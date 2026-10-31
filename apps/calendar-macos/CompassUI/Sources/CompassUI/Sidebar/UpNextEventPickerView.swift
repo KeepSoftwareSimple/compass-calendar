@@ -110,7 +110,7 @@ struct UpNextEventPickerView: View {
                         .foregroundStyle(theme.textMutedColor)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                ShortcutHintChip(label: String(index + 1), style: .default)
+                ShortcutHintChip(label: String(index + 1))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)

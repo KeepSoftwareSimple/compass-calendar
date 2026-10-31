@@ -1,6 +1,10 @@
 import { NodeEnv } from "@core/constants/core.constants";
-import { EventIdSchema } from "@core/types/domain-primitives";
-import { type Event } from "@core/types/event.contracts";
+import {
+  CalendarIdSchema,
+  DateTimeSchema,
+  EventIdSchema,
+} from "@core/types/domain-primitives";
+import { type Event, EventScheduleSchema } from "@core/types/event.contracts";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { showAppUpdateAvailableToast } from "@web/common/utils/toast/app-update-available.toast";
 import { showRecurrenceScopeToast } from "@web/common/utils/toast/recurrence-scope.toast";
@@ -18,29 +22,34 @@ declare global {
   }
 }
 
-const captureRecurrenceScopeEvent = (): Event =>
-  ({
-    id: EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa"),
-    calendarId: EventIdSchema.parse("bbbbbbbbbbbbbbbbbbbbbbbb"),
-    content: { kind: "details", title: "Write", description: "" },
-    schedule: {
-      kind: "timed",
-      start: "2026-05-05T09:00:00.000-05:00",
-      end: "2026-05-05T10:00:00.000-05:00",
-      timeZone: "America/Chicago",
-    },
-    recurrence: {
-      kind: "occurrence",
-      seriesId: EventIdSchema.parse("cccccccccccccccccccccccc"),
-    },
-    createdAt: "2026-05-01T00:00:00.000Z",
-    updatedAt: null,
-  }) as Event;
+const captureCalendarId = CalendarIdSchema.parse("507f1f77bcf86cd799439011");
+const captureSeriesId = EventIdSchema.parse("cccccccccccccccccccccccc");
+const captureEventId = EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa");
+const captureSchedule = EventScheduleSchema.parse({
+  kind: "timed",
+  start: "2026-05-05T09:00:00.000-05:00",
+  end: "2026-05-05T10:00:00.000-05:00",
+  timeZone: "America/Chicago",
+});
+
+const captureRecurrenceScopeEvent = (): Event => ({
+  id: captureEventId,
+  calendarId: captureCalendarId,
+  content: { kind: "details", title: "Write", description: "" },
+  schedule: captureSchedule,
+  recurrence: {
+    kind: "occurrence",
+    seriesId: captureSeriesId,
+  },
+  createdAt: DateTimeSchema.parse("2026-05-01T00:00:00.000Z"),
+  updatedAt: null,
+});
 
 function showRecurrenceScopeCaptureToast(): void {
+  const original = captureRecurrenceScopeEvent();
   recurrenceScopeOpportunityActions.begin({
     kind: "replace",
-    original: captureRecurrenceScopeEvent(),
+    original,
     input: {
       content: {
         kind: "details",
@@ -48,8 +57,9 @@ function showRecurrenceScopeCaptureToast(): void {
         description: "",
         location: "",
       },
-      schedule: captureRecurrenceScopeEvent().schedule,
+      schedule: original.schedule,
       recurrence: { kind: "preserve" },
+      scope: "this",
     },
     source: "local",
   });
