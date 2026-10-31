@@ -35,10 +35,15 @@ recreate_api_proxy() {
   compose up -d --force-recreate --no-deps api-proxy >/dev/null 2>&1
 }
 
-# Deploy replaces ~/compass/api-proxy/ as a whole directory. Docker keeps serving
-# the old bind-mounted nginx.conf from the replaced inode until api-proxy is
-# recreated, so reload alone cannot apply resolver-based upstream switching.
+# Staging deploy updates api-proxy/nginx.conf in place (see _deploy-environment.yml).
+# Prefer nginx reload so the save-loop proof does not hit a proxy recreate gap.
 sync_api_proxy_after_deploy() {
+  if api_proxy_running; then
+    if compose exec -T api-proxy nginx -t >/dev/null 2>&1 &&
+      compose exec -T api-proxy nginx -s reload >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
   recreate_api_proxy || return 1
 }
 

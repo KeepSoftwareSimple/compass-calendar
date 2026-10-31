@@ -354,8 +354,12 @@ jobs:
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "mv ~/compass/config.sh.$$ ~/compass/config.sh"
           scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compass" "$SSH_USER@$SSH_HOST:~/compass/compass.$$"
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
-          scp -i ~/.ssh/staging_key -r "$ORCHESTRATION_DIR/api-proxy" "$SSH_USER@$SSH_HOST:~/compass/api-proxy.$$"
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "rm -rf ~/compass/api-proxy && mv ~/compass/api-proxy.$$ ~/compass/api-proxy"
+          # Update nginx.conf in place so the api-proxy bind mount keeps the same
+          # inode. Replacing ~/compass/api-proxy/ forces a container recreate and
+          # a brief 502 window during rolling deploys.
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "mkdir -p ~/compass/api-proxy"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/api-proxy/nginx.conf" \
+            "$SSH_USER@$SSH_HOST:~/compass/api-proxy/nginx.conf"
           scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/rolling-backend.sh" "$SSH_USER@$SSH_HOST:~/compass/rolling-backend.sh.$$"
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "chmod +x ~/compass/rolling-backend.sh.$$ && mv ~/compass/rolling-backend.sh.$$ ~/compass/rolling-backend.sh"
           # Always enable the booking and sync profiles: their config is always
