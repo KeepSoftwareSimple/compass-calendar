@@ -1,35 +1,26 @@
-import { type Id } from "react-toastify";
+import { z } from "zod/v4";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { getToast } from "@web/common/utils/toast/toast.port";
 
 const SESSION_KEY = "compass.shell.pending-toast";
 
-export type PendingShellToast = {
-  variant: "info" | "error";
-  message: string;
-  toastId?: Id;
-  autoClose?: false;
-};
+const PendingShellToastSchema = z.object({
+  variant: z.enum(["info", "error"]),
+  message: z.string(),
+  /** react-toastify `Id`. */
+  toastId: z.union([z.string(), z.number()]).optional(),
+  autoClose: z.literal(false).optional(),
+});
+
+export type PendingShellToast = z.infer<typeof PendingShellToastSchema>;
 
 function parsePendingShellToast(raw: string): PendingShellToast | null {
   try {
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "variant" in parsed &&
-      "message" in parsed &&
-      typeof (parsed as PendingShellToast).message === "string" &&
-      ((parsed as PendingShellToast).variant === "info" ||
-        (parsed as PendingShellToast).variant === "error")
-    ) {
-      return parsed as PendingShellToast;
-    }
+    return PendingShellToastSchema.parse(JSON.parse(raw));
   } catch {
-    // ignore malformed payloads
+    // Malformed or stale payload; the caller clears the key.
+    return null;
   }
-
-  return null;
 }
 
 function readPendingShellToast(): PendingShellToast | null {

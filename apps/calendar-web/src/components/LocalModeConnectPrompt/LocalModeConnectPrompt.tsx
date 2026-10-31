@@ -1,12 +1,11 @@
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type FC, useCallback, useContext, useEffect } from "react";
 import { PH_NO_RAGECLICK_CLASS } from "@web/auth/posthog/posthog-calendar-grid.util";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import { NoticeCard } from "@web/components/BottomNoticeStack/NoticeCard";
+import { NoticeDismissButton } from "@web/components/BottomNoticeStack/NoticeDismissButton";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
-import IconButton from "@web/components/IconButton/IconButton";
 import { localModeConnectPromptActions } from "@web/components/LocalModeConnectPrompt/local-mode-connect.store";
 import { useLocalModeConnectPromptEligible } from "@web/components/LocalModeConnectPrompt/useLocalModeConnectPromptEligible";
 import {
@@ -69,14 +68,7 @@ export const LocalModeConnectPrompt: FC = () => {
         <p className="text-sm leading-relaxed">
           {LOCAL_MODE_CONNECT_PROMPT_MESSAGE}
         </p>
-        <IconButton
-          aria-label="Dismiss"
-          className="shrink-0 text-text-muted hover:text-text"
-          onClick={dismiss}
-          size="small"
-        >
-          <XIcon aria-hidden="true" size={14} />
-        </IconButton>
+        <NoticeDismissButton onClick={dismiss} />
       </div>
       <NoticePrimaryButton
         onClick={startTrial}

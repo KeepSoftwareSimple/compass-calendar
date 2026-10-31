@@ -1,12 +1,11 @@
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type FC, useState } from "react";
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import dayjs from "@core/util/date/dayjs";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { NoticeCard } from "@web/components/BottomNoticeStack/NoticeCard";
+import { NoticeDismissButton } from "@web/components/BottomNoticeStack/NoticeDismissButton";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
-import IconButton from "@web/components/IconButton/IconButton";
 import { formatEventStatus } from "@web/components/Sidebar/UpNextCard/UpNextCard";
 import { useUpNextEvent } from "@web/components/Sidebar/UpNextCard/useUpNextEvent";
 import { useUpNextOsNotification } from "@web/components/Sidebar/UpNextCard/useUpNextOsNotification";
@@ -93,14 +92,7 @@ export const UpNextBanner: FC = () => {
             <span className="truncate font-medium text-sm">{upNext.title}</span>
           </div>
         </div>
-        <IconButton
-          aria-label="Dismiss"
-          className="shrink-0 text-text-muted hover:text-text"
-          onClick={dismiss}
-          size="small"
-        >
-          <XIcon aria-hidden="true" size={14} />
-        </IconButton>
+        <NoticeDismissButton onClick={dismiss} />
       </div>
       <NoticePrimaryButton onClick={onPrimary} shortcutKeys={primaryShortcut}>
         {primaryLabel}

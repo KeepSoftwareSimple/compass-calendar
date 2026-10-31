@@ -187,7 +187,7 @@ start_stack() {
   migrate_from_legacy_backend ||
     fail "Legacy backend migration failed. Run './compass logs' for details."
   active=$(read_backend_active_slot)
-  inactive=$(write_backend_inactive_slot "$active")
+  inactive=$(inactive_backend_slot "$active")
   write_upstream_for_slot "$active"
   printf '%s\n' "$active" > "$INSTALL_DIR/.backend-active-slot"
   compose up -d || fail "Docker Compose failed to start Compass."
@@ -217,6 +217,13 @@ run_compose_wait() {
     return $?
   fi
   compose up -d --remove-orphans --wait "$@"
+}
+
+# Failed update steps all dump the same picture: container state for the whole
+# project, then recent logs for the services an update touches.
+dump_stack_diagnostics() {
+  compose ps -a >&2 || true
+  compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
 }
 
 prune_unused_images() {
@@ -277,8 +284,7 @@ case $command_name in
         ;;
     esac
     if ! rolling_backend_update; then
-      compose ps -a >&2 || true
-      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
+      dump_stack_diagnostics
       fail "Rolling backend update failed. Run './compass logs' for details."
     fi
     secondary_services="web booking-web sync"
@@ -295,19 +301,17 @@ case $command_name in
     compose_wait_sec=${COMPASS_COMPOSE_WAIT_SEC:-900}
     # shellcheck disable=SC2086
     if ! run_compose_wait "$compose_wait_sec" $secondary_services; then
-      compose ps -a >&2 || true
-      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
+      dump_stack_diagnostics
       fail "Docker Compose failed to start updated Compass services."
     fi
     active=$(read_backend_active_slot)
-    inactive=$(write_backend_inactive_slot "$active")
+    inactive=$(inactive_backend_slot "$active")
     compose stop -t 1 "backend-$inactive" >/dev/null 2>&1 || true
     prune_unused_images
     if wait_for_health; then
       info "Compass updated and running at $APP_URL"
     else
-      compose ps -a >&2 || true
-      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
+      dump_stack_diagnostics
       fail "Compass updated, but the backend health check did not pass. Run './compass logs' for details."
     fi
     ;;
