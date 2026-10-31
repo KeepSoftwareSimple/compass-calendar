@@ -1,5 +1,15 @@
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { KEYMAP } from "@core/shortcuts/keymap";
+import {
+  isShowcaseHandoffEligible,
+  selectFirstEventCelebrating,
+  selectFirstEventDone,
+  useFirstEventPromptStore,
+} from "@web/components/FirstEventPrompt/first-event.store";
+import {
+  selectShowcaseActive,
+  useShortcutShowcaseStore,
+} from "@web/components/ShortcutShowcase/showcase.store";
 import { useDraftStore } from "@web/events/stores/draft.store";
 import { useEdgeFocusStore } from "@web/grid/shortcuts/edge-focus.store";
 import { useGridScrollShortcuts } from "@web/grid/shortcuts/useGridScrollShortcuts";
@@ -43,6 +53,18 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
   const timeTravelZone = useTimeTravelZone();
   useGridScrollShortcuts();
 
+  const firstEventPromptOwnsCreate = (): boolean => {
+    const firstEventState = useFirstEventPromptStore.getState();
+    const showcaseActive = selectShowcaseActive(
+      useShortcutShowcaseStore.getState(),
+    );
+    return (
+      !selectFirstEventDone(firstEventState) &&
+      !selectFirstEventCelebrating(firstEventState) &&
+      isShowcaseHandoffEligible(showcaseActive)
+    );
+  };
+
   const nav = APP_SHORTCUT_BINDINGS;
   useAppShortcutUp(nav.navPrevious.hotkey, () => config.onPrevPeriod?.(), {
     shortcutId: "nav-previous",
@@ -80,6 +102,7 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
   useAppShortcutUp(
     KEYMAP.createEvent.hotkey,
     () => {
+      if (firstEventPromptOwnsCreate()) return;
       if (!config.onCreateTimedEvent) return;
       config.onCreateTimedEvent();
       shortcutHintProgressActions.demonstrate("create-event");

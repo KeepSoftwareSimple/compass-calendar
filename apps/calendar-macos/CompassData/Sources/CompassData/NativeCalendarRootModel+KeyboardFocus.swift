@@ -144,6 +144,12 @@ extension NativeCalendarRootModel {
         recordShortcut(id)
         switch id {
         case .createTimed, .createAllday:
+            if id == .createTimed,
+               activeOnboardingSurface == .firstEventPrompt,
+               !onboardingStore.isFirstEventDone
+            {
+                return
+            }
             if viewStore.view == .life {
                 viewStore.view = .week
                 scheduleRefreshVisibleRange()

@@ -6,7 +6,9 @@ import SwiftUI
 /// a short celebration before it retires for good.
 struct FirstEventPromptView: View {
     @Environment(\.nativeWebTheme) private var theme
-    @Bindable var onboardingStore: OnboardingStore
+    @Bindable var model: NativeCalendarRootModel
+
+    private var onboardingStore: OnboardingStore { model.onboardingStore }
 
     var body: some View {
         FloatingNoticeCard(width: 288) {
@@ -22,21 +24,30 @@ struct FirstEventPromptView: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 8) {
-                        Text("Add your first event")
-                            .font(.rubik(14, weight: .semibold))
+                        Text("Your calendar is ready. Add something to it.")
+                            .font(.rubik(14))
                             .foregroundStyle(theme.textColor)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         NoticeDismissButton {
                             onboardingStore.dismissFirstEventPrompt()
                         }
                     }
-                    HStack(spacing: 6) {
-                        Text("Press")
-                        ShortcutHintChip(label: "C")
-                        Text(", type a title, then Enter.")
+                    Button {
+                        model.createTimedDraft(activity: .createShortcut)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Add event")
+                            ShortcutHintChip(label: "C", style: .onAccent)
+                        }
+                        .font(.rubik(14, weight: .medium))
+                        .foregroundStyle(theme.onAccentColor)
+                        .frame(maxWidth: .infinity, minHeight: 32)
+                        .background(theme.accentColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
-                    .font(.rubik(12))
-                    .foregroundStyle(theme.textMutedColor)
+                    .buttonStyle(.plain)
+                    .keyboardShortcut("c", modifiers: [])
+                    .accessibilityLabel("Add event")
                 }
             }
         }

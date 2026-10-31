@@ -179,10 +179,13 @@ describe("FirstEventPrompt", () => {
       name: "Create your first event",
     });
     expect(prompt).toBeTruthy();
-    expect(screen.getByText("Add your first event.")).toBeTruthy();
-    const addCoffee = screen.getByRole("button", { name: "Add Coffee" });
-    expect(addCoffee).toBeTruthy();
-    expect(addCoffee.className).toContain("c-button-primary");
+    expect(
+      screen.getByText("Your calendar is ready. Add something to it."),
+    ).toBeTruthy();
+    const addEvent = screen.getByRole("button", { name: "Add event" });
+    expect(addEvent).toBeTruthy();
+    expect(addEvent.className).toContain("c-button-primary");
+    expect(screen.getByText("C")).toBeTruthy();
   });
 
   it("lifts the shared bottom stack above the sidebar footer on wide layouts", () => {
@@ -213,12 +216,22 @@ describe("FirstEventPrompt", () => {
     ).toBeTruthy();
   });
 
-  it("creates the default first event when Add Coffee is clicked", async () => {
+  it("creates the default first event when Add event is clicked", async () => {
     const user = userEvent.setup();
     markShowcaseSeen();
     render(<FirstEventPrompt />);
 
-    await user.click(screen.getByRole("button", { name: "Add Coffee" }));
+    await user.click(screen.getByRole("button", { name: "Add event" }));
+
+    expect(quickCreateFirstEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates the default first event when C is pressed", async () => {
+    const user = userEvent.setup();
+    markShowcaseSeen();
+    render(<FirstEventPrompt />);
+
+    await user.keyboard("c");
 
     expect(quickCreateFirstEvent).toHaveBeenCalledTimes(1);
   });

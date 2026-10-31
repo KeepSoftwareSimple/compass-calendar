@@ -1,5 +1,6 @@
 import { useContext, useEffect, useId, useRef, useState } from "react";
 import { BILLING_PLAN } from "@core/constants/billing.constants";
+import { WELCOME_KEYBOARD_SHORTCUTS_CONTINUE_LABEL } from "@core/onboarding/welcome-keyboard-shortcuts.content";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { trackSignupStartedAtClick } from "@web/auth/posthog/signup-funnel";
@@ -25,6 +26,7 @@ import { PixelPirate } from "./PixelPirate";
 import { useFaqDisclosure } from "./useFaqDisclosure";
 import { useWelcomeJumpShortcuts } from "./useWelcomeJumpShortcuts";
 import { WelcomeFaqList } from "./WelcomeFaqList";
+import { WelcomeKeyboardShortcutsStep } from "./WelcomeKeyboardShortcutsStep";
 import { WelcomeLinks } from "./WelcomeLinks";
 import { WelcomeSteps } from "./WelcomeSteps";
 import { welcomeGuideActions } from "./welcome.guide.store";
@@ -46,6 +48,7 @@ import { shouldDelegateEnterToWelcomePrimary } from "./welcome-modal-enter.util"
 import {
   nextWelcomeStep,
   previousWelcomeStep,
+  WELCOME_KEYBOARD_SHORTCUTS_STEP,
   type WelcomeStep,
 } from "./welcome-steps";
 
@@ -200,6 +203,11 @@ export function WelcomeModal() {
     });
   };
 
+  const advanceToKeyboardShortcuts = () => {
+    if (closing || isAuthHandoffInFlight()) return;
+    setStep(WELCOME_KEYBOARD_SHORTCUTS_STEP);
+  };
+
   const beginAuthHandoff = () => {
     skipFocusRestoreRef.current = true;
     hidingForAuthRef.current = true;
@@ -241,7 +249,7 @@ export function WelcomeModal() {
     }
     if (
       e.key === "Enter" &&
-      (step === 1 || step === 2 || step === 3) &&
+      (step === 1 || step === 2 || step === 3 || step === 4) &&
       shouldDelegateEnterToWelcomePrimary(
         document.activeElement,
         primaryRef.current,
@@ -255,6 +263,8 @@ export function WelcomeModal() {
         } else {
           handOffToAuth("sign_up");
         }
+      } else if (step === 4) {
+        explore();
       } else {
         advance();
       }
@@ -281,7 +291,7 @@ export function WelcomeModal() {
       handOffToAuth("sign_up");
     } else if (key === "s") {
       e.preventDefault();
-      explore();
+      advanceToKeyboardShortcuts();
     }
   };
 
@@ -477,12 +487,30 @@ export function WelcomeModal() {
               ) : null}
               <button
                 type="button"
-                onClick={explore}
+                onClick={advanceToKeyboardShortcuts}
                 className={QUIET_TEXT_CTA_CLASS}
                 {...navigationBusyProps}
               >
                 {LOCAL_DEVICE_ONLY_LABEL}
                 <ShortcutHint className="ml-2">S</ShortcutHint>
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <WelcomeKeyboardShortcutsStep />
+            <div className="flex w-full flex-col items-center gap-3">
+              <button
+                type="button"
+                ref={primaryRef}
+                onClick={explore}
+                className={PRIMARY_CTA_CLASS}
+                {...navigationBusyProps}
+              >
+                {WELCOME_KEYBOARD_SHORTCUTS_CONTINUE_LABEL}
+                <ShortcutHint className="ml-2">Enter</ShortcutHint>
               </button>
             </div>
           </>

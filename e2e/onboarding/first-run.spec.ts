@@ -44,6 +44,11 @@ test("welcomes a first-time user and seeds sample events", async ({
     welcomeDialog.getByRole("button", { name: "On this device only" }),
   ).toBeVisible();
   await page.keyboard.press("s");
+  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
+  await expect(
+    welcomeDialog.getByRole("heading", { name: "Essential shortcuts" }),
+  ).toBeVisible();
+  await page.keyboard.press("Enter");
   await expect(welcomeDialog).toBeHidden();
   await expect(
     page.getByRole("region", { name: "Shortcut practice" }),
@@ -60,8 +65,10 @@ test("welcomes a first-time user and seeds sample events", async ({
     name: "Create your first event",
   });
   await expect(prompt).toBeVisible();
-  await expect(prompt).toContainText("Add your first event");
-  await prompt.getByRole("button", { name: "Add Coffee" }).click();
+  await expect(prompt).toContainText(
+    "Your calendar is ready. Add something to it.",
+  );
+  await prompt.getByRole("button", { name: "Add event" }).click();
 
   // The prompt celebrates the first real event, then retires.
   await expect(prompt).toContainText("It's on the calendar.");

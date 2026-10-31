@@ -3,7 +3,17 @@ import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { act, type PropsWithChildren } from "react";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import * as statusToastUtil from "@web/common/utils/toast/status-toast.util";
+import {
+  initialFirstEventPromptState,
+  useFirstEventPromptStore,
+} from "@web/components/FirstEventPrompt/first-event.store";
+import {
+  initialShortcutShowcaseState,
+  useShortcutShowcaseStore,
+} from "@web/components/ShortcutShowcase/showcase.store";
 import {
   createGridEventDraft,
   timedGridSchedule,
@@ -48,6 +58,12 @@ const wrapper = ({ children }: PropsWithChildren) => (
 
 beforeEach(() => {
   HotkeyManager.resetInstance();
+  persistentBrowserStore.remove(STORAGE_KEYS.FIRST_EVENT_DONE);
+  useShortcutShowcaseStore.setState(initialShortcutShowcaseState, true);
+  useFirstEventPromptStore.setState(
+    { isDone: true, isCelebrating: false },
+    true,
+  );
 });
 
 afterEach(() => {
@@ -103,6 +119,21 @@ describe("useCalendarViewShortcuts", () => {
     await waitFor(() => {
       expect(onCreateTimedEvent).toHaveBeenCalled();
     });
+  });
+
+  it("defers C to the first-event prompt while it is active", () => {
+    useFirstEventPromptStore.setState({
+      ...initialFirstEventPromptState,
+      isDone: false,
+    });
+    const onCreateTimedEvent = mock();
+
+    renderHook(() => useCalendarViewShortcuts({ onCreateTimedEvent }), {
+      wrapper,
+    });
+    pressKey("C");
+
+    expect(onCreateTimedEvent).not.toHaveBeenCalled();
   });
 
   it("does not create an all-day event when typing in an input", async () => {

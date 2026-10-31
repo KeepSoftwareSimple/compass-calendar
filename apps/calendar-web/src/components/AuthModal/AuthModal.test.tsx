@@ -875,6 +875,31 @@ describe("AuthModal", () => {
   });
 
   describe("Provider sign-in buttons", () => {
+    it("renders provider buttons on sign up without the connect-calendar heading", async () => {
+      const user = userEvent.setup();
+      setSignInAvailability({ google: "available" });
+      await renderWithProviders(<ModalTrigger />);
+
+      await user.click(screen.getByRole("button", { name: /open modal/i }));
+      await waitForAuthModal();
+      await user.click(screen.getByRole("button", { name: /^sign up$/i }));
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: /nice to meet you/i }),
+        ).toBeInTheDocument();
+      });
+
+      expect(
+        screen.queryByText("Connect a calendar account"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Pick Google, Microsoft, or Apple/),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Continue with Google" }),
+      ).toBeInTheDocument();
+    });
+
     it("renders all three configured provider buttons", async () => {
       const user = userEvent.setup();
       setSignInAvailability({
