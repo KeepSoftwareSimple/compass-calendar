@@ -27,6 +27,8 @@ import { resetNewMeetingsNoticeForTests } from "@web/booking/useNewMeetingsNotic
 import { resetCalendarVisibilityStoreForTests } from "@web/calendars/calendar-visibility.store";
 import { resetCollapsedAccountsStoreForTests } from "@web/calendars/collapsed-accounts.store";
 import { resetDefaultCalendarStoreForTests } from "@web/calendars/default-calendar.store";
+import { appUpdateNoticeActions } from "@web/components/BottomNoticeStack/app-update-notice.store";
+import { bottomNoticeQueueActions } from "@web/components/BottomNoticeStack/bottom-notice-queue.store";
 import { resetRecentCommandsStoreForTests } from "@web/components/CommandPalette/recent-commands.store";
 import { resetConnectCalendarPromptStoreForTests } from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
 import { useFeedbackStore } from "@web/components/Feedback/feedback.store";
@@ -155,6 +157,8 @@ const storeResets: StoreReset[] = [
   resetShortcutUsageProfileStoreForTests,
   resetShortcutLevelHiddenStoreForTests,
   resetPointerIntentSessionForTests,
+  appUpdateNoticeActions.resetForTests,
+  bottomNoticeQueueActions.resetForTests,
 ];
 
 export function resetAllStores() {

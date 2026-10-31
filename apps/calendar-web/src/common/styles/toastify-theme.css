@@ -17,11 +17,11 @@
   background: var(--text-muted);
 }
 
-/* Shared bottom-left notice stack (cards + react-toastify). */
+/* Shared bottom-left notice slot (one panel + optional react-toastify). */
 .compass-bottom-notice-stack {
   bottom: max(1rem, env(safe-area-inset-bottom));
   left: max(1rem, env(safe-area-inset-left));
-  width: min(24rem, calc(100vw - 2rem));
+  width: min(21rem, calc(100vw - 2rem));
 }
 
 .compass-bottom-notice-stack--clears-footer {
@@ -37,8 +37,16 @@
   inset: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
   flex-shrink: 0;
+}
+
+.compass-bottom-notice-stack__toasts--hidden {
+  visibility: hidden;
+  pointer-events: none;
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
 .compass-bottom-notice-stack .Toastify__toast {
@@ -57,23 +65,5 @@
 }
 
 .compass-bottom-notice-stack .Toastify__toast-body {
-  padding: 0.75rem 1rem;
-}
-
-@media (min-width: 1280px) {
-  .compass-bottom-notice-stack
-    .Toastify__toast.app-update-available-toast-host {
-    width: max-content;
-    max-width: min(36rem, calc(100vw - 2rem));
-    align-self: flex-start;
-  }
-
-  .compass-bottom-notice-stack
-    .Toastify__toast.app-update-available-toast-host
-    .app-update-available-toast-message,
-  .compass-bottom-notice-stack
-    .Toastify__toast.app-update-available-toast-host
-    p {
-    white-space: nowrap;
-  }
+  padding: 0.625rem 0.75rem;
 }

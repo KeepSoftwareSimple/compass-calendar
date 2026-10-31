@@ -1,35 +1,24 @@
 import { renderHook } from "@testing-library/react";
-import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
-import * as realToast from "@web/common/utils/toast/app-update-available.toast";
+import {
+  appUpdateNoticeActions,
+  useAppUpdateNoticeStore,
+} from "@web/components/BottomNoticeStack/app-update-notice.store";
 import { resetAppUpdateNoticeStorageForTests } from "@web/components/Sidebar/SidebarActions/app-update-notice.storage";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-
-const showAppUpdateAvailableToast = mock();
-mockModuleForFile(
-  "@web/common/utils/toast/app-update-available.toast",
-  realToast,
-  { showAppUpdateAvailableToast },
-);
-
-const moduleUrl = new URL(
-  `./useAppUpdateAvailableNotice.ts?test=${Math.random().toString(36).slice(2)}`,
-  import.meta.url,
-);
-const { useAppUpdateAvailableNotice } = (await import(
-  moduleUrl.href
-)) as typeof import("./useAppUpdateAvailableNotice");
+import { useAppUpdateAvailableNotice } from "@web/components/Sidebar/SidebarActions/useAppUpdateAvailableNotice";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 describe("useAppUpdateAvailableNotice", () => {
   beforeEach(() => {
     resetAppUpdateNoticeStorageForTests();
-    showAppUpdateAvailableToast.mockClear();
+    appUpdateNoticeActions.resetForTests();
   });
 
   afterEach(() => {
     resetAppUpdateNoticeStorageForTests();
+    appUpdateNoticeActions.resetForTests();
   });
 
-  it("shows the toast once for a pending version", () => {
+  it("queues the notice once for a pending version", () => {
     const { rerender } = renderHook(
       ({
         available,
@@ -41,18 +30,17 @@ describe("useAppUpdateAvailableNotice", () => {
       { initialProps: { available: true, version: "9.9.9" } },
     );
 
-    expect(showAppUpdateAvailableToast).toHaveBeenCalledTimes(1);
-    expect(showAppUpdateAvailableToast).toHaveBeenCalledWith("9.9.9");
+    expect(useAppUpdateNoticeStore.getState().pendingVersion).toBe("9.9.9");
 
     rerender({ available: true, version: "9.9.9" });
-    expect(showAppUpdateAvailableToast).toHaveBeenCalledTimes(1);
+    expect(useAppUpdateNoticeStore.getState().pendingVersion).toBe("9.9.9");
   });
 
   it("does not re-show after the version was handled", () => {
     renderHook(() => useAppUpdateAvailableNotice(true, "9.9.9"));
-    showAppUpdateAvailableToast.mockClear();
+    appUpdateNoticeActions.resetForTests();
 
     renderHook(() => useAppUpdateAvailableNotice(true, "9.9.9"));
-    expect(showAppUpdateAvailableToast).not.toHaveBeenCalled();
+    expect(useAppUpdateNoticeStore.getState().pendingVersion).toBeNull();
   });
 });

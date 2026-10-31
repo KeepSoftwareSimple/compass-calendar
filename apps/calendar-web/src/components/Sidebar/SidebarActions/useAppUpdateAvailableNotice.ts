@@ -1,12 +1,13 @@
 import { useEffect } from "react";
-import { showAppUpdateAvailableToast } from "@web/common/utils/toast/app-update-available.toast";
+import { appUpdateNoticeActions } from "@web/components/BottomNoticeStack/app-update-notice.store";
 import {
   isAppUpdateNoticeHandled,
   markAppUpdateNoticeHandled,
 } from "@web/components/Sidebar/SidebarActions/app-update-notice.storage";
 
 /**
- * Surfaces a one-time toast when `/version.json` reports a newer app build.
+ * Queues a one-time bottom-left update notice when `/version.json` reports a
+ * newer app build.
  */
 export function useAppUpdateAvailableNotice(
   isUpdateAvailable: boolean,
@@ -17,6 +18,6 @@ export function useAppUpdateAvailableNotice(
     if (isAppUpdateNoticeHandled(availableVersion)) return;
 
     markAppUpdateNoticeHandled(availableVersion);
-    showAppUpdateAvailableToast(availableVersion);
+    appUpdateNoticeActions.setPendingVersion(availableVersion);
   }, [availableVersion, isUpdateAvailable]);
 }

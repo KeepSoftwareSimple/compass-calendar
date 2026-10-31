@@ -73,6 +73,30 @@ public struct RootView: View {
         }
     }
 
+    @ViewBuilder
+    private var bottomLeadingNotice: some View {
+        switch model.activeBottomNotice {
+        case .updateReady:
+            DesktopUpdateReadyBannerView {
+                model.onDesktopRestartToUpdate?()
+            }
+            .noticeFocusRing(model.focusedNotice == .updateReady)
+        case .localModeConnect:
+            LocalModeConnectPromptView(model: model)
+                .noticeFocusRing(model.focusedNotice == .localModeConnectPrompt)
+        case .firstEvent, .none:
+            if model.viewStore.view != .life {
+                UpNextBanner(
+                    model: model,
+                    onOpen: { model.openUpNextEvent() },
+                    onJoin: { model.joinUpNextMeeting() },
+                    onBannerShown: { event in
+                        model.upNextBannerShown(event)
+                    })
+            }
+        }
+    }
+
     private var calendarWithBanners: some View {
         calendarShell
         .background(theme.backgroundColor)
@@ -85,25 +109,9 @@ public struct RootView: View {
             )
         }
         .overlay(alignment: .bottomLeading) {
-            VStack(alignment: .leading, spacing: 12) {
-                if model.desktopUpdateReadyVersion != nil {
-                    DesktopUpdateReadyBannerView {
-                        model.onDesktopRestartToUpdate?()
-                    }
-                    .noticeFocusRing(model.focusedNotice == .updateReady)
-                }
-                if model.viewStore.view != .life {
-                    UpNextBanner(
-                        model: model,
-                        onOpen: { model.openUpNextEvent() },
-                        onJoin: { model.joinUpNextMeeting() },
-                        onBannerShown: { event in
-                            model.upNextBannerShown(event)
-                        })
-                }
-            }
-            .padding(.leading, 16)
-            .padding(.bottom, 16)
+            bottomLeadingNotice
+                .padding(.leading, 16)
+                .padding(.bottom, 16)
         }
         .overlay(alignment: .top) {
             if case let .server(server) = model.billingStore.appAccess,
@@ -136,11 +144,6 @@ public struct RootView: View {
         }
         .onChange(of: model.viewStore.view) { _, _ in
             model.refreshLifeViewIntro()
-        }
-        .overlay {
-            if model.showsLocalModeConnectPrompt {
-                LocalModeConnectPromptView(model: model)
-            }
         }
         .overlay {
             BlockPartyOverlay(model: model)

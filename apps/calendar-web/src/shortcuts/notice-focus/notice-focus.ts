@@ -8,18 +8,14 @@ const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
- * Notices with something to focus, toasts first: the toast container runs
- * limit={1}, so at most one toast is up, and it is always the newest thing on
- * screen. Banners follow in document order. Dismissed notices unmount, so
- * presence in the DOM is the visibility check.
+ * Notices with something to focus. The bottom-left queue shows one panel at a
+ * time; dismissed notices unmount, so presence in the DOM is the visibility
+ * check.
  */
 export const getVisibleNotices = (): HTMLElement[] => {
-  const notices = [
-    ...document.querySelectorAll<HTMLElement>("[data-notice]"),
-  ].filter((notice) => firstFocusable(notice) !== null);
-
-  const isToast = (notice: HTMLElement) => notice.closest(".Toastify") !== null;
-  return [...notices.filter(isToast), ...notices.filter((n) => !isToast(n))];
+  return [...document.querySelectorAll<HTMLElement>("[data-notice]")].filter(
+    (notice) => firstFocusable(notice) !== null,
+  );
 };
 
 const firstFocusable = (notice: HTMLElement): HTMLElement | null =>

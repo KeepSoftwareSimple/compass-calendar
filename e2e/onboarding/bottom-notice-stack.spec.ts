@@ -1,32 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-
-type LayoutBox = { x: number; y: number; width: number; height: number };
-
-const MIN_NOTICE_GAP_PX = 8;
-
-function boxesIntersect(a: LayoutBox, b: LayoutBox): boolean {
-  const aRight = a.x + a.width;
-  const aBottom = a.y + a.height;
-  const bRight = b.x + b.width;
-  const bBottom = b.y + b.height;
-  return !(aRight <= b.x || a.x >= bRight || aBottom <= b.y || a.y >= bBottom);
-}
-
-function isFullyInViewport(
-  box: LayoutBox,
-  viewport: { width: number; height: number },
-) {
-  return (
-    box.x >= 0 &&
-    box.y >= 0 &&
-    box.x + box.width <= viewport.width + 1 &&
-    box.y + box.height <= viewport.height + 1
-  );
-}
-
-function verticalGapPx(upper: LayoutBox, lower: LayoutBox): number {
-  return lower.y - (upper.y + upper.height);
-}
+import { BOTTOM_NOTICE_DESKTOP_WIDTH_PX } from "../../apps/calendar-web/src/components/BottomNoticeStack/bottom-notice.constants";
 
 async function prepareSession(page: Page) {
   await page.route(/version\.json(\?.*)?$/, async (route) => {
@@ -48,16 +21,7 @@ async function prepareSession(page: Page) {
   });
 }
 
-async function ensureUpdateToastVisible(page: Page) {
-  const updateToast = page.locator(
-    ".Toastify__toast.app-update-available-toast-host",
-  );
-
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    if (await updateToast.isVisible()) return;
-    await page.waitForTimeout(500);
-  }
-
+async function showAppUpdateNotice(page: Page) {
   await page.evaluate(() => {
     localStorage.removeItem("compass.app-update.notice-handled-versions");
     const helpers = (
@@ -69,161 +33,116 @@ async function ensureUpdateToastVisible(page: Page) {
     ).__compassE2E;
     helpers?.showAppUpdateAvailableToast("99.99.99");
   });
-
-  await expect(updateToast).toBeVisible({ timeout: 15_000 });
-  await expect(
-    page.getByText("Compass just got better. Refresh to update."),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Refresh/i })).toBeVisible();
 }
 
-async function openWeekWithNotices(page: Page) {
-  const firstEvent = page.getByRole("complementary", {
-    name: "Create your first event",
-  });
-
+async function openWeek(page: Page) {
   await page.goto("/week", { waitUntil: "networkidle" });
-  await expect(firstEvent).toBeVisible({ timeout: 120_000 });
-  await ensureUpdateToastVisible(page);
 }
 
-function noticeLocators(page: Page): Locator[] {
-  return [
-    page.locator(".Toastify__toast.app-update-available-toast-host"),
-    page.getByRole("complementary", { name: "Create your first event" }),
-  ];
+async function assertSingleNotice(page: Page) {
+  await expect(page.locator("[data-notice]")).toHaveCount(1, {
+    timeout: 15_000,
+  });
 }
 
-async function assertBottomLeftStack(page: Page) {
+async function readMessageAndButtonStyle(notice: Locator) {
+  return notice.evaluate((root) => {
+    const message = root.querySelector("p");
+    const button = root.querySelector("button.c-button-primary");
+    const read = (el: Element | null) =>
+      el
+        ? {
+            fontSize: getComputedStyle(el).fontSize,
+            fontWeight: getComputedStyle(el).fontWeight,
+          }
+        : null;
+    return { message: read(message), button: read(button) };
+  });
+}
+
+async function assertNoticeWidth(viewportWidth: number, notice: Locator) {
+  const box = await notice.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) throw new Error("Expected notice box");
+
+  if (viewportWidth >= 1280) {
+    expect(Math.round(box.width)).toBe(BOTTOM_NOTICE_DESKTOP_WIDTH_PX);
+  } else {
+    expect(box.width).toBeGreaterThan(viewportWidth - 40);
+    expect(box.width).toBeLessThanOrEqual(viewportWidth - 16);
+  }
+}
+
+async function assertBottomLeft(page: Page) {
   const stack = page.locator("section.compass-bottom-notice-stack");
   await expect(stack).toBeVisible();
-
   const stackBox = await stack.boundingBox();
+  const viewport = page.viewportSize();
   expect(stackBox).not.toBeNull();
-  if (!stackBox) throw new Error("Expected bottom notice stack box");
-
-  const viewport = page.viewportSize();
   expect(viewport).not.toBeNull();
-  if (!viewport) throw new Error("Expected viewport");
-
+  if (!stackBox || !viewport) throw new Error("Expected layout boxes");
   expect(stackBox.x).toBeLessThan(viewport.width * 0.35);
-  expect(isFullyInViewport(stackBox, viewport)).toBe(true);
 }
 
-async function assertPrimaryCtas(page: Page) {
-  const refresh = page.getByRole("button", { name: /^Refresh/i });
-  const addCoffee = page.getByRole("button", { name: "Add Coffee" });
-  await expect(refresh).toBeVisible();
-  await expect(addCoffee).toBeVisible();
-
-  await expect(refresh).toHaveClass(/c-button-primary/);
-  await expect(addCoffee).toHaveClass(/c-button-primary/);
-}
-
-async function waitForNoticesFullyInViewport(page: Page, notices: Locator[]) {
-  await expect
-    .poll(
-      async () => {
-        const viewport = page.viewportSize();
-        if (!viewport) return false;
-
-        for (const notice of notices) {
-          if (!(await notice.isVisible())) return false;
-          const box = await notice.boundingBox();
-          if (!box || box.width <= 0 || box.height <= 0) return false;
-          if (!isFullyInViewport(box, viewport)) return false;
-        }
-
-        return true;
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-}
-
-async function assertNoticeStackLayout(page: Page) {
-  const viewport = page.viewportSize();
-  expect(viewport).not.toBeNull();
-  if (!viewport) throw new Error("Expected viewport");
-
-  const notices = noticeLocators(page);
-  await waitForNoticesFullyInViewport(page, notices);
-
-  const boxes: LayoutBox[] = [];
-
-  for (const notice of notices) {
-    await expect(notice).toBeVisible();
-    const box = await notice.boundingBox();
-    expect(box).not.toBeNull();
-    if (!box) throw new Error("Expected notice bounding box");
-    expect(box.width).toBeGreaterThan(0);
-    expect(box.height).toBeGreaterThan(0);
-    expect(isFullyInViewport(box, viewport)).toBe(true);
-    boxes.push(box);
-  }
-
-  expect(boxes.length).toBeGreaterThanOrEqual(2);
-
-  for (let i = 0; i < boxes.length; i += 1) {
-    for (let j = i + 1; j < boxes.length; j += 1) {
-      expect(boxesIntersect(boxes[i], boxes[j])).toBe(false);
-    }
-  }
-
-  const [updateBox, firstEventBox] = boxes;
-  expect(updateBox.y + updateBox.height).toBeLessThanOrEqual(
-    firstEventBox.y - MIN_NOTICE_GAP_PX + 1,
-  );
-  expect(verticalGapPx(updateBox, firstEventBox)).toBeGreaterThanOrEqual(
-    MIN_NOTICE_GAP_PX,
-  );
-}
-
-test.describe("bottom notice stack", () => {
+test.describe("bottom notice queue", () => {
   test.describe.configure({ mode: "serial" });
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto("about:blank");
-  });
-
-  test("1280px anchors notices bottom-left with primary CTAs and no overlap", async ({
+  test("1280px shows one notice at a time with shared width and typography", async ({
     page,
   }, testInfo) => {
     testInfo.setTimeout(240_000);
     await page.setViewportSize({ width: 1280, height: 900 });
     await prepareSession(page);
-    await openWeekWithNotices(page);
+    await openWeek(page);
 
-    await assertBottomLeftStack(page);
-    await assertPrimaryCtas(page);
-    await assertNoticeStackLayout(page);
+    await showAppUpdateNotice(page);
+    const updateNotice = page.locator('[data-app-update-notice=""]');
+    await expect(updateNotice).toBeVisible({ timeout: 60_000 });
+    await assertSingleNotice(page);
+    await assertNoticeWidth(1280, updateNotice);
+    await assertBottomLeft(page);
+    const updateTypography = await readMessageAndButtonStyle(updateNotice);
 
-    if (process.env.BOTTOM_NOTICE_CAPTURE === "1") {
-      await page.screenshot({
-        path: "/opt/cursor/artifacts/bottom-notice-stack-1280.png",
-        fullPage: false,
-      });
-    }
+    await expect(
+      page.locator('[data-first-event-prompt=""]'),
+    ).not.toBeVisible();
+
+    await updateNotice
+      .getByRole("button", { name: "Dismiss update notice" })
+      .click();
+    await expect(updateNotice).not.toBeVisible({ timeout: 15_000 });
+
+    const firstEvent = page.locator('[data-first-event-prompt=""]');
+    await expect(firstEvent).toBeVisible({ timeout: 60_000 });
+    await assertSingleNotice(page);
+    await assertNoticeWidth(1280, firstEvent);
+
+    const firstEventTypography = await readMessageAndButtonStyle(firstEvent);
+    expect(firstEventTypography.message).toEqual(updateTypography.message);
+    expect(firstEventTypography.button).toEqual(updateTypography.button);
   });
 
-  test("360px anchors notices bottom-left with primary CTAs and no overlap", async ({
+  test("360px shows one notice at a time at full width minus margins", async ({
     page,
   }, testInfo) => {
     testInfo.setTimeout(240_000);
     await page.setViewportSize({ width: 360, height: 740 });
     await prepareSession(page);
-    await openWeekWithNotices(page);
+    await openWeek(page);
 
-    await assertBottomLeftStack(page);
-    await assertPrimaryCtas(page);
-    await assertNoticeStackLayout(page);
+    await showAppUpdateNotice(page);
+    const updateNotice = page.locator('[data-app-update-notice=""]');
+    await expect(updateNotice).toBeVisible({ timeout: 60_000 });
+    await assertSingleNotice(page);
+    await assertNoticeWidth(360, updateNotice);
 
-    if (process.env.BOTTOM_NOTICE_CAPTURE === "1") {
-      await page.screenshot({
-        path: "/opt/cursor/artifacts/bottom-notice-stack-360.png",
-        fullPage: false,
-      });
-    }
+    await updateNotice
+      .getByRole("button", { name: "Dismiss update notice" })
+      .click();
+    const firstEvent = page.locator('[data-first-event-prompt=""]');
+    await expect(firstEvent).toBeVisible({ timeout: 60_000 });
+    await assertSingleNotice(page);
+    await assertNoticeWidth(360, firstEvent);
   });
 });
