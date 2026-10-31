@@ -8,23 +8,33 @@ Native UI XCTest runs only on isolated GitHub Macs. No local desktop takeover.
 
 ## Current package
 
-Branch `test/macos-description-list-persistence`, fixes #4983. New native UI
-regression uses the real Numbered list control, types three items via Enter,
-exits with double Enter, types a normal following paragraph, then saves/reopens.
-It checks exact text, semantic ordered-list state at every saved item and normal
-paragraph state afterward, with a retained screenshot. This fills a UI persistence
-gap beyond existing two-item text-view and representation tests. No production
-behavior changed; acceptance remains unreviewed until actual isolated verification.
+Branch `test/macos-description-bullet-selection`, fixes #5014. New native UI
+regression pastes equivalent rich text with soft breaks, selects only the five
+place lines using real keyboard input, applies Bullet list and saves/reopens.
+It checks exact visible text, preserved preceding literal list text and headings,
+and semantic list state on every selected/nonselected line. Clipboard contents
+are restored in teardown. The lower-level fixture now includes the previously
+omitted sibling paragraph and asserts it is preserved, rather than asserting
+absence of text never present. No production behavior changed or coverage weakened.
+The original source head's normal full native suite and both new regressions
+passed, but strict hit its unchanged 30-minute budget during the UI pass. Strict
+now restores SwiftPM compilation and saves missing compiled test binaries before
+verification, so a later timeout preserves compilation work. Every test still
+executes in the existing serial order; no timeout or assertion changes. The new
+head requires fresh actual native/web verdicts and capture review before acceptance.
 
-Full guest-meet and boot-shell source reviews transferred into inventory. Public
-web hosting/source/bundle checks and literal DOM/meta/script details have narrow
-reviewed exclusions. Native window widths below720 are excluded with the actual
-AppDelegate minimum-size reason. Supported-width geometry, stored sidebar/theme
-initial rendering and native startup performance remain separate unresolved work.
-The report can grow as coarse sources split into behaviors; counts are not parity.
+Ordered-list acceptance from merged #4984 is recorded with actual exact-head
+verification and sampled capture evidence. Supported geometry, stored sidebar/theme
+initial rendering, booking keyboard links, native startup performance and broad
+visual/signed-in/final-build gates remain open. Counts do not establish parity.
 
 ## Verified history, do not repeat
 
+- #4984 merged 2026-10-31T13:28:50Z. Exact e176 native/web strict41142347442
+  PASS/no required skips, normal41142348480 PASS. New screenshot inspected
+  `/tmp/compass-list-e176-shots`: final item and following paragraph visible at
+  the current scroll position; the regression proves full text and each item's
+  persisted semantic list state. No broad visual or signed-in acceptance claim.
 - #4975 merged 2026-10-30T23:02:40Z. Fixed E-then-T title resolution colliding with
   standalone Today. Actual source03f native/web strict41124192953 attempt2 PASS,
   no required checks skipped, logs `/tmp/compass-et-03f-attempt2-strict`.
@@ -51,8 +61,8 @@ propagation of web changes is deferred.
 
 Check usage each wake and before long work; checkpoint at80% of either window or
 sooner in operational memory with branch/head, dirty paths, run IDs, evidence,
-next command and UTC reset times. Latest natural reset: primary4%, weekly46%,
-resets1793417548/1793774272. Reset credits remain unused. Keep the existing active
+next command and UTC reset times. Latest observation: primary6%, weekly48%,
+resets1793469777/1793774272. Reset credits remain unused. Keep the existing active
 30-minute heartbeat in chat01a18a4c-acd8-7791-9819-4f87caa8c156. No verified reset
 trigger or execution guarantee while limited/asleep. Continue on the first eligible
 recurring wake after reset without consuming credits.
