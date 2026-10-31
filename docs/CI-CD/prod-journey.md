@@ -32,6 +32,18 @@ Add `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` to the **production** GitHub
 Environment under the same name as `prod-journey` (copy the value once in the
 GitHub UI; deploy references the secret, it does not embed the coupon id).
 
-The spec completes embedded Checkout with a test card, cancels the subscription
-in Settings, then continues logout/login/delete. Accounts are tagged synthetic
+The spec completes embedded Checkout without a card: production checkout uses
+`payment_method_collection: if_required` with the 100% journey discount, fills
+billing address when Stripe Tax requires it, then submits. It cancels the
+subscription in Settings, continues logout/login, and always deletes the account
+in a `finally` block (including after failures). Accounts are tagged synthetic
 server-side and must not receive welcome email or pollute billing funnels.
+
+After email signup the calendar uses the explore-first trial path: the spec
+opens `?auth=trial` (same as staging signup trial capture), then embedded
+Checkout. Production must deploy `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` so
+synthetic journey inboxes stay on `awaiting_checkout` instead of the staging
+write bypass.
+
+Failed workflow runs upload `e2e/test-results/` for seven days via
+`actions/upload-artifact` (`if: always()`).

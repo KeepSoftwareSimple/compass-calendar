@@ -29,7 +29,7 @@ import { isStripeConfigured } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
 
 /** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
-const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v8-";
+const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v9-";
 
 function syntheticJourneyCheckoutDiscounts(user: {
   email: string;
@@ -244,9 +244,9 @@ export class StripeService {
           client_reference_id: userId,
           line_items: [{ price: getStripePriceId(), quantity: 1 }],
           ...(discounts ? { discounts } : {}),
-          // Card is required to start the trial. Default is `always`, but pin
-          // it so a Dashboard setting cannot silently skip collection.
-          payment_method_collection: "always",
+          // Real checkout always collects a card. Synthetic prod journey uses a
+          // 100% discount and `if_required` so live Stripe never sees test cards.
+          payment_method_collection: discounts ? "if_required" : "always",
           // Stripe Tax is a create-param, not a Dashboard toggle. Because we
           // always pass an existing `customer`, these three go together: the
           // billing address has to be collected and written back to the
