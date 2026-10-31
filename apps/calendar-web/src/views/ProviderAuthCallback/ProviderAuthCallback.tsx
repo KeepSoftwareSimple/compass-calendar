@@ -120,18 +120,15 @@ export function ProviderAuthCallbackView() {
   const completeAuthentication = useCompleteAuthentication();
   const searchParams = new URLSearchParams(location.searchStr);
   const oauthState = searchParams.get("state");
-  const shouldRelay =
-    providerParam &&
-    isSignInProviderKind(providerParam) &&
-    shouldRelayDesktopOAuthCallback(oauthState, false);
+  const signInProvider =
+    providerParam && isSignInProviderKind(providerParam) ? providerParam : null;
+  const shouldRelay = Boolean(
+    signInProvider && shouldRelayDesktopOAuthCallback(oauthState, false),
+  );
 
   useRedirectStaleProviderOAuthReplay(
-    providerParam && isSignInProviderKind(providerParam)
-      ? providerParam
-      : "google",
-    Boolean(
-      providerParam && isSignInProviderKind(providerParam) && !shouldRelay,
-    ),
+    signInProvider ?? "google",
+    Boolean(signInProvider) && !shouldRelay,
   );
 
   useOneShotAuthCallback(() => {
@@ -139,7 +136,7 @@ export function ProviderAuthCallbackView() {
       return;
     }
 
-    if (!providerParam || !isSignInProviderKind(providerParam)) {
+    if (!signInProvider) {
       showErrorToast("We couldn't finish signing you in. Please try again.");
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
       return;
@@ -149,23 +146,23 @@ export function ProviderAuthCallbackView() {
     // is a backstop rather than a fix for a reproduced case, but the failure
     // mode it guards (see `useOneShotAuthCallback`) is unrecoverable.
     completeProviderAuthCallback({
-      provider: providerParam,
+      provider: signInProvider,
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
       search: location.searchStr,
     }).catch(
       reportAuthCallbackCrash({
-        method: providerParam,
+        method: signInProvider,
         errorMessage: PROVIDER_AUTHORIZATION_ERROR_MESSAGE,
         replace: (path) => router.history.replace(path),
       }),
     );
   });
 
-  if (shouldRelay && providerParam && isSignInProviderKind(providerParam)) {
+  if (shouldRelay && signInProvider) {
     return (
       <DesktopOAuthCallbackRelay
-        provider={providerParam}
+        provider={signInProvider}
         search={location.searchStr}
       />
     );

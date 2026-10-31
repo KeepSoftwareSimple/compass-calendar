@@ -6,7 +6,10 @@ import {
   FOOTER_ICON_BUTTON_CLASS,
   SIDEBAR_REFRESH_SLOT_CLASS,
 } from "@web/components/Sidebar/SidebarActions/sidebar-footer.constants";
-import { useReloadAppShortcut } from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
+import {
+  RELOAD_APP_KEYCAPS,
+  useReloadAppShortcut,
+} from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { useSseDegradedSince } from "@web/sse/hooks/useSseDegraded";
 
@@ -50,7 +53,6 @@ export const SidebarRefreshButton: FC = () => {
   const { isUpdateAvailable } = useSharedAppVersionCheck();
 
   const visible = refreshDue || isUpdateAvailable;
-  const description = SIDEBAR_RELOAD_DESCRIPTION;
 
   useReloadAppShortcut(visible);
 
@@ -58,12 +60,12 @@ export const SidebarRefreshButton: FC = () => {
     <div aria-live="polite" className={SIDEBAR_REFRESH_SLOT_CLASS}>
       {visible ? (
         <TooltipWrapper
-          description={description}
+          description={SIDEBAR_RELOAD_DESCRIPTION}
           onClick={reloadLocation}
-          shortcut={["Mod", "R"]}
+          shortcut={[...RELOAD_APP_KEYCAPS]}
         >
           <button
-            aria-label={description}
+            aria-label={SIDEBAR_RELOAD_DESCRIPTION}
             className={FOOTER_ICON_BUTTON_CLASS}
             type="button"
           >

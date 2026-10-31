@@ -5,12 +5,13 @@ import { reloadLocation } from "@web/common/utils/browser/browser-navigation.uti
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { NoticeDismissButton } from "@web/components/BottomNoticeStack/NoticeDismissButton";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
-import { useReloadAppShortcut } from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
+import {
+  RELOAD_APP_KEYCAPS,
+  useReloadAppShortcut,
+} from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
 
 export const APP_UPDATE_TOAST_MESSAGE =
   "Compass just got better. Refresh to update.";
-
-export const APP_UPDATE_RELOAD_SHORTCUT = ["Mod", "R"] as const;
 
 export const APP_UPDATE_REFRESH_LABEL = "Refresh";
 
@@ -36,7 +37,7 @@ export function AppUpdateAvailableToast({ toastId }: { toastId: Id }) {
         onClick={() => {
           reloadLocation();
         }}
-        shortcutKeys={[...APP_UPDATE_RELOAD_SHORTCUT]}
+        shortcutKeys={[...RELOAD_APP_KEYCAPS]}
       >
         {APP_UPDATE_REFRESH_LABEL}
       </NoticePrimaryButton>
