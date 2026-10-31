@@ -85,21 +85,25 @@ public struct RootView: View {
             )
         }
         .overlay(alignment: .bottomLeading) {
-            VStack(alignment: .leading, spacing: 12) {
-                if model.desktopUpdateReadyVersion != nil {
-                    DesktopUpdateReadyBannerView {
-                        model.onDesktopRestartToUpdate?()
+            Group {
+                if !model.suppressBottomNotices {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if model.desktopUpdateReadyVersion != nil {
+                            DesktopUpdateReadyBannerView {
+                                model.onDesktopRestartToUpdate?()
+                            }
+                            .noticeFocusRing(model.focusedNotice == .updateReady)
+                        }
+                        if model.viewStore.view != .life {
+                            UpNextBanner(
+                                model: model,
+                                onOpen: { model.openUpNextEvent() },
+                                onJoin: { model.joinUpNextMeeting() },
+                                onBannerShown: { event in
+                                    model.upNextBannerShown(event)
+                                })
+                        }
                     }
-                    .noticeFocusRing(model.focusedNotice == .updateReady)
-                }
-                if model.viewStore.view != .life {
-                    UpNextBanner(
-                        model: model,
-                        onOpen: { model.openUpNextEvent() },
-                        onJoin: { model.joinUpNextMeeting() },
-                        onBannerShown: { event in
-                            model.upNextBannerShown(event)
-                        })
                 }
             }
             .padding(.leading, 16)
