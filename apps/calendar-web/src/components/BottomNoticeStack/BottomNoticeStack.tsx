@@ -3,7 +3,6 @@ import { type PropsWithChildren } from "react";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import { BottomNoticeToastHost } from "@web/components/BottomNoticeStack/BottomNoticeToastHost";
 import { useFlushPendingShellToast } from "@web/components/BottomNoticeStack/useFlushPendingShellToast";
-import { useIsNarrowSidebarLayout } from "@web/components/Sidebar/hooks/useIsNarrowSidebarLayout";
 import {
   selectIsSidebarOpen,
   useViewStore,
@@ -11,9 +10,11 @@ import {
 
 /** Bottom-left stack for react-toastify and floating notice cards. */
 export function BottomNoticeStack({ children }: PropsWithChildren) {
-  const isNarrowLayout = useIsNarrowSidebarLayout();
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
-  const clearsSidebarFooter = !isNarrowLayout && isSidebarOpen;
+  // Lift cards and toasts above the sidebar footer whenever the panel is open.
+  // On narrow viewports the stack spans nearly the full width, so leaving it
+  // at the default bottom inset covers footer actions and blocks pointer hits.
+  const clearsSidebarFooter = isSidebarOpen;
   useFlushPendingShellToast();
 
   return (
