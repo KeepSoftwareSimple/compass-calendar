@@ -14,8 +14,11 @@ booking links. Real keyboard word selection must reach each link, expose its
 full destination help and preserve HTML. It never activates external URLs.
 Native caret selection is a platform-specific keyboard path; separate tabbable
 AX elements, focus-ring visual review, full UI and signed-in evidence stay open.
-Do not run this AppKit test locally. Inspect isolated normal package test results
-first, diagnose failures, then exact-head native/web strict before ready/queue.
+The initial isolated package run confirmed both named links lacked destination
+help; keyboard selection, destinations, focus and unchanged HTML passed. The
+shared native link renderer now assigns full destination tooltips. Keep the
+regression unchanged and require new exact-head native/web strict before ready/queue.
+Do not run this AppKit test locally.
 Existing description Tab routing and cancellation/clipboard tests are untouched.
 
 Accounting PR #5020 merged 2026-10-31T18:16:32Z with exact0e0 native/web strict
