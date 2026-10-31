@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   ensureSidebarOpen,
   prepareCalendarPage,
+  waitForWeekEventsLoaded,
 } from "../utils/event-test-utils";
 
 test("u returns focus from the month picker to the grid", async ({ page }) => {
@@ -13,11 +14,40 @@ test("u returns focus from the month picker to the grid", async ({ page }) => {
 
   const pickerDay = page.locator('.react-datepicker__day[tabindex="0"]');
   await expect(pickerDay).toBeFocused();
+  await expect(
+    page.locator(
+      '.c-month-picker[data-picker-unit="week"] .react-datepicker__week:has(.react-datepicker__day:focus)',
+    ),
+  ).toBeVisible();
 
   await page.keyboard.press("u");
 
   await expect(pickerDay).not.toBeFocused();
   await expect(page.locator("#mainGrid")).toBeFocused();
+  await expect(page.getByTestId("grid-focus-indicator")).toBeVisible();
+});
+
+test("week picker and grid focus rings stay visible after keyboard focus", async ({
+  page,
+}) => {
+  await prepareCalendarPage(page);
+  await ensureSidebarOpen(page);
+  await waitForWeekEventsLoaded(page);
+
+  await page.locator("#mainGrid").focus();
+  await page.keyboard.press("i");
+  await expect(
+    page.locator('.react-datepicker__day[tabindex="0"]'),
+  ).toBeFocused();
+  await expect(
+    page.locator(
+      '.c-month-picker[data-picker-unit="week"] .react-datepicker__week:has(.react-datepicker__day:focus)',
+    ),
+  ).toBeVisible();
+
+  await page.keyboard.press("u");
+  await expect(page.locator("#mainGrid")).toBeFocused();
+  await expect(page.getByTestId("grid-focus-indicator")).toBeVisible();
 });
 
 test("life view i focuses the birth date field and u returns to the grid", async ({
