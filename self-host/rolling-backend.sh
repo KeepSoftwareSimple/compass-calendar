@@ -35,38 +35,11 @@ recreate_api_proxy() {
   compose up -d --force-recreate --no-deps api-proxy >/dev/null 2>&1
 }
 
-api_proxy_nginx_checksum() {
-  md5sum "$INSTALL_DIR/api-proxy/nginx.conf" 2>/dev/null | awk '{print $1}'
-}
-
-api_proxy_running_nginx_checksum() {
-  compose exec -T api-proxy sh -c \
-    'md5sum /etc/nginx/nginx.conf 2>/dev/null' | awk '{print $1}'
-}
-
-api_proxy_bind_mount_stale() {
-  if ! api_proxy_running; then
-    return 0
-  fi
-  host_sum=$(api_proxy_nginx_checksum) || return 0
-  running_sum=$(api_proxy_running_nginx_checksum) || return 0
-  [ -n "$host_sum" ] && [ -n "$running_sum" ] && [ "$host_sum" != "$running_sum" ]
-}
-
 # Deploy replaces ~/compass/api-proxy/ as a whole directory. Docker keeps serving
 # the old bind-mounted nginx.conf from the replaced inode until api-proxy is
 # recreated, so reload alone cannot apply resolver-based upstream switching.
 sync_api_proxy_after_deploy() {
-  if api_proxy_bind_mount_stale; then
-    cutover_log "recreating api-proxy (bind mount out of date with deploy dir)"
-    recreate_api_proxy || return 1
-    return 0
-  fi
-  if api_proxy_running; then
-    cutover_log "api-proxy config matches deploy dir, reloading instead of recreate"
-    reload_api_proxy || return 1
-    return 0
-  fi
+  cutover_log "recreating api-proxy so bind mounts match deploy dir"
   recreate_api_proxy || return 1
 }
 
@@ -290,11 +263,12 @@ rolling_backend_update() {
 
   cutover_log "switching api-proxy upstream ${active} -> ${inactive}"
   write_upstream_for_slot "$inactive"
-  reload_api_proxy_for_cutover || return 1
+  cutover_log "recreating api-proxy to apply upstream ${active} -> ${inactive}"
+  recreate_api_proxy || return 1
 
   if ! wait_for_proxy_health_stable; then
     write_upstream_for_slot "$active"
-    reload_api_proxy_for_cutover || true
+    recreate_api_proxy >/dev/null 2>&1 || reload_api_proxy_for_cutover || true
     compose stop -t 10 "backend-$inactive" >/dev/null 2>&1 || true
     cutover_log "rollback active_slot=${active} after unstable proxy health"
     return 1

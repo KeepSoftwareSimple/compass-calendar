@@ -39,10 +39,10 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
 
-      - name: Check out deploy overlay from workflow ref
+      - name: Check out deploy overlay from release tag
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || inputs.tag }}
           sparse-checkout: |
             self-host
             apps/booking-web/Dockerfile

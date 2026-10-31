@@ -653,9 +653,12 @@ describe("staging deploy workflow", () => {
     expect(workflow).toContain('NODE_ENV="staging"');
   });
 
-  it("copies self-host orchestration from the workflow ref instead of curling raw GitHub", () => {
+  it("copies self-host orchestration from the release tag instead of curling raw GitHub", () => {
     const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
 
+    expect(workflow).toContain(
+      "ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || inputs.tag }}",
+    );
     expect(workflow).toContain("path: deploy-overlay");
     expect(workflow).toContain("apps/booking-web/Dockerfile");
     expect(workflow).toContain(
@@ -894,8 +897,9 @@ describe("staging deploy workflow", () => {
     expect(rolling).toContain("--force-recreate --no-deps api-proxy");
     expect(rolling).toContain("wait_for_proxy_health_stable");
     expect(rolling).toContain(
-      "api-proxy config matches deploy dir, reloading instead of recreate",
+      "recreating api-proxy so bind mounts match deploy dir",
     );
+    expect(rolling).toContain("recreating api-proxy to apply upstream");
     expect(rolling).toContain("reload_api_proxy_for_cutover");
     expect(rolling).toContain("compass-backend-cutover:");
     expect(rolling).toContain("stopping backend-");
