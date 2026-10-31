@@ -189,6 +189,66 @@ describe("refreshConnectionState", () => {
     );
   });
 
+  it("uses the older of event sync and calendar-list sync for lastSyncedAt", async () => {
+    const connection = await seedImportingConnection();
+    const calendar = await calendars.upsertByProviderCalendar({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      providerCalendarId: "primary@example.com" as ProviderCalendarSourceId,
+      displayName: "Primary",
+      color: "#fff",
+      active: true,
+      primary: true,
+      accessRole: "owner",
+      capabilities: {
+        canReadEvents: true,
+        canWriteEvents: true,
+        canReadBusy: true,
+        canInviteAttendees: true,
+      },
+      eventLabels: [],
+      createsGoogleMeet: true,
+    });
+    const listResource = await resources.ensure({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceKind: "calendarList",
+      calendarId: null,
+    });
+    await resources.advanceCursor(
+      connection.tenantId,
+      connection.principalId,
+      listResource._id,
+      "list-cursor",
+      new Date("2026-07-10T00:00:00.000Z"),
+    );
+    const eventsResource = await resources.ensure({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceKind: "events",
+      calendarId: calendar._id as ProviderCalendarId,
+    });
+    await resources.advanceCursor(
+      connection.tenantId,
+      connection.principalId,
+      eventsResource._id,
+      "events-cursor",
+      new Date("2026-07-11T00:00:00.000Z"),
+    );
+    await resources.setBootstrapState(
+      connection.tenantId,
+      connection.principalId,
+      eventsResource._id,
+      "ready",
+    );
+
+    const after = await refreshConnectionState(deps(), connection);
+    expect(after.lastSyncedAt).toEqual(new Date("2026-07-10T00:00:00.000Z"));
+  });
+
   it("persists a newer lastSyncedAt without a connection invalidation once already healthy", async () => {
     const connection = await seedImportingConnection();
     const calendar = await calendars.upsertByProviderCalendar({
@@ -263,6 +323,13 @@ describe("refreshConnectionState", () => {
       connection.principalId,
       eventsResource._id,
       "events-cursor",
+      new Date("2026-07-11T00:01:00.000Z"),
+    );
+    await resources.advanceCursor(
+      connection.tenantId,
+      connection.principalId,
+      listResource._id,
+      "list-cursor",
       new Date("2026-07-11T00:01:00.000Z"),
     );
     const later = await refreshConnectionState(withInvalidations, healthy);

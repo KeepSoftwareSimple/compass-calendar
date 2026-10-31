@@ -7,7 +7,16 @@ import { isRealMouseClick } from "@web/shortcuts/pointer-intent/real-mouse-click
 export const calendarRowDisplayName = (
   calendar: Calendar,
   label?: string,
-): string => label ?? (calendar.isPrimary ? "primary" : calendar.name);
+): string => {
+  if (label) return label;
+  if (!calendar.isPrimary) return calendar.name;
+  const normalizedName = calendar.name.trim().toLowerCase();
+  const normalizedEmail = calendar.accountEmail?.trim().toLowerCase();
+  if (normalizedEmail && normalizedName === normalizedEmail) {
+    return "primary";
+  }
+  return calendar.name;
+};
 
 export const CalendarRow: FC<{
   calendar: Calendar;

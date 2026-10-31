@@ -8,11 +8,32 @@ import {
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
-import { CalendarRow } from "./CalendarRow";
+import { CalendarRow, calendarRowDisplayName } from "./CalendarRow";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const track = mock();
 mockModuleForFile("@web/auth/posthog/track", trackModule, { track });
+
+describe("calendarRowDisplayName", () => {
+  it("keeps Microsoft's default Calendar title under the account heading", () => {
+    const calendar = createMockCalendar({
+      name: "Calendar",
+      isPrimary: true,
+      accountEmail: "user@outlook.com",
+      provider: "microsoft",
+    });
+    expect(calendarRowDisplayName(calendar)).toBe("Calendar");
+  });
+
+  it("relabels a primary calendar whose name matches the account email", () => {
+    const calendar = createMockCalendar({
+      name: "ahab@pequod.com",
+      isPrimary: true,
+      accountEmail: "ahab@pequod.com",
+    });
+    expect(calendarRowDisplayName(calendar)).toBe("primary");
+  });
+});
 
 describe("CalendarRow pointer teach", () => {
   beforeEach(() => {

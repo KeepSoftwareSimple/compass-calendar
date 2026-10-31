@@ -490,22 +490,21 @@ test("sidebar lists calendars, toggles visibility in localStorage, and shows car
   const sidebar = page.locator("#sidebar");
   const grid = page.locator("#mainGrid");
 
-  // One connected Google account: its section heading is the account email,
-  // and the primary calendar's own name (which duplicates it) is replaced
-  // by a "primary" row. Scope to that region so a Compass-email bucket for
-  // leftover ungrouped rows cannot collide under strict mode.
+  // One connected Google account: its section heading is the account email.
+  // The primary row reads "primary" only when the calendar name equals that
+  // email; otherwise the real calendar name is shown under the heading.
   const googleSection = sidebar.getByRole("region", {
     name: `Calendars for ${GOOGLE_ACCOUNT_EMAIL} (Google)`,
   });
   await expect(
     googleSection.getByRole("heading", { name: GOOGLE_ACCOUNT_EMAIL }),
   ).toBeVisible();
-  await expect(
-    googleSection.getByText("primary", { exact: true }),
-  ).toBeVisible();
+  await expect(googleSection.getByText("primary", { exact: true })).toHaveCount(
+    0,
+  );
   await expect(
     googleSection.getByText(CALENDAR_A_NAME, { exact: true }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   await expect(
     googleSection.getByText(CALENDAR_B_NAME, { exact: true }),
   ).toBeVisible();
@@ -847,13 +846,13 @@ test("sidebar lists a Microsoft calendar under its account heading", async ({
   ).toBeVisible();
   await expect(
     microsoftSection.getByText("primary", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    microsoftSection.getByText(CALENDAR_MS_NAME, { exact: true }),
   ).toHaveCount(0);
   await expect(
+    microsoftSection.getByText(CALENDAR_MS_NAME, { exact: true }),
+  ).toBeVisible();
+  await expect(
     microsoftSection.getByRole("button", {
-      name: /^(Show|Hide) primary calendar$/,
+      name: new RegExp(`^(Show|Hide) ${CALENDAR_MS_NAME} calendar$`),
     }),
   ).toBeVisible();
 });

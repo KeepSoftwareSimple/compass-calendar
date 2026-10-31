@@ -3,6 +3,7 @@ import {
   type TenantId,
   TenantIdSchema,
 } from "@core/types/sync/identity.contracts";
+import { FOREGROUND_CALENDAR_LIST_STALE_AFTER_MS } from "@sync/domain/calendar-list-rediscovery.constants";
 import {
   calendarListSyncJob,
   JOB_PRIORITY,
@@ -29,7 +30,10 @@ export interface ConnectionRefreshDeps {
 }
 
 export interface ForegroundRefreshDeps {
-  resources: Pick<SyncResourceRepository, "listStaleEventsByPrincipal">;
+  resources: Pick<
+    SyncResourceRepository,
+    "listStaleEventsByPrincipal" | "listByConnection" | "clearSyncCursor"
+  >;
   jobs: Pick<JobRepository, "enqueueForeground">;
   connections: Pick<ProviderConnectionRepository, "listByPrincipal">;
 }
@@ -112,17 +116,35 @@ export async function refreshPrincipalCalendars(
 
   // Re-run calendar-list discovery per connection so a Refresh heals
   // resource-less calendars (discovery creates the missing events resource
-  // and enqueues its import). Coalesced per connection at user priority.
+  // and enqueues its import). Clear the stored incremental cursor first so
+  // this pass full-lists (Google incremental tokens can miss a brand-new
+  // calendar; Microsoft has no list delta but shares the same fullList gate
+  // for retirement). Coalesced per connection at user priority.
   await Promise.all(
-    connectionIds.map((connectionId) =>
-      deps.jobs.enqueueUrgent(
+    connectionIds.map(async (connectionId) => {
+      const connectionResources = await deps.resources.listByConnection(
+        tenantId,
+        principalId,
+        connectionId,
+      );
+      const calendarList = connectionResources.find(
+        (resource) => resource.resourceKind === "calendarList",
+      );
+      if (calendarList) {
+        await deps.resources.clearSyncCursor(
+          tenantId,
+          principalId,
+          calendarList._id,
+        );
+      }
+      await deps.jobs.enqueueUrgent(
         calendarListSyncJob(
           { tenantId, principalId, connectionId },
           runAfter,
           JOB_PRIORITY.user,
         ),
-      ),
-    ),
+      );
+    }),
   );
 
   const outcomes = await Promise.all(
@@ -142,8 +164,9 @@ export async function refreshPrincipalCalendars(
 /**
  * Bound staleness for a principal actively viewing Compass when a Google push
  * notification is lost. Unlike the manual refresh path this only touches
- * ready resources that have not recently attempted a pull; it deliberately
- * does not rediscover calendars or revive failed jobs every foreground tick.
+ * ready resources that have not recently attempted a pull. Also re-lists
+ * calendar lists that have not had a full enumeration recently so Microsoft
+ * accounts pick up new folders while the tab stays open (no Graph list watch).
  */
 export async function refreshStalePrincipalCalendars(
   deps: ForegroundRefreshDeps,
@@ -152,6 +175,7 @@ export async function refreshStalePrincipalCalendars(
   staleBefore: Date,
   now: () => Date = () => new Date(),
 ): Promise<ConnectionRefreshTally> {
+  const at = now();
   const [candidates, connections] = await Promise.all([
     deps.resources.listStaleEventsByPrincipal(
       tenantId,
@@ -160,18 +184,54 @@ export async function refreshStalePrincipalCalendars(
     ),
     deps.connections.listByPrincipal(tenantId, principalId),
   ]);
+  const refreshableConnections = connections.filter(
+    (connection) =>
+      connection.state === "healthy" || connection.state === "delayed",
+  );
   const refreshableConnectionIds = new Set(
-    connections
-      .filter(
-        (connection) =>
-          connection.state === "healthy" || connection.state === "delayed",
-      )
-      .map((connection) => connection._id),
+    refreshableConnections.map((connection) => connection._id),
   );
   const resources = candidates.filter((resource) =>
     refreshableConnectionIds.has(resource.connectionId),
   );
-  const runAfter = now();
+  const runAfter = at;
+  const listStaleBefore = new Date(
+    at.getTime() - FOREGROUND_CALENDAR_LIST_STALE_AFTER_MS,
+  );
+  await Promise.all(
+    refreshableConnections.map(async (connection) => {
+      const connectionResources = await deps.resources.listByConnection(
+        tenantId,
+        principalId,
+        connection._id,
+      );
+      const calendarList = connectionResources.find(
+        (resource) => resource.resourceKind === "calendarList",
+      );
+      const needsList =
+        !calendarList?.lastFullListAt ||
+        calendarList.lastFullListAt < listStaleBefore;
+      if (!needsList) return;
+      if (calendarList) {
+        await deps.resources.clearSyncCursor(
+          tenantId,
+          principalId,
+          calendarList._id,
+        );
+      }
+      // One coalescingKey per connection (`calendarListSync:<connectionId>`),
+      // so duplicate foreground ticks, backend replicas, or many tabs on the
+      // same account share a single pending/in-flight list job instead of
+      // multiplying Graph/Google list calls.
+      await deps.jobs.enqueueForeground(
+        calendarListSyncJob(
+          { tenantId, principalId, connectionId: connection._id },
+          runAfter,
+          JOB_PRIORITY.user,
+        ),
+      );
+    }),
+  );
   const tally: ConnectionRefreshTally = {
     ...emptyTally(),
     resources: resources.length,
