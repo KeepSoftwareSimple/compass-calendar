@@ -122,8 +122,10 @@ describe("SidebarActions", () => {
     const { container } = render(<SidebarActions sections={[]} />, { wrapper });
 
     const footer = container.firstElementChild;
-    expect(footer?.childElementCount).toBe(5);
-    expect(footer?.className).not.toContain("justify-between");
+    const group = footer?.firstElementChild;
+    expect(group?.childElementCount).toBe(5);
+    expect(group?.className).not.toContain("justify-between");
+    expect(group?.className).not.toContain("flex-1");
 
     const labels = screen
       .getAllByRole("button")
