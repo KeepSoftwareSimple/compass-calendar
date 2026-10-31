@@ -1,6 +1,8 @@
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import {
   connectCalendarPromptActions,
   resetConnectCalendarPromptStoreForTests,
+  selectConnectCalendarPromptSurfaceEligible,
 } from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
@@ -19,6 +21,33 @@ mock.module("@web/auth/posthog/posthog.bootstrap", () => ({
 
 afterAll(() => {
   isClientMocked = false;
+});
+
+describe("selectConnectCalendarPromptSurfaceEligible", () => {
+  const base = {
+    authenticated: true,
+    metadataStatus: "loaded" as const,
+    connectionCount: 0,
+    isSnoozed: false,
+    availableProviderCount: 2,
+    storageAvailable: true,
+    isAuthModalOpen: false,
+    isSettingsOpen: false,
+    isAboutOpen: false,
+    isAppleFormOpen: false,
+    isMissingPermissionsOpen: false,
+  };
+
+  it("waits until the first-event onboarding step finishes", () => {
+    persistentBrowserStore.remove("compass.onboarding.first-event-done");
+    expect(selectConnectCalendarPromptSurfaceEligible(base)).toBe(false);
+    persistentBrowserStore.set(
+      "compass.onboarding.first-event-done",
+      "dismissed",
+    );
+    expect(selectConnectCalendarPromptSurfaceEligible(base)).toBe(true);
+    persistentBrowserStore.remove("compass.onboarding.first-event-done");
+  });
 });
 
 describe("connect calendar prompt analytics", () => {
