@@ -11,6 +11,7 @@ import {
   BillingSubscriptionResponseSchema,
 } from "@core/types/billing.types";
 import { zObjectId } from "@core/types/object-id.schema";
+import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import {
   BillingHttpError,
   logBillingHttpError,
@@ -31,7 +32,7 @@ const sendBillingError = (res: Response, e: unknown) => {
     res.status(Status.NOT_FOUND).json({ error: "User not found" });
     return;
   }
-  logger.error(message, e);
+  logMongoNetworkError(logger, "Billing request failed", e);
   res.status(Status.INTERNAL_SERVER).json({ error: "Internal server error" });
 };
 

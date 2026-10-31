@@ -1,5 +1,6 @@
 import { type Request, type Response } from "express";
 import { Status } from "@core/errors/status.codes";
+import { PostHogExceptionTransport } from "@core/logger/posthog-exception.transport";
 import { type BillingStatusResponse } from "@core/types/billing.types";
 import billingService from "@backend/billing/services/billing.service";
 import billingController from "./billing.controller";
@@ -81,6 +82,36 @@ describe("BillingController", () => {
       Status.INTERNAL_SERVER,
     );
     expect(json).toHaveBeenCalledWith({ error: "Internal server error" });
+  });
+
+  it("keeps a transient Mongo timeout out of exception capture", async () => {
+    const capture = spyOn(
+      PostHogExceptionTransport.prototype,
+      "log",
+    ).mockImplementation((_info, next) => next());
+    const failWith = async (error: Error) => {
+      spyOn(billingService, "getStatus").mockRejectedValue(error);
+      const { res } = jsonRes();
+      await billingController.getStatus(
+        sessionReq("507f1f77bcf86cd799439011"),
+        res,
+      );
+      return res;
+    };
+
+    const res = await failWith(
+      new Error("connection <monitor> to 34.56.108.77:27017 timed out"),
+    );
+    expect((res.status as ReturnType<typeof mock>).mock.calls[0]?.[0]).toBe(
+      Status.INTERNAL_SERVER,
+    );
+    expect(capture).not.toHaveBeenCalled();
+
+    await failWith(new Error("mongo down"));
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture.mock.calls[0]?.[0].message).toBe(
+      "Billing request failed mongo down",
+    );
   });
 
   it("maps BillingHttpError to its status and client message", async () => {

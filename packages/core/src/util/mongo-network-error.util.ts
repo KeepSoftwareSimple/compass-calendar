@@ -25,6 +25,12 @@ const TRANSIENT_MONGO_MESSAGE_PATTERNS = [
   // Driver: "connection 15 to 35.193.60.195:27017 closed" — match even when
   // the MongoNetworkError name is stripped by wrapping/serialization.
   /connection \d+ to \S+ closed/i,
+  // Driver: "connection <monitor> to 34.56.108.77:27017 timed out" from the
+  // server monitor heartbeat. The host varies per Atlas node.
+  /connection (\d+|<monitor>) to \S+ timed out/i,
+  // Driver: MongoNetworkTimeoutError "Socket 'secureConnect' timed out after
+  // 30006ms (connectTimeoutMS: 30000)" when a new connection cannot connect.
+  /socket '\w+' timed out/i,
   // Connection pool checkout timeout under CSOT: MongoOperationTimeoutError
   // wraps "Timed out during connection checkout" around a
   // MongoWaitQueueTimeoutError cause of "Timed out while checking out a
@@ -42,17 +48,19 @@ type MongoNetworkLogger = {
 };
 
 /** Transient Atlas/network blips stay at warn so they do not open a PostHog
- * exception alert (error-level only). Durable failures still page. */
+ * exception alert (error-level only). Durable failures still page. `meta`
+ * lets a caller log a redacted form while `error` is still classified. */
 export function logMongoNetworkError(
   logger: MongoNetworkLogger,
   message: string,
   error: unknown,
+  meta: unknown = error,
 ): void {
   if (isTransientMongoNetworkError(error)) {
-    logger.warn(message, error);
+    logger.warn(message, meta);
     return;
   }
-  logger.error(message, error);
+  logger.error(message, meta);
 }
 
 export function isTransientMongoNetworkError(error: unknown): boolean {
