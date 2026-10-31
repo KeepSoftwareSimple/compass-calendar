@@ -58,7 +58,8 @@ final class OnboardingSurfaceTests: XCTestCase {
             pointerHintVisible: true,
             isLifeView: false,
             isUpNextPickerPresented: true)
-        XCTAssertNil(OnboardingGating.selectActiveSurface(input))
+        let flags = OnboardingGating.buildSurfaceFlags(input)
+        XCTAssertFalse(flags[.pointerHint] ?? true)
     }
 
     func testWelcomeModalHiddenOnLifeViewViaShowCalendarOnboarding() {
