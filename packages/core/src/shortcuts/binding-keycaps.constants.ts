@@ -18,7 +18,10 @@ export const EVENT_FORM_TOGGLE_ALL_DAY_KEYCAPS = ["Mod", "Alt", "a"] as const;
 /** Max keycaps in a single modifier chord shown in the legend (Mod/Alt/Shift + key). */
 export const MOD_CHORD_MAX_KEYCAPS = 3 as const;
 
-export const EVENT_MENU_LETTER = "m";
+/** Opens the focused event's context menu. `.` keeps bare `m` for Monday jumps. */
+export const EVENT_MENU_LETTER = ".";
+/** Sidebar meeting-page nudge CTA. `/` matches meet URLs; frees `m` for Monday. */
+export const MEETING_PAGE_NUDGE_LETTER = "/";
 export const HIDE_EVENT_LETTER = "x";
 export const FOCUS_NOTICE_LETTER = "p";
 

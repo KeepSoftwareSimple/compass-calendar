@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { MEETING_PAGE_NUDGE_LETTER } from "@core/shortcuts/binding-keycaps.constants";
 import { hasAnyModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { isEventJumpActive } from "@web/shortcuts/shift-hint/event-jump.store";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
@@ -23,8 +24,9 @@ export const CONNECTION_BANNER_SHORTCUT_KEY = "G" as const;
  * key is its only way off the screen. */
 export const DEMO_EVENTS_BANNER_SHORTCUT_KEY = "O" as const;
 
-/** Sidebar meeting-page nudge CTA. `M` as in Meeting page. */
-export const MEETING_PAGE_NUDGE_SHORTCUT_KEY = "M" as const;
+/** Sidebar meeting-page nudge CTA. See {@link MEETING_PAGE_NUDGE_LETTER}. */
+export const MEETING_PAGE_NUDGE_SHORTCUT_KEY =
+  MEETING_PAGE_NUDGE_LETTER as typeof MEETING_PAGE_NUDGE_LETTER;
 
 /** "Meeting link added" toast CTA. `L` as in Link. Bare `l` is also the
  * Life view, bound on keyup, so the handler swallows the release. */

@@ -5,7 +5,7 @@
  * remap here propagates to the real handlers, the showcase, and its hint
  * chips in one edit. Bindings come in four shapes because the app has four
  * dispatch styles: tanstack hotkey strings, the bespoke `e`… sequence engine,
- * bare-letter capture listeners (`f`, `p`, `m`), and the hold-Mod + digit-chord
+ * bare-letter capture listeners (`f`, `p`, `.`), and the hold-Mod + digit-chord
  * engine (`jumpFormField`).
  *
  * Only taught bindings live here — this is not a registry of every shortcut.
