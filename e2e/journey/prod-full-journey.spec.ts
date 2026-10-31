@@ -14,9 +14,11 @@ import {
   logInJourneyAccount,
   logOutOfJourneyAccount,
   openJourneySettings,
+  openJourneyTrialStep,
   seedJourneyOnboarding,
   signUpJourneyAccount,
   uniqueJourneyEmail,
+  waitForJourneySignUpComplete,
 } from "./journey-leg.util";
 
 const provider = journeyProvider("PROD");
@@ -59,11 +61,13 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
     email: uniqueEmail,
     password,
   });
+  await waitForJourneySignUpComplete(page);
 
-  const trialDialog = page.getByRole("dialog", {
-    name: "Start your 7-day free trial",
+  const trialDialog = await openJourneyTrialStep(page);
+  await trialDialog.getByRole("button", { name: "Start free trial" }).click();
+  await expect(trialDialog.getByRole("button", { name: "Back" })).toBeVisible({
+    timeout: 120_000,
   });
-  await expect(trialDialog).toBeVisible({ timeout: 120_000 });
 
   await expect
     .poll(() => checkoutClientSecret.length > 0, { timeout: 120_000 })
@@ -72,13 +76,13 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
   const stripeFrame = page
     .frameLocator('iframe[name*="stripe"], iframe[src*="stripe"]')
     .first();
-  await stripeFrame.locator("input").first().waitFor({ timeout: 120_000 });
   await stripeFrame.getByLabel("Card number").fill("4242424242424242");
   await stripeFrame.getByLabel("Expiration").fill("12/34");
   await stripeFrame.getByLabel("CVC").fill("123");
   await stripeFrame.getByLabel("ZIP").fill("80202");
-
-  await page.getByRole("button", { name: "Start free trial" }).click();
+  await stripeFrame.getByTestId("hosted-payment-submit-button").click({
+    timeout: 120_000,
+  });
   await expect(trialDialog).toBeHidden({ timeout: 180_000 });
 
   const createdTitle = createEventTitle("Prod journey create");

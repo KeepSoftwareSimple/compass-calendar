@@ -28,3 +28,17 @@ export function isSyntheticAccount(
   if (!email) return false;
   return isBillingAutomationBypassEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
 }
+
+/**
+ * Synthetic journey inboxes normally report as `active` so staging legs can
+ * mutate without Stripe. When `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` is set,
+ * prod journey must stay on `awaiting_checkout` until embedded Checkout runs.
+ */
+export function shouldBypassBillingStatusForSynthetic(
+  email: string | undefined,
+  isSynthetic?: boolean,
+): boolean {
+  if (!isSyntheticAccount(email, isSynthetic)) return false;
+  if (CONFIG.STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID) return false;
+  return true;
+}

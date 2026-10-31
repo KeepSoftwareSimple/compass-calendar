@@ -35,3 +35,9 @@ GitHub UI; deploy references the secret, it does not embed the coupon id).
 The spec completes embedded Checkout with a test card, cancels the subscription
 in Settings, then continues logout/login/delete. Accounts are tagged synthetic
 server-side and must not receive welcome email or pollute billing funnels.
+
+After email signup the calendar uses the explore-first trial path: the spec
+opens `?auth=trial` (same as staging signup trial capture), then embedded
+Checkout. Production must deploy `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` so
+synthetic journey inboxes stay on `awaiting_checkout` instead of the staging
+write bypass.

@@ -99,6 +99,22 @@ export const signUpJourneyAccount = async (
   await page.getByRole("button", { name: "Sign up" }).click();
 };
 
+/** Signup closes the auth modal; the trial step is opened explicitly via URL. */
+export const waitForJourneySignUpComplete = async (page: Page) => {
+  await expect(page.getByLabel("Password")).toHaveCount(0, {
+    timeout: 120_000,
+  });
+};
+
+export const openJourneyTrialStep = async (page: Page) => {
+  await page.goto("/week?auth=trial", { waitUntil: "domcontentloaded" });
+  const trialDialog = page.getByRole("dialog", {
+    name: "Start your 7-day free trial",
+  });
+  await expect(trialDialog).toBeVisible({ timeout: 120_000 });
+  return trialDialog;
+};
+
 export const logInJourneyAccount = async (
   page: Page,
   { email, password }: { email: string; password: string },
