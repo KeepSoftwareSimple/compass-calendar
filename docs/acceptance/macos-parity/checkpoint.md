@@ -8,22 +8,22 @@ Native UI XCTest runs only on isolated GitHub Macs. No local desktop takeover.
 
 ## Current package
 
-Branch `chore/macos-parity-reviewed-behaviors`: records selected-bullet acceptance
-from merged #5015 with actual exact084 native/web strict PASS, normal full-suite
-PASS and inspected sampled capture. All broad gates remain open.
+Branch `test/macos-booking-link-accessibility`, fixes #5026. New isolated AppKit
+integration regression creates a real window and rich editor with both named
+booking links. Real keyboard word selection must reach each link, expose its
+full destination help and preserve HTML. It never activates external URLs.
+Native caret selection is a platform-specific keyboard path; separate tabbable
+AX elements, focus-ring visual review, full UI and signed-in evidence stay open.
+The initial isolated package run confirmed both named links lacked destination
+help; keyboard selection, destinations, focus and unchanged HTML passed. The
+shared native link renderer now assigns full destination tooltips. Keep the
+regression unchanged and require new exact-head native/web strict before ready/queue.
+Do not run this AppKit test locally.
+Existing description Tab routing and cancellation/clipboard tests are untouched.
 
-Completed frozen-source reviews for local-mode trial prompt, initial paint,
-welcome action geometry, welcome body-click/Enter and description links now have
-explicit behavior mappings. Browser first-paint mechanics are narrowly excluded;
-observable native first-frame theme/content/geometry/responsiveness remain open.
-Later web changes to link help/shortcut policy remain deferred. The frozen CTA
-source compares provider/email widths only, not all three actions.
-
-Next inspect real native booking-description link accessibility and responder
-routing before implementing the missing two-link keyboard eligibility/help/focus
-regression. Existing cancellation and clipboard tests do not prove this behavior;
-avoid duplicating them or claiming a product defect from a coverage gap alone.
-No local native UI tests or external link activation.
+Accounting PR #5020 merged 2026-10-31T18:16:32Z with exact0e0 native/web strict
+PASS and no required skips. Five completed frozen source reviews are recorded;
+future web changes remain deferred. All broad gates and parent #4783 stay open.
 
 ## Verified history, do not repeat
 

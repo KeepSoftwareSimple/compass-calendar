@@ -825,10 +825,11 @@
       "behavior": "Cancel and Reschedule description links have keyboard eligibility, visible focus and URL help",
       "web": ["e2e/event-form/description-booking-links.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassUITests/DescriptionLinkCopyShortcutTests.swift#testExportedShortcutCopiesAPastedDescriptionLink"
+        "apps/calendar-macos/CompassUITests/DescriptionLinkCopyShortcutTests.swift#testExportedShortcutCopiesAPastedDescriptionLink",
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/BookingDescriptionKeyboardTests.swift#testBothBookingLinksSupportKeyboardSelectionAndDestinationHelp"
       ],
       "status": "missing",
-      "reason": "Single pasted-link clipboard test does not assert two-link traversal, names, help or focus. Separate management buttons do not prove description link keyboard behavior.",
+      "reason": "New isolated AppKit integration regression uses a real window/responder and keyboard word selection for both named links, checks full destination help and unchanged HTML. Pending execution. This native caret-selection path does not establish separate tabbable AX links, visible focus-ring review or real signed-in acceptance; those remain missing.",
       "evidence": "",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
@@ -1408,6 +1409,18 @@
       "reason": "Native open callbacks alone do not prove actual focused responder/shortcut routing; use isolated acceptance without real external account actions.",
       "evidence": "",
       "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "booking-named-link-help",
+      "behavior": "Both named booking links retain full destination URL help without changing labels or HTML",
+      "web": ["e2e/event-form/description-booking-links.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/BookingDescriptionKeyboardTests.swift#testBothBookingLinksSupportKeyboardSelectionAndDestinationHelp"
+      ],
+      "status": "failing",
+      "reason": "Initial isolated real-window keyboard regression confirmed nil destination tooltip on both named links; renderer fix pending fresh full verification. Separate tabbable AX/focus-ring and real UI gates stay open.",
+      "evidence": "Exactfd2 normal41230663752 package job124624185637 actual raw log /tmp/compass-booking-fd2-package.log lines10195-10196: only two tooltip assertions fail; keyboard selection/destination/focus/HTML assertions do not fail.",
+      "review": "2026-10-31 agent: frozen booking-description URL title assertion mapped to native tooltip. Minimal general native renderer fix; no test weakening."
     }
   ],
   "gates": {
