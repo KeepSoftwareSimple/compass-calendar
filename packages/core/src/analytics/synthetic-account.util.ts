@@ -90,3 +90,15 @@ export function isSyntheticAccountHeaderValue(
   const trimmed = raw?.trim().toLowerCase();
   return trimmed === "1" || trimmed === "true" || trimmed === "yes";
 }
+
+/** Redact journey plus-address local parts in CI logs. */
+export function redactJourneyEmailForLog(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 0) return "***";
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const plus = local.indexOf("+");
+  const safeLocal =
+    plus >= 0 ? `${local.slice(0, plus)}+***` : `${local.slice(0, 2)}***`;
+  return `${safeLocal}@${domain}`;
+}
