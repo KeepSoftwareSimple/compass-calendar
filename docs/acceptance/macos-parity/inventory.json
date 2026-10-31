@@ -849,11 +849,12 @@
         "e2e/event-form/description-list-editing.spec.ts#description bullet list applies only to the selected lines"
       ],
       "native": [
+        "apps/calendar-macos/CompassUITests/DescriptionBulletSelectionTests.swift#testSelectedPlaceLinesBecomeBulletsWithoutChangingPrecedingTextAfterReopen",
         "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/DescriptionEditorTests.swift#testPartialSelectionBulletsOnlySelectedLinesInHardBreakParagraph"
       ],
-      "status": "missing",
-      "reason": "Native editor unit fixture omits preceding LIST/-Frames and asserts absence, not preservation. It toggles off rather than saving/reopening through the real UI.",
-      "evidence": "",
+      "status": "unreviewed",
+      "reason": "Strengthened lower-level fixture now includes the previously omitted preceding literal list paragraph. Native UI uses equivalent RTF soft line breaks, checks preserved visible text and semantic list/non-list state on every line after reopening. No acceptance pass until exercised.",
+      "evidence": "New #5014 fixture and real UI rich-paste/keyboard-selection/save/reopen regressions, pending exact-head isolated verification.",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
     {
@@ -865,9 +866,9 @@
       "native": [
         "apps/calendar-macos/CompassUITests/DescriptionListPersistenceTests.swift#testNumberedListContinuesExitsAndSurvivesSaveAndReopen"
       ],
-      "status": "unreviewed",
-      "reason": "Uses an existing editable demo event instead of creating the web fixture. Checks exact three-item text, semantic ordered-list state at every saved item, exit to normal paragraph and persisted content; no acceptance pass until exercised.",
-      "evidence": "New #4983 real native toolbar/keyboard/save/reopen regression, pending isolated exact-head native/web verification.",
+      "status": "passing",
+      "reason": "Native uses an existing editable demo event instead of creating the web setup fixture. The same observable three-item continuation, exit, normal paragraph and save/reopen semantics are exercised. Sample capture is not broad visual or real signed-in acceptance.",
+      "evidence": "Merged #4984 exact e1763dd494457d3455477f8d57663c3cba257644 isolated native/web strict41142347442 PASS/no required skips; normal41142348480 PASS. Screenshot inspected /tmp/compass-list-e176-shots, with full text and each item semantic list state independently asserted.",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
     {
