@@ -286,9 +286,10 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       IS_EVENT_SIDEBAR_STAGING_UX && isScheduleLocked;
     const displayTitle = isBusy ? BUSY_EVENT_TITLE : title;
     // Title edits sync into the draft store on every keystroke so the grid chip
-    // stays live, but a store-driven controlled input falls behind when the grid
-    // re-renders under fast typing. Keep the field on local state instead.
-    const [titleInputValue, setTitleInputValue] = useState(displayTitle);
+    // stays live. A controlled value falls behind when deferred store updates
+    // re-render the grid under fast typing, so the field stays uncontrolled
+    // while editable and only mirrors `displayTitle` when it is not focused.
+    const titleInputRef = useRef<HTMLInputElement>(null);
     const [locationInputValue, setLocationInputValue] = useState(
       location ?? "",
     );
@@ -458,6 +459,13 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     }, [draft]);
 
     useEffect(() => {
+      if (isBusy) return;
+      const titleInput = titleInputRef.current;
+      if (!titleInput || document.activeElement === titleInput) return;
+      titleInput.value = displayTitle;
+    }, [displayTitle, isBusy]);
+
+    useEffect(() => {
       if (!showProviderManagedStagingUx) {
         setEventFormProviderManagedFocusGuard(null);
         return;
@@ -492,9 +500,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
      * Handlers
      **********/
     const onChangeTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const nextTitle = e.target.value;
-      flushSync(() => setTitleInputValue(nextTitle));
-      patchDraftFields({ title: nextTitle });
+      patchDraftFields({ title: e.target.value });
     };
 
     const onTitleBlur = () => {
@@ -977,6 +983,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
             <div className="min-w-0">
               <Focusable
                 id={EVENT_FORM_TITLE_ID}
+                ref={titleInputRef}
                 Component="input"
                 className={classNames(
                   INPUT_RESET_CLASSNAME,
@@ -995,7 +1002,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                 aria-invalid={titleError ? true : undefined}
                 aria-describedby={titleErrorDescribedBy}
                 underlineColor={eventColor}
-                value={isBusy ? BUSY_EVENT_TITLE : titleInputValue}
+                {...(isBusy
+                  ? { value: BUSY_EVENT_TITLE }
+                  : { defaultValue: displayTitle })}
                 withUnderline
               />
             </div>
