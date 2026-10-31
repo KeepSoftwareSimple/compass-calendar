@@ -129,6 +129,7 @@ test.describe("bottom notices during auth and onboarding", () => {
     await expect(page.locator("[data-up-next-banner]")).toBeVisible({
       timeout: 15_000,
     });
+    await queueAppUpdateToast(page);
     await expect(
       page.locator(".Toastify__toast.app-update-available-toast-host"),
     ).toBeVisible({ timeout: 15_000 });
