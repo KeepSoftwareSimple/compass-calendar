@@ -103,7 +103,7 @@ describe("ui-focus-region", () => {
     expect(detectLifeUiFocusRegion()).toBe("sidebar");
   });
 
-  it("moves life focus between grid and birth date field", () => {
+  it("moves life focus between grid and birth date field", async () => {
     const main = document.createElement("main");
     main.id = ID_MAIN;
     main.setAttribute("data-page-jump", "life-grid");
@@ -124,6 +124,9 @@ describe("ui-focus-region", () => {
 
     week.focus();
     moveLifeUiFocusRight();
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
     expect(document.activeElement).toBe(birth);
 
     moveLifeUiFocusLeft();

@@ -102,7 +102,10 @@ struct LifeSidebarView: View {
     .onChange(of: model.pendingLifeSidebarFieldFocus) { _, pending in
       guard pending else { return }
       model.pendingLifeSidebarFieldFocus = false
-      focusedField = .birthDate
+      // Defer so the key that opened the sidebar cannot append into the field.
+      DispatchQueue.main.async {
+        focusedField = .birthDate
+      }
     }
     .onChange(of: model.lifeStore.preferences) { _, _ in refreshInputs() }
     .onChange(of: focusedField) { old, _ in

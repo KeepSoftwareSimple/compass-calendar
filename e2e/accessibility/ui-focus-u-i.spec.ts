@@ -34,10 +34,10 @@ test("life view i focuses the birth date field and u returns to the grid", async
     await currentWeek.first().focus();
   }
 
+  const birthDate = page.getByRole("textbox", { name: "Date of birth" });
   await page.keyboard.press("i");
-  await expect(
-    page.getByRole("textbox", { name: "Date of birth" }),
-  ).toBeFocused();
+  await expect(birthDate).toBeFocused();
+  await expect(birthDate).toHaveValue("Jan 1, 2000");
 
   await page.keyboard.press("u");
   if (await currentWeek.count()) {

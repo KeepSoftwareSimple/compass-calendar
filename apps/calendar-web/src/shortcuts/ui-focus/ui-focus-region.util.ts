@@ -15,6 +15,12 @@ import {
   viewActions,
 } from "@web/events/stores/view.store";
 import { getPageJumpFocusElement } from "@web/shortcuts/page-jump/page-jump.targets";
+import {
+  clearUiFocusTextInsertSuppress,
+  markUiFocusTextInsertSuppress,
+  scheduleUiFocusInsertScrub,
+  shouldSuppressUiFocusTextInsert,
+} from "@web/shortcuts/ui-focus/ui-focus-text-insert.util";
 
 /** Horizontal focus regions, left to right, for Day and Week. */
 export type CalendarUiFocusRegion = "grid" | "sidebar" | "eventPanel";
@@ -59,14 +65,53 @@ const focusGridShell = (): boolean => {
   return true;
 };
 
+const stripTrailingShortcutLetter = (
+  input: HTMLInputElement,
+  key: string,
+): void => {
+  if (!input.value.endsWith(key)) return;
+  input.value = input.value.slice(0, -1);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
+const deferFocus = (
+  target: HTMLElement | null | undefined,
+  suppressInsertKey?: string,
+): boolean => {
+  if (!target) return false;
+  if (suppressInsertKey) {
+    markUiFocusTextInsertSuppress(suppressInsertKey);
+  }
+  const scrubInsert = () => {
+    if (
+      suppressInsertKey &&
+      target instanceof HTMLInputElement &&
+      shouldSuppressUiFocusTextInsert(suppressInsertKey)
+    ) {
+      stripTrailingShortcutLetter(target, suppressInsertKey);
+    }
+  };
+  setTimeout(() => {
+    target.focus({ preventScroll: true });
+    scrubInsert();
+    setTimeout(() => {
+      scrubInsert();
+      clearUiFocusTextInsertSuppress();
+    }, 30);
+  }, 0);
+  return true;
+};
+
+const LIFE_BIRTH_DATE_INPUT_ID = "life-date-of-birth";
+
 const focusFirstLifeSidebarField = (): boolean => {
   const anchor = document.querySelector<HTMLElement>(LIFE_DETAILS_SELECTOR);
   if (!anchor) return false;
   const target =
-    anchor.querySelector<HTMLElement>("#life-date-of-birth") ??
+    anchor.querySelector<HTMLElement>(`#${LIFE_BIRTH_DATE_INPUT_ID}`) ??
     anchor.querySelector<HTMLElement>(INTERACTIVE_SELECTOR);
-  target?.focus({ preventScroll: true });
-  return Boolean(target);
+  scheduleUiFocusInsertScrub(LIFE_BIRTH_DATE_INPUT_ID, "i");
+  return deferFocus(target, "i");
 };
 
 const openSidebarForFocus = (): void => {
@@ -130,6 +175,8 @@ export const moveCalendarUiFocusRight = (): boolean => {
 export const moveLifeUiFocusLeft = (): boolean => {
   if (detectLifeUiFocusRegion() === "grid") return true;
 
+  scheduleUiFocusInsertScrub(LIFE_BIRTH_DATE_INPUT_ID, "u");
+
   const gridTarget = getPageJumpFocusElement("life-grid");
   if (gridTarget) {
     gridTarget.focus({ preventScroll: true });
@@ -140,6 +187,8 @@ export const moveLifeUiFocusLeft = (): boolean => {
 
 export const moveLifeUiFocusRight = (): boolean => {
   if (detectLifeUiFocusRegion() === "sidebar") return true;
+
+  markUiFocusTextInsertSuppress("i");
 
   const wasOpen = selectIsSidebarOpen(useViewStore.getState());
   openSidebarForFocus();
