@@ -472,12 +472,13 @@ export const verifyJourneyAccountDeletedAfterCleanup = async (
   const verifyPage = await context.newPage();
   try {
     await logInJourneyAccount(verifyPage, { email, password });
+    const loginDialog = verifyPage.getByRole("dialog", {
+      name: "Hey, welcome back",
+    });
+    await expect(loginDialog).toBeVisible({ timeout: 15_000 });
     await expect(
-      verifyPage.getByText(/Incorrect email or password\.|Log in failed/i),
+      loginDialog.getByText(/Incorrect email or password\.|Log in failed/i),
     ).toBeVisible({ timeout: 60_000 });
-    await expect(
-      verifyPage.getByRole("button", { name: "Open settings" }),
-    ).not.toBeVisible({ timeout: 5_000 });
     console.log(
       `Journey delete verified email=${redactJourneyEmailForLog(email)} sign_in=failed_as_expected`,
     );
