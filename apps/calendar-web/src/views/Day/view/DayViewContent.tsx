@@ -128,7 +128,7 @@ export const DayViewContent = memo(() => {
       <div
         id={ID_MAIN}
         ref={mainRef}
-        className="flex h-screen flex-1 flex-col overflow-hidden bg-background pt-5 pl-8 transition-[width] duration-200 ease-out motion-reduce:transition-none"
+        className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-background pt-5 pl-4 transition-[width] duration-200 ease-out motion-reduce:transition-none xl:pl-8"
       >
         <Header />
         <CalendarConnectionBannerGate />
