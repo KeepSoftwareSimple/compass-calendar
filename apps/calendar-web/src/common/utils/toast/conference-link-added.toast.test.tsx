@@ -49,8 +49,11 @@ describe("ConferenceLinkAddedToast", () => {
     renderToast();
 
     expect(screen.getByText("Google Meet link added")).toBeInTheDocument();
+    const copy = screen.getByRole("button", { name: /Copy link/ });
+    expect(copy.className).toContain("bg-accent-secondary");
+    expect(copy.className).not.toContain("c-button-primary");
 
-    await userEvent.click(screen.getByRole("button", { name: /Copy link/ }));
+    await userEvent.click(copy);
 
     expect(copyText).toHaveBeenCalledWith(conference.url);
     expect(await screen.findByText("Link copied")).toBeInTheDocument();

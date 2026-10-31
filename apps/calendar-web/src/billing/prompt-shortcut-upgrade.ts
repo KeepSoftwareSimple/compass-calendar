@@ -111,7 +111,7 @@ export function promptShortcutUpgrade(
 
 /**
  * Lazy so this module can sit on the `useAppShortcut` hot path without a
- * boot-time cycle through toast CTAs (`ToastActionButton` →
+ * boot-time cycle through toast CTAs (`ContextualToastActionButton` →
  * `useNoticeActionShortcut` → `useAppShortcut`).
  */
 function showUpgradeToast(

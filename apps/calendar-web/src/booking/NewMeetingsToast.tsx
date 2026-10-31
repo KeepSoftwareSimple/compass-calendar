@@ -18,7 +18,7 @@ import {
   getToastDefaultOptions,
   NEW_MEETINGS_TOAST_ID,
 } from "@web/common/constants/toast.constants";
-import { ToastActionButton } from "@web/common/utils/toast/ToastActionButton";
+import { ContextualToastActionButton } from "@web/common/utils/toast/ToastActionButton";
 import { ToastNotice } from "@web/common/utils/toast/ToastNotice";
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
@@ -78,7 +78,9 @@ export function NewMeetingsToast({
       <p className="text-sm text-text">
         {newMeetingsToastCopy(count, latest, timeZone)}
       </p>
-      <ToastActionButton onClick={handleShow}>Show</ToastActionButton>
+      <ContextualToastActionButton onClick={handleShow}>
+        Show
+      </ContextualToastActionButton>
     </ToastNotice>
   );
 }

@@ -44,13 +44,12 @@ describe("ShortcutUpgradeToast", () => {
         "Unlock event editing shortcuts with Premium. Upgrade in 30 seconds.",
       ),
     ).toBeInTheDocument();
-    expect(
-      within(screen.getByRole("button", { name: "Start trial" })).getByText(
-        "S",
-      ),
-    ).toBeTruthy();
+    const cta = screen.getByRole("button", { name: "Start trial" });
+    expect(within(cta).getByText("S")).toBeTruthy();
+    expect(cta.className).toContain("bg-accent-secondary");
+    expect(cta.className).not.toContain("c-button-primary");
 
-    await user.click(screen.getByRole("button", { name: "Start trial" }));
+    await user.click(cta);
 
     expect(track).toHaveBeenCalledWith("billing_gate_cta_clicked", {
       cta: "shortcut_prompt",
