@@ -18,6 +18,7 @@ import {
   applyTimedDeckPosition,
   applyTimedEventDisplayPosition,
   createTimedEventLayout,
+  elevateTimedDeckZIndex,
 } from "./timed-deck.layout";
 
 const createTimedEvent = (
@@ -216,6 +217,12 @@ describe("applyTimedDeckPosition", () => {
     });
 
     expect(deck.width).toBe(basePosition.width / 3);
+  });
+
+  it("elevates a focused card above overlap partners in the same group", () => {
+    const deck = { order: 0, groupSize: 2 };
+    const base = applyTimedDeckPosition(basePosition, deck);
+    expect(elevateTimedDeckZIndex(deck, base.zIndex ?? 1)).toBeGreaterThan(2);
   });
 
   it("offsets left by order and sets zIndex", () => {

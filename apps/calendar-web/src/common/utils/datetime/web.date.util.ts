@@ -499,7 +499,10 @@ export const getCalendarHeadingLabel = (
 
 export { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 
-export const mapToBackend = (s: SelectedDates): EventSchedule => {
+export const mapToBackend = (
+  s: SelectedDates,
+  timedOutputTimeZone?: string,
+): EventSchedule => {
   if (s.isAllDay) {
     const timeZone = getEffectiveTimeZone();
     const startDate = inEffectiveTimeZone(s.startDate, timeZone).format(
@@ -524,13 +527,14 @@ export const mapToBackend = (s: SelectedDates): EventSchedule => {
     });
   }
 
-  const timeZone = getEffectiveTimeZone();
-  const { startDate, endDate } = _addTimesToDates(s, timeZone);
+  const displayTimeZone = getEffectiveTimeZone();
+  const timeZone = timedOutputTimeZone ?? displayTimeZone;
+  const { startDate, endDate } = _addTimesToDates(s, displayTimeZone);
 
   return EventScheduleSchema.parse({
     kind: "timed",
-    start: startDate,
-    end: endDate,
+    start: dayjs(startDate).tz(timeZone).format(),
+    end: dayjs(endDate).tz(timeZone).format(),
     timeZone,
   });
 };
@@ -540,9 +544,12 @@ export type MapToBackendResult =
   | { ok: false };
 
 /** Same as `mapToBackend`, but returns a result instead of throwing on schema failure. */
-export const tryMapToBackend = (s: SelectedDates): MapToBackendResult => {
+export const tryMapToBackend = (
+  s: SelectedDates,
+  timedOutputTimeZone?: string,
+): MapToBackendResult => {
   try {
-    return { ok: true, schedule: mapToBackend(s) };
+    return { ok: true, schedule: mapToBackend(s, timedOutputTimeZone) };
   } catch (error) {
     if (error instanceof ZodError) return { ok: false };
     throw error;

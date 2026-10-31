@@ -91,6 +91,13 @@ public enum TimedDeckLayoutEngine {
         )
     }
 
+    public static func elevateTimedDeckZIndex(
+        deckLayout: TimedDeckLayout,
+        zIndex: Int
+    ) -> Int {
+        max(zIndex, deckLayout.groupSize + 1 + deckLayout.order)
+    }
+
     public static func applyTimedEventDisplayPosition(
         _ position: EventPosition,
         deckLayout: TimedDeckLayout?,
