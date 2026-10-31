@@ -20,7 +20,15 @@ import {
   resetEffectiveTimeZoneStoreForTests,
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
-import { afterEach, describe, expect, it, mock, setSystemTime, spyOn } from "bun:test";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  mock,
+  setSystemTime,
+  spyOn,
+} from "bun:test";
 import "@testing-library/jest-dom";
 
 import { AllDayEventCard } from "./AllDayEventCard";
