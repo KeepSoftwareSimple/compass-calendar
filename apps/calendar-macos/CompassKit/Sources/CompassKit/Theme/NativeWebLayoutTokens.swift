@@ -13,4 +13,7 @@ public enum NativeWebLayoutTokens {
     public static let fontSizeBody: CGFloat = 14
     public static let fontSizeL: CGFloat = 16
     public static let fontSizeXL: CGFloat = 18
+
+    /// Web `BOTTOM_NOTICE_DESKTOP_WIDTH_PX` (21rem).
+    public static let bottomNoticeWidth: CGFloat = 336
 }

@@ -2,9 +2,9 @@ import classNames from "classnames";
 import { type ReactNode } from "react";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 
-/** Matches first-event and other compact primary CTAs in the notice stack. */
+/** Compact bottom-notice primary: ~28px tall, `text-xs` label (500 on label span). */
 export const NOTICE_PRIMARY_BUTTON_CLASS =
-  "c-button-compact c-button-primary inline-flex items-center justify-center gap-2 self-start rounded-xs px-3 py-1.5 text-s";
+  "c-button-compact c-button-primary inline-flex h-7 min-h-7 items-center justify-center gap-1 rounded-xs px-2 text-xs font-normal [&_.c-notice-primary-label]:font-medium [&_.c-keycap]:min-h-0 [&_.c-keycap]:border-on-accent/35 [&_.c-keycap]:bg-on-accent/10 [&_.c-keycap]:px-1 [&_.c-keycap]:py-0 [&_.c-keycap]:text-on-accent";
 
 export function NoticePrimaryButton({
   children,
@@ -23,9 +23,10 @@ export function NoticePrimaryButton({
       onClick={onClick}
       type="button"
     >
-      {children}
+      <span className="c-notice-primary-label">{children}</span>
       {shortcutKeys ? (
         <ShortcutKeys
+          className="gap-0.5"
           keys={
             typeof shortcutKeys === "string" ? shortcutKeys : [...shortcutKeys]
           }

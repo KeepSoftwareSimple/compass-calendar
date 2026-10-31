@@ -1,12 +1,11 @@
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type FC, useState } from "react";
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import dayjs from "@core/util/date/dayjs";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
-import { NoticeCard } from "@web/components/BottomNoticeStack/NoticeCard";
-import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
-import IconButton from "@web/components/IconButton/IconButton";
+import { BottomNotice } from "@web/components/BottomNoticeStack/BottomNotice";
+import { BOTTOM_NOTICE_QUEUE_ID } from "@web/components/BottomNoticeStack/bottom-notice.constants";
+import { useBottomNoticeQueue } from "@web/components/BottomNoticeStack/useBottomNoticeQueue";
 import { formatEventStatus } from "@web/components/Sidebar/UpNextCard/UpNextCard";
 import { useUpNextEvent } from "@web/components/Sidebar/UpNextCard/useUpNextEvent";
 import { useUpNextOsNotification } from "@web/components/Sidebar/UpNextCard/useUpNextOsNotification";
@@ -25,7 +24,9 @@ export const UpNextBanner: FC = () => {
     (isCurrentEvent ||
       dayjs(upNext?.startDate).diff(now, "minute", true) <=
         MINUTES_BEFORE_START);
-  const isVisible = isWithinWindow && upNext?._id !== dismissedId;
+  const isCandidate = isWithinWindow && upNext?._id !== dismissedId;
+  const eligible = Boolean(isCandidate && upNext && !closing);
+  const visible = useBottomNoticeQueue(BOTTOM_NOTICE_QUEUE_ID.upNext, eligible);
 
   useUpNextOsNotification(
     upNext?._id
@@ -35,7 +36,7 @@ export const UpNextBanner: FC = () => {
           startDate: upNext.startDate,
         }
       : undefined,
-    isVisible,
+    visible,
   );
 
   const openConference = () =>
@@ -49,15 +50,15 @@ export const UpNextBanner: FC = () => {
   useAppShortcutUp(
     upNextShortcuts.navUpNext.hotkey,
     () => openEventDetails("keyboardEdit"),
-    { shortcutId: "nav-up-next" },
+    { enabled: visible, shortcutId: "nav-up-next" },
   );
   useAppShortcutUp(upNextShortcuts.navJoinMeeting.hotkey, openConference, {
-    enabled: Boolean(conferenceUrl),
+    enabled: visible && Boolean(conferenceUrl),
     shortcutId: "nav-join-meeting",
   });
-  useAppShortcutUp("Escape", dismiss, { enabled: isVisible });
+  useAppShortcutUp("Escape", dismiss, { enabled: visible });
 
-  if (!isVisible || !upNext) {
+  if (!visible || !upNext) {
     return null;
   }
 
@@ -74,37 +75,20 @@ export const UpNextBanner: FC = () => {
     ? openConference
     : () => openEventDetails("gridClick");
 
+  const message = `${countdown} · ${upNext.title}`;
+
   return (
-    <NoticeCard
+    <BottomNotice
       ariaLabel="Up next event"
       aria-live="polite"
       closing={closing}
       data-up-next-banner=""
+      message={message}
+      onDismiss={dismiss}
+      onPrimary={onPrimary}
+      primaryLabel={primaryLabel}
+      primaryShortcutKeys={primaryShortcut}
       role="status"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="text-text-muted text-xs">{countdown}</div>
-          <div className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="size-1.5 shrink-0 rounded-full bg-accent"
-            />
-            <span className="truncate font-medium text-sm">{upNext.title}</span>
-          </div>
-        </div>
-        <IconButton
-          aria-label="Dismiss"
-          className="shrink-0 text-text-muted hover:text-text"
-          onClick={dismiss}
-          size="small"
-        >
-          <XIcon aria-hidden="true" size={14} />
-        </IconButton>
-      </div>
-      <NoticePrimaryButton onClick={onPrimary} shortcutKeys={primaryShortcut}>
-        {primaryLabel}
-      </NoticePrimaryButton>
-    </NoticeCard>
+    />
   );
 };

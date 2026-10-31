@@ -2,41 +2,32 @@ import CompassData
 import CompassKit
 import SwiftUI
 
-/// Web `FirstEventPrompt`: bottom-left card until the first real event, then
-/// a short celebration before it retires for good.
+/// Web `FirstEventPrompt`: bottom-left notice until the first real event.
 struct FirstEventPromptView: View {
-    @Environment(\.nativeWebTheme) private var theme
     @Bindable var onboardingStore: OnboardingStore
 
     var body: some View {
-        FloatingNoticeCard(width: 288) {
+        Group {
             if onboardingStore.isFirstEventCelebrating {
-                Text("It's on the calendar.")
-                    .font(.rubik(14, weight: .semibold))
-                    .foregroundStyle(theme.textColor)
-                    .padding(.vertical, 8)
-                    .task {
-                        try? await Task.sleep(for: .seconds(4))
-                        onboardingStore.finalizeFirstEventCelebration()
-                    }
+                BottomNoticeView(message: "It's on the calendar.", onDismiss: nil) {
+                    EmptyView()
+                }
+                .task {
+                    try? await Task.sleep(for: .seconds(4))
+                    onboardingStore.finalizeFirstEventCelebration()
+                }
             } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("Add your first event")
-                            .font(.rubik(14, weight: .semibold))
-                            .foregroundStyle(theme.textColor)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        NoticeDismissButton {
-                            onboardingStore.dismissFirstEventPrompt()
+                BottomNoticeView(
+                    message: "Add your first event.",
+                    onDismiss: { onboardingStore.dismissFirstEventPrompt() }
+                ) {
+                    Button {} label: {
+                        HStack(spacing: 4) {
+                            Text("Add Coffee")
+                            ShortcutHintChip(label: "C", style: .onAccent)
                         }
                     }
-                    HStack(spacing: 6) {
-                        Text("Press")
-                        ShortcutHintChip(label: "C")
-                        Text(", type a title, then Enter.")
-                    }
-                    .font(.rubik(12))
-                    .foregroundStyle(theme.textMutedColor)
+                    .buttonStyle(NoticeCompactPrimaryButtonStyle())
                 }
             }
         }

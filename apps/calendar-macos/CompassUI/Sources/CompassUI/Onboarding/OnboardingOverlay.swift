@@ -18,7 +18,17 @@ public struct OnboardingOverlay: View {
         case .connectCalendarPrompt:
             ConnectCalendarPromptView(model: model)
         case .firstEventPrompt:
-            FirstEventPromptView(onboardingStore: model.onboardingStore)
+            if model.activeBottomNotice == .firstEvent {
+                VStack {
+                    Spacer(minLength: 0)
+                    HStack {
+                        FirstEventPromptView(onboardingStore: model.onboardingStore)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.leading, 16)
+                    .padding(.bottom, 16)
+                }
+            }
         case .billingGate, .checkoutCelebration, .shortcutShowcase, .pointerHint, .none:
             EmptyView()
         }

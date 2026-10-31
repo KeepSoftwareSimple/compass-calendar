@@ -1,6 +1,7 @@
 import classNames from "classnames";
 import { type PropsWithChildren } from "react";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
+import { AppUpdateAvailableNotice } from "@web/components/BottomNoticeStack/AppUpdateAvailableNotice";
 import { BottomNoticeToastHost } from "@web/components/BottomNoticeStack/BottomNoticeToastHost";
 import { useFlushPendingShellToast } from "@web/components/BottomNoticeStack/useFlushPendingShellToast";
 import { useIsNarrowSidebarLayout } from "@web/components/Sidebar/hooks/useIsNarrowSidebarLayout";
@@ -9,7 +10,7 @@ import {
   useViewStore,
 } from "@web/events/stores/view.store";
 
-/** Bottom-left stack for react-toastify and floating notice cards. */
+/** Bottom-left slot: one prioritized notice at a time. */
 export function BottomNoticeStack({ children }: PropsWithChildren) {
   const isNarrowLayout = useIsNarrowSidebarLayout();
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
@@ -20,14 +21,15 @@ export function BottomNoticeStack({ children }: PropsWithChildren) {
     <section
       aria-label="Notifications"
       className={classNames(
-        "compass-bottom-notice-stack pointer-events-none fixed flex flex-col items-stretch justify-end gap-3",
+        "compass-bottom-notice-stack pointer-events-none fixed flex flex-col items-stretch justify-end",
         clearsSidebarFooter && "compass-bottom-notice-stack--clears-footer",
       )}
       data-clears-sidebar-footer={clearsSidebarFooter || undefined}
       style={{ zIndex: Z_INDEX_TOOLTIP }}
     >
-      <BottomNoticeToastHost />
+      <AppUpdateAvailableNotice />
       {children}
+      <BottomNoticeToastHost />
     </section>
   );
 }
