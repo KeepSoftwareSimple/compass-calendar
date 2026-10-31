@@ -1,5 +1,5 @@
 import { DateTimeSchema, type EventId } from "@core/types/domain-primitives";
-import { type Event } from "@core/types/event.contracts";
+import { type Event, type EventSchedule } from "@core/types/event.contracts";
 import {
   type CreateEventInput,
   type EventListQuery,
@@ -25,6 +25,17 @@ import {
 import { truncateSeriesRulesBefore } from "@web/events/recurrence/truncate-series-rules.util";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
 import { type EventRepository } from "./event.repository.types";
+
+function resolveReplaceSchedule(
+  inputSchedule: ReplaceEventInput["schedule"],
+  existingSchedule: EventSchedule | undefined,
+): EventSchedule {
+  const schedule = inputSchedule ?? existingSchedule;
+  if (!schedule) {
+    throw new Error("replace requires a schedule when the event is not stored");
+  }
+  return schedule;
+}
 
 /**
  * Local event repository implementation using the offline data store.
@@ -223,7 +234,7 @@ export class LocalEventRepository implements EventRepository {
         existing?.calendarId ??
         getLocalCalendarSentinelId(),
       content: detailsContent(input.content),
-      schedule: input.schedule,
+      schedule: resolveReplaceSchedule(input.schedule, existing?.schedule),
       recurrence: resolveRecurrence(input.recurrence, recurrenceFallback),
       createdAt: existing?.createdAt ?? nowDateTime(),
       updatedAt: nowDateTime(),
@@ -263,14 +274,18 @@ export class LocalEventRepository implements EventRepository {
     );
 
     if (!splits) {
+      const resolvedSchedule = resolveReplaceSchedule(
+        input.schedule,
+        record.event.schedule,
+      );
       const schedule =
         input.scope === "all"
           ? shiftSeriesScheduleByOccurrenceEdit(
               record.event.schedule,
               occurrenceStart,
-              input.schedule,
+              resolvedSchedule,
             )
-          : input.schedule;
+          : resolvedSchedule;
       const event: Event = {
         ...record.event,
         calendarId: input.calendarId ?? record.event.calendarId,
@@ -301,7 +316,7 @@ export class LocalEventRepository implements EventRepository {
       id,
       calendarId: input.calendarId ?? record.event.calendarId,
       content: detailsContent(input.content),
-      schedule: input.schedule,
+      schedule: resolveReplaceSchedule(input.schedule, record.event.schedule),
       recurrence,
       createdAt: nowDateTime(),
       updatedAt: null,

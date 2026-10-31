@@ -192,6 +192,46 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
     providerDeleteDeps(repos, writer);
 
   describe("executeProviderOccurrenceUpdate", () => {
+    it("sends color-only patch flags for a scope-this color change without schedule", async () => {
+      const { calendar, master } = await seedMaster();
+      const command = (
+        await commands.submit({
+          tenantId: master.tenantId,
+          principalId: master.principalId,
+          idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
+          eventId: master._id,
+          input: {
+            kind: "update",
+            invitation: "none",
+            content: { ...content("Old"), color: "blue" },
+            recurrence: { kind: "preserve" },
+            scope: "this",
+            recurrenceId: SECOND_START,
+          } as unknown as SyncCommandInput,
+          expectedVersion: null,
+        })
+      ).record;
+      const writer = new FakeProviderEventWriter();
+      writer.fetchInstanceResult = providerInstance(
+        "g-inst-1",
+        "Old",
+        "etag-1",
+      );
+
+      const result = await executeProviderOccurrenceUpdate(
+        deps(writer),
+        command,
+        master,
+        calendar,
+        now,
+      );
+
+      expect(result.outcome.state).toBe("confirmed");
+      expect(writer.patchCalls[0]?.writeSchedule).toBe(false);
+      expect(writer.patchCalls[0]?.colorOnly).toBe(true);
+      expect(writer.patchCalls[0]?.recurrence).toEqual({ kind: "instance" });
+    });
+
     it("resolves the instance, patches IT (not the master), and stores its own provider identity", async () => {
       const { tenantId, principalId, calendar, master } = await seedMaster();
       const command = await thisScopeCommand(master, "update", "Moved");

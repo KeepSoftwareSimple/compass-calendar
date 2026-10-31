@@ -183,7 +183,9 @@ describe("useUndoRedo rsvp", () => {
 
     expect(mocks.update).toHaveBeenCalledWith(
       UNDO_DECLINED_TOAST_ID,
-      expect.objectContaining({ render: "Can't undo. Event changed since" }),
+      expect.objectContaining({
+        render: "Can't undo. Event changed since your last edit",
+      }),
     );
     expect(hook.result.current.undoRedo.canUndo).toBe(false);
     expect(hook.result.current.undoRedo.canRedo).toBe(false);

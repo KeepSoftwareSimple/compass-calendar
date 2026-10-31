@@ -199,7 +199,10 @@ export function parseGridEventDraft(
           values: draft.values,
         };
 
-  const parsed = parseEventDraft(eventDraft);
+  const parsed = parseEventDraft(
+    eventDraft,
+    draft.kind === "edit" ? draft.source : undefined,
+  );
   if (
     parsed.ok &&
     parsed.mode === "create" &&

@@ -243,7 +243,7 @@ export const toReplaceSubmitRequests = (
       scope: target.scope,
       recurrenceId: target.recurrenceId,
       content: input.content,
-      schedule: input.schedule,
+      ...(input.schedule !== undefined ? { schedule: input.schedule } : {}),
       recurrence: input.recurrence,
     }),
     eventId: target.eventId,
@@ -253,7 +253,7 @@ export const toReplaceSubmitRequests = (
       invitation: input.invitation ?? "none",
       attendeesEdit: toAttendeesEdit(input.content),
       content: toSyncContent(input.content),
-      schedule: input.schedule,
+      ...(input.schedule !== undefined ? { schedule: input.schedule } : {}),
       recurrence: input.recurrence,
       scope: target.scope,
       recurrenceId: target.recurrenceId,
@@ -391,11 +391,22 @@ const synthesizeReplaceEvent = (
   const responseId =
     parts && target.recurrenceId !== null ? requestId : target.eventId;
 
+  // Schedule may be omitted on metadata-only replaces; the web applies the
+  // optimistic merge from the request and ignores this acknowledgment shape.
+  const schedule =
+    input.schedule ??
+    ({
+      kind: "timed",
+      start: "1970-01-01T00:00:00.000Z",
+      end: "1970-01-01T00:00:00.000Z",
+      timeZone: "UTC",
+    } as ReplaceEventInput["schedule"]);
+
   return EventSchema.parse({
     id: responseId,
     calendarId: input.calendarId ?? UNKNOWN_CALENDAR_ID,
     content: toResponseContent(input.content),
-    schedule: input.schedule,
+    schedule,
     recurrence,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

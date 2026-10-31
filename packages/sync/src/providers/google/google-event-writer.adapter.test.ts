@@ -773,6 +773,23 @@ describe("GoogleEventWriter", () => {
     expect(api.calls.patch[0]!.requestBody).not.toHaveProperty("colorId");
   });
 
+  it("sends only colorId on a color-only patch", async () => {
+    const api = new FakeEventsApi();
+    const { writer } = writerWith(api);
+
+    await writer.patchEvent({
+      ...basePatch,
+      content: content({ color: "blue" }),
+      colorOnly: true,
+      writeSchedule: false,
+    });
+
+    expect(api.calls.patch).toHaveLength(1);
+    expect(api.calls.patch[0]!.requestBody).toEqual({
+      colorId: "7",
+    });
+  });
+
   it("clears Google colorId when content.color is null", async () => {
     const api = new FakeEventsApi();
     const { writer } = writerWith(api);

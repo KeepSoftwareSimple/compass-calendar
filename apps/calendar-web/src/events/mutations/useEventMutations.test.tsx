@@ -290,7 +290,7 @@ const timedStartOf = (
 const nudgeAndGetOpportunity = async (
   context: MutationTestContext,
   id: EventId,
-  schedule: ReplaceEventInput["schedule"],
+  schedule: NonNullable<ReplaceEventInput["schedule"]>,
 ) => {
   await act(async () => {
     context.hook.result.current.mutations.replace({

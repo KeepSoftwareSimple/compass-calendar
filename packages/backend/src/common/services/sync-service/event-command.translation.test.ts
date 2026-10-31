@@ -353,6 +353,25 @@ describe("toCreateSubmitRequest", () => {
 });
 
 describe("toReplaceSubmitRequests", () => {
+  it("omits schedule from the update command when the replace payload omits it", () => {
+    const eventId = objectId() as EventId;
+    const { requests } = toReplaceSubmitRequests(eventId, {
+      content: {
+        kind: "details",
+        title: "Renamed",
+        description: "",
+        location: "",
+        color: "blue",
+      },
+      recurrence: { kind: "preserve" },
+      scope: "this",
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.input.kind).toBe("update");
+    if (requests[0]?.input.kind !== "update") return;
+    expect(requests[0].input).not.toHaveProperty("schedule");
+  });
+
   it("emits a single update for a plain-id replace without a calendar move", () => {
     const eventId = objectId() as EventId;
     const { requests, responseEvent } = toReplaceSubmitRequests(eventId, {
@@ -506,9 +525,6 @@ describe("toReplaceSubmitRequests", () => {
     expect(requests[0].input.content?.attendees).toEqual([]);
   });
 
-  // Snapshot regression for the pack's backward-compat guarantee: a payload
-  // that predates attendee support must build the same submit request it
-  // always did (invitation none, attendeesEdit preserve, [] attendee pad).
   it("builds a byte-identical submit request for a legacy replace payload", () => {
     const eventId = "64b7f7f7f7f7f7f7f7f7f7f7" as EventId;
     const { requests } = toReplaceSubmitRequests(eventId, {

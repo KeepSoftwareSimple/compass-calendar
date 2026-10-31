@@ -255,6 +255,10 @@ function toGraphPatchBody(input: ProviderPatchInput): GraphEventWriteBody {
     input.recurrence,
     input.invitation,
     input.attendees,
+    {
+      writeSchedule: input.writeSchedule,
+      colorOnly: input.colorOnly,
+    },
   );
 }
 
@@ -264,7 +268,11 @@ function toGraphWriteBody(
   recurrence: ProviderWriteRecurrence,
   invitation: InvitationIntent,
   attendees?: readonly Attendee[],
+  options?: { writeSchedule?: boolean; colorOnly?: true },
 ): GraphEventWriteBody {
+  if (options?.colorOnly) {
+    return { ...microsoftCategoryFields(content.color) };
+  }
   return {
     subject: content.title,
     body: {
@@ -272,9 +280,11 @@ function toGraphWriteBody(
       content: content.description ?? "",
     },
     location: { displayName: content.location ?? "" },
-    ...scheduleFields(schedule),
+    ...(options?.writeSchedule !== false ? scheduleFields(schedule) : {}),
     showAs: "busy",
-    ...recurrenceField(recurrence, schedule),
+    ...(options?.writeSchedule !== false
+      ? recurrenceField(recurrence, schedule)
+      : {}),
     ...attendeesField(attendees, invitation),
     ...microsoftCategoryFields(content.color),
   };

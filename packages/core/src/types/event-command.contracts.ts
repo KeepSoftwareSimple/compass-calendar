@@ -108,7 +108,9 @@ export const ReplaceEventInputSchema = z.strictObject({
   // moves for series/occurrences.
   calendarId: CalendarIdSchema.optional(),
   content: EditableContentSchema,
-  schedule: EventScheduleSchema,
+  // Omitted when the edit did not change schedule (color-only and other
+  // metadata saves). Sync keeps the stored/provider schedule untouched.
+  schedule: EventScheduleSchema.optional(),
   recurrence: RecurrenceEditSchema,
   scope: RecurrenceScopeSchema,
   // Same undo/redo replay marker as CreateEventInputSchema.restore, for

@@ -10,6 +10,7 @@ import {
   type ConnectionId,
   type ProviderEventId,
 } from "@core/types/sync/identity.contracts";
+import { providerColorOnlyPatchFlags } from "@sync/domain/color-only-update";
 import {
   mergeAttendees,
   resolveUpdateContent,
@@ -392,6 +393,12 @@ export async function applyLinkedProviderUpdate(
     return commit(current.providerVersion);
   }
 
+  const { writeSchedule, colorOnly } = providerColorOnlyPatchFlags(
+    command,
+    event.content,
+    content,
+    intendedAttendees,
+  );
   const patchResult = await runProviderWrite(() =>
     deps.writer.patchEvent({
       ...location,
@@ -406,6 +413,8 @@ export async function applyLinkedProviderUpdate(
       schedule,
       recurrence: intendedRecurrence,
       invitation: input.invitation,
+      writeSchedule,
+      ...(colorOnly ? { colorOnly } : {}),
       ...(intendedAttendees ? { attendees: intendedAttendees } : {}),
     }),
   );

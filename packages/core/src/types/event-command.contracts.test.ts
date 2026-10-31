@@ -171,6 +171,13 @@ describe("Event Command Contracts", () => {
       expect(ReplaceEventInputSchema.safeParse(base()).success).toBe(true);
     });
 
+    it("accepts an edit that omits schedule for metadata-only changes", () => {
+      const { schedule: _schedule, ...withoutSchedule } = base();
+      expect(ReplaceEventInputSchema.safeParse(withoutSchedule).success).toBe(
+        true,
+      );
+    });
+
     it("accepts a single recurrence edit", () => {
       const input = base({ recurrence: { kind: "single" } });
 

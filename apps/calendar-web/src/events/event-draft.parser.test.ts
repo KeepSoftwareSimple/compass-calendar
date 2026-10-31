@@ -5,6 +5,7 @@ import {
   type EventId,
   EventIdSchema,
 } from "@core/types/domain-primitives";
+import { type Event } from "@core/types/event.contracts";
 import { CreateEventInputSchema } from "@core/types/event-command.contracts";
 import { parseEventDraft } from "@web/events/event-draft.parser";
 import {
@@ -212,6 +213,51 @@ describe("parseEventDraft", () => {
         rules: ["RRULE:FREQ=WEEKLY"],
       });
       expect(CreateEventInputSchema.parse(result.input)).toBeTruthy();
+    });
+
+    it("omits schedule on edit when only color changes across a DST boundary", () => {
+      const source: Event = {
+        id: eventId(),
+        calendarId: calendarId(),
+        content: {
+          kind: "details",
+          title: "With guest",
+          description: "",
+          location: "",
+          attendees: [
+            {
+              email: "guest@example.com",
+              displayName: null,
+              responseStatus: "accepted",
+            },
+          ],
+        },
+        schedule: {
+          kind: "timed",
+          start: "2026-10-30T20:00:00-04:00" as never,
+          end: "2026-10-30T21:00:00-04:00" as never,
+          timeZone: "America/New_York" as never,
+        },
+        recurrence: { kind: "single" },
+        createdAt: "2026-07-01T00:00:00.000Z" as never,
+        updatedAt: null,
+      };
+      const draft = editDraft({
+        color: "blue",
+        schedule: {
+          kind: "timed",
+          start: new Date("2026-10-30T20:00:00-04:00"),
+          end: new Date("2026-10-30T21:00:00-04:00"),
+          timeZone: "America/New_York",
+        },
+      });
+      const result = parseEventDraft(draft, source);
+
+      expect(result.ok).toBe(true);
+      if (!result.ok || result.mode !== "edit")
+        throw new Error("expected edit");
+      expect(result.input.schedule).toBeUndefined();
+      expect(result.input.content.color).toBe("blue");
     });
   });
 
