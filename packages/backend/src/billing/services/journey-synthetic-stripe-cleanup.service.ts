@@ -5,7 +5,9 @@ import {
   isAllowedSyntheticJourneyCleanupEmail,
   type JourneyCleanupEnvironment,
 } from "@core/journey/synthetic-journey-cleanup-email.util";
-import { STRIPE_API_VERSION } from "@backend/billing/services/stripe.client";
+
+/** Keep in sync with `@backend/billing/services/stripe.client` (avoid config import). */
+const STRIPE_API_VERSION = "2026-09-30.endive" as const;
 
 export type JourneySyntheticStripeCleanupLine = {
   email: string;

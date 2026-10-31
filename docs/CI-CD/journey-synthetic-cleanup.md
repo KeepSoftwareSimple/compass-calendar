@@ -19,6 +19,8 @@ Production emails must match `^lance\.essert\+prod-journey-[a-z]+\+journey\d+@gm
 
 Uses the same journey environments as prod/staging journey legs, plus `STRIPE_SECRET_KEY` when Stripe cleanup is planned.
 
+When `bootstrap_staging_probe_account` is true, the workflow signs up one staging account and writes `journey-pending-account.json` (via `STAGING_JOURNEY_CLEANUP_BOOTSTRAP=1`, not the artifact probe).
+
 ## Local CLI
 
 ```bash
