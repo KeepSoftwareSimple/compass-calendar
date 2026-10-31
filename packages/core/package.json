@@ -9,7 +9,7 @@
     "@googleapis/calendar": "^20.1.0",
     "@mongodb-js/zstd": "^7.0.0",
     "@opentelemetry/api-logs": "^0.223.0",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.223.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.300.0",
     "@opentelemetry/resources": "^2.9.0",
     "@opentelemetry/sdk-logs": "^0.223.0",
     "bson": "^7.3.3",
@@ -17,7 +17,7 @@
     "google-auth-library": "^11.1.0",
     "lodash": "^4.18.1",
     "logform": "^2.7.0",
-    "posthog-node": "^5.56.2",
+    "posthog-node": "^5.57.2",
     "rrule": "^2.7.2",
     "snappy": "^7.3.2",
     "tslib": "^2.4.0",
@@ -28,9 +28,9 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
-    "@types/lodash": "^4.17.26",
+    "@types/lodash": "^4.17.27",
     "mongodb": "^7.7.0",
-    "supertokens-node": "^24.0.3",
+    "supertokens-node": "^24.0.4",
     "typescript": "^7.0.2"
   }
 }

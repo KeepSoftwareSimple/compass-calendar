@@ -14,10 +14,10 @@
   "dependencies": {
     "@compass/core": "1.0.0",
     "@phosphor-icons/react": "^2.1.7",
-    "@tanstack/react-hotkeys": "0.15.0",
+    "@tanstack/react-hotkeys": "0.17.0",
     "@tanstack/react-query": "^5",
-    "@tanstack/react-router": "1.170.45",
-    "posthog-js": "^1.438.12",
+    "@tanstack/react-router": "1.170.46",
+    "posthog-js": "^1.438.21",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "zod": "^4.6.7"
@@ -29,7 +29,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^18.0.3",
     "@types/testing-library__jest-dom": "^5.9.1",
-    "bun-types": "^1.4.3",
+    "bun-types": "^1.4.4",
     "jsdom": "^26.1.0",
     "msw": "^2.7.0",
     "typescript": "^7.0.2"
