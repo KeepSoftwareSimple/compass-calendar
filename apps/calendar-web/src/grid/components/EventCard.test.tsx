@@ -75,8 +75,8 @@ describe("EventCard", () => {
       <TimedEventCard
         displayMode="saved"
         event={createEvent({
-          startDate: "2026-10-31T18:00:00.000Z",
-          endDate: "2026-10-31T19:30:00.000Z",
+          startDate: "2099-10-31T18:00:00.000Z",
+          endDate: "2099-10-31T19:30:00.000Z",
           timeZone: "Europe/Berlin",
           title: "Monthly Ritual",
         })}
