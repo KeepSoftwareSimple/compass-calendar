@@ -1,4 +1,14 @@
-import { expect, type FrameLocator, type Page } from "@playwright/test";
+import {
+  expect,
+  type FrameLocator,
+  type Locator,
+  type Page,
+} from "@playwright/test";
+import { redactJourneyEmailForLog } from "@core/analytics/synthetic-account.util";
+import {
+  clearPendingJourneyAccount,
+  writePendingJourneyAccount,
+} from "./journey-pending-account.util";
 
 /**
  * The staging and prod journey legs run the same account lifecycle against
@@ -142,35 +152,141 @@ export const logOutOfJourneyAccount = async (page: Page) => {
     .click();
 };
 
-/** Tax checkout still needs a billing address when no card is collected. */
+const requireStripeFieldVisible = async (
+  fieldName: string,
+  locator: Locator,
+): Promise<void> => {
+  try {
+    await expect(locator).toBeVisible({ timeout: 60_000 });
+  } catch {
+    throw new Error(`Stripe checkout missing required field: ${fieldName}`);
+  }
+};
+
+export const collectStripeHostedCheckoutValidationErrors = async (
+  stripeFrame: FrameLocator,
+): Promise<string[]> => {
+  const errorLocators = stripeFrame.locator(
+    '[class*="FieldError"], [class*="ErrorMessage"], [data-testid*="error" i], [role="alert"]',
+  );
+  const count = await errorLocators.count().catch(() => 0);
+  const messages: string[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const text = (
+      await errorLocators
+        .nth(index)
+        .innerText()
+        .catch(() => "")
+    )
+      .replace(/\s+/g, " ")
+      .trim();
+    if (text) messages.push(text);
+  }
+  return [...new Set(messages)];
+};
+
+/**
+ * When Stripe renders billing address fields, every visible required input
+ * must be filled or the leg fails immediately with the missing field name.
+ */
 export const fillJourneyCheckoutBillingAddressIfVisible = async (
   stripeFrame: FrameLocator,
 ) => {
   const country = stripeFrame.getByLabel("Country or region");
   if (!(await country.isVisible().catch(() => false))) return;
 
+  await requireStripeFieldVisible("country", country);
   await country.selectOption("US");
+
+  const name = stripeFrame
+    .getByLabel(/^Full name$/i)
+    .or(stripeFrame.getByLabel(/^Name$/i))
+    .or(stripeFrame.getByLabel(/Cardholder name/i))
+    .first();
+  if (await name.isVisible().catch(() => false)) {
+    await requireStripeFieldVisible("name", name);
+    await name.fill("Prod Journey Billing");
+  }
+
   const addressLine = stripeFrame
     .getByLabel(/^Address$/i)
     .or(stripeFrame.getByLabel(/Address line 1/i))
     .first();
-  if (await addressLine.isVisible().catch(() => false)) {
-    await addressLine.fill("123 Main St");
-  }
-  const city = stripeFrame.getByLabel(/City/i);
-  if (await city.isVisible().catch(() => false)) {
-    await city.fill("Denver");
-  }
+  await requireStripeFieldVisible("address line 1", addressLine);
+  await addressLine.fill("123 Main St");
+
+  const city = stripeFrame.getByLabel(/^City$/i);
+  await requireStripeFieldVisible("city", city);
+  await city.fill("Denver");
+
   const stateField = stripeFrame
     .getByLabel(/^State$/i)
     .or(stripeFrame.getByRole("combobox", { name: /^State$/i }));
   if (await stateField.isVisible().catch(() => false)) {
+    await requireStripeFieldVisible("state", stateField);
     await stateField.selectOption({ label: "Colorado" });
   }
-  const zip = stripeFrame.getByLabel("ZIP");
-  if (await zip.isVisible().catch(() => false)) {
-    await zip.fill("80202");
+
+  const zip = stripeFrame.getByLabel(/^ZIP$/i);
+  await requireStripeFieldVisible("ZIP", zip);
+  await zip.fill("80202");
+};
+
+export const registerJourneyAccountForCleanup = async (
+  scope: JourneyScope,
+  { email, password }: { email: string; password: string },
+): Promise<void> => {
+  await writePendingJourneyAccount({
+    scope,
+    email,
+    password,
+    createdAtMs: Date.now(),
+  });
+};
+
+export const waitForSyntheticProdJourneyCheckoutSuccess = async (
+  page: Page,
+  stripeFrame: FrameLocator,
+  trialDialog: Locator,
+  { timeoutMs = 180_000 }: { timeoutMs?: number } = {},
+): Promise<void> => {
+  const celebration = page.getByRole("dialog", { name: "You're aboard!" });
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    if (await celebration.isVisible().catch(() => false)) {
+      await expect(trialDialog).toBeHidden({ timeout: 30_000 });
+      return;
+    }
+    if (!(await trialDialog.isVisible().catch(() => false))) {
+      return;
+    }
+
+    const errors =
+      await collectStripeHostedCheckoutValidationErrors(stripeFrame);
+    if (errors.length > 0) {
+      throw new Error(
+        `Stripe checkout validation failed: ${errors.join("; ")}`,
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
+
+  const errors = await collectStripeHostedCheckoutValidationErrors(stripeFrame);
+  if (errors.length > 0) {
+    throw new Error(`Stripe checkout validation failed: ${errors.join("; ")}`);
+  }
+
+  const stripeText = await stripeFrame
+    .locator("body")
+    .innerText()
+    .catch(() => "");
+  throw new Error(
+    stripeText.trim()
+      ? `Prod journey checkout did not complete: ${stripeText.slice(0, 500)}`
+      : "Prod journey checkout did not complete: trial dialog still open after submit",
+  );
 };
 
 /** Stripe Link can require a phone when save is checked; prod uses no card. */
@@ -240,14 +356,57 @@ export const cancelJourneySubscriptionIfActive = async (page: Page) => {
   await page.keyboard.press("Escape");
 };
 
-/**
- * Best-effort prod leg teardown: re-auth if needed, cancel any subscription,
- * then delete the account. Swallows errors so a failing leg still reports.
- */
+export const resolveJourneyPasswordForCleanupEmail = (
+  scope: JourneyScope,
+  email: string,
+): string => {
+  const normalized = email.trim().toLowerCase();
+  if (scope === "PROD") {
+    const match = normalized.match(/prod-journey-(google|microsoft|apple)/);
+    if (!match) {
+      throw new Error(
+        `Cannot resolve prod journey password for ${redactJourneyEmailForLog(email)}`,
+      );
+    }
+    process.env.PROD_JOURNEY_PROVIDER = match[1];
+    return journeyCredentials("PROD").password;
+  }
+
+  for (const provider of ["google", "microsoft", "apple"] as const) {
+    process.env.STAGING_JOURNEY_PROVIDER = provider;
+    try {
+      const { accountEmail, password } = journeyCredentials("STAGING");
+      const base = accountEmail.trim().toLowerCase();
+      const at = normalized.indexOf("@");
+      const local = at >= 0 ? normalized.slice(0, at) : normalized;
+      const baseLocal = base.includes("@")
+        ? base.slice(0, base.indexOf("@"))
+        : base;
+      if (local === baseLocal || local.startsWith(`${baseLocal}+`)) {
+        return password;
+      }
+    } catch {
+      // Try the next configured provider secret set.
+    }
+  }
+
+  throw new Error(
+    `Cannot resolve staging journey password for ${redactJourneyEmailForLog(email)}`,
+  );
+};
+
+/** Prod leg teardown outside the main test timeout budget. */
 export const cleanupProdJourneyAccount = async (
   page: Page,
-  { email, password }: { email: string; password: string },
+  {
+    email,
+    password,
+    scope = "PROD",
+  }: { email: string; password: string; scope?: JourneyScope },
 ) => {
+  await page
+    .goto("/week", { waitUntil: "domcontentloaded" })
+    .catch(() => undefined);
   const onCalendar =
     (await page
       .locator("#mainGrid")
@@ -265,7 +424,11 @@ export const cleanupProdJourneyAccount = async (
       .catch(() => undefined);
   }
   await cancelJourneySubscriptionIfActive(page).catch(() => undefined);
-  await deleteJourneyAccount(page).catch(() => undefined);
+  await deleteJourneyAccount(page);
+  await clearPendingJourneyAccount(scope);
+  console.log(
+    `Journey cleanup confirmed for ${redactJourneyEmailForLog(email)}`,
+  );
 };
 
 export const deleteJourneyAccount = async (page: Page) => {
