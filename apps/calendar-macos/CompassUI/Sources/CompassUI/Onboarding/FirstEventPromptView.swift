@@ -2,7 +2,7 @@ import CompassData
 import CompassKit
 import SwiftUI
 
-/// Web `FirstEventPrompt`: bottom-right card until the first real event, then
+/// Web `FirstEventPrompt`: bottom-left card until the first real event, then
 /// a short celebration before it retires for good.
 struct FirstEventPromptView: View {
     @Environment(\.nativeWebTheme) private var theme

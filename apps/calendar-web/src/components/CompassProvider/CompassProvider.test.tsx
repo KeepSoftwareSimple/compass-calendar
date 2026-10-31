@@ -8,6 +8,7 @@ import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { createCompassQueryClient } from "@web/api/query-client";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
+import { BottomNoticeToastHost } from "@web/components/BottomNoticeStack/BottomNoticeToastHost";
 import { CompassRequiredProviders } from "./CompassProvider";
 import { beforeEach, expect, test } from "bun:test";
 
@@ -65,7 +66,11 @@ test("Escape dismisses the toast (proves the hook is actually mounted)", () => {
   const { port, mocks } = createTestToastPort();
   registerToastPort(port);
 
-  render(<CompassRequiredProviders>{null}</CompassRequiredProviders>);
+  render(
+    <CompassRequiredProviders>
+      <BottomNoticeToastHost />
+    </CompassRequiredProviders>,
+  );
   pressKey("Escape");
 
   expect(mocks.dismiss).toHaveBeenCalledTimes(1);

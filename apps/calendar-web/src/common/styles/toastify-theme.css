@@ -17,52 +17,63 @@
   background: var(--text-muted);
 }
 
-.Toastify__toast-container--bottom-left {
-  inset-inline: max(1rem, env(safe-area-inset-left));
+/* Shared bottom-left notice stack (cards + react-toastify). */
+.compass-bottom-notice-stack {
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: max(1rem, env(safe-area-inset-left));
   width: min(24rem, calc(100vw - 2rem));
 }
 
-.Toastify__toast.app-update-available-toast-host {
-  --toastify-toast-width: auto;
-  width: 100%;
-  max-width: min(36rem, calc(100vw - 2rem));
+.compass-bottom-notice-stack--clears-footer {
+  bottom: calc(5rem + max(1rem, env(safe-area-inset-bottom)));
 }
 
-.Toastify__toast.app-update-available-toast-host .Toastify__toast-body {
-  flex: 1 1 auto;
-  min-width: 0;
+.compass-bottom-notice-stack__toasts.Toastify__toast-container {
+  position: static;
+  transform: none;
   width: 100%;
+  padding: 0;
+  margin: 0;
+  inset: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex-shrink: 0;
 }
 
-.app-update-available-toast {
-  flex-wrap: wrap;
+.compass-bottom-notice-stack .Toastify__toast {
+  --toastify-toast-width: 100%;
+  position: relative;
+  transform: none;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 0;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 4px 12px var(--shadow-default);
+}
+
+.compass-bottom-notice-stack .Toastify__toast-body {
+  padding: 0.75rem 1rem;
 }
 
 @media (min-width: 1280px) {
-  .Toastify__toast-container--bottom-left:has(
-    .app-update-available-toast-host
-  ) {
+  .compass-bottom-notice-stack
+    .Toastify__toast.app-update-available-toast-host {
     width: max-content;
     max-width: min(36rem, calc(100vw - 2rem));
+    align-self: flex-start;
   }
 
-  .Toastify__toast.app-update-available-toast-host {
-    width: max-content;
-  }
-
-  .app-update-available-toast {
-    flex-wrap: nowrap;
-  }
-
-  .app-update-available-toast-message {
+  .compass-bottom-notice-stack
+    .Toastify__toast.app-update-available-toast-host
+    .app-update-available-toast-message,
+  .compass-bottom-notice-stack
+    .Toastify__toast.app-update-available-toast-host
+    p {
     white-space: nowrap;
   }
-}
-
-/* Stack update toasts above the first-event onboarding card. */
-html[data-first-event-prompt-live] .Toastify__toast-container--bottom-left {
-  bottom: calc(
-    max(var(--toastify-toast-offset), env(safe-area-inset-bottom)) +
-    var(--compass-first-event-prompt-stack-height, 0px)
-  );
 }

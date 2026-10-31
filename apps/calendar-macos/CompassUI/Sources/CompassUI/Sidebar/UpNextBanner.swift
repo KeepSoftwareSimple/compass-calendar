@@ -22,22 +22,33 @@ struct UpNextBanner: View {
         if isVisible, let presentation = UpNextFormatting.resolve(state) {
             let upNext = presentation.upNext
             let countdown = presentation.countdown
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(countdown)
-                        .font(.rubik(12))
-                        .foregroundStyle(theme.textMutedColor)
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(theme.accentColor)
-                            .frame(width: 6, height: 6)
-                        Text(upNext.title)
-                            .font(.rubik(14, weight: .medium))
-                            .foregroundStyle(theme.textColor)
-                            .lineLimit(1)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(countdown)
+                            .font(.rubik(12))
+                            .foregroundStyle(theme.textMutedColor)
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(theme.accentColor)
+                                .frame(width: 6, height: 6)
+                            Text(upNext.title)
+                                .font(.rubik(14, weight: .medium))
+                                .foregroundStyle(theme.textColor)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    NoticeDismissButton {
+                        withAnimation {
+                            isClosing = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            dismissedEventId = upNext.id
+                            isClosing = false
+                        }
                     }
                 }
-                Spacer(minLength: 8)
                 Button {
                     if state.conferenceURL != nil {
                         onJoin()
@@ -45,50 +56,27 @@ struct UpNextBanner: View {
                         onOpen()
                     }
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Text(state.conferenceURL != nil ? "Join" : "Open")
-                            .font(.rubik(14, weight: .medium))
                         ShortcutHintChip(
                             label: state.conferenceURL != nil ? "V" : "N",
                             style: .onAccent
                         )
                     }
-                    .foregroundStyle(theme.onAccentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(theme.accentSecondaryColor)
-                    .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
                 }
-                .buttonStyle(.plain)
-                Button {
-                    withAnimation {
-                        isClosing = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        dismissedEventId = upNext.id
-                        isClosing = false
-                    }
-                } label: {
-                    Text("×")
-                        .font(.rubik(16))
-                        .foregroundStyle(theme.textMutedColor)
-                        .padding(.horizontal, 4)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Dismiss")
+                .buttonStyle(CompactPrimaryButtonStyle())
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
-            .background(theme.surfacePanelColor.opacity(0.8))
-            .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(width: 288, alignment: .leading)
+            .background(theme.surfaceColor.opacity(0.95))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
-                RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
+                RoundedRectangle(cornerRadius: 12)
                     .stroke(theme.borderColor, lineWidth: 1))
-            .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+            .shadow(color: theme.shadowDefaultColor, radius: 20, y: 10)
             .opacity(isClosing ? 0 : 1)
-            .frame(width: 288)
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("compass-native-up-next-banner")
             .onAppear {
                 onBannerShown(

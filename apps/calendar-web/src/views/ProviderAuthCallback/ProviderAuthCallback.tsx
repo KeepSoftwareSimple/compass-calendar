@@ -24,9 +24,8 @@ import { consumeGoogleOAuthScopesRecoveryPending } from "@web/auth/providers/aut
 import { recordOAuthSignInCallbackLanding } from "@web/auth/providers/authorization/record-oauth-signin-callback-landing";
 import { missingPermissionsActions } from "@web/auth/providers/missing-permissions.store";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
-import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
-import { getToast } from "@web/common/utils/toast/toast.port";
+import { queuePendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
 
@@ -81,7 +80,7 @@ export async function completeProviderAuthCallback({
     // Cancelling is a choice, not a fault. An error toast for it reads as a
     // Compass failure and discourages the retry that would have worked.
     if (result.reason === "oauth_user_cancelled") {
-      getToast().info(result.message, getToastDefaultOptions());
+      queuePendingShellToast({ variant: "info", message: result.message });
     } else if (result.reason === "oauth_missing_scopes") {
       const missingScopes = result.missingScopes ?? [];
       if (
@@ -96,7 +95,7 @@ export async function completeProviderAuthCallback({
         missingPermissionsActions.open(provider);
       }
     } else {
-      showErrorToast(result.message);
+      queuePendingShellToast({ variant: "error", message: result.message });
     }
   } else {
     if (consumeGoogleOAuthScopesRecoveryPending()) {
