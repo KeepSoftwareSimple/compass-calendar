@@ -50,7 +50,7 @@ describe("PointerHint", () => {
   it("renders pointer teaching with shortcutKey only", () => {
     pointerHintActions.pulse({
       source: "pointer",
-      shortcutKey: "m",
+      shortcutKey: ".",
     });
     render(<PointerHint />);
     expect(screen.getByRole("status")).toHaveTextContent("Next time, press");

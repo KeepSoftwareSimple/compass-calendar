@@ -185,7 +185,7 @@ Found a separate capture reliability defect with multiple installed Compass buil
 | --- | --- | --- |
 | Billing past due | ✅ | |
 | Demo events, update ready | ✅ | |
-| Meeting nudge, connect prompts, first-event | ✅ | Sidebar meeting-page nudge (`M`), local-mode trial card (`S`, Esc), first-event card completes on first create |
+| Meeting nudge, connect prompts, first-event | ✅ | Sidebar meeting-page nudge (`/`), local-mode trial card (`S`, Esc), first-event card completes on first create |
 | Connection + timezone banners | ✅ | Reconnect / Retry / Refresh / Learn more (`G`); timezone mismatch Switch / Keep; Auto zone follows the Mac each minute |
 | Status toasts | 🟡 | `StatusToastOverlay` vs web toast stack |
 | Focus latest notice **`p`** | ✅ | Connection banner, sample events, meeting nudge, trial card, update, past due |
