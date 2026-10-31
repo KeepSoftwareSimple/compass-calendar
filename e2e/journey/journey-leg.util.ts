@@ -1,10 +1,14 @@
 import {
+  type Browser,
   expect,
   type FrameLocator,
   type Locator,
   type Page,
 } from "@playwright/test";
-import { redactJourneyEmailForLog } from "@core/analytics/synthetic-account.util";
+import {
+  COMPASS_SYNTHETIC_ACCOUNT_HEADER,
+  redactJourneyEmailForLog,
+} from "@core/analytics/synthetic-account.util";
 import {
   clearPendingJourneyAccount,
   writePendingJourneyAccount,
@@ -402,7 +406,13 @@ export const cleanupProdJourneyAccount = async (
     email,
     password,
     scope = "PROD",
-  }: { email: string; password: string; scope?: JourneyScope },
+    browser,
+  }: {
+    email: string;
+    password: string;
+    scope?: JourneyScope;
+    browser?: Browser | null;
+  },
 ) => {
   await page
     .goto("/week", { waitUntil: "domcontentloaded" })
@@ -429,29 +439,51 @@ export const cleanupProdJourneyAccount = async (
   console.log(
     `Journey cleanup confirmed for ${redactJourneyEmailForLog(email)}`,
   );
-  await verifyJourneyAccountDeletedAfterCleanup(page, { email, password });
+  const browserForVerify = browser ?? page.context().browser();
+  if (!browserForVerify) {
+    throw new Error(
+      "Browser instance required to verify journey account deletion",
+    );
+  }
+  await verifyJourneyAccountDeletedAfterCleanup(browserForVerify, scope, {
+    email,
+    password,
+  });
 };
 
 /** After UI delete, sign-in must not reach the calendar (account row is gone). */
 export const verifyJourneyAccountDeletedAfterCleanup = async (
-  page: Page,
+  browser: Browser,
+  scope: JourneyScope,
   { email, password }: { email: string; password: string },
 ) => {
-  await page.context().clearCookies();
-  await page.addInitScript(() => {
-    localStorage.clear();
-    sessionStorage.clear();
+  const baseURL =
+    scope === "PROD"
+      ? (process.env.PROD_BASE_URL ?? "https://compasscalendar.com")
+      : (process.env.STAGING_BASE_URL ?? "https://staging.compasscalendar.com");
+
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 1280, height: 800 },
+    extraHTTPHeaders: {
+      [COMPASS_SYNTHETIC_ACCOUNT_HEADER]: "true",
+    },
   });
-  await logInJourneyAccount(page, { email, password });
-  await expect(page.getByRole("button", { name: "Open settings" })).not.toBeVisible(
-    { timeout: 30_000 },
-  );
-  await expect(
-    page.getByText(/Incorrect email or password\.|Log in failed/i),
-  ).toBeVisible({ timeout: 30_000 });
-  console.log(
-    `Journey delete verified email=${redactJourneyEmailForLog(email)} sign_in=failed_as_expected`,
-  );
+  const verifyPage = await context.newPage();
+  try {
+    await logInJourneyAccount(verifyPage, { email, password });
+    await expect(
+      verifyPage.getByText(/Incorrect email or password\.|Log in failed/i),
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(
+      verifyPage.getByRole("button", { name: "Open settings" }),
+    ).not.toBeVisible({ timeout: 5_000 });
+    console.log(
+      `Journey delete verified email=${redactJourneyEmailForLog(email)} sign_in=failed_as_expected`,
+    );
+  } finally {
+    await context.close();
+  }
 };
 
 export const deleteJourneyAccount = async (page: Page) => {
@@ -466,4 +498,7 @@ export const deleteJourneyAccount = async (page: Page) => {
   await expect(page.getByText(/until our sails cross paths/i)).toBeVisible({
     timeout: 60_000,
   });
+  await page
+    .waitForURL((url) => !url.pathname.includes("/week"), { timeout: 15_000 })
+    .catch(() => undefined);
 };

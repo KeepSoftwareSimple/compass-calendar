@@ -17,7 +17,7 @@ test.use({
   },
 });
 
-test("manual synthetic journey account cleanup", async ({ page }) => {
+test("manual synthetic journey account cleanup", async ({ page, browser }) => {
   test.skip(
     process.env.JOURNEY_MANUAL_CLEANUP_UI !== "1",
     "Set JOURNEY_MANUAL_CLEANUP_UI=1 for UI cleanup",
@@ -41,6 +41,11 @@ test("manual synthetic journey account cleanup", async ({ page }) => {
 
   for (const email of emails) {
     const password = resolveJourneyPasswordForCleanupEmail(scope, email);
-    await cleanupProdJourneyAccount(page, { email, password, scope });
+    await cleanupProdJourneyAccount(page, {
+      email,
+      password,
+      scope,
+      browser,
+    });
   }
 });
