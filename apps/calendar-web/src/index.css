@@ -1049,6 +1049,12 @@
     outline-offset: 1px;
   }
 
+  /* Playwright and programmatic .focus() do not set :focus-visible. */
+  &[data-view="sidebar"] .react-datepicker__day:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
   /* Sidebar days are keyboard targets, not click targets: no hover
      affordance. Use --text (not inherit): react-datepicker sets `color: #000`
      on .react-datepicker, so inherit painted black numbers on Dark Abyss. */
@@ -1178,6 +1184,12 @@
 .c-number-input {
   background-color: var(--surface);
   color: var(--text);
+}
+
+.c-life-input:focus,
+.c-life-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .c-number-input {
@@ -1561,7 +1573,8 @@
     z-index: 1;
     outline: none;
   }
-  & .react-datepicker__week:has(.react-datepicker__day:focus-visible)::after {
+  & .react-datepicker__week:has(.react-datepicker__day:focus-visible)::after,
+  & .react-datepicker__week:has(.react-datepicker__day:focus)::after {
     position: absolute;
     inset: 0 -3px;
     z-index: 20;
@@ -1569,6 +1582,24 @@
     box-shadow: inset 0 0 0 2px var(--accent);
     content: "";
     pointer-events: none;
+  }
+
+  & .react-datepicker__week:has(.react-datepicker__day:focus) {
+    position: relative;
+    z-index: 1;
+    outline: none;
+  }
+}
+
+@container month-picker (max-width: 280px) {
+  .c-month-picker .c-date-picker[data-view="sidebar"] .react-datepicker__day,
+  .c-month-picker
+    .c-date-picker[data-view="sidebar"]
+    .react-datepicker__day-name {
+    width: 1.2rem;
+    height: 1.2rem;
+    line-height: 1.2rem;
+    font-size: 0.6875rem;
   }
 }
 

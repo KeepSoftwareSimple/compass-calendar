@@ -146,7 +146,7 @@ export function LifeSidebarContent({
             calendarClassName="lifeBirthDatePicker"
             dateFormat="MMM d, yyyy"
             id="life-date-of-birth"
-            inputClassName="c-life-input w-44"
+            inputClassName="c-life-input w-full max-w-44 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel"
             isClearable
             isOpen={isBirthDatePickerOpen}
             maxDate={today}

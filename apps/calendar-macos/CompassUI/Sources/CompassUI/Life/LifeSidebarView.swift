@@ -45,6 +45,13 @@ struct LifeSidebarView: View {
               .padding(.vertical, 8).frame(width: 176)
               .background(theme.surfaceColor).foregroundStyle(theme.textColor)
               .clipShape(RoundedRectangle(cornerRadius: 4))
+              .overlay {
+                if focusedField == .birthDate {
+                  RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(theme.accentColor, lineWidth: 2)
+                    .padding(-2)
+                }
+              }
               // Typing stays in the field; the button opens web's calendar picker.
               .overlay(alignment: .trailing) {
                 Button {

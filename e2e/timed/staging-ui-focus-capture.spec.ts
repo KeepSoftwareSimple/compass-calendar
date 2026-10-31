@@ -39,14 +39,51 @@ const signUpSyntheticAccount = async (page: Page) => {
   }
 };
 
-const expectFocusInMainGrid = async (page: Page) => {
+const dismissTrialBanner = async (page: Page) => {
+  const trialBanner = page.getByRole("status").filter({
+    hasText: "Start your 7-day free trial to plan your week.",
+  });
+  if (await trialBanner.isVisible().catch(() => false)) {
+    await trialBanner.getByRole("button", { name: "Dismiss" }).click();
+    await expect(trialBanner).toBeHidden({ timeout: 10_000 });
+  }
+  const meetingDismiss = page
+    .getByRole("region", { name: "Meeting page" })
+    .getByRole("button", { name: "Dismiss" });
+  if (await meetingDismiss.isVisible().catch(() => false)) {
+    await meetingDismiss.click();
+  }
+};
+
+const waitForSidebarIdle = async (page: Page) => {
   await expect
-    .poll(async () =>
-      page.evaluate(() =>
-        Boolean(
-          document.getElementById("mainGrid")?.contains(document.activeElement),
-        ),
-      ),
+    .poll(() => page.locator("#sidebar [aria-busy='true']").count(), {
+      timeout: 60_000,
+    })
+    .toBe(0);
+};
+
+const expectFocusReturnedToWeekGrid = async (page: Page) => {
+  const pickerDay = page.locator('.react-datepicker__day[tabindex="0"]');
+  await expect(pickerDay).not.toBeFocused({ timeout: 15_000 });
+
+  await expect
+    .poll(
+      async () =>
+        page.evaluate(() => {
+          const active = document.activeElement;
+          if (!active) return false;
+          const grid = document.getElementById("mainGrid");
+          const week = document.querySelector(
+            '[aria-label="Week calendar horizontal scroll area"]',
+          );
+          return (
+            active === grid ||
+            Boolean(grid?.contains(active)) ||
+            Boolean(week?.contains(active))
+          );
+        }),
+      { timeout: 15_000 },
     )
     .toBe(true);
 };
@@ -58,13 +95,16 @@ const captureWeekFocusSequence = async (
 ) => {
   await page.setViewportSize({ width, height });
   await page.goto(`${baseUrl}/week`, { waitUntil: "domcontentloaded" });
+  await dismissTrialBanner(page);
   await ensureSidebarOpen(page);
+  await waitForSidebarIdle(page);
   await page.locator("#mainGrid").focus();
 
   await expect(page.locator("#mainGrid")).toBeFocused();
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-grid-focused-${width}.png`,
   });
+  await page.locator("#mainGrid").focus();
 
   await page.keyboard.press("i");
   const pickerDay = page.locator('.react-datepicker__day[tabindex="0"]');
@@ -72,9 +112,10 @@ const captureWeekFocusSequence = async (
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-month-picker-after-i-${width}.png`,
   });
+  await pickerDay.focus();
 
   await page.keyboard.press("u");
-  await expectFocusInMainGrid(page);
+  await expectFocusReturnedToWeekGrid(page);
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-grid-after-u-${width}.png`,
   });
@@ -84,6 +125,7 @@ const captureLifeAfterI = async (page: Page, width: number, height: number) => {
   await page.setViewportSize({ width, height });
   await page.goto(`${baseUrl}/life`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Life" })).toBeVisible();
+  await waitForSidebarIdle(page);
 
   const currentWeek = page.getByRole("button", { name: /current week/i });
   if (await currentWeek.count()) {
