@@ -632,7 +632,8 @@ describe("self-host helper", () => {
 
     expect(helper).toContain("prune_unused_images");
     expect(helper).toContain("timeout 120 docker image prune -af");
-    expect(updateBlock).toContain("compose logs --tail=100 mongo backend-a");
+    expect(helper).toContain("compose logs --tail=100 mongo backend-a");
+    expect(updateBlock).toContain("dump_stack_diagnostics");
   });
 
   it("applies the selfhosted mongo overlay when the selfhosted profile is active", () => {
