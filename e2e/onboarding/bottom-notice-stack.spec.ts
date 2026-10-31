@@ -48,7 +48,7 @@ async function assertSingleNotice(page: Page) {
 async function readMessageAndButtonStyle(notice: Locator) {
   return notice.evaluate((root) => {
     const message = root.querySelector("p");
-    const button = root.querySelector("button.c-button-primary");
+    const buttonLabel = root.querySelector(".c-notice-primary-label");
     const read = (el: Element | null) =>
       el
         ? {
@@ -56,7 +56,7 @@ async function readMessageAndButtonStyle(notice: Locator) {
             fontWeight: getComputedStyle(el).fontWeight,
           }
         : null;
-    return { message: read(message), button: read(button) };
+    return { message: read(message), buttonLabel: read(buttonLabel) };
   });
 }
 
@@ -120,7 +120,10 @@ test.describe("bottom notice queue", () => {
 
     const firstEventTypography = await readMessageAndButtonStyle(firstEvent);
     expect(firstEventTypography.message).toEqual(updateTypography.message);
-    expect(firstEventTypography.button).toEqual(updateTypography.button);
+    expect(firstEventTypography.buttonLabel).toEqual(
+      updateTypography.buttonLabel,
+    );
+    expect(updateTypography.buttonLabel?.fontWeight).toBe("500");
   });
 
   test("360px shows one notice at a time at full width minus margins", async ({

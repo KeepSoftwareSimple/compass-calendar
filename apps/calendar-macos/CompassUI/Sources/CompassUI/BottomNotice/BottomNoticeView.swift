@@ -13,7 +13,7 @@ struct BottomNoticeView<Actions: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 8) {
                 Text(message)
-                    .font(.rubik(NativeWebLayoutTokens.fontSizeM, weight: .regular))
+                    .font(.rubik(NativeWebLayoutTokens.fontSizeXS, weight: .regular))
                     .foregroundStyle(theme.textColor)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)

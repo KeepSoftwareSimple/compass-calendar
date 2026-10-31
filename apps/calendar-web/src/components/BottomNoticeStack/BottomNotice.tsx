@@ -4,9 +4,9 @@ import { type HTMLAttributes, type ReactNode } from "react";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
 import IconButton from "@web/components/IconButton/IconButton";
 
-/** Standard small UI copy (~13px), regular weight. */
+/** Same scale as sidebar secondary copy (`text-xs`, e.g. Up Next, demo banner). */
 export const BOTTOM_NOTICE_MESSAGE_CLASS =
-  "min-w-0 flex-1 text-m font-normal leading-snug text-text line-clamp-2";
+  "min-w-0 flex-1 text-xs font-normal leading-snug text-text line-clamp-2";
 
 export const BOTTOM_NOTICE_PANEL_CLASS =
   "flex w-full flex-col gap-2 rounded-xl border border-border bg-surface/95 p-3 text-text shadow-[0_4px_12px_var(--color-shadow-default)] backdrop-blur-2xl backdrop-saturate-150";

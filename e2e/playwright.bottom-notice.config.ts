@@ -7,6 +7,7 @@ const repoRoot = process.cwd();
 
 export default defineConfig({
   ...base,
+  testDir: join(repoRoot, "e2e"),
   testMatch: [
     "onboarding/bottom-notice-stack.spec.ts",
     "onboarding/bottom-notice-capture.spec.ts",

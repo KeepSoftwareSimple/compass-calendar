@@ -12,7 +12,7 @@ public struct DesktopUpdateReadyBannerView: View {
 
     public var body: some View {
         BottomNoticeView(
-            message: "Compass just got better. Refresh now.",
+            message: "Compass just got better. Refresh to update.",
             onDismiss: onDismiss
         ) {
             Button(action: onRestart) {
