@@ -1,7 +1,7 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { seedJourneyOnboarding } from "../journey/journey-leg.util";
-import { ensureSidebarOpen, pressShortcut } from "../utils/event-test-utils";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { ensureSidebarOpen } from "../utils/event-test-utils";
 
 const ARTIFACT_DIR = "/opt/cursor/artifacts/staging-ui-focus";
 const baseUrl =
@@ -39,6 +39,18 @@ const signUpSyntheticAccount = async (page: Page) => {
   }
 };
 
+const expectFocusInMainGrid = async (page: Page) => {
+  await expect
+    .poll(async () =>
+      page.evaluate(() =>
+        Boolean(
+          document.getElementById("mainGrid")?.contains(document.activeElement),
+        ),
+      ),
+    )
+    .toBe(true);
+};
+
 const captureWeekFocusSequence = async (
   page: Page,
   width: number,
@@ -54,7 +66,7 @@ const captureWeekFocusSequence = async (
     path: `${ARTIFACT_DIR}/week-grid-focused-${width}.png`,
   });
 
-  await pressShortcut(page, "i");
+  await page.keyboard.press("i");
   const pickerDay = page.locator('.react-datepicker__day[tabindex="0"]');
   await expect(pickerDay).toBeFocused();
   await page.screenshot({
@@ -62,12 +74,13 @@ const captureWeekFocusSequence = async (
   });
 
   await page.keyboard.press("u");
+  await expectFocusInMainGrid(page);
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-grid-after-u-${width}.png`,
   });
 };
 
-const captureLifeSidebarAfterI = async (
+const captureLifeAfterI = async (
   page: Page,
   width: number,
   height: number,
@@ -80,17 +93,17 @@ const captureLifeSidebarAfterI = async (
   if (await currentWeek.count()) {
     await currentWeek.first().focus();
   } else {
-    const lifeGrid = page.locator('[data-page-jump="life-grid"]');
-    await lifeGrid.first().focus();
+    await page.locator('[data-page-jump="life-grid"]').first().focus();
   }
 
   const birthDate = page.getByRole("textbox", { name: "Date of birth" });
-  await pressShortcut(page, "i");
+  await page.keyboard.press("i");
   await expect(birthDate).toBeFocused();
   await expect(birthDate).toHaveValue("Jan 1, 2000");
 
-  await birthDate.screenshot({
-    path: `${ARTIFACT_DIR}/life-sidebar-after-i-${width}.png`,
+  await page.screenshot({
+    path: `${ARTIFACT_DIR}/life-after-i-${width}.png`,
+    fullPage: width <= 360,
   });
 };
 
@@ -118,7 +131,7 @@ test.describe("staging ui focus capture", () => {
 
     await captureWeekFocusSequence(page, 1280, 800);
     await captureWeekFocusSequence(page, 360, 800);
-    await captureLifeSidebarAfterI(page, 1280, 800);
-    await captureLifeSidebarAfterI(page, 360, 800);
+    await captureLifeAfterI(page, 1280, 800);
+    await captureLifeAfterI(page, 360, 800);
   });
 });

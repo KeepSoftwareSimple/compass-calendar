@@ -179,15 +179,24 @@ export function LifeSidebarContent({
               }
               if (isBirthDatePickerOpen) return;
               if (
-                event.key !== "Enter" &&
-                event.key !== "ArrowDown" &&
-                event.key !== "ArrowUp"
+                event.key === "Enter" ||
+                event.key === "ArrowDown" ||
+                event.key === "ArrowUp"
               ) {
+                event.preventDefault();
+                (event.target as HTMLElement).click();
                 return;
               }
-              event.preventDefault();
-              (event.target as HTMLElement).click();
+              if (
+                event.key.length === 1 &&
+                !event.ctrlKey &&
+                !event.metaKey &&
+                !event.altKey
+              ) {
+                event.preventDefault();
+              }
             }}
+            readOnly={!isBirthDatePickerOpen}
             onSelect={(date) => {
               if (!date) return;
               setBirthDate(date);

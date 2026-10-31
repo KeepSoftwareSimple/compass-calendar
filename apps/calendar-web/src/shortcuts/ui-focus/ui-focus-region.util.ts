@@ -18,6 +18,7 @@ import { getPageJumpFocusElement } from "@web/shortcuts/page-jump/page-jump.targ
 import {
   clearUiFocusTextInsertSuppress,
   markUiFocusTextInsertSuppress,
+  scheduleUiFocusInsertScrub,
   shouldSuppressUiFocusTextInsert,
 } from "@web/shortcuts/ui-focus/ui-focus-text-insert.util";
 
@@ -101,12 +102,15 @@ const deferFocus = (
   return true;
 };
 
+const LIFE_BIRTH_DATE_INPUT_ID = "life-date-of-birth";
+
 const focusFirstLifeSidebarField = (): boolean => {
   const anchor = document.querySelector<HTMLElement>(LIFE_DETAILS_SELECTOR);
   if (!anchor) return false;
   const target =
-    anchor.querySelector<HTMLElement>("#life-date-of-birth") ??
+    anchor.querySelector<HTMLElement>(`#${LIFE_BIRTH_DATE_INPUT_ID}`) ??
     anchor.querySelector<HTMLElement>(INTERACTIVE_SELECTOR);
+  scheduleUiFocusInsertScrub(LIFE_BIRTH_DATE_INPUT_ID, "i");
   return deferFocus(target, "i");
 };
 
@@ -170,6 +174,8 @@ export const moveCalendarUiFocusRight = (): boolean => {
 
 export const moveLifeUiFocusLeft = (): boolean => {
   if (detectLifeUiFocusRegion() === "grid") return true;
+
+  scheduleUiFocusInsertScrub(LIFE_BIRTH_DATE_INPUT_ID, "u");
 
   const gridTarget = getPageJumpFocusElement("life-grid");
   if (gridTarget) {
