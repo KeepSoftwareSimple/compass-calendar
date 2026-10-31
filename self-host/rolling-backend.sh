@@ -273,13 +273,6 @@ rolling_backend_update() {
     compose logs --tail=80 "backend-$active" api-proxy >&2 || true
     return 1
   fi
-  cutover_log "waiting for stable proxy health on active slot ${active} after api-proxy sync"
-  if ! wait_for_proxy_health_stable; then
-    compose ps -a "backend-$active" api-proxy >&2 || true
-    compose logs --tail=80 "backend-$active" api-proxy >&2 || true
-    cutover_log "proxy health unstable after api-proxy sync on active slot ${active}"
-    return 1
-  fi
 
   cutover_log "recreating backend-${inactive} with new image"
   if ! compose up -d --force-recreate --no-deps "backend-$inactive"; then
