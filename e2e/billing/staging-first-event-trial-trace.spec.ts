@@ -155,11 +155,26 @@ test.describe("staging first-event trial trace", () => {
 
     trace.push(await snapshotState(page, "after first event save attempt"));
 
+    await expect(trialDialog).toBeVisible();
+
+    // #5018: no bottom-left notice cards or toasts over auth / trial modals.
+    const noticeStack = page.locator("section.compass-bottom-notice-stack");
+    await expect(noticeStack.getByRole("complementary")).toHaveCount(0);
+    await expect(noticeStack.locator(".Toastify__toast--visible")).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("status").filter({
+        hasText: "Start your 7-day free trial to plan your week.",
+      }),
+    ).toHaveCount(0);
+
     for (const { width, height, suffix } of [
       { width: 1280, height: 800, suffix: "1280" },
       { width: 360, height: 740, suffix: "360" },
     ]) {
       await page.setViewportSize({ width, height });
+      await expect(trialDialog).toBeVisible();
       await page.screenshot({
         path: `${ARTIFACT_DIR}/staging-trace-after-first-event-${suffix}.png`,
         fullPage: false,
