@@ -2,6 +2,7 @@ import classNames from "classnames";
 import { type PropsWithChildren } from "react";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import { BottomNoticeToastHost } from "@web/components/BottomNoticeStack/BottomNoticeToastHost";
+import { useFlushPendingShellToast } from "@web/components/BottomNoticeStack/useFlushPendingShellToast";
 import { useIsNarrowSidebarLayout } from "@web/components/Sidebar/hooks/useIsNarrowSidebarLayout";
 import {
   selectIsSidebarOpen,
@@ -13,6 +14,7 @@ export function BottomNoticeStack({ children }: PropsWithChildren) {
   const isNarrowLayout = useIsNarrowSidebarLayout();
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
   const clearsSidebarFooter = !isNarrowLayout && isSidebarOpen;
+  useFlushPendingShellToast();
 
   return (
     <section

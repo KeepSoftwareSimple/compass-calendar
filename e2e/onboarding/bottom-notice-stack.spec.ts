@@ -48,22 +48,43 @@ async function prepareSession(page: Page) {
   });
 }
 
-async function openWeekWithNotices(page: Page) {
-  await page.goto("/week", { waitUntil: "networkidle" });
-
-  const firstEvent = page.getByRole("complementary", {
-    name: "Create your first event",
-  });
-  await expect(firstEvent).toBeVisible({ timeout: 120_000 });
-
+async function ensureUpdateToastVisible(page: Page) {
   const updateToast = page.locator(
     ".Toastify__toast.app-update-available-toast-host",
   );
-  await expect(updateToast).toBeVisible({ timeout: 180_000 });
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if (await updateToast.isVisible()) return;
+    await page.waitForTimeout(500);
+  }
+
+  await page.evaluate(() => {
+    localStorage.removeItem("compass.app-update.notice-handled-versions");
+    const helpers = (
+      window as Window & {
+        __compassE2E?: {
+          showAppUpdateAvailableToast: (version: string) => void;
+        };
+      }
+    ).__compassE2E;
+    helpers?.showAppUpdateAvailableToast("99.99.99");
+  });
+
+  await expect(updateToast).toBeVisible({ timeout: 15_000 });
   await expect(
     page.getByText("Compass just got better. Refresh to update."),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /^Refresh/i })).toBeVisible();
+}
+
+async function openWeekWithNotices(page: Page) {
+  const firstEvent = page.getByRole("complementary", {
+    name: "Create your first event",
+  });
+
+  await page.goto("/week", { waitUntil: "networkidle" });
+  await expect(firstEvent).toBeVisible({ timeout: 120_000 });
+  await ensureUpdateToastVisible(page);
 }
 
 function noticeLocators(page: Page): Locator[] {
@@ -99,12 +120,35 @@ async function assertPrimaryCtas(page: Page) {
   await expect(addCoffee).toHaveClass(/c-button-primary/);
 }
 
+async function waitForNoticesFullyInViewport(page: Page, notices: Locator[]) {
+  await expect
+    .poll(
+      async () => {
+        const viewport = page.viewportSize();
+        if (!viewport) return false;
+
+        for (const notice of notices) {
+          if (!(await notice.isVisible())) return false;
+          const box = await notice.boundingBox();
+          if (!box || box.width <= 0 || box.height <= 0) return false;
+          if (!isFullyInViewport(box, viewport)) return false;
+        }
+
+        return true;
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+}
+
 async function assertNoticeStackLayout(page: Page) {
   const viewport = page.viewportSize();
   expect(viewport).not.toBeNull();
   if (!viewport) throw new Error("Expected viewport");
 
   const notices = noticeLocators(page);
+  await waitForNoticesFullyInViewport(page, notices);
+
   const boxes: LayoutBox[] = [];
 
   for (const notice of notices) {
@@ -138,6 +182,10 @@ async function assertNoticeStackLayout(page: Page) {
 test.describe("bottom notice stack", () => {
   test.describe.configure({ mode: "serial" });
   test.use({ storageState: { cookies: [], origins: [] } });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("about:blank");
+  });
 
   test("1280px anchors notices bottom-left with primary CTAs and no overlap", async ({
     page,
