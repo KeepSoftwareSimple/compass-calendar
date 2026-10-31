@@ -460,6 +460,90 @@ describe("refreshPrincipalCalendars (db)", () => {
     expect(reloaded?.syncCursor).toBeNull();
   });
 
+  it("coalesces repeated foreground calendarListSync for one connection", async () => {
+    const { resources, jobs, calendars, connections } = deps();
+    const connection = await connections.upsertByProviderAccount({
+      tenantId: faker.database.mongodbObjectId() as TenantId,
+      principalId: faker.database.mongodbObjectId() as PrincipalId,
+      provider: "google",
+      account: {
+        providerAccountId: "fg-coalesce@gmail.com" as ProviderAccountId,
+        email: "fg-coalesce@gmail.com",
+        displayName: "Foreground coalesce",
+      },
+      capabilities: ["readEvents"],
+      state: "healthy",
+      stateReason: null,
+    });
+    const calendar: ProviderCalendarRecord = await seedProviderCalendar(
+      calendars,
+      {
+        tenantId: connection.tenantId,
+        principalId: connection.principalId,
+        connectionId: connection._id,
+      },
+    );
+    const events = await resources.ensure({
+      tenantId: calendar.tenantId,
+      principalId: calendar.principalId,
+      connectionId: calendar.connectionId,
+      resourceKind: "events",
+      calendarId: calendar._id,
+    });
+    await resources.setBootstrapState(
+      events.tenantId,
+      events.principalId,
+      events._id,
+      "ready",
+    );
+    await resources.markAttempt(
+      events.tenantId,
+      events.principalId,
+      events._id,
+      new Date("2026-08-10T11:59:50.000Z"),
+    );
+    const listResource = await resources.ensure({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceKind: "calendarList",
+      calendarId: null,
+    });
+    await resources.markFullListCompleted(
+      connection.tenantId,
+      connection.principalId,
+      listResource._id,
+      new Date("2026-08-10T11:00:00.000Z"),
+    );
+
+    const depsBundle = { resources, jobs, connections };
+    const tickAt = new Date("2026-08-10T11:59:30.000Z");
+    const staleBefore = new Date("2026-08-10T11:59:00.000Z");
+    await refreshStalePrincipalCalendars(
+      depsBundle,
+      connection.tenantId,
+      connection.principalId,
+      staleBefore,
+      () => tickAt,
+    );
+    await refreshStalePrincipalCalendars(
+      depsBundle,
+      connection.tenantId,
+      connection.principalId,
+      staleBefore,
+      () => new Date(tickAt.getTime() + 15_000),
+    );
+
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.jobs)
+        .countDocuments({
+          coalescingKey: `calendarListSync:${connection._id}`,
+        }),
+    ).toBe(1);
+  });
+
   it("manual refresh skips an inactive calendar's incrementalPull", async () => {
     const { resources, jobs, calendars, connections } = deps();
     const activeCalendar: ProviderCalendarRecord =
