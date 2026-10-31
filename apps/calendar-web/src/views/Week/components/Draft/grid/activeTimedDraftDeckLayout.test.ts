@@ -1,8 +1,17 @@
 import { Origin } from "@core/constants/core.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
+import { gridEventsFromProdOverlapExport } from "@web/grid/layout/prod-overlap-export.fixture";
+import {
+  resetEffectiveTimeZoneStoreForTests,
+  setBrowserTimeZoneForTests,
+  setCalendarTimeZoneHint,
+  setPinnedTimeZone,
+} from "@web/timezone/effective-timezone.store";
 import { getActiveTimedDraftDeckLayout } from "./activeTimedDraftDeckLayout";
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const createTimedEvent = (overrides: Partial<GridEvent> = {}): GridEvent => ({
   description: "",
@@ -16,7 +25,35 @@ const createTimedEvent = (overrides: Partial<GridEvent> = {}): GridEvent => ({
   ...overrides,
 });
 
+afterEach(() => {
+  resetEffectiveTimeZoneStoreForTests();
+});
+
 describe("getActiveTimedDraftDeckLayout", () => {
+  it("decks Tyler prod Monthly Ritual against its duplicate when the form is open", () => {
+    setBrowserTimeZoneForTests("Etc/UTC");
+    setCalendarTimeZoneHint("America/Denver");
+    setPinnedTimeZone("America/Denver");
+
+    const path = join(
+      import.meta.dir,
+      "../../../../../grid/layout/fixtures/tyler-prod-overlap-2026-10-31.json",
+    );
+    const payload = JSON.parse(readFileSync(path, "utf8")) as {
+      instances: Parameters<typeof gridEventsFromProdOverlapExport>[0];
+    };
+    const events = gridEventsFromProdOverlapExport(payload.instances);
+    const ritual = events.find(
+      (event) => event._id === "6a8313927f0219811f36f89a",
+    );
+    expect(ritual).toBeDefined();
+
+    expect(getActiveTimedDraftDeckLayout(ritual!, events)).toEqual({
+      groupSize: 2,
+      order: 1,
+    });
+  });
+
   it("finds the saved draft event's stacked layout from real overlapping events", () => {
     const draft = createTimedEvent({
       _id: "draft",

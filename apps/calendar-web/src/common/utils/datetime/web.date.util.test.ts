@@ -28,6 +28,8 @@ import {
 } from "@web/common/utils/datetime/web.date.util";
 import {
   resetEffectiveTimeZoneStoreForTests,
+  setBrowserTimeZoneForTests,
+  setCalendarTimeZoneHint,
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { getFormDates } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/form.datetime.util";
@@ -467,6 +469,8 @@ describe("toUTCOffset", () => {
   });
 
   it("includes a TZ offset - when passing Date object", () => {
+    setBrowserTimeZoneForTests("Etc/UTC");
+    setCalendarTimeZoneHint("America/Denver");
     setPinnedTimeZone("America/Denver");
     try {
       const result = toUTCOffset(new Date("2026-10-21T18:00:00.000Z"));
@@ -834,21 +838,57 @@ describe("mapToBackend timed overnight", () => {
     expect(tryMapToBackend(selected).ok).toBe(false);
   });
 
+  it("keeps the event timezone when mapping display-zone wall times", () => {
+    setBrowserTimeZoneForTests("Etc/UTC");
+    setCalendarTimeZoneHint("America/Denver");
+    setPinnedTimeZone("America/Denver");
+    try {
+      const day = dayjs.tz("2026-10-31", "America/Denver");
+      const schedule = mapToBackend(
+        {
+          startDate: day.hour(12).minute(0).toDate(),
+          endDate: day.hour(13).minute(30).toDate(),
+          startTime: getTimeOptionByValue(day.hour(12).minute(0)),
+          endTime: getTimeOptionByValue(day.hour(13).minute(30)),
+          isAllDay: false,
+        },
+        "Europe/Berlin",
+      );
+
+      expect(schedule.kind).toBe("timed");
+      if (schedule.kind !== "timed") return;
+      expect(schedule.timeZone).toBe(TimeZoneSchema.parse("Europe/Berlin"));
+      expect(dayjs(schedule.start).valueOf()).toBe(
+        dayjs("2026-10-31T18:00:00.000Z").valueOf(),
+      );
+      expect(dayjs(schedule.end).valueOf()).toBe(
+        dayjs("2026-10-31T19:30:00.000Z").valueOf(),
+      );
+    } finally {
+      resetEffectiveTimeZoneStoreForTests();
+    }
+  });
+
   it("stamps the pinned timezone on new timed events", () => {
+    setBrowserTimeZoneForTests("Etc/UTC");
+    setCalendarTimeZoneHint("America/Chicago");
     setPinnedTimeZone("America/Chicago");
+    try {
+      const day = dayjs("2026-08-11T00:00:00");
+      const schedule = mapToBackend({
+        startDate: day.toDate(),
+        endDate: day.toDate(),
+        startTime: getTimeOptionByValue(day.hour(9).minute(0)),
+        endTime: getTimeOptionByValue(day.hour(10).minute(0)),
+        isAllDay: false,
+      });
 
-    const day = dayjs("2026-08-11T00:00:00");
-    const schedule = mapToBackend({
-      startDate: day.toDate(),
-      endDate: day.toDate(),
-      startTime: getTimeOptionByValue(day.hour(9).minute(0)),
-      endTime: getTimeOptionByValue(day.hour(10).minute(0)),
-      isAllDay: false,
-    });
-
-    expect(schedule.kind).toBe("timed");
-    if (schedule.kind !== "timed") return;
-    expect(schedule.timeZone).toBe(TimeZoneSchema.parse("America/Chicago"));
+      expect(schedule.kind).toBe("timed");
+      if (schedule.kind !== "timed") return;
+      expect(schedule.timeZone).toBe(TimeZoneSchema.parse("America/Chicago"));
+    } finally {
+      resetEffectiveTimeZoneStoreForTests();
+    }
   });
 });
 

@@ -1,7 +1,20 @@
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
+import dayjs from "@core/util/date/dayjs";
 import { getTimeOptionByValue } from "@web/common/utils/datetime/web.date.util";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
+
+/** Wall-clock form fields follow the pinned calendar zone, not the event zone. */
+export const getFormDatesForTimedInstants = (
+  start: Date,
+  end: Date,
+  displayTimeZone: string = getEffectiveTimeZone(),
+) =>
+  getFormDates(
+    dayjs(start).toISOString(),
+    dayjs(end).toISOString(),
+    displayTimeZone,
+  );
 
 export const getFormDates = (
   startDate: string,

@@ -117,13 +117,22 @@ public enum GridLayoutSnapshotBuilder {
                 deckLayout: deckItem.deckLayout,
                 isHidden: deckItem.isHidden
             )
+            var cardZIndex = display.zIndex ?? 1
+            if let deckLayout = deckItem.deckLayout,
+               scenario.draftOverlay?.eventId == timed.eventId
+            {
+                cardZIndex = TimedDeckLayoutEngine.elevateTimedDeckZIndex(
+                    deckLayout: deckLayout,
+                    zIndex: cardZIndex
+                )
+            }
             cards.append(
                 makeCard(
                     eventId: timed.eventId,
                     kind: .timed,
                     label: timed.title,
                     frame: display,
-                    zIndex: display.zIndex ?? 1,
+                    zIndex: cardZIndex,
                     lookup: lookup,
                     calendarId: timed.calendarId,
                     colorHex: timed.colorHex,
@@ -428,18 +437,37 @@ public enum GridLayoutSnapshotBuilder {
             visibleDates: visibleDates,
             startDate: startISO
         )
+        let deckInputs = timedDeckInputs(for: scenario)
+        let deckLayout = TimedDeckLayoutEngine.createTimedEventLayout(
+            events: deckInputs,
+            hiddenEventIds: scenario.hiddenEventIds
+        )
+            .first(where: { $0.eventId == draft.eventId })?
+            .deckLayout
         let position = EventPositionCalculator.getTimedEventPosition(
             EventPositionCalculator.TimedEventInput(
                 startDate: startISO,
                 endDate: endISO,
-                isDraft: true
+                isDraft: deckLayout == nil
             ),
             measurements: measurements,
             visibleDates: visibleDates,
             columnIndex: scenario.layoutMode == .day ? columnIndex : nil
         )
-        var floated = position
-        floated.zIndex = 10_000
+        let display = TimedDeckLayoutEngine.applyTimedEventDisplayPosition(
+            position,
+            deckLayout: deckLayout,
+            isHidden: false
+        )
+        var floated = display
+        if let deckLayout {
+            floated.zIndex = TimedDeckLayoutEngine.elevateTimedDeckZIndex(
+                deckLayout: deckLayout,
+                zIndex: floated.zIndex ?? 1
+            )
+        } else {
+            floated.zIndex = 10_000
+        }
 
         return GridLayoutCardSnapshot(
             accessibilityIdentifier: GridLayoutAccessibility.eventIdentifier(eventId: draft.eventId),
@@ -453,7 +481,7 @@ public enum GridLayoutSnapshotBuilder {
             isHiddenStrip: false,
             kind: .timed,
             label: displayTitle,
-            zIndex: 10_000,
+            zIndex: floated.zIndex ?? 10_000,
             isDraft: true,
             showsInlineTitleEditor: draft.showsInlineTitleEditor
         )

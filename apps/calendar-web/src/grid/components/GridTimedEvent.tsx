@@ -7,6 +7,7 @@ import { TimedEventCard } from "@web/grid/components/TimedEventCard";
 import { getTimedEventPosition } from "@web/grid/layout/event.position";
 import {
   applyTimedEventDisplayPosition,
+  elevateTimedDeckZIndex,
   type TimedDeckLayout,
   timedDeckBoxShadow,
 } from "@web/grid/layout/timed-deck.layout";
@@ -77,9 +78,17 @@ const GridTimedEventBase = (
 
   const shouldFloatAboveDeck =
     isDragging || isResizing || ((isDraft || isActiveDraft) && !isDeck);
+  const baseZIndex = position.zIndex ?? ZIndex.LAYER_1;
+  const deckRaised =
+    isDeck &&
+    deckLayout &&
+    (isSelected || isActiveDraft) &&
+    !shouldFloatAboveDeck;
   const zIndex = shouldFloatAboveDeck
     ? ZIndex.MAX
-    : (position.zIndex ?? ZIndex.LAYER_1);
+    : deckRaised
+      ? elevateTimedDeckZIndex(deckLayout, baseZIndex)
+      : baseZIndex;
 
   const deckBoxShadow = isDeck ? timedDeckBoxShadow(isFocused) : undefined;
   return (

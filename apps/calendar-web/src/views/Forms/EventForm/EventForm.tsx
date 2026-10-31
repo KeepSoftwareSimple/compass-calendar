@@ -68,7 +68,6 @@ import {
   patchGridDraftFields,
   replaceGridDraftSchedule,
   scheduleDatesFromDraft,
-  scheduleTimeZoneFromDraft,
 } from "@web/events/grid-event-draft.adapter";
 import { BUSY_EVENT_TITLE } from "@web/events/queries/event.view-model";
 import { useEventById } from "@web/events/queries/useEventById";
@@ -87,7 +86,11 @@ import { useContactSuggestions } from "@web/views/Forms/EventForm/AttendeeField/
 import { CalendarSelect } from "@web/views/Forms/EventForm/CalendarSelect/CalendarSelect";
 import { copyMeetingLinkUrl } from "@web/views/Forms/EventForm/conference-link.util";
 import { DateControlsSection } from "@web/views/Forms/EventForm/DateControlsSection/DateControlsSection/DateControlsSection";
-import { getFormDates } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/form.datetime.util";
+import { timedOutputTimeZoneForDraft } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/event-form-schedule-timezone.util";
+import {
+  getFormDates,
+  getFormDatesForTimedInstants,
+} from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/form.datetime.util";
 import { commitFocusedTimePickerDraft } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/TimePicker/timePickerCommitDraft";
 import { useOpenSide } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/useOpenSide";
 import { RecurrenceSection } from "@web/views/Forms/EventForm/DateControlsSection/RecurrenceSection/RecurrenceSection";
@@ -325,12 +328,13 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     const latestDraftRef = useRef(draft);
     const { startDate: eventStartDate, endDate: eventEndDate } =
       scheduleDatesFromDraft(draft);
-    const scheduleTimeZone = scheduleTimeZoneFromDraft(draft);
-    const formDates = getFormDates(
-      eventStartDate,
-      eventEndDate,
-      scheduleTimeZone,
-    );
+    const formDates =
+      draft.values.schedule.kind === "timed"
+        ? getFormDatesForTimedInstants(
+            draft.values.schedule.start,
+            draft.values.schedule.end,
+          )
+        : getFormDates(eventStartDate, eventEndDate);
     const selectedStartDate = formDates.startDate;
     const selectedEndDate = formDates.endDate;
     const displayEndDate = dayjs(formDates.displayEndDate).toDate();
@@ -509,11 +513,17 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       const draftToSubmit = latestDraftRef.current;
       const isAllDay = draftToSubmit.values.schedule.kind === "allDay";
       const submitScheduleDates = scheduleDatesFromDraft(draftToSubmit);
-      const submitFormDates = getFormDates(
-        submitScheduleDates.startDate,
-        submitScheduleDates.endDate,
-        scheduleTimeZoneFromDraft(draftToSubmit),
-      );
+      const submitSchedule = draftToSubmit.values.schedule;
+      const submitFormDates =
+        submitSchedule.kind === "timed"
+          ? getFormDatesForTimedInstants(
+              submitSchedule.start,
+              submitSchedule.end,
+            )
+          : getFormDates(
+              submitScheduleDates.startDate,
+              submitScheduleDates.endDate,
+            );
       const selectedDateTimes = {
         startDate: submitFormDates.startDate,
         startTime: submitFormDates.startTime,
@@ -522,7 +532,10 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
         isAllDay,
       };
 
-      const mapped = tryMapToBackend(selectedDateTimes);
+      const mapped = tryMapToBackend(
+        selectedDateTimes,
+        timedOutputTimeZoneForDraft(draftToSubmit),
+      );
       if (!mapped.ok) {
         showErrorToast(
           "uff-dah, looks like you got the start & end times mixed up",
