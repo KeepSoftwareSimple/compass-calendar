@@ -356,6 +356,45 @@ export const cancelJourneySubscriptionIfActive = async (page: Page) => {
   await page.keyboard.press("Escape");
 };
 
+export const resolveJourneyPasswordForCleanupEmail = (
+  scope: JourneyScope,
+  email: string,
+): string => {
+  const normalized = email.trim().toLowerCase();
+  if (scope === "PROD") {
+    const match = normalized.match(/prod-journey-(google|microsoft|apple)/);
+    if (!match) {
+      throw new Error(
+        `Cannot resolve prod journey password for ${redactJourneyEmailForLog(email)}`,
+      );
+    }
+    process.env.PROD_JOURNEY_PROVIDER = match[1];
+    return journeyCredentials("PROD").password;
+  }
+
+  for (const provider of ["google", "microsoft", "apple"] as const) {
+    process.env.STAGING_JOURNEY_PROVIDER = provider;
+    try {
+      const { accountEmail, password } = journeyCredentials("STAGING");
+      const base = accountEmail.trim().toLowerCase();
+      const at = normalized.indexOf("@");
+      const local = at >= 0 ? normalized.slice(0, at) : normalized;
+      const baseLocal = base.includes("@")
+        ? base.slice(0, base.indexOf("@"))
+        : base;
+      if (local === baseLocal || local.startsWith(`${baseLocal}+`)) {
+        return password;
+      }
+    } catch {
+      // Try the next configured provider secret set.
+    }
+  }
+
+  throw new Error(
+    `Cannot resolve staging journey password for ${redactJourneyEmailForLog(email)}`,
+  );
+};
+
 /** Prod leg teardown outside the main test timeout budget. */
 export const cleanupProdJourneyAccount = async (
   page: Page,
