@@ -2,6 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { type EventId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
+import { eventDetailsEqualForUndo } from "@core/util/event/event-details-equal-for-undo";
+import { eventSchedulesEqual } from "@core/util/event/event-schedule-equal";
 import { setCalendarVisibility } from "@web/calendars/calendar-visibility.store";
 import { calendarVisibilityStatusMessage } from "@web/calendars/useCalendarVisibility";
 import {
@@ -112,20 +114,6 @@ const showUndoDeclinedToast = () =>
 // editable-content contract requires a definite string, and the rest of the
 // app treats a missing `color` the same as `color: null` (see
 // grid-event-draft.adapter.ts's `color: event.content.color ?? null`).
-// Comparing raw JSON.stringify output would then read "gained a location/
-// color key" as an external change. Normalizing both sides the same way
-// keeps the comparison about the actual value, not whether the key happened
-// to be present.
-const normalizedDetailsContent = (content: Event["content"]) =>
-  content.kind === "details"
-    ? {
-        ...content,
-        location: detailsLocation(content),
-        color: content.color ?? null,
-        colorHex: content.colorHex ?? null,
-      }
-    : content;
-
 // Whether `current` still matches the state an undo/redo entry expects to
 // find before it replays — the staleness guard. Deliberately narrow: it
 // compares only the fields our own snapshots capture and our own replays
@@ -138,13 +126,10 @@ const normalizedDetailsContent = (content: Event["content"]) =>
 // toast instead of applying stale data.
 function snapshotMatches(current: Event, expected: Event): boolean {
   if (current.calendarId !== expected.calendarId) return false;
-  if (
-    JSON.stringify(normalizedDetailsContent(current.content)) !==
-    JSON.stringify(normalizedDetailsContent(expected.content))
-  ) {
+  if (!eventDetailsEqualForUndo(current.content, expected.content)) {
     return false;
   }
-  return JSON.stringify(current.schedule) === JSON.stringify(expected.schedule);
+  return eventSchedulesEqual(current.schedule, expected.schedule);
 }
 
 /**
@@ -177,6 +162,10 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
   const replaySnapshot = useCallback(
     (id: EventId, snapshot: Event, callbacks?: EventMutationCallbacks) => {
       if (snapshot.content.kind !== "details") return;
+      const current = findEventInCache(queryClient, id, source);
+      const scheduleUnchanged =
+        current?.schedule !== undefined &&
+        eventSchedulesEqual(snapshot.schedule, current.schedule);
       mutations.replace(
         {
           id,
@@ -192,7 +181,7 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
               ...snapshot.content,
               location: detailsLocation(snapshot.content),
             },
-            schedule: snapshot.schedule,
+            ...(scheduleUnchanged ? {} : { schedule: snapshot.schedule }),
             // "preserve" keeps whatever recurrence linkage the target already
             // has (single, or one occurrence of a series) — scope "this"
             // never changes that linkage server-side regardless of what's
@@ -211,7 +200,7 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
         callbacks,
       );
     },
-    [mutations],
+    [mutations, queryClient, source],
   );
 
   // Undo of a delete: a single event is recreated; a recurring occurrence is

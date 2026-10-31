@@ -2,6 +2,12 @@ import { type Attendee } from "@core/types/event-attendance.contracts";
 import { type SyncEventContent } from "@core/types/sync/event.contracts";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 
+// Provider color fields are per-user on the authenticated calendar copy:
+// Google colorId is attendee-controlled and not copied to other guests'
+// copies (https://developers.google.com/workspace/calendar/api/concepts/inviting-attendees-to-events).
+// Microsoft categories map to the signed-in user's outlookCategory list
+// (https://learn.microsoft.com/en-us/graph/api/resources/event).
+
 /** Whether this update only changes Compass color (no schedule or guest edits). */
 export function isColorOnlyProviderUpdate(
   command: CommandRecord,

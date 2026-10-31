@@ -7,6 +7,7 @@ import {
 } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import { CreateEventInputSchema } from "@core/types/event-command.contracts";
+import { eventSchedulesEqual } from "@core/util/event/event-schedule-equal";
 import { parseEventDraft } from "@web/events/event-draft.parser";
 import {
   type EditEventDraft,
@@ -215,6 +216,24 @@ describe("parseEventDraft", () => {
       expect(CreateEventInputSchema.parse(result.input)).toBeTruthy();
     });
 
+    it("includes schedule on color-only edit when sourceEvent is omitted (would resend times)", () => {
+      const draft = editDraft({
+        color: "blue",
+        schedule: {
+          kind: "timed",
+          start: new Date("2026-10-30T20:00:00-04:00"),
+          end: new Date("2026-10-30T21:00:00-04:00"),
+          timeZone: "America/New_York",
+        },
+      });
+      const withoutSource = parseEventDraft(draft);
+      expect(withoutSource.ok).toBe(true);
+      if (!withoutSource.ok || withoutSource.mode !== "edit") {
+        throw new Error("expected edit");
+      }
+      expect(withoutSource.input.schedule).toBeDefined();
+    });
+
     it("omits schedule on edit when only color changes across a DST boundary", () => {
       const source: Event = {
         id: eventId(),
@@ -234,8 +253,8 @@ describe("parseEventDraft", () => {
         },
         schedule: {
           kind: "timed",
-          start: "2026-10-30T20:00:00-04:00" as never,
-          end: "2026-10-30T21:00:00-04:00" as never,
+          start: "2026-10-31T00:00:00.000Z" as never,
+          end: "2026-10-31T01:00:00.000Z" as never,
           timeZone: "America/New_York" as never,
         },
         recurrence: { kind: "single" },
@@ -258,6 +277,19 @@ describe("parseEventDraft", () => {
         throw new Error("expected edit");
       expect(result.input.schedule).toBeUndefined();
       expect(result.input.content.color).toBe("blue");
+      const wronglyIncluded = parseEventDraft(draft);
+      expect(wronglyIncluded.ok).toBe(true);
+      if (!wronglyIncluded.ok || wronglyIncluded.mode !== "edit") {
+        throw new Error("expected edit");
+      }
+      expect(wronglyIncluded.input.schedule).toBeDefined();
+      expect(
+        eventSchedulesEqual(source.schedule, wronglyIncluded.input.schedule!),
+      ).toBe(true);
+      expect(
+        JSON.stringify(source.schedule) !==
+          JSON.stringify(wronglyIncluded.input.schedule),
+      ).toBe(true);
     });
   });
 

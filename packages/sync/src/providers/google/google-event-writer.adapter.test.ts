@@ -782,12 +782,14 @@ describe("GoogleEventWriter", () => {
       content: content({ color: "blue" }),
       colorOnly: true,
       writeSchedule: false,
+      invitation: "all",
     });
 
     expect(api.calls.patch).toHaveLength(1);
     expect(api.calls.patch[0]!.requestBody).toEqual({
       colorId: "7",
     });
+    expect(api.calls.patch[0]!.sendUpdates).toBe("none");
   });
 
   it("clears Google colorId when content.color is null", async () => {

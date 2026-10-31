@@ -63,6 +63,14 @@ describe("isColorOnlyProviderUpdate", () => {
 });
 
 describe("providerColorOnlyPatchFlags", () => {
+  it("forces writeSchedule false when schedule is omitted on update", () => {
+    const stored = baseContent();
+    const merged = { ...stored, color: "mint" as const };
+    expect(
+      providerColorOnlyPatchFlags(updateCommand() as never, stored, merged)
+        .writeSchedule,
+    ).toBe(false);
+  });
   it("sets writeSchedule false and colorOnly for recurring scope-this color edits", () => {
     const stored = baseContent();
     const merged = { ...stored, color: "mint" as const };

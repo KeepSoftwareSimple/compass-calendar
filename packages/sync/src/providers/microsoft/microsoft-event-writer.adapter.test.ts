@@ -253,10 +253,13 @@ describe("MicrosoftEventWriter", () => {
       recurrence: { kind: "instance" },
       colorOnly: true,
       writeSchedule: false,
+      invitation: "all",
     });
 
     expect(api.calls.patch).toHaveLength(1);
     expect(api.calls.patch[0]?.body).toEqual({ categories: ["Blue"] });
+    expect(api.calls.patch[0]?.body).not.toHaveProperty("attendees");
+    expect(api.calls.patch[0]?.body).not.toHaveProperty("subject");
   });
 
   it("writes timed schedule, text body, and showAs busy", async () => {

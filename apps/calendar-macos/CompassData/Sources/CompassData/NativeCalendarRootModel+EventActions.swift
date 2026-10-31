@@ -276,21 +276,13 @@ extension NativeCalendarRootModel {
         let expected = undo ? after : before
         guard let current = try? eventsStore.fetchAllEvents().first(where: { $0.id == id }),
               current.calendarId == expected.calendarId,
-              current.schedule == expected.schedule,
-              normalizedContent(current.content) == normalizedContent(expected.content)
+              EventScheduleEqual.matches(current.schedule, expected.schedule),
+              EventDetailsEqualForUndo.matches(current.content, expected.content)
         else {
             statusToastStore.show(id: "undo-status", message: "Event changed since your last edit")
             return false
         }
         return true
-    }
-
-    private func normalizedContent(_ content: EventContent) -> EventContent {
-        guard case .details(let value) = content else { return content }
-        return .details(.init(
-            attendees: value.attendees, color: value.color, colorHex: value.colorHex,
-            conference: value.conference, description: value.description, kind: value.kind,
-            location: value.location ?? "", organizer: value.organizer, title: value.title))
     }
 
     private func replayUndoEntry(_ entry: UndoHistoryEntry) async {

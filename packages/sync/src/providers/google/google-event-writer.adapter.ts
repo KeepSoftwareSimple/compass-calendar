@@ -291,7 +291,9 @@ export class GoogleEventWriter implements ProviderEventWriter {
           calendarId: input.calendarId,
           eventId: input.providerEventId,
           requestBody: mainBody,
-          sendUpdates: toSendUpdates(input.invitation),
+          sendUpdates: input.colorOnly
+            ? "none"
+            : toSendUpdates(input.invitation),
           ifMatch,
         });
         return toResult(patched);
