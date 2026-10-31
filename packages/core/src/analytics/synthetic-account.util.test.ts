@@ -55,11 +55,14 @@ describe("synthetic account helpers", () => {
     expect(isSyntheticAccountHeaderValue("no")).toBe(false);
   });
 
-  it("redacts journey addresses for logs", () => {
+  it("redacts journey addresses for logs but keeps +journey digits", () => {
     expect(
       redactJourneyEmailForLog(
         "runner+prod-journey-google+journey1730123456789@gmail.com",
       ),
-    ).toBe("runner+***@gmail.com");
+    ).toBe("runner+***+journey1730123456789@gmail.com");
+    expect(
+      redactJourneyEmailForLog("lance.essert+journey1730123456789@gmail.com"),
+    ).toBe("lance.essert+journey1730123456789@gmail.com");
   });
 });

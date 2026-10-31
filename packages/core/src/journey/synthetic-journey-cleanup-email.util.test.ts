@@ -23,6 +23,21 @@ describe("synthetic journey cleanup email patterns", () => {
     ).toBe(false);
   });
 
+  it("rejects production cleanup for arbitrary non-matching emails", () => {
+    expect(
+      isAllowedSyntheticJourneyCleanupEmail(
+        "someone@example.com",
+        "production",
+      ),
+    ).toBe(false);
+    expect(() =>
+      assertAllowedSyntheticJourneyCleanupEmails(
+        ["someone@example.com"],
+        "production",
+      ),
+    ).toThrow(/Refusing cleanup.*production/);
+  });
+
   it("allows staging journey addresses only in staging", () => {
     expect(
       isAllowedSyntheticJourneyCleanupEmail(
