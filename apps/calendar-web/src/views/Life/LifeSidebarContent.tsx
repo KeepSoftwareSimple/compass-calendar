@@ -5,6 +5,11 @@ import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import { NumberInput } from "@web/components/NumberInput/NumberInput";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
+import {
+  clearUiFocusTextInsertSuppress,
+  consumeUiFocusTextInsertSuppress,
+  shouldSuppressUiFocusTextInsert,
+} from "@web/shortcuts/ui-focus/ui-focus-text-insert.util";
 import { LifeQuote } from "./LifeQuote";
 import {
   clampLifespan,
@@ -150,7 +155,12 @@ export function LifeSidebarContent({
             onCalendarOpen={() => setIsBirthDatePickerOpen(true)}
             onChange={(date) => (date ? setBirthDate(date) : clearBirthDate())}
             onChangeRaw={(event) => {
-              const value = event.currentTarget.value;
+              let value = event.currentTarget.value;
+              if (shouldSuppressUiFocusTextInsert("i") && value.endsWith("i")) {
+                clearUiFocusTextInsertSuppress();
+                value = value.slice(0, -1);
+                event.currentTarget.value = value;
+              }
               const date = parseLifeDate(value);
               if (date) {
                 setBirthDate(date);
@@ -163,6 +173,10 @@ export function LifeSidebarContent({
             // arrows open via click so react-datepicker's internal open state
             // stays in sync (Escape / day-grid focus depend on it).
             onKeyDown={(event) => {
+              if (consumeUiFocusTextInsertSuppress(event.key)) {
+                event.preventDefault();
+                return;
+              }
               if (isBirthDatePickerOpen) return;
               if (
                 event.key !== "Enter" &&

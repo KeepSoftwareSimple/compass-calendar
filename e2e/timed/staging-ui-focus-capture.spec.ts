@@ -1,0 +1,124 @@
+import { expect, type Page, test } from "@playwright/test";
+import { seedJourneyOnboarding } from "../journey/journey-leg.util";
+import { ensureSidebarOpen, pressShortcut } from "../utils/event-test-utils";
+import { mkdirSync, writeFileSync } from "node:fs";
+
+const ARTIFACT_DIR = "/opt/cursor/artifacts/staging-ui-focus";
+const baseUrl =
+  process.env.STAGING_BASE_URL ?? "https://staging.compasscalendar.com";
+
+const seedOnboarding = async (page: Page) => {
+  await seedJourneyOnboarding(page, { snoozeConnectPrompt: true });
+  await page.addInitScript(() => {
+    localStorage.setItem("compass.onboarding.has-seen-life-view-intro", "true");
+    localStorage.setItem("compass.view.sidebar-open", "true");
+  });
+};
+
+const signUpSyntheticAccount = async (page: Page) => {
+  await page.goto(`${baseUrl}/week?auth=signup`, {
+    waitUntil: "domcontentloaded",
+  });
+  const email = `agent.ui-focus.${Date.now()}@compasscaltest.invalid`;
+  await page.getByLabel("Name").fill("UI Focus Capture");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("CompassStagingUiFocus1!");
+  await page.getByRole("button", { name: "Sign up" }).click();
+  await expect(page.getByLabel("Password")).toHaveCount(0, {
+    timeout: 120_000,
+  });
+  await page
+    .locator("#mainGrid")
+    .waitFor({ state: "visible", timeout: 60_000 });
+
+  const trialBanner = page.getByRole("status").filter({
+    hasText: "Start your 7-day free trial to plan your week.",
+  });
+  if (await trialBanner.isVisible().catch(() => false)) {
+    await trialBanner.getByRole("button", { name: "Dismiss" }).click();
+  }
+};
+
+const captureWeekFocusSequence = async (
+  page: Page,
+  width: number,
+  height: number,
+) => {
+  await page.setViewportSize({ width, height });
+  await page.goto(`${baseUrl}/week`, { waitUntil: "domcontentloaded" });
+  await ensureSidebarOpen(page);
+  await page.locator("#mainGrid").focus();
+
+  await expect(page.locator("#mainGrid")).toBeFocused();
+  await page.screenshot({
+    path: `${ARTIFACT_DIR}/week-grid-focused-${width}.png`,
+  });
+
+  await pressShortcut(page, "i");
+  const pickerDay = page.locator('.react-datepicker__day[tabindex="0"]');
+  await expect(pickerDay).toBeFocused();
+  await page.screenshot({
+    path: `${ARTIFACT_DIR}/week-month-picker-after-i-${width}.png`,
+  });
+
+  await page.keyboard.press("u");
+  await page.screenshot({
+    path: `${ARTIFACT_DIR}/week-grid-after-u-${width}.png`,
+  });
+};
+
+const captureLifeSidebarAfterI = async (
+  page: Page,
+  width: number,
+  height: number,
+) => {
+  await page.setViewportSize({ width, height });
+  await page.goto(`${baseUrl}/life`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Life" })).toBeVisible();
+
+  const currentWeek = page.getByRole("button", { name: /current week/i });
+  if (await currentWeek.count()) {
+    await currentWeek.first().focus();
+  } else {
+    const lifeGrid = page.locator('[data-page-jump="life-grid"]');
+    await lifeGrid.first().focus();
+  }
+
+  const birthDate = page.getByRole("textbox", { name: "Date of birth" });
+  await pressShortcut(page, "i");
+  await expect(birthDate).toBeFocused();
+  await expect(birthDate).toHaveValue("Jan 1, 2000");
+
+  await birthDate.screenshot({
+    path: `${ARTIFACT_DIR}/life-sidebar-after-i-${width}.png`,
+  });
+};
+
+test.describe("staging ui focus capture", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("week and life u/i focus rings", async ({ page }) => {
+    test.skip(
+      process.env.STAGING_UI_FOCUS_CAPTURE !== "1",
+      "Set STAGING_UI_FOCUS_CAPTURE=1 to run against staging",
+    );
+
+    mkdirSync(ARTIFACT_DIR, { recursive: true });
+
+    await seedOnboarding(page);
+    await signUpSyntheticAccount(page);
+
+    const versionResponse = await page.request.get(`${baseUrl}/version.json`);
+    expect(versionResponse.ok()).toBe(true);
+    const version = (await versionResponse.json()) as { version?: string };
+    writeFileSync(
+      `${ARTIFACT_DIR}/staging-version.txt`,
+      `${version.version ?? "unknown"}\n`,
+    );
+
+    await captureWeekFocusSequence(page, 1280, 800);
+    await captureWeekFocusSequence(page, 360, 800);
+    await captureLifeSidebarAfterI(page, 1280, 800);
+    await captureLifeSidebarAfterI(page, 360, 800);
+  });
+});

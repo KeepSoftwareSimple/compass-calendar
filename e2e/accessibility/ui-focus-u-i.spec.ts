@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   ensureSidebarOpen,
   prepareCalendarPage,
+  pressShortcut,
 } from "../utils/event-test-utils";
 
 test("u returns focus from the month picker to the grid", async ({ page }) => {
@@ -34,12 +35,12 @@ test("life view i focuses the birth date field and u returns to the grid", async
     await currentWeek.first().focus();
   }
 
-  await page.keyboard.press("i");
-  await expect(
-    page.getByRole("textbox", { name: "Date of birth" }),
-  ).toBeFocused();
+  const birthDate = page.getByRole("textbox", { name: "Date of birth" });
+  await pressShortcut(page, "i");
+  await expect(birthDate).toBeFocused();
+  await expect(birthDate).toHaveValue("Jan 1, 2000");
 
-  await page.keyboard.press("u");
+  await pressShortcut(page, "u");
   if (await currentWeek.count()) {
     await expect(currentWeek.first()).toBeFocused({ timeout: 5_000 });
   }
