@@ -22,7 +22,6 @@ export function BottomNoticeToastHost() {
       pauseOnHover
       position="bottom-left"
       rtl={false}
-      stacked
       theme={theme === "dark-abyss" ? "dark" : "light"}
       toastStyle={TOAST_CHROME_STYLE}
       transition={Slide}
