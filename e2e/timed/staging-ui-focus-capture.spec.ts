@@ -109,16 +109,20 @@ const captureWeekFocusSequence = async (
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-grid-focused-${width}.png`,
   });
-  await page.locator("#mainGrid").focus();
-
+  await page
+    .getByRole("region", { name: "Week calendar horizontal scroll area" })
+    .click({ position: { x: 80, y: 120 } });
+  await expect(page.locator("#mainGrid")).toBeFocused();
   await page.keyboard.press("i");
+  const focusedPickerDay = page.locator(".react-datepicker__day:focus");
+  await expect(focusedPickerDay).toBeVisible({ timeout: 10_000 });
+  const weekFocusRing = await focusedPickerDay.evaluate((el) => {
+    const row = el.closest(".react-datepicker__week");
+    if (!row) return null;
+    return getComputedStyle(row, "::after").boxShadow;
+  });
+  expect(weekFocusRing).toMatch(/inset/);
   const pickerDay = page.locator('.react-datepicker__day[tabindex="0"]');
-  await expect(pickerDay).toBeFocused();
-  await expect(
-    page.locator(
-      '.c-month-picker[data-picker-unit="week"] .react-datepicker__week:has(.react-datepicker__day:focus)',
-    ),
-  ).toBeVisible();
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-month-picker-after-i-${width}.png`,
   });
@@ -161,6 +165,7 @@ test.describe("staging ui focus capture", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test("week and life u/i focus rings", async ({ page }) => {
+    test.setTimeout(600_000);
     test.skip(
       process.env.STAGING_UI_FOCUS_CAPTURE !== "1",
       "Set STAGING_UI_FOCUS_CAPTURE=1 to run against staging",
@@ -179,9 +184,16 @@ test.describe("staging ui focus capture", () => {
       `${version.version ?? "unknown"}\n`,
     );
 
-    await captureWeekFocusSequence(page, 1280, 800);
-    await captureWeekFocusSequence(page, 360, 800);
-    await captureLifeAfterI(page, 1280, 800);
-    await captureLifeAfterI(page, 360, 800);
+    const widthOnly = process.env.STAGING_UI_FOCUS_WIDTH;
+    if (!widthOnly || widthOnly === "1280") {
+      await captureWeekFocusSequence(page, 1280, 800);
+    }
+    if (!widthOnly || widthOnly === "360") {
+      await captureWeekFocusSequence(page, 360, 800);
+    }
+    if (!widthOnly) {
+      await captureLifeAfterI(page, 1280, 800);
+      await captureLifeAfterI(page, 360, 800);
+    }
   });
 });
