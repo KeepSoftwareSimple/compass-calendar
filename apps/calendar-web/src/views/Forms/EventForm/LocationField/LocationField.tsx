@@ -17,6 +17,7 @@ interface LocationFieldProps {
   className?: string;
   disabled?: boolean;
   onKeyDown?: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
+  onBlur?: () => void;
 }
 
 /**
@@ -38,6 +39,7 @@ export function LocationField({
   className,
   disabled,
   onKeyDown,
+  onBlur,
 }: LocationFieldProps) {
   const listId = useId();
   const [isListOpen, setIsListOpen] = useState(false);
@@ -49,6 +51,11 @@ export function LocationField({
   const closeList = () => {
     setIsListOpen(false);
     setActiveIndex(-1);
+  };
+
+  const handleBlur = () => {
+    closeList();
+    onBlur?.();
   };
 
   const pick = (suggestion: string) => {
@@ -96,6 +103,7 @@ export function LocationField({
       <input
         {...sharedProps}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={handleBlur}
         onKeyDown={onKeyDown}
       />
     );
@@ -117,7 +125,7 @@ export function LocationField({
         autoComplete="off"
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onBlur={closeList}
+        onBlur={handleBlur}
       />
       {isExpanded && (
         <div className="absolute top-full right-0 left-0 z-10 mt-1 overflow-hidden rounded-md border border-border bg-surface-raised shadow-lg">

@@ -288,6 +288,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     // stays live, but a store-driven controlled input falls behind when the grid
     // re-renders under fast typing. Keep the field on local state instead.
     const [titleInputValue, setTitleInputValue] = useState(displayTitle);
+    const [locationInputValue, setLocationInputValue] = useState(
+      location ?? "",
+    );
     const showBookingFormActions = !isReadOnly && bookingLinks !== null;
     const formDigitRows = useMemo(
       () => visibleFormFieldDigitRows(fieldVisibilityInput),
@@ -418,12 +421,18 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
             "title" | "description" | "location" | "color" | "attendees"
           >
         >,
+        options?: { urgent?: boolean },
       ) => {
         const current = latestDraftRef.current;
         if (!current) return;
         latestDraftRef.current = patchGridDraftFields(current, patch);
         if (contentDraftSyncFrameRef.current !== null) {
           cancelAnimationFrame(contentDraftSyncFrameRef.current);
+          contentDraftSyncFrameRef.current = null;
+        }
+        if (options?.urgent) {
+          pushDraftToStore(latestDraftRef.current, true);
+          return;
         }
         contentDraftSyncFrameRef.current = requestAnimationFrame(() => {
           contentDraftSyncFrameRef.current = null;
@@ -492,7 +501,12 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     };
 
     const onChangeLocation = (nextLocation: string) => {
+      setLocationInputValue(nextLocation);
       patchDraftFields({ location: nextLocation });
+    };
+
+    const onLocationBlur = () => {
+      flushContentDraftSync();
     };
 
     const onClose = useCallback(() => {
@@ -1061,9 +1075,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
               <FormCard>
                 <FormCardIconRow
                   icon={
-                    location ? (
+                    locationInputValue ? (
                       <a
-                        href={mapsUrlForLocation(location)}
+                        href={mapsUrlForLocation(locationInputValue)}
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="Open in Google Maps"
@@ -1082,8 +1096,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                     className={FORM_CARD_FIELD_INPUT_CLASSNAME}
                     disabled={isReadOnly}
                     onChange={onChangeLocation}
+                    onBlur={onLocationBlur}
                     onKeyDown={handleIgnoredKeys}
-                    value={location}
+                    value={locationInputValue}
                   />
                 </FormCardIconRow>
                 {conferenceKind && draft.kind === "create" && (
@@ -1119,7 +1134,10 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                         id={EVENT_FORM_ATTENDEES_ID}
                         value={attendeeChips}
                         onChange={(next) =>
-                          patchDraftFields({ attendees: next })
+                          patchDraftFields(
+                            { attendees: next },
+                            { urgent: true },
+                          )
                         }
                         statusByEmail={attendeeRsvpByEmail}
                         suggestionSource={contactSuggestionSource}
