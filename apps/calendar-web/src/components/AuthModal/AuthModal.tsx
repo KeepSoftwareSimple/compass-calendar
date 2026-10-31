@@ -1,5 +1,6 @@
 import { DotIcon } from "@phosphor-icons/react/dist/csr/Dot";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import classNames from "classnames";
 import {
   type FC,
   useCallback,
@@ -259,6 +260,22 @@ export const AuthModal: FC = () => {
             : "Nice to meet you"
           : "Hey, welcome back";
 
+  const providerSignInBlock = showProviderSignIn ? (
+    <>
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-sm text-text-muted">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <SignInProviderButtons
+        available={available}
+        loadingKind={isLoading ? loadingKind : null}
+        onSignIn={handleProviderSignIn}
+        showShortcutKeys={showBareLetterShortcutHints}
+      />
+    </>
+  ) : null;
+
   if (isStartTrialView) {
     const leaveTrialCheckoutOrStep = isTrialCheckoutOpen
       ? checkoutPanelActions.close
@@ -324,15 +341,27 @@ export const AuthModal: FC = () => {
       widthClassName="w-120"
     >
       <div className="flex w-full flex-col gap-6">
-        {/* Form based on current view */}
-        {currentView === "signUp" && (
-          <SignUpForm
-            onSubmit={handleSignUp}
-            onNameChange={setSignUpName}
-            isSubmitting={isSubmitting}
-            emailInputRef={emailInputRef}
-          />
-        )}
+        {currentView === "signUp" ? (
+          <div
+            className={classNames(
+              "flex w-full flex-col gap-6",
+              showProviderSignIn && "max-sm:flex-col-reverse",
+            )}
+          >
+            <SignUpForm
+              onSubmit={handleSignUp}
+              onNameChange={setSignUpName}
+              isSubmitting={isSubmitting}
+              emailInputRef={emailInputRef}
+            />
+            {showSubmitError ? (
+              <p className="text-center text-error text-sm" role="alert">
+                {submitError}
+              </p>
+            ) : null}
+            {providerSignInBlock}
+          </div>
+        ) : null}
         {isLoginView && (
           <LogInForm
             onSubmit={handleLogin}
@@ -361,27 +390,12 @@ export const AuthModal: FC = () => {
             error={submitError}
           />
         )}
-        {showSubmitError ? (
+        {currentView !== "signUp" && showSubmitError ? (
           <p className="text-center text-error text-sm" role="alert">
             {submitError}
           </p>
         ) : null}
-        {/* Google Sign In - at bottom */}
-        {showProviderSignIn ? (
-          <>
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-sm text-text-muted">or</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <SignInProviderButtons
-              available={available}
-              loadingKind={isLoading ? loadingKind : null}
-              onSignIn={handleProviderSignIn}
-              showShortcutKeys={showBareLetterShortcutHints}
-            />
-          </>
-        ) : null}
+        {isLoginView ? providerSignInBlock : null}
         {currentView === "signUp" ? (
           <p className="text-center text-text-muted text-xs">
             Signing up also gets you occasional product emails. Unsubscribe
