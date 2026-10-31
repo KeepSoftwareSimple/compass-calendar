@@ -437,10 +437,11 @@ public enum GridLayoutSnapshotBuilder {
             visibleDates: visibleDates,
             startDate: startISO
         )
-        let deckInputs = scenario.timedEvents.map {
-            TimedDeckEventInput(id: $0.eventId, startDate: $0.startDate, endDate: $0.endDate)
-        }
-        let deckLayout = TimedDeckLayoutEngine.createTimedEventLayout(events: deckInputs)
+        let deckInputs = timedDeckInputs(for: scenario)
+        let deckLayout = TimedDeckLayoutEngine.createTimedEventLayout(
+            events: deckInputs,
+            hiddenEventIds: scenario.hiddenEventIds
+        )
             .first(where: { $0.eventId == draft.eventId })?
             .deckLayout
         let position = EventPositionCalculator.getTimedEventPosition(
