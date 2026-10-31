@@ -156,6 +156,8 @@ describe("useHideEventShortcut", () => {
     act(() => {
       pressX();
     });
-    expect(result.current.has("event-1")).toBe(false);
+    await waitFor(() => {
+      expect(result.current.has("event-1")).toBe(true);
+    });
   });
 });

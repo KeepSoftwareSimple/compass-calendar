@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
+import { HIDE_EVENT_LETTER } from "@core/shortcuts/binding-keycaps.constants";
 import { KEYMAP } from "@core/shortcuts/keymap";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
@@ -695,7 +696,8 @@ export function useShiftHoldEventHints({
         // stay swallowed so j/k cannot fire.
         if (
           key === KEYMAP.editTitle.sequence.leader ||
-          key === KEYMAP.createEvent.hotkey.toLowerCase()
+          key === KEYMAP.createEvent.hotkey.toLowerCase() ||
+          key === HIDE_EVENT_LETTER
         ) {
           return;
         }
