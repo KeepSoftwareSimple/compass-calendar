@@ -1,8 +1,8 @@
 import {
   DESCRIPTION_LINK_CHROME_FALLBACK_PLACEMENTS,
   DESCRIPTION_LINK_CHROME_PLACEMENT,
-  rectsIntersect,
 } from "@web/components/DescriptionEditor/description-link-chrome-floating";
+import { rectsIntersect } from "@web/components/DescriptionEditor/description-link-chrome-geometry.test.utils";
 import { describe, expect, it } from "bun:test";
 
 describe("descriptionLinkChromeMiddleware", () => {

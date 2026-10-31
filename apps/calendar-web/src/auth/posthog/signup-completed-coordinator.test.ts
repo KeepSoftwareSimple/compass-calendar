@@ -1,7 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const capture = mock();
-const register = mock();
 
 const actualPosthogBootstrap = {
   ...(await import("@web/auth/posthog/posthog.bootstrap")),
@@ -11,9 +10,7 @@ let isClientMocked = true;
 mock.module("@web/auth/posthog/posthog.bootstrap", () => ({
   ...actualPosthogBootstrap,
   getPosthogClient: () =>
-    isClientMocked
-      ? { capture, register }
-      : actualPosthogBootstrap.getPosthogClient(),
+    isClientMocked ? { capture } : actualPosthogBootstrap.getPosthogClient(),
 }));
 
 afterAll(() => {
@@ -31,7 +28,6 @@ const SIGNUP_METHODS = ["email", "google", "microsoft", "apple"] as const;
 describe("signup-completed coordinator", () => {
   beforeEach(() => {
     capture.mockClear();
-    register.mockClear();
     resetSignupCompletedCoordinatorForTests();
     sessionStorage.clear();
   });
@@ -72,10 +68,6 @@ describe("signup-completed coordinator", () => {
       isSynthetic: true,
     });
 
-    expect(register).toHaveBeenCalledWith({
-      $internal_or_test_user: true,
-      is_synthetic: true,
-    });
     expect(capture).toHaveBeenCalledWith("signup_completed", {
       method: "email",
       $internal_or_test_user: true,
@@ -90,7 +82,6 @@ describe("signup-completed coordinator", () => {
       profileEmail: "real.user@gmail.com",
     });
 
-    expect(register).not.toHaveBeenCalled();
     expect(capture).toHaveBeenCalledWith("signup_completed", {
       method: "google",
     });

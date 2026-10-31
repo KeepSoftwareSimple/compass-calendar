@@ -445,11 +445,7 @@ export const getTimesLabel = (
 ) => {
   const start = _getTimeLabel(startDate, timeZone);
   const end = _getTimeLabel(endDate, timeZone);
-  const startMinimal = _cleanStartMeridiem(start, end);
-
-  const label = `${startMinimal} - ${end}`;
-
-  return label;
+  return formatMeridiemRangeLabel(start, end);
 };
 
 /** Grid card labels follow pinned calendar zone placement, not the event zone wall clock. */
@@ -466,7 +462,7 @@ export const getGridCardTimesLabel = (
   const end = parseGridScheduleDate(endDate, eventZone).tz(calendarTimeZone);
   const startLabel = getTimeLabel(start.format(HOURS_AM_FORMAT));
   const endLabel = getTimeLabel(end.format(HOURS_AM_FORMAT));
-  return `${_cleanStartMeridiem(startLabel, endLabel)} - ${endLabel}`;
+  return formatMeridiemRangeLabel(startLabel, endLabel);
 };
 
 export const getWeekRangeLabel = (weekStart: Dayjs, weekEnd: Dayjs) => {
@@ -600,6 +596,9 @@ const _addTimesToDates = (dt: SelectedDates, timeZone: string) => {
 // "6 AM" - "7 AM" reads as "6 - 7 AM": the start's meridiem is redundant when
 // the end repeats it. trimEnd because dropping it also leaves the space that
 // separated it, which the caller's " - " would double up on.
+const formatMeridiemRangeLabel = (startLabel: string, endLabel: string) =>
+  `${_cleanStartMeridiem(startLabel, endLabel)} - ${endLabel}`;
+
 const _cleanStartMeridiem = (start: string, end: string) => {
   const meridiems = [start.slice(-2), end.slice(-2)];
   const verboseMeridiems = meridiems[0] === meridiems[1];

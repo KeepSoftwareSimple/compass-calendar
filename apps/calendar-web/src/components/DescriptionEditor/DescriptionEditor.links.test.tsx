@@ -7,7 +7,7 @@ import { DescriptionEditor } from "@web/components/DescriptionEditor/Description
 import {
   collectDescriptionTextRects,
   rectsIntersect,
-} from "@web/components/DescriptionEditor/description-link-chrome-floating";
+} from "@web/components/DescriptionEditor/description-link-chrome-geometry.test.utils";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const copyTextMock = mock(() => Promise.resolve(true));

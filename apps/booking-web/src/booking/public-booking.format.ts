@@ -178,9 +178,18 @@ export function formatBookingSlotDateHeading(
   return slotDateHeadingFormatter(timeZone).format(new Date(slotStart));
 }
 
+function splitDurationMinutes(minutes: number): {
+  hours: number;
+  remainder: number;
+} {
+  return {
+    hours: Math.floor(minutes / 60),
+    remainder: minutes % 60,
+  };
+}
+
 export function formatDurationMinutes(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
+  const { hours, remainder } = splitDurationMinutes(minutes);
   if (hours === 0) {
     return `${minutes} minutes`;
   }
@@ -212,8 +221,7 @@ export function formatOwnerInboxScheduleLine(
 }
 
 export function formatDurationMinutesCompact(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
+  const { hours, remainder } = splitDurationMinutes(minutes);
   if (hours === 0) {
     return `${minutes} min`;
   }

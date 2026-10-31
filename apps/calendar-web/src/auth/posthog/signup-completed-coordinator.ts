@@ -1,8 +1,5 @@
-import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
-import {
-  shouldRegisterSyntheticAccount,
-  syntheticAccountPosthogRegistration,
-} from "@web/auth/posthog/posthog-audience-filter.util";
+import { syntheticAccountPosthogFlags } from "@core/analytics/synthetic-account.util";
+import { shouldRegisterSyntheticAccount } from "@web/auth/posthog/posthog-audience-filter.util";
 import {
   isSignupMethod,
   type SignupMethod,
@@ -88,7 +85,7 @@ function markSignupCompletedEmitted(userId: string): void {
 
 /**
  * Fires `signup_completed` once per account after PostHog identify, with
- * synthetic/test super properties when the inbox matches journey rules.
+ * synthetic/test event properties when the inbox matches journey rules.
  */
 export function flushSignupCompletedAfterSessionReady(input: {
   userId: string;
@@ -103,17 +100,11 @@ export function flushSignupCompletedAfterSessionReady(input: {
     return;
   }
 
-  const posthog = getPosthogClient();
-  const isSyntheticAccount = shouldRegisterSyntheticAccount({
+  const syntheticProperties = shouldRegisterSyntheticAccount({
     email: input.profileEmail,
     isSynthetic: input.isSynthetic,
-  });
-  if (isSyntheticAccount && posthog?.register) {
-    posthog.register(syntheticAccountPosthogRegistration());
-  }
-
-  const syntheticProperties = isSyntheticAccount
-    ? syntheticAccountPosthogRegistration()
+  })
+    ? syntheticAccountPosthogFlags()
     : undefined;
 
   trackSignupCompleted(method, syntheticProperties);
