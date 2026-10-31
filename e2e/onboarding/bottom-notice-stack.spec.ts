@@ -115,6 +115,13 @@ test.describe("bottom notice stack", () => {
     await assertBottomLeftStack(page);
     await assertPrimaryCtas(page);
     await assertNoticesDoNotOverlap(page);
+
+    if (process.env.BOTTOM_NOTICE_CAPTURE === "1") {
+      await page.screenshot({
+        path: "/opt/cursor/artifacts/bottom-notice-stack-1280.png",
+        fullPage: false,
+      });
+    }
   });
 
   test("360px anchors notices bottom-left with primary CTAs and no overlap", async ({
@@ -128,5 +135,12 @@ test.describe("bottom notice stack", () => {
     await assertBottomLeftStack(page);
     await assertPrimaryCtas(page);
     await assertNoticesDoNotOverlap(page);
+
+    if (process.env.BOTTOM_NOTICE_CAPTURE === "1") {
+      await page.screenshot({
+        path: "/opt/cursor/artifacts/bottom-notice-stack-360.png",
+        fullPage: false,
+      });
+    }
   });
 });
