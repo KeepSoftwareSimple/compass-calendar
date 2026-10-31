@@ -16,7 +16,12 @@ and semantic list state on every selected/nonselected line. Clipboard contents
 are restored in teardown. The lower-level fixture now includes the previously
 omitted sibling paragraph and asserts it is preserved, rather than asserting
 absence of text never present. No production behavior changed or coverage weakened.
-Acceptance remains unreviewed until isolated native/web results and capture review.
+The original source head's normal full native suite and both new regressions
+passed, but strict hit its unchanged 30-minute budget during the UI pass. Strict
+now restores SwiftPM compilation and saves missing compiled test binaries before
+verification, so a later timeout preserves compilation work. Every test still
+executes in the existing serial order; no timeout or assertion changes. The new
+head requires fresh actual native/web verdicts and capture review before acceptance.
 
 Ordered-list acceptance from merged #4984 is recorded with actual exact-head
 verification and sampled capture evidence. Supported geometry, stored sidebar/theme
