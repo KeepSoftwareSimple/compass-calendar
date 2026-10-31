@@ -30,7 +30,6 @@ final class WelcomeKeyboardTests: XCTestCase {
             XCTAssertTrue(modal.staticTexts["The Keyboard Calendar"].waitForExistence(timeout: 5))
             modal.buttons["Get started for free"].click()
             window.typeKey(.return, modifierFlags: [])
-            window.typeKey(.return, modifierFlags: [])
             window.typeKey("s", modifierFlags: [])
             XCTAssertTrue(modal.staticTexts["Essential shortcuts"].waitForExistence(timeout: 5))
             window.typeKey(.return, modifierFlags: [])
