@@ -11,7 +11,7 @@ struct FirstEventPromptView: View {
     private var onboardingStore: OnboardingStore { model.onboardingStore }
 
     var body: some View {
-        FloatingNoticeCard(width: 288) {
+        FloatingNoticeCard(width: 288, opaque: true) {
             if onboardingStore.isFirstEventCelebrating {
                 Text("It's on the calendar.")
                     .font(.rubik(14, weight: .semibold))

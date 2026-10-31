@@ -6,6 +6,8 @@ struct FloatingNoticeCard<Content: View>: View {
     @Environment(\.nativeWebTheme) private var theme
     let width: CGFloat
     var isFocused = false
+    /// Solid panel surface (matches web `NoticeCard` opaque).
+    var opaque = false
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -16,7 +18,8 @@ struct FloatingNoticeCard<Content: View>: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .frame(width: width, alignment: .leading)
-                    .background(theme.surfaceColor.opacity(0.95))
+                    .background(
+                        opaque ? theme.surfacePanelColor : theme.surfaceColor.opacity(0.95))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)

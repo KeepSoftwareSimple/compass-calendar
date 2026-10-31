@@ -28,6 +28,14 @@ final class WelcomeKeyboardTests: XCTestCase {
             XCTAssertTrue(modal.staticTexts["How Compass works"].waitForExistence(timeout: 5))
             window.typeKey(.escape, modifierFlags: [])
             XCTAssertTrue(modal.staticTexts["The Keyboard Calendar"].waitForExistence(timeout: 5))
+            modal.buttons["Get started for free"].click()
+            window.typeKey(.return, modifierFlags: [])
+            window.typeKey(.return, modifierFlags: [])
+            modal.buttons["On this device only"].click()
+            XCTAssertTrue(modal.staticTexts["Step 4 of 4"].waitForExistence(timeout: 5))
+            XCTAssertTrue(modal.staticTexts["Essential shortcuts"].waitForExistence(timeout: 5))
+            window.typeKey(.return, modifierFlags: [])
+            XCTAssertFalse(modal.waitForExistence(timeout: 5))
             app.terminate()
         }
     }

@@ -81,6 +81,7 @@ const PromptCard: FC = () => {
       className={PH_NO_RAGECLICK_CLASS}
       closing={closing}
       data-first-event-prompt=""
+      opaque
     >
       {isCelebrating ? (
         <div className="flex flex-col gap-1 py-2">

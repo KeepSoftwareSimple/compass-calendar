@@ -2,11 +2,10 @@ import { expect, test } from "@playwright/test";
 import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 test.use({ storageState: { cookies: [], origins: [] } });
-test.use({ viewport: { width: 1280, height: 900 } });
 
-test("signup shows provider buttons without the connect-calendar heading", async ({
-  page,
-}) => {
+const mockAllSignInProviders = async (
+  page: import("@playwright/test").Page,
+) => {
   await page.route("**/api/config", async (route) => {
     await route.fulfill({
       status: 200,
@@ -15,15 +14,17 @@ test("signup shows provider buttons without the connect-calendar heading", async
         version: E2E_APP_CONFIG_VERSION,
         providers: {
           google: { signIn: true, connect: true },
-          microsoft: { signIn: false, connect: false },
-          apple: { signIn: false, connect: false },
+          microsoft: { signIn: true, connect: true },
+          apple: { signIn: true, connect: true },
         },
       }),
     });
   });
+};
 
-  await page.goto("/week?auth=signup", { waitUntil: "domcontentloaded" });
-
+const expectSignupProviderLayout = async (
+  page: import("@playwright/test").Page,
+) => {
   const dialog = page.getByRole("dialog", { name: "Nice to meet you" });
   await expect(dialog).toBeVisible();
   await expect(
@@ -32,7 +33,33 @@ test("signup shows provider buttons without the connect-calendar heading", async
   await expect(
     dialog.getByText("Pick Google, Microsoft, or Apple"),
   ).toHaveCount(0);
-  await expect(
-    dialog.getByRole("button", { name: /Continue with Google/i }),
-  ).toBeVisible();
+  for (const label of [
+    /Continue with Google/i,
+    /Continue with Microsoft/i,
+    /Continue with Apple/i,
+  ]) {
+    await expect(dialog.getByRole("button", { name: label })).toBeVisible();
+  }
+};
+
+test.describe("signup provider layout at 1280", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test("shows all provider buttons without the connect-calendar heading", async ({
+    page,
+  }) => {
+    await mockAllSignInProviders(page);
+    await page.goto("/week?auth=signup", { waitUntil: "domcontentloaded" });
+    await expectSignupProviderLayout(page);
+  });
+});
+
+test.describe("signup provider layout at 360", () => {
+  test.use({ viewport: { width: 360, height: 740 } });
+
+  test("shows all provider buttons above the fold", async ({ page }) => {
+    await mockAllSignInProviders(page);
+    await page.goto("/week?auth=signup", { waitUntil: "domcontentloaded" });
+    await expectSignupProviderLayout(page);
+  });
 });
