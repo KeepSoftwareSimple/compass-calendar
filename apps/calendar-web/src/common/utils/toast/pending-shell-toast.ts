@@ -1,12 +1,15 @@
+import { type Id } from "react-toastify";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
-import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
 
 const SESSION_KEY = "compass.shell.pending-toast";
 
-export type PendingShellToast =
-  | { variant: "info"; message: string }
-  | { variant: "error"; message: string };
+export type PendingShellToast = {
+  variant: "info" | "error";
+  message: string;
+  toastId?: Id;
+  autoClose?: false;
+};
 
 function parsePendingShellToast(raw: string): PendingShellToast | null {
   try {
@@ -68,12 +71,21 @@ function schedulePendingShellToastClear(
 }
 
 function deliverPendingShellToast(pending: PendingShellToast): void {
+  const toast = getToast();
+  const options = {
+    ...getToastDefaultOptions(),
+    ...(pending.toastId ? { toastId: pending.toastId } : {}),
+    ...(pending.autoClose === false
+      ? { autoClose: false as const, closeOnClick: false, draggable: false }
+      : {}),
+  };
+
   if (pending.variant === "info") {
-    getToast().info(pending.message, getToastDefaultOptions());
+    toast.info(pending.message, options);
     return;
   }
 
-  showErrorToast(pending.message);
+  toast.error(pending.message, options);
 }
 
 function isPendingShellToastVisible(pending: PendingShellToast): boolean {
