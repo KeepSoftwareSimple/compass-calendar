@@ -1,5 +1,6 @@
 import { test } from "@playwright/test";
 import { COMPASS_SYNTHETIC_ACCOUNT_HEADER } from "@core/analytics/synthetic-account.util";
+import { dismissBringYourEventsPromptIfOpen } from "../utils/event-test-utils";
 import {
   cleanupProdJourneyAccount,
   isJourneyEnabled,
