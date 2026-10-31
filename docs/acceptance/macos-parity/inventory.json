@@ -1349,11 +1349,11 @@
       "behavior": "Click welcome heading/body, then Enter advances to second step",
       "web": ["e2e/onboarding/welcome-enter-body.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassUITests/WelcomeKeyboardTests.swift#testWelcomeStepsRemainInteractiveInBothThemes"
+        "apps/calendar-macos/CompassUITests/WelcomeBodyKeyboardTests.swift#testEnterAdvancesAfterClickingWelcomeHeading"
       ],
-      "status": "missing",
-      "reason": "Existing native welcome test clicks CTA on first step and presses Return only on step two. Literal DOM dialog focus is platform-specific; observable native keyboard routing remains required.",
-      "evidence": "",
+      "status": "unreviewed",
+      "reason": "Separate real native heading-click then Return regression verifies second-step heading and Next control without clicking first CTA. Native does not require literal DOM dialog focus; observable responder routing remains asserted. Pending isolated execution and capture review.",
+      "evidence": "New #5036 native UI regression and retained step-two capture, pending exact-head isolated verification.",
       "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
     },
     {
@@ -1417,10 +1417,46 @@
       "native": [
         "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/BookingDescriptionKeyboardTests.swift#testBothBookingLinksSupportKeyboardSelectionAndDestinationHelp"
       ],
-      "status": "failing",
-      "reason": "Initial isolated real-window keyboard regression confirmed nil destination tooltip on both named links; renderer fix pending fresh full verification. Separate tabbable AX/focus-ring and real UI gates stay open.",
-      "evidence": "Exactfd2 normal41230663752 package job124624185637 actual raw log /tmp/compass-booking-fd2-package.log lines10195-10196: only two tooltip assertions fail; keyboard selection/destination/focus/HTML assertions do not fail.",
+      "status": "passing",
+      "reason": "Native real-window/responder integration selects both named links with keyboard events, checks destination tooltips and unchanged HTML. Separate tabbable AX links, visual focus, full UI and signed-in acceptance remain open.",
+      "evidence": "Merged #5027 exactaab6066c80a8a339ab403e06163acff65e73cd82 BOTHstrict41232910599 actualPASS/no required skips /tmp/compass-booking-aab-both-strict; unchanged integration regressionPASS0.704s; normal41232916088PASS. Beforefd2 only two URL-help assertions failed in actual /tmp/compass-booking-fd2-package.log.",
       "review": "2026-10-31 agent: frozen booking-description URL title assertion mapped to native tooltip. Minimal general native renderer fix; no test weakening."
+    },
+    {
+      "id": "go-to-date-iso",
+      "behavior": "G opens palette; query 2026-12-15 shows exact date option; Enter closes palette, reveals 2026-12-15 and announces chosen week",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+      ],
+      "status": "missing",
+      "reason": "Pure parse/label/announcement vectors do not establish actual keyboard palette entry, dismissal, visible day navigation and accessible announcement. Native anchor/view replaces web URL routing; observable date selection is not excluded. Pin current year for month-first input.",
+      "evidence": "",
+      "review": "2026-10-31 agent: full frozen cf5 source and all three cases read, compared parser vectors, remote-event search navigation and header keyboard candidates. No fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "go-to-date-slash",
+      "behavior": "G opens palette; query 2026/10/29 shows exact date option; Enter closes palette, reveals 2026-10-29 and announces chosen week",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+      ],
+      "status": "missing",
+      "reason": "Pure parse/label/announcement vectors do not establish actual keyboard palette entry, dismissal, visible day navigation and accessible announcement. Native anchor/view replaces web URL routing; observable date selection is not excluded. Pin current year for month-first input.",
+      "evidence": "",
+      "review": "2026-10-31 agent: full frozen cf5 source and all three cases read, compared parser vectors, remote-event search navigation and header keyboard candidates. No fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "go-to-date-month-first",
+      "behavior": "G opens palette; query 10/29 shows exact date option; Enter closes palette, reveals 2026-10-29 and announces chosen week",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+      ],
+      "status": "missing",
+      "reason": "Pure parse/label/announcement vectors do not establish actual keyboard palette entry, dismissal, visible day navigation and accessible announcement. Native anchor/view replaces web URL routing; observable date selection is not excluded. Pin current year for month-first input.",
+      "evidence": "",
+      "review": "2026-10-31 agent: full frozen cf5 source and all three cases read, compared parser vectors, remote-event search navigation and header keyboard candidates. No fixture-to-UI equivalence inferred."
     }
   ],
   "gates": {
@@ -1455,6 +1491,7 @@
     "e2e/onboarding/initial-paint.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
     "e2e/onboarding/welcome-cta-width.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
     "e2e/onboarding/welcome-enter-body.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
-    "e2e/timed/event-description-links.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    "e2e/timed/event-description-links.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
+    "e2e/navigation/go-to-date.spec.ts": "2026-10-31 agent: read every assertion in frozen cf5 source, mapped all three input cases including palette close/date visibility/announcement. Browser URL routing maps native anchor/view."
   }
 }

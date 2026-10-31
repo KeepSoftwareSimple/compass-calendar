@@ -8,22 +8,19 @@ Native UI XCTest runs only on isolated GitHub Macs. No local desktop takeover.
 
 ## Current package
 
-Branch `test/macos-booking-link-accessibility`, fixes #5026. New isolated AppKit
-integration regression creates a real window and rich editor with both named
-booking links. Real keyboard word selection must reach each link, expose its
-full destination help and preserve HTML. It never activates external URLs.
-Native caret selection is a platform-specific keyboard path; separate tabbable
-AX elements, focus-ring visual review, full UI and signed-in evidence stay open.
-The initial isolated package run confirmed both named links lacked destination
-help; keyboard selection, destinations, focus and unchanged HTML passed. The
-shared native link renderer now assigns full destination tooltips. Keep the
-regression unchanged and require new exact-head native/web strict before ready/queue.
-Do not run this AppKit test locally.
-Existing description Tab routing and cancellation/clipboard tests are untouched.
+Branch `test/macos-welcome-body-enter`, fixes #5036. A separate native UI
+regression clicks the welcome heading then presses Return and verifies the
+second step and Next control, retaining a screenshot. Existing welcome tests
+and production behavior are unchanged. Pending isolated exact-head native/web
+strict verification and actual capture review before acceptance/ready/queue.
+No local native UI execution or authentication flow.
 
-Accounting PR #5020 merged 2026-10-31T18:16:32Z with exact0e0 native/web strict
-PASS and no required skips. Five completed frozen source reviews are recorded;
-future web changes remain deferred. All broad gates and parent #4783 stay open.
+Named-link help acceptance from merged #5027 is recorded with actual exactaab
+native/web strict PASS and unchanged keyboard integration regression. Separate
+AX link focus, broad visual, real UI and signed-in gates remain open. Clock
+blocker #5032 merged; preserve its worktree and do not rerun passing suites.
+Frozen go-to-date source review now explicitly tracks three missing real native
+keyboard/palette/date/announcement behaviors, beyond parser vectors.
 
 ## Verified history, do not repeat
 
