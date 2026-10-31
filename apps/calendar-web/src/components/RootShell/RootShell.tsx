@@ -242,9 +242,11 @@ export function RootShell() {
       )}
       {activeOnboardingSurface === "pointerHint" && <PointerHint />}
       <BottomNoticeStack>
-        <UpNextBanner />
+        {/* Phone visitors only see MobileGate; a bottom notice card steals
+            tray touches and breaks Time Block Party drag/tap. */}
+        {!isMobile && <UpNextBanner />}
         {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
-        <LocalModeConnectPrompt />
+        {!isMobile && <LocalModeConnectPrompt />}
       </BottomNoticeStack>
     </AuthModalProvider>
   );
