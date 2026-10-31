@@ -57,8 +57,12 @@ const swallowDayPointer = (event: MouseEvent<HTMLElement>) => {
 /** react-datepicker moves its own cursor on Arrow keys; there is no app
  * handler to hang a shortcutId off, so the legend row records here instead. */
 const handlePickerKeyDownCapture = (event: KeyboardEvent<HTMLElement>) => {
-  if (event.key === "Escape") {
+  if (event.key === "Escape" || event.key === "u" || event.key === "U") {
+    if (event.key === "u" || event.key === "U") {
+      recordHandledShortcutInvocation("focus-event");
+    }
     restoreSidebarPickerReturnFocus();
+    event.preventDefault();
     return;
   }
   if (event.key.startsWith("Arrow")) {

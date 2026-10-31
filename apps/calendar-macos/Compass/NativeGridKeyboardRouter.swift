@@ -72,6 +72,7 @@ final class NativeGridKeyboardRouter {
             .navGoToDate,
             .otherSidebar,
             .focusSidebar,
+            .focusEvent,
             .focusNotice,
             .otherSubscribe,
         ]
@@ -878,6 +879,16 @@ final class NativeGridKeyboardRouter {
             model.commitMonthPickerFocus()
         case .named(.escape):
             model.clearMonthPickerFocus()
+        case .character(let char):
+            if char == "u" {
+                model.clearMonthPickerFocus()
+                model.focusFirstCalendarEvent()
+            } else if char == "i" {
+                break
+            } else {
+                model.clearMonthPickerFocus()
+                return false
+            }
         default:
             model.clearMonthPickerFocus()
             return false

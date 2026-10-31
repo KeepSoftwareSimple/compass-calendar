@@ -25,7 +25,6 @@ export interface CalendarViewShortcutsConfig {
   onGoToToday?: () => void;
   onCreateAllDayEvent?: () => void;
   onCreateTimedEvent?: () => void;
-  onFocusCalendar?: () => void;
 }
 
 /**
@@ -35,8 +34,9 @@ export interface CalendarViewShortcutsConfig {
  * PageUp/PageDown and Alt+ArrowUp/Down scroll the timed grid via
  * `useGridScrollShortcuts`.
  * Shift+J/K register only when the view provides a handler (Week's window
- * shift). "i" (focus sidebar) is registered separately via
- * useFocusSidebarShortcut. Behavior lives in each view's owner; this is only
+ * shift). "u" / "i" (UI region focus) register via
+ * useCalendarUiFocusLeftShortcut and useFocusSidebarShortcut. Behavior lives
+ * in each view's owner; this is only
  * the thin key-registration boundary.
  */
 export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
@@ -90,9 +90,6 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
       shortcutId: "create-timed",
     },
   );
-  useAppShortcutUp(nav.focusEvent.hotkey, () => config.onFocusCalendar?.(), {
-    shortcutId: "focus-event",
-  });
   // Keydown so a macOS Cmd+Z keyup-replay (meta already released) cannot
   // match this binding the way Mod+D vs D does on keyup.
   useAppShortcut(

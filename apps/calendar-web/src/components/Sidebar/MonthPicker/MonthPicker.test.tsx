@@ -299,6 +299,7 @@ describe("MonthPicker", () => {
 
     act(() => getTabStopDay()?.focus());
     expect(picker).toHaveTextContent("move by week");
+    expect(picker).toHaveTextContent("returns to the grid");
     expect(picker).not.toHaveTextContent("focuses the picker");
     expect(picker).not.toHaveTextContent("Arrows");
     expect(picker.querySelector("[data-testid='arrowup-icon']")).not.toBeNull();
