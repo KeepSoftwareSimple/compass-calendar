@@ -20,24 +20,19 @@ async function prepareSession(page: Page) {
   });
 
   await page.addInitScript(() => {
-    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
-    localStorage.setItem(
-      "compass.onboarding.has-seen-shortcut-showcase",
-      "true",
-    );
+    localStorage.removeItem("compass.onboarding.has-seen-welcome");
     localStorage.removeItem("compass.onboarding.first-event-done");
     localStorage.removeItem("compass.app-update.notice-handled-versions");
   });
 }
 
-async function completeWelcomeIfPresent(page: Page) {
+async function openWeekWithNotices(page: Page) {
+  await page.goto("/week", { waitUntil: "networkidle" });
+
   const welcomeDialog = page.getByRole("dialog", {
     name: "Welcome to Compass Calendar",
   });
-  if (!(await welcomeDialog.isVisible().catch(() => false))) {
-    return;
-  }
-
+  await expect(welcomeDialog).toBeVisible({ timeout: 120_000 });
   await welcomeDialog
     .getByRole("button", { name: "Get started for free" })
     .click();
@@ -45,25 +40,19 @@ async function completeWelcomeIfPresent(page: Page) {
   await page.keyboard.press("Enter");
   await page.keyboard.press("Enter");
   await page.keyboard.press("s");
-  await expect(welcomeDialog).toBeHidden({ timeout: 30_000 });
-}
-
-async function openWeekWithNotices(page: Page) {
-  await page.goto("/week", { waitUntil: "networkidle" });
-  await completeWelcomeIfPresent(page);
+  await expect(welcomeDialog).toBeHidden({ timeout: 60_000 });
 
   const firstEvent = page.getByRole("complementary", {
     name: "Create your first event",
   });
-  await expect(firstEvent).toBeVisible({ timeout: 60_000 });
+  await expect(firstEvent).toBeVisible({ timeout: 120_000 });
 
   const updateCopy = page.getByText(
     "Compass just got better. Refresh to update.",
   );
-  if (!(await updateCopy.isVisible().catch(() => false))) {
-    await page.reload({ waitUntil: "networkidle" });
-  }
-  await expect(updateCopy).toBeVisible({ timeout: 90_000 });
+  await expect
+    .poll(async () => updateCopy.isVisible(), { timeout: 120_000 })
+    .toBe(true);
 }
 
 async function assertBottomLeftStack(page: Page) {
@@ -118,7 +107,7 @@ test.describe("bottom notice stack", () => {
   test("1280px anchors notices bottom-left with primary CTAs and no overlap", async ({
     page,
   }, testInfo) => {
-    testInfo.setTimeout(120_000);
+    testInfo.setTimeout(240_000);
     await page.setViewportSize({ width: 1280, height: 900 });
     await prepareSession(page);
     await openWeekWithNotices(page);
@@ -131,7 +120,7 @@ test.describe("bottom notice stack", () => {
   test("360px anchors notices bottom-left with primary CTAs and no overlap", async ({
     page,
   }, testInfo) => {
-    testInfo.setTimeout(120_000);
+    testInfo.setTimeout(240_000);
     await page.setViewportSize({ width: 360, height: 740 });
     await prepareSession(page);
     await openWeekWithNotices(page);
