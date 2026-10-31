@@ -70,7 +70,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prod-journey-${{ matrix.provider }}-${{ github.run_id }}
-          path: e2e/test-results/prod-journey/
+          path: |
+            e2e/test-results/prod-journey/
+            test-results/prod-journey/
           retention-days: 7
           if-no-files-found: warn
 

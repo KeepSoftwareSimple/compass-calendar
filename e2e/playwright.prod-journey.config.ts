@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./journey",
-  testMatch: "prod-full-journey.spec.ts",
+  testMatch: /prod-(full-journey|journey-cleanup)\.spec\.ts/,
   timeout: 600_000,
   expect: {
     timeout: 180_000,
