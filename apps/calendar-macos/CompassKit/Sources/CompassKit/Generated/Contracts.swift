@@ -1376,10 +1376,10 @@ public struct ReplaceEventInput: Codable, Hashable, Sendable {
     public let invitation: InvitationEnum?
     public let recurrence: ReplaceEventInputRecurrence
     public let restore: Bool?
-    public let schedule: EventSchedule
+    public let schedule: EventSchedule?
     public let scope: ScopeEnum
 
-    public init(calendarId: CalendarId? = nil, content: CreateEventInputContent, invitation: InvitationEnum? = nil, recurrence: ReplaceEventInputRecurrence, restore: Bool? = nil, schedule: EventSchedule, scope: ScopeEnum) {
+    public init(calendarId: CalendarId? = nil, content: CreateEventInputContent, invitation: InvitationEnum? = nil, recurrence: ReplaceEventInputRecurrence, restore: Bool? = nil, schedule: EventSchedule? = nil, scope: ScopeEnum) {
         self.calendarId = calendarId
         self.content = content
         self.invitation = invitation

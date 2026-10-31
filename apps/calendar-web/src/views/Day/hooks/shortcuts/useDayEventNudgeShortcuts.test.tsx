@@ -195,7 +195,11 @@ const renderEditShortcuts = ({
         ...(id === ALL_DAY_EVENT_ID ? allDayEventContract : timedEventContract),
         id,
         content,
-        schedule: input.schedule,
+        schedule:
+          input.schedule ??
+          (id === ALL_DAY_EVENT_ID
+            ? allDayEventContract.schedule
+            : timedEventContract.schedule),
       };
     },
     delete: async () => {},

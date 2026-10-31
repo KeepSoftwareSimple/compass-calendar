@@ -5,6 +5,7 @@ import {
   type SyncEventContent,
 } from "@core/types/sync/event.contracts";
 import { type ProviderEventId } from "@core/types/sync/identity.contracts";
+import { providerColorOnlyPatchFlags } from "@sync/domain/color-only-update";
 import {
   resolveUpdateContent,
   resolveUpdateSchedule,
@@ -147,6 +148,11 @@ export async function executeProviderOccurrenceUpdate(
   let activeInstance = instance;
   let activeProviderEventId = providerEventId;
   let activeLocation = location;
+  const { writeSchedule, colorOnly } = providerColorOnlyPatchFlags(
+    command,
+    master.content,
+    content,
+  );
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const patchResult = await runProviderWrite(() =>
@@ -158,6 +164,8 @@ export async function executeProviderOccurrenceUpdate(
         schedule,
         recurrence: { kind: "instance" },
         invitation: input.invitation,
+        writeSchedule,
+        ...(colorOnly ? { colorOnly } : {}),
       }),
     );
     if (patchResult.ok) {

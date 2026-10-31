@@ -68,16 +68,20 @@ public enum GridEventDraftMapping {
         from draft: GridEventDraft,
         originalCalendarId: CalendarId,
         scope: ScopeEnum,
+        baseline: Event? = nil,
         invitation: InvitationEnum? = nil
     ) -> ReplaceEventInput? {
         guard draft.kind == .edit, let calendarId = draft.calendarId else { return nil }
         let resolvedTitle = resolvedTitle(from: draft)
+        let wireSchedule = schedule(from: draft.schedule, timeZone: draft.timeZone)
+        let includeSchedule =
+            baseline == nil || !schedulesEqual(baseline!.schedule, wireSchedule)
         return ReplaceEventInput(
             calendarId: calendarId == originalCalendarId ? nil : calendarId,
             content: inputContent(from: draft, title: resolvedTitle),
             invitation: invitation,
             recurrence: replaceRecurrence(from: draft.recurrence),
-            schedule: schedule(from: draft.schedule, timeZone: draft.timeZone),
+            schedule: includeSchedule ? wireSchedule : nil,
             scope: scope
         )
     }
@@ -165,6 +169,21 @@ public enum GridEventDraftMapping {
 
     private static func draftColorEnum(_ draft: GridEventDraft) -> ColorEnum? {
         draft.color.flatMap { ColorEnum(rawValue: $0.rawValue) }
+    }
+
+    private static func schedulesEqual(_ left: EventSchedule, _ right: EventSchedule) -> Bool {
+        switch (left, right) {
+        case (.allDay(let a), .allDay(let b)):
+            return a.start == b.start && a.end == b.end
+        case (.timed(let a), .timed(let b)):
+            let leftStart = CompassDateParsing.parseInEffectiveTimeZone(a.start.rawValue)
+            let rightStart = CompassDateParsing.parseInEffectiveTimeZone(b.start.rawValue)
+            let leftEnd = CompassDateParsing.parseInEffectiveTimeZone(a.end.rawValue)
+            let rightEnd = CompassDateParsing.parseInEffectiveTimeZone(b.end.rawValue)
+            return leftStart == rightStart && leftEnd == rightEnd
+        default:
+            return false
+        }
     }
 
     private static func schedule(from draftSchedule: DraftSchedule, timeZone: IANATimeZone?) -> EventSchedule {

@@ -243,6 +243,25 @@ describe("MicrosoftEventWriter", () => {
     expect(api.calls.patch[0]?.body.categories).toEqual([]);
   });
 
+  it("sends only categories on a color-only instance patch", async () => {
+    const api = new FakeWriteApi();
+    const { writer } = writerWith(api);
+
+    await writer.patchEvent({
+      ...basePatch,
+      content: content({ color: "blue" }),
+      recurrence: { kind: "instance" },
+      colorOnly: true,
+      writeSchedule: false,
+      invitation: "all",
+    });
+
+    expect(api.calls.patch).toHaveLength(1);
+    expect(api.calls.patch[0]?.body).toEqual({ categories: ["Blue"] });
+    expect(api.calls.patch[0]?.body).not.toHaveProperty("attendees");
+    expect(api.calls.patch[0]?.body).not.toHaveProperty("subject");
+  });
+
   it("writes timed schedule, text body, and showAs busy", async () => {
     const api = new FakeWriteApi();
     const { writer } = writerWith(api);
