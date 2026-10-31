@@ -82,8 +82,28 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
     const stripeFrame = page
       .frameLocator('iframe[name*="stripe"], iframe[src*="stripe"]')
       .first();
-    await submitSyntheticProdJourneyCheckout(stripeFrame);
-    await expect(trialDialog).toBeHidden({ timeout: 180_000 });
+    try {
+      await submitSyntheticProdJourneyCheckout(stripeFrame);
+      await expect(
+        page.getByRole("dialog", { name: "You're aboard!" }),
+      ).toBeVisible({ timeout: 180_000 });
+      await expect(trialDialog).toBeHidden({ timeout: 180_000 });
+    } catch (error) {
+      await trialDialog.screenshot({
+        path: test.info().outputPath("prod-journey-checkout-failure.png"),
+      });
+      const stripeText = await stripeFrame
+        .locator("body")
+        .innerText()
+        .catch(() => "");
+      if (stripeText) {
+        test.info().attach("stripe-frame-on-failure", {
+          body: stripeText.slice(0, 8000),
+          contentType: "text/plain",
+        });
+      }
+      throw error;
+    }
 
     const createdTitle = createEventTitle("Prod journey create");
     await openTimedEventFormWithKeyboard(page);

@@ -173,10 +173,43 @@ export const fillJourneyCheckoutBillingAddressIfVisible = async (
   }
 };
 
+/** Stripe Link can require a phone when save is checked; prod uses no card. */
+export const dismissStripeLinkSaveIfChecked = async (
+  stripeFrame: FrameLocator,
+) => {
+  const linkSave = stripeFrame.locator("#enableStripePass");
+  if (!(await linkSave.isVisible().catch(() => false))) return;
+
+  if (await linkSave.isChecked().catch(() => false)) {
+    await linkSave.click({ force: true });
+  }
+  if (await linkSave.isChecked().catch(() => false)) {
+    const phone = stripeFrame.getByRole("textbox", { name: /Phone/i });
+    if (await phone.isVisible().catch(() => false)) {
+      await phone.click();
+      await phone.fill("");
+      await phone.fill("(303) 555-0100");
+      await expect(phone).toHaveValue(/303/);
+    }
+  } else {
+    await expect(
+      stripeFrame.getByRole("textbox", { name: /Phone/i }),
+    ).toHaveCount(0);
+  }
+};
+
 export const submitSyntheticProdJourneyCheckout = async (
   stripeFrame: FrameLocator,
 ) => {
+  const cardField = stripeFrame.getByLabel("Card number");
+  if (await cardField.isVisible().catch(() => false)) {
+    throw new Error(
+      "Synthetic prod checkout expected no card field (100% discount with payment_method_collection if_required). Verify production deploy wrote SYNTHETIC_JOURNEY_EMAILS and STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID.",
+    );
+  }
+
   await fillJourneyCheckoutBillingAddressIfVisible(stripeFrame);
+  await dismissStripeLinkSaveIfChecked(stripeFrame);
   await expect(
     stripeFrame.getByTestId("hosted-payment-submit-button"),
   ).toBeEnabled({ timeout: 120_000 });

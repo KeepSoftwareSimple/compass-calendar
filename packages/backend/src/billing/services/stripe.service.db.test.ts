@@ -111,7 +111,7 @@ describe("StripeService", () => {
         .custom_text,
     ).toBeUndefined();
     expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-      idempotencyKey: `compass-checkout-v9-${userId.toString()}`,
+      idempotencyKey: `compass-checkout-v10-${userId.toString()}`,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
@@ -168,6 +168,14 @@ describe("StripeService", () => {
       (syntheticArgs as { payment_method_collection?: string })
         .payment_method_collection,
     ).toBe("if_required");
+    expect(
+      (syntheticArgs as { automatic_tax?: { enabled?: boolean } })
+        .automatic_tax,
+    ).toBeUndefined();
+    expect(
+      (syntheticArgs as { billing_address_collection?: string })
+        .billing_address_collection,
+    ).toBeUndefined();
 
     sessionsCreate.mockClear();
     await stripeService.createCheckoutSession(realUserId.toString());
@@ -1090,7 +1098,7 @@ describe("StripeService", () => {
       expect(sessionArgs.ui_mode).toBeUndefined();
       expect(sessionArgs.redirect_on_completion).toBeUndefined();
       expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-        idempotencyKey: `compass-checkout-v9-desktop-${userId.toString()}`,
+        idempotencyKey: `compass-checkout-v10-desktop-${userId.toString()}`,
       });
     });
 
