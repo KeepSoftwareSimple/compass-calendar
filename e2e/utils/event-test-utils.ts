@@ -294,6 +294,13 @@ export const forceIntlTimeZoneToUtc = async (page: Page) => {
   });
 };
 
+export const waitForWeekEventsLoaded = async (page: Page) => {
+  const loader = page.getByRole("status", { name: "Loading events" });
+  if (await loader.count()) {
+    await expect(loader).toBeHidden({ timeout: 120_000 });
+  }
+};
+
 export const prepareCalendarPage = async (page: Page) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
   await waitForCalendarShell(page);
@@ -305,6 +312,7 @@ export const prepareCalendarPage = async (page: Page) => {
 
   await ensureWeekView(page);
   await page.locator("#mainGrid").waitFor({ state: "visible", timeout: 15000 });
+  await waitForWeekEventsLoaded(page);
   await blurActiveElement(page);
   await page.locator("#mainGrid").focus();
 };
