@@ -43,77 +43,82 @@ export const SidebarActions = ({ sections }: SidebarActionsProps) => {
     : "Open shortcuts";
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-start gap-2 border-border border-t px-3">
-      <TooltipWrapper
-        description={shortcutsActionLabel}
-        shortcut="?"
-        shortcutId="other-shortcuts"
-        onClick={viewActions.toggleShortcuts}
+    <div className="flex h-12 shrink-0 items-center justify-start border-border border-t px-3">
+      <div
+        className="flex shrink-0 items-center gap-2"
+        data-testid="sidebar-footer-actions"
       >
-        <button
-          aria-label={shortcutsActionLabel}
-          className={FOOTER_ICON_BUTTON_CLASS}
-          type="button"
+        <TooltipWrapper
+          description={shortcutsActionLabel}
+          shortcut="?"
+          shortcutId="other-shortcuts"
+          onClick={viewActions.toggleShortcuts}
         >
-          <KeyboardIcon
-            aria-hidden="true"
-            size={16}
-            weight={isShortcutsOpen ? "fill" : "regular"}
-          />
-        </button>
-      </TooltipWrapper>
-      <TooltipWrapper
-        description="Open settings"
-        shortcut={["Mod", ","]}
-        shortcutId="other-settings"
-        onClick={() => settingsActions.openSettings()}
-      >
-        <button
-          aria-label="Open settings"
-          className={FOOTER_ICON_BUTTON_CLASS}
-          type="button"
-        >
-          <GearIcon
-            aria-hidden="true"
-            size={16}
-            weight={isSettingsOpen ? "fill" : "regular"}
-          />
-        </button>
-      </TooltipWrapper>
-      <TooltipWrapper
-        description="Open command palette"
-        shortcut={["Mod", "K"]}
-        shortcutId="other-palette"
-        onClick={toggleCmdPalette}
-      >
-        <button
-          aria-label={
-            isCalendarSyncing
-              ? "Open command palette, syncing in the background"
-              : "Open command palette"
-          }
-          className={FOOTER_ICON_BUTTON_CLASS}
-          type="button"
-        >
-          <span className="relative flex size-4 items-center justify-center">
-            <CommandIcon
+          <button
+            aria-label={shortcutsActionLabel}
+            className={FOOTER_ICON_BUTTON_CLASS}
+            type="button"
+          >
+            <KeyboardIcon
               aria-hidden="true"
               size={16}
-              weight={isCmdPaletteOpen ? "fill" : "regular"}
+              weight={isShortcutsOpen ? "fill" : "regular"}
             />
-            {isCalendarSyncing ? (
+          </button>
+        </TooltipWrapper>
+        <TooltipWrapper
+          description="Open settings"
+          shortcut={["Mod", ","]}
+          shortcutId="other-settings"
+          onClick={() => settingsActions.openSettings()}
+        >
+          <button
+            aria-label="Open settings"
+            className={FOOTER_ICON_BUTTON_CLASS}
+            type="button"
+          >
+            <GearIcon
+              aria-hidden="true"
+              size={16}
+              weight={isSettingsOpen ? "fill" : "regular"}
+            />
+          </button>
+        </TooltipWrapper>
+        <TooltipWrapper
+          description="Open command palette"
+          shortcut={["Mod", "K"]}
+          shortcutId="other-palette"
+          onClick={toggleCmdPalette}
+        >
+          <button
+            aria-label={
+              isCalendarSyncing
+                ? "Open command palette, syncing in the background"
+                : "Open command palette"
+            }
+            className={FOOTER_ICON_BUTTON_CLASS}
+            type="button"
+          >
+            <span className="relative flex size-4 items-center justify-center">
               <CommandIcon
                 aria-hidden="true"
-                className="c-sync-icon-wave absolute inset-0 text-text"
                 size={16}
                 weight={isCmdPaletteOpen ? "fill" : "regular"}
               />
-            ) : null}
-          </span>
-        </button>
-      </TooltipWrapper>
-      <SidebarRefreshButton />
-      <ShortcutLevelBadge sections={sections} />
+              {isCalendarSyncing ? (
+                <CommandIcon
+                  aria-hidden="true"
+                  className="c-sync-icon-wave absolute inset-0 text-text"
+                  size={16}
+                  weight={isCmdPaletteOpen ? "fill" : "regular"}
+                />
+              ) : null}
+            </span>
+          </button>
+        </TooltipWrapper>
+        <ShortcutLevelBadge sections={sections} />
+        <SidebarRefreshButton />
+      </div>
     </div>
   );
 };
