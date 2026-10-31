@@ -84,6 +84,18 @@ public struct RootView: View {
                 visible: model.focusStore.pageJumpHintsVisible
             )
         }
+        .overlay(alignment: .bottom) {
+            if model.viewStore.view != .life {
+                UpNextBanner(
+                    model: model,
+                    onOpen: { model.openUpNextEvent() },
+                    onJoin: { model.joinUpNextMeeting() },
+                    onBannerShown: { event in
+                        model.upNextBannerShown(event)
+                    })
+                .padding(.bottom, 16)
+            }
+        }
         .overlay(alignment: .bottomLeading) {
             VStack(alignment: .leading, spacing: 12) {
                 if model.desktopUpdateReadyVersion != nil {
@@ -91,15 +103,6 @@ public struct RootView: View {
                         model.onDesktopRestartToUpdate?()
                     }
                     .noticeFocusRing(model.focusedNotice == .updateReady)
-                }
-                if model.viewStore.view != .life {
-                    UpNextBanner(
-                        model: model,
-                        onOpen: { model.openUpNextEvent() },
-                        onJoin: { model.joinUpNextMeeting() },
-                        onBannerShown: { event in
-                            model.upNextBannerShown(event)
-                        })
                 }
             }
             .padding(.leading, 16)

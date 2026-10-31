@@ -75,6 +75,9 @@ public final class NativeCalendarRootModel {
     public var pendingLifeSidebarFieldFocus = false
     /// Banner holding keyboard focus after `p`, like the web's `data-notice` focus.
     public internal(set) var focusedNotice: NativeNotice?
+    /// Centered picker when several events share the Up Next nudge window.
+    public var isUpNextPickerPresented = false
+    public var upNextPickerHighlightIndex = 0
     /// Calendar list whose rows take number keys, like the web's focused
     /// account section. Nil when no list has focus.
     public internal(set) var focusedCalendarListKey: String?

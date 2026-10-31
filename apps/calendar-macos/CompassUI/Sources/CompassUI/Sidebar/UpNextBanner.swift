@@ -2,8 +2,6 @@ import CompassData
 import CompassKit
 import SwiftUI
 
-private let bannerLeadMinutes = 2
-
 struct UpNextBanner: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable var model: NativeCalendarRootModel
@@ -16,39 +14,31 @@ struct UpNextBanner: View {
 
     var body: some View {
         let state = model.upNextState
-        let snapshot = state.snapshot
-        let isVisible = bannerVisible(snapshot: snapshot, now: state.referenceNow)
+        let window = state.nudgeWindow
+        let isVisible = bannerVisible(window: window, now: state.referenceNow)
+            && !model.isUpNextPickerPresented
 
-        if isVisible, let presentation = UpNextFormatting.resolve(state) {
+        if model.isUpNextPickerPresented, window.occurrences.count > 1 {
+            UpNextEventPickerView(model: model, window: window)
+        } else if isVisible, let presentation = bannerPresentation(state: state, window: window) {
             let upNext = presentation.upNext
             let countdown = presentation.countdown
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(countdown)
-                            .font(.rubik(12))
-                            .foregroundStyle(theme.textMutedColor)
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(theme.accentColor)
-                                .frame(width: 6, height: 6)
-                            Text(upNext.title)
-                                .font(.rubik(14, weight: .medium))
-                                .foregroundStyle(theme.textColor)
-                                .lineLimit(1)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    NoticeDismissButton {
-                        withAnimation {
-                            isClosing = true
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                            dismissedEventId = upNext.id
-                            isClosing = false
-                        }
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(countdown)
+                        .font(.rubik(12))
+                        .foregroundStyle(theme.textMutedColor)
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(theme.accentColor)
+                            .frame(width: 6, height: 6)
+                        Text(upNext.title)
+                            .font(.rubik(14, weight: .medium))
+                            .foregroundStyle(theme.textColor)
+                            .lineLimit(1)
                     }
                 }
+                Spacer(minLength: 8)
                 Button {
                     if state.conferenceURL != nil {
                         onJoin()
@@ -56,27 +46,50 @@ struct UpNextBanner: View {
                         onOpen()
                     }
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Text(state.conferenceURL != nil ? "Join" : "Open")
+                            .font(.rubik(14, weight: .medium))
                         ShortcutHintChip(
                             label: state.conferenceURL != nil ? "V" : "N",
                             style: .onAccent
                         )
                     }
+                    .foregroundStyle(theme.onAccentColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(theme.accentSecondaryColor)
+                    .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
                 }
-                .buttonStyle(CompactPrimaryButtonStyle())
+                .buttonStyle(.plain)
+                Button {
+                    withAnimation {
+                        isClosing = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        dismissedEventId = upNext.id
+                        isClosing = false
+                    }
+                } label: {
+                    Text("×")
+                        .font(.rubik(16))
+                        .foregroundStyle(theme.textMutedColor)
+                        .padding(.horizontal, 4)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss")
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(width: 288, alignment: .leading)
-            .background(theme.surfaceColor.opacity(0.95))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial)
+            .background(theme.surfacePanelColor.opacity(0.8))
+            .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
                     .stroke(theme.borderColor, lineWidth: 1))
-            .shadow(color: theme.shadowDefaultColor, radius: 20, y: 10)
+            .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
             .opacity(isClosing ? 0 : 1)
-            .accessibilityElement(children: .contain)
+            .frame(width: 288)
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("compass-native-up-next-banner")
             .onAppear {
                 onBannerShown(
@@ -88,14 +101,39 @@ struct UpNextBanner: View {
         }
     }
 
-    private func bannerVisible(snapshot: UpNextSnapshot, now: Date) -> Bool {
-        guard let upNext = snapshot.upNext else { return false }
-        if dismissedEventId == upNext.id { return false }
-        if snapshot.isCurrentEvent { return true }
-        guard let start = CompassDateParsing.parseInEffectiveTimeZone(upNext.startDate) else {
-            return false
+    private struct BannerPresentation {
+        let upNext: UpNextOccurrence
+        let countdown: String
+    }
+
+    private func bannerPresentation(
+        state: NativeUpNextState,
+        window: UpNextNudgeWindow
+    ) -> BannerPresentation? {
+        guard let upNext = window.primary,
+              let start = CompassDateParsing.parseInEffectiveTimeZone(upNext.startDate),
+              let end = CompassDateParsing.parseInEffectiveTimeZone(upNext.endDate)
+        else {
+            return nil
         }
-        let minutes = start.timeIntervalSince(now) / 60
-        return minutes <= Double(bannerLeadMinutes)
+        let countdown: String
+        if window.occurrences.count > 1 {
+            countdown = UpNextNudgeFormatting.multiSummary(
+                count: window.occurrences.count,
+                hasCurrentEvent: window.hasCurrentEvent)
+        } else {
+            countdown = UpNextFormatting.formatEventStatus(
+                start: start,
+                end: end,
+                now: state.referenceNow,
+                isCurrentEvent: window.isPrimaryCurrent)
+        }
+        return BannerPresentation(upNext: upNext, countdown: countdown)
+    }
+
+    private func bannerVisible(window: UpNextNudgeWindow, now: Date) -> Bool {
+        guard let upNext = window.primary else { return false }
+        if dismissedEventId == upNext.id { return false }
+        return !window.occurrences.isEmpty
     }
 }

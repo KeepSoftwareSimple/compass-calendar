@@ -13,7 +13,16 @@ import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
 import { UpNextBanner } from "./UpNextBanner";
 import { useUpNextAvailabilityStore } from "./up-next.availability.store";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { upNextNudgeUiActions } from "./up-next-nudge-ui.store";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import "@testing-library/jest-dom";
 
 const SOON_EVENT_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
@@ -67,6 +76,44 @@ describe("UpNextBanner", () => {
     expect(screen.getByText("Soon Event")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open" })).toBeInTheDocument();
     expect(screen.getByText("N")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveClass("left-1/2");
+  });
+
+  it("uses compact multi-event copy and opens a picker when Open is clicked", () => {
+    render(<UpNextBanner />, {
+      events: [
+        timedEvent(SOON_EVENT_ID, "Soon Event", 1),
+        timedEvent(LATER_EVENT_ID, "Other Event", 2),
+      ],
+    });
+
+    expect(screen.getByText("2 events starting soon")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+
+    expect(
+      screen.getByText(
+        "You have 2 upcoming events. Select which event to open",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("pressing n opens the picker when several events qualify", async () => {
+    const user = userEvent.setup();
+    const showPicker = spyOn(upNextNudgeUiActions, "showPicker");
+    render(<UpNextBanner />, {
+      events: [
+        timedEvent(SOON_EVENT_ID, "Soon Event", 1),
+        timedEvent(LATER_EVENT_ID, "Other Event", 2),
+      ],
+    });
+
+    await user.keyboard("n");
+
+    await waitFor(() => {
+      expect(showPicker).toHaveBeenCalledWith("keyboardEdit");
+    });
+    showPicker.mockRestore();
   });
 
   it("publishes availability so the palette can enable Up Next without querying", async () => {

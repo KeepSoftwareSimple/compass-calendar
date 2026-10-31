@@ -76,6 +76,35 @@ final class UpNextProjectionTests: XCTestCase {
         XCTAssertFalse(snapshot.isCurrentEvent)
     }
 
+    func testNudgeWindowIncludesCurrentAndUpcomingWithinLeadMinutes() throws {
+        let now = isoDate("2026-03-10T21:00:00.000Z")
+        let calendarId = "507f1f77bcf86cd799439011"
+        let current = try decodeTimedEvent(
+            id: "current",
+            calendarId: calendarId,
+            title: "Now",
+            start: "2026-03-10T14:50:00.000-06:00",
+            end: "2026-03-10T16:00:00.000-06:00")
+        let soon = try decodeTimedEvent(
+            id: "soon",
+            calendarId: calendarId,
+            title: "Soon",
+            start: "2026-03-10T15:01:00.000-06:00",
+            end: "2026-03-10T15:31:00.000-06:00")
+        let later = try decodeTimedEvent(
+            id: "later",
+            calendarId: calendarId,
+            title: "Later",
+            start: "2026-03-10T16:00:00.000-06:00",
+            end: "2026-03-10T16:30:00.000-06:00")
+
+        let candidates = UpNextProjection.timedCandidates(from: [current, soon, later])
+        let window = UpNextProjection.nudgeWindow(now: now, timedCandidates: candidates)
+
+        XCTAssertEqual(window.occurrences.map(\.id), ["current", "soon"])
+        XCTAssertTrue(window.hasCurrentEvent)
+    }
+
     private func decodeTimedEvent(
         id: String,
         calendarId: String,
