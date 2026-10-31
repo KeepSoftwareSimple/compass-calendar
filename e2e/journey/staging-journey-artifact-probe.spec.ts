@@ -72,5 +72,9 @@ test(`staging journey artifact probe (${provider || "unset"})`, async ({
     password,
   });
 
+  await dismissBringYourEventsPromptIfOpen(page);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+
   throw new Error("Staging journey artifact probe forced failure");
 });

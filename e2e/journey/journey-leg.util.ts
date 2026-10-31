@@ -365,6 +365,9 @@ export const cleanupProdJourneyAccount = async (
     scope = "PROD",
   }: { email: string; password: string; scope?: JourneyScope },
 ) => {
+  await page
+    .goto("/week", { waitUntil: "domcontentloaded" })
+    .catch(() => undefined);
   const onCalendar =
     (await page
       .locator("#mainGrid")
