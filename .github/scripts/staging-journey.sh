@@ -23,7 +23,7 @@ export STAGING_BASE_URL="${STAGING_BASE_URL:-https://staging.compasscalendar.com
 
 bunx playwright install chromium
 if [ "${STAGING_JOURNEY_ARTIFACT_PROBE:-}" = "1" ]; then
-  bunx playwright test --config e2e/playwright.staging-journey.config.ts staging-journey-artifact-probe.spec.ts
+  bunx playwright test --config e2e/playwright.staging-journey-probe.config.ts
 else
   bunx playwright test --config e2e/playwright.staging-journey.config.ts
 fi
