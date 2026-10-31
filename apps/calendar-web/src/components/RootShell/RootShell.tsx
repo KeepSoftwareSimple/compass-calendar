@@ -28,6 +28,11 @@ import {
   VIEW_TO_PARAM,
 } from "@web/components/AuthModal/hooks/useAuthModal";
 import { BottomNoticeStack } from "@web/components/BottomNoticeStack/BottomNoticeStack";
+import {
+  isBottomNoticeStackSuppressed,
+  isUpNextBannerSuppressed,
+} from "@web/components/BottomNoticeStack/bottom-notice-stack-suppressed";
+import { useBottomNoticeStackGateSync } from "@web/components/BottomNoticeStack/useBottomNoticeStackGateSync";
 import { ConnectCalendarPromptGate } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPromptGate";
 import { useConnectCalendarPromptSurfaceEligible } from "@web/components/ConnectCalendarPrompt/useConnectCalendarPromptSurfaceEligible";
 import { FirstEventPrompt } from "@web/components/FirstEventPrompt/FirstEventPrompt";
@@ -210,6 +215,14 @@ export function RootShell() {
   ]);
 
   const activeOnboardingSurface = selectActiveSurface(onboardingFlags);
+  const noticeSuppression = {
+    isAuthModalOpen,
+    activeOnboardingSurface,
+  };
+  const suppressBottomNoticeStack =
+    isBottomNoticeStackSuppressed(noticeSuppression);
+  const suppressUpNextBanner = isUpNextBannerSuppressed(noticeSuppression);
+  useBottomNoticeStackGateSync(suppressBottomNoticeStack);
 
   // The gate and the celebration own the screen: the onboarding cards sit at
   // Z_INDEX_TOOLTIP (above Z_INDEX_MODAL), so leaving them mounted would let
@@ -241,10 +254,10 @@ export function RootShell() {
         <ConnectCalendarPromptGate />
       )}
       {activeOnboardingSurface === "pointerHint" && <PointerHint />}
-      <BottomNoticeStack>
+      <BottomNoticeStack suppressed={suppressBottomNoticeStack}>
         {/* Phone visitors only see MobileGate; a bottom notice card steals
             tray touches and breaks Time Block Party drag/tap. */}
-        {!isMobile && <UpNextBanner />}
+        {!isMobile && !suppressUpNextBanner && <UpNextBanner />}
         {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
         {!isMobile && <LocalModeConnectPrompt />}
       </BottomNoticeStack>

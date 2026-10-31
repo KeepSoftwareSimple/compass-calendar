@@ -1,7 +1,10 @@
 import classNames from "classnames";
-import { type PropsWithChildren } from "react";
+import { type PropsWithChildren, useLayoutEffect } from "react";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
+import { flushPendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
 import { BottomNoticeToastHost } from "@web/components/BottomNoticeStack/BottomNoticeToastHost";
+import { bottomNoticeStackGateActions } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.store";
+import { flushQueuedBottomNoticeToasts } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.toast";
 import { useFlushPendingShellToast } from "@web/components/BottomNoticeStack/useFlushPendingShellToast";
 import {
   selectIsSidebarOpen,
@@ -9,13 +12,25 @@ import {
 } from "@web/events/stores/view.store";
 
 /** Bottom-left stack for react-toastify and floating notice cards. */
-export function BottomNoticeStack({ children }: PropsWithChildren) {
+export function BottomNoticeStack({
+  children,
+  suppressed = false,
+}: PropsWithChildren<{ suppressed?: boolean }>) {
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
-  // Lift cards and toasts above the sidebar footer whenever the panel is open.
-  // On narrow viewports the stack spans nearly the full width, so leaving it
-  // at the default bottom inset covers footer actions and blocks pointer hits.
   const clearsSidebarFooter = isSidebarOpen;
+
   useFlushPendingShellToast();
+
+  useLayoutEffect(() => {
+    bottomNoticeStackGateActions.setSuppressed(suppressed);
+    if (suppressed) return;
+    flushQueuedBottomNoticeToasts();
+    flushPendingShellToast();
+  }, [suppressed]);
+
+  if (suppressed) {
+    return null;
+  }
 
   return (
     <section
