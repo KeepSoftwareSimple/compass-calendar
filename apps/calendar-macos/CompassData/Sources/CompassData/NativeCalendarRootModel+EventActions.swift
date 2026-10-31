@@ -327,6 +327,9 @@ extension NativeCalendarRootModel {
 
     private func replaceEvent(with event: Event) async {
         guard case .details(let details) = event.content else { return }
+        let current = loadedEvents.first { $0.id == event.id }
+        let scheduleUnchanged =
+            current.map { EventScheduleEqual.matches(event.schedule, $0.schedule) } ?? false
         let input = ReplaceEventInput(
             calendarId: eventsStore.source == .local ? event.calendarId : nil,
             content: .init(
@@ -334,7 +337,8 @@ extension NativeCalendarRootModel {
                 color: details.color, description: details.description, kind: "details",
                 location: details.location ?? "", title: details.title),
             recurrence: .preserve(.init(kind: "preserve")), restore: true,
-            schedule: event.schedule, scope: .this)
+            schedule: scheduleUnchanged ? nil : event.schedule,
+            scope: .this)
         do {
             try await eventsStore.replaceOptimistic(id: event.id, input: input, optimisticEvent: event)
             refreshLoadedEvents()
