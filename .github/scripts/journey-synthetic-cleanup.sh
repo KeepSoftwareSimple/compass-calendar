@@ -16,9 +16,6 @@ if [ -z "$ENVIRONMENT" ]; then
 fi
 
 CLI_ARGS=(--environment "$ENVIRONMENT")
-if [ -n "$EMAILS" ]; then
-  CLI_ARGS+=(--emails "$EMAILS")
-fi
 if [ "$DISCOVER" = "true" ]; then
   CLI_ARGS+=(--discover-pending-file)
   if [ -z "$EMAILS" ]; then
@@ -32,6 +29,9 @@ if [ "$DISCOVER" = "true" ]; then
       EMAILS=$(bun -e "const j=JSON.parse(require('fs').readFileSync('$PENDING_FILE','utf8')); process.stdout.write(j.email??'');")
     fi
   fi
+fi
+if [ -n "$EMAILS" ]; then
+  CLI_ARGS+=(--emails "$EMAILS")
 fi
 
 if [ "$DRY_RUN" = "true" ]; then
