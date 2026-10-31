@@ -1,4 +1,3 @@
-import { runStripeSyntheticJourneyCleanup } from "@scripts/commands/journey-synthetic-cleanup/stripe";
 import { redactJourneyEmailForLog } from "@core/analytics/synthetic-account.util";
 import {
   assertAllowedSyntheticJourneyCleanupEmails,
@@ -103,6 +102,9 @@ export async function runJourneySyntheticCleanup(): Promise<void> {
         "STRIPE_SECRET_KEY is required for Stripe cleanup (--apply --stripe-only)",
       );
     }
+    const { runStripeSyntheticJourneyCleanup } = await import(
+      "@scripts/commands/journey-synthetic-cleanup/stripe"
+    );
     await runStripeSyntheticJourneyCleanup({
       emails,
       environment: args.environment,
@@ -128,6 +130,9 @@ export async function runJourneySyntheticCleanup(): Promise<void> {
     process.exit(0);
   }
 
+  const { runStripeSyntheticJourneyCleanup } = await import(
+    "@scripts/commands/journey-synthetic-cleanup/stripe"
+  );
   await runStripeSyntheticJourneyCleanup({
     emails,
     environment: args.environment,
