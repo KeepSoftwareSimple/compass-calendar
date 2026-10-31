@@ -59,6 +59,34 @@ describe("journey-synthetic-cleanup email resolution", () => {
     expect(emails).toEqual([stagingEmail]);
   });
 
+  it("exits 0 on stripe-only when STRIPE_SECRET_KEY is unset", async () => {
+    const proc = Bun.spawn({
+      cmd: [
+        "bun",
+        "packages/scripts/src/cli.ts",
+        "journey-synthetic-cleanup",
+        "--environment",
+        "staging",
+        "--emails",
+        stagingEmail,
+        "--apply",
+        "--stripe-only",
+      ],
+      env: { ...process.env, STRIPE_SECRET_KEY: "" },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain(
+      "stripe_leg=skipped (app delete handles customer)",
+    );
+    expect(stdout).toContain("journey1793475794523");
+  });
+
   it("requires emails or pending file when discover finds nothing", async () => {
     await rm(STAGING_PENDING_PATH, { force: true });
 

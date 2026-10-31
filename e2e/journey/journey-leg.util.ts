@@ -429,6 +429,24 @@ export const cleanupProdJourneyAccount = async (
   console.log(
     `Journey cleanup confirmed for ${redactJourneyEmailForLog(email)}`,
   );
+  await verifyJourneyAccountDeletedAfterCleanup(page, { email, password });
+};
+
+/** After UI delete, sign-in must not reach the calendar (account row is gone). */
+export const verifyJourneyAccountDeletedAfterCleanup = async (
+  page: Page,
+  { email, password }: { email: string; password: string },
+) => {
+  await page.context().clearCookies();
+  await page.goto("/week", { waitUntil: "domcontentloaded" });
+  await logInJourneyAccount(page, { email, password });
+  await expect(page.locator("#mainGrid")).not.toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByRole("dialog", { name: "Hey, welcome back" }),
+  ).toBeVisible({ timeout: 30_000 });
+  console.log(
+    `Journey delete verified email=${redactJourneyEmailForLog(email)} sign_in=failed_as_expected`,
+  );
 };
 
 export const deleteJourneyAccount = async (page: Page) => {
