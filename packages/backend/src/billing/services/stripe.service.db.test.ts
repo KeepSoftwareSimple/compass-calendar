@@ -111,7 +111,7 @@ describe("StripeService", () => {
         .custom_text,
     ).toBeUndefined();
     expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-      idempotencyKey: `compass-checkout-v8-${userId.toString()}`,
+      idempotencyKey: `compass-checkout-v9-${userId.toString()}`,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
@@ -164,6 +164,10 @@ describe("StripeService", () => {
     expect(syntheticArgs.discounts).toEqual([
       { coupon: "coupon_synthetic_100" },
     ]);
+    expect(
+      (syntheticArgs as { payment_method_collection?: string })
+        .payment_method_collection,
+    ).toBe("if_required");
 
     sessionsCreate.mockClear();
     await stripeService.createCheckoutSession(realUserId.toString());
@@ -171,6 +175,10 @@ describe("StripeService", () => {
       discounts?: Array<{ coupon?: string; promotion_code?: string }>;
     };
     expect(realArgs.discounts).toBeUndefined();
+    expect(
+      (realArgs as { payment_method_collection?: string })
+        .payment_method_collection,
+    ).toBe("always");
   });
 
   it("maps promo_ synthetic journey discount ids to Stripe promotion_code checkout params", async () => {
@@ -1082,7 +1090,7 @@ describe("StripeService", () => {
       expect(sessionArgs.ui_mode).toBeUndefined();
       expect(sessionArgs.redirect_on_completion).toBeUndefined();
       expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-        idempotencyKey: `compass-checkout-v8-desktop-${userId.toString()}`,
+        idempotencyKey: `compass-checkout-v9-desktop-${userId.toString()}`,
       });
     });
 

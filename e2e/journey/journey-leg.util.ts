@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type FrameLocator, type Page } from "@playwright/test";
 
 /**
  * The staging and prod journey legs run the same account lifecycle against
@@ -140,6 +140,99 @@ export const logOutOfJourneyAccount = async (page: Page) => {
     .getByRole("dialog", { name: /log out/i })
     .getByRole("button", { name: "Log out" })
     .click();
+};
+
+/** Tax checkout still needs a billing address when no card is collected. */
+export const fillJourneyCheckoutBillingAddressIfVisible = async (
+  stripeFrame: FrameLocator,
+) => {
+  const country = stripeFrame.getByLabel("Country or region");
+  if (!(await country.isVisible().catch(() => false))) return;
+
+  await country.selectOption("US");
+  const addressLine = stripeFrame
+    .getByLabel(/^Address$/i)
+    .or(stripeFrame.getByLabel(/Address line 1/i))
+    .first();
+  if (await addressLine.isVisible().catch(() => false)) {
+    await addressLine.fill("123 Main St");
+  }
+  const city = stripeFrame.getByLabel(/City/i);
+  if (await city.isVisible().catch(() => false)) {
+    await city.fill("Denver");
+  }
+  const stateField = stripeFrame
+    .getByLabel(/^State$/i)
+    .or(stripeFrame.getByRole("combobox", { name: /^State$/i }));
+  if (await stateField.isVisible().catch(() => false)) {
+    await stateField.selectOption({ label: "Colorado" });
+  }
+  const zip = stripeFrame.getByLabel("ZIP");
+  if (await zip.isVisible().catch(() => false)) {
+    await zip.fill("80202");
+  }
+};
+
+export const submitSyntheticProdJourneyCheckout = async (
+  stripeFrame: FrameLocator,
+) => {
+  await fillJourneyCheckoutBillingAddressIfVisible(stripeFrame);
+  await expect(
+    stripeFrame.getByTestId("hosted-payment-submit-button"),
+  ).toBeEnabled({ timeout: 120_000 });
+  await stripeFrame.getByTestId("hosted-payment-submit-button").click({
+    timeout: 120_000,
+  });
+};
+
+export const cancelJourneySubscriptionIfActive = async (page: Page) => {
+  const settings = await openJourneySettings(page);
+  const cancelButton = settings.getByRole("button", {
+    name: "Cancel subscription",
+  });
+  if (!(await cancelButton.isVisible().catch(() => false))) {
+    await page.keyboard.press("Escape");
+    return;
+  }
+  await cancelButton.click();
+  const confirm = page
+    .getByRole("dialog", { name: /cancel/i })
+    .getByRole("button", { name: "Cancel subscription" });
+  if (await confirm.isVisible().catch(() => false)) {
+    await confirm.click();
+    await expect(page.getByText(/canceled|cancelled/i)).toBeVisible({
+      timeout: 60_000,
+    });
+  }
+  await page.keyboard.press("Escape");
+};
+
+/**
+ * Best-effort prod leg teardown: re-auth if needed, cancel any subscription,
+ * then delete the account. Swallows errors so a failing leg still reports.
+ */
+export const cleanupProdJourneyAccount = async (
+  page: Page,
+  { email, password }: { email: string; password: string },
+) => {
+  const onCalendar =
+    (await page
+      .locator("#mainGrid")
+      .isVisible()
+      .catch(() => false)) ||
+    (await page
+      .getByRole("button", { name: "Open settings" })
+      .isVisible()
+      .catch(() => false));
+  if (!onCalendar) {
+    await logInJourneyAccount(page, { email, password }).catch(() => undefined);
+    await page
+      .locator("#mainGrid")
+      .waitFor({ state: "visible", timeout: 60_000 })
+      .catch(() => undefined);
+  }
+  await cancelJourneySubscriptionIfActive(page).catch(() => undefined);
+  await deleteJourneyAccount(page).catch(() => undefined);
 };
 
 export const deleteJourneyAccount = async (page: Page) => {
