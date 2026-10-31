@@ -130,6 +130,7 @@ public enum OnboardingGating {
         public var pointerHintVisible: Bool
         public var pointerHintDismissedPermanently: Bool
         public var isLifeView: Bool
+        public var isUpNextPickerPresented: Bool
 
         public init(
             gateStatus: SubscriptionStatusEnum?,
@@ -144,7 +145,8 @@ public enum OnboardingGating {
             firstEventEligible: Bool,
             pointerHintVisible: Bool,
             pointerHintDismissedPermanently: Bool = false,
-            isLifeView: Bool
+            isLifeView: Bool,
+            isUpNextPickerPresented: Bool = false
         ) {
             self.gateStatus = gateStatus
             self.isCheckoutCelebrating = isCheckoutCelebrating
@@ -159,6 +161,7 @@ public enum OnboardingGating {
             self.pointerHintVisible = pointerHintVisible
             self.pointerHintDismissedPermanently = pointerHintDismissedPermanently
             self.isLifeView = isLifeView
+            self.isUpNextPickerPresented = isUpNextPickerPresented
         }
     }
 
@@ -171,9 +174,10 @@ public enum OnboardingGating {
             guestMeetingSetupActive: input.guestMeetingSetupActive)
         let connectCalendar = billingGateClear && input.connectCalendarEligible
         let firstEvent = input.showCalendarOnboarding && input.firstEventEligible
-        let pointerHint = !input.isLifeView && selectPointerHintSurfaceEligible(
-            pointerHintVisible: input.pointerHintVisible,
-            dismissedPermanently: input.pointerHintDismissedPermanently)
+        let pointerHint = !input.isLifeView && !input.isUpNextPickerPresented
+            && selectPointerHintSurfaceEligible(
+                pointerHintVisible: input.pointerHintVisible,
+                dismissedPermanently: input.pointerHintDismissedPermanently)
 
         return [
             .billingGate: input.gateStatus != nil,

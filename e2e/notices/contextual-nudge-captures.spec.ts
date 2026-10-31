@@ -46,6 +46,27 @@ test.describe("contextual nudge captures (local parity)", () => {
     ).toBeHidden();
   }
 
+  async function assertPointerHintDoesNotOverlapMonthHeader(page: Page) {
+    await expect(page.locator("[data-pointer-hint]")).toHaveCount(0);
+    const overlaps = await page.evaluate(() => {
+      const hint = document.querySelector("[data-pointer-hint]");
+      if (!hint) return false;
+      const hintRect = hint.getBoundingClientRect();
+      const monthHeader = Array.from(
+        document.querySelectorAll("button, h1, h2, h3, span, div"),
+      ).find((node) => node.textContent?.trim() === "June 2026");
+      if (!monthHeader) return false;
+      const headerRect = monthHeader.getBoundingClientRect();
+      const separated =
+        hintRect.bottom <= headerRect.top ||
+        hintRect.top >= headerRect.bottom ||
+        hintRect.right <= headerRect.left ||
+        hintRect.left >= headerRect.right;
+      return !separated;
+    });
+    expect(overlaps).toBe(false);
+  }
+
   /** Keep parity captures from stacking unrelated nudges over the target toast. */
   async function dismissIncidentalNudges(page: Page) {
     const upNext = page.locator("[data-up-next-banner]");
@@ -181,6 +202,7 @@ test.describe("contextual nudge captures (local parity)", () => {
     await expect(picker).toContainText("Capture standup A");
     await expect(picker.getByText("Capture standup A")).toBeVisible();
     await expect(picker.getByText("Capture standup B")).toBeVisible();
+    await assertPointerHintDoesNotOverlapMonthHeader(page);
 
     await page.screenshot({
       path: `${artifactDir}/up-next-multi-picker-1280.png`,
@@ -202,6 +224,7 @@ test.describe("contextual nudge captures (local parity)", () => {
       name: /Select which event to open/i,
     });
     await expect(picker).toBeVisible();
+    await assertPointerHintDoesNotOverlapMonthHeader(page);
 
     await page.screenshot({
       path: `${artifactDir}/up-next-multi-picker-360.png`,

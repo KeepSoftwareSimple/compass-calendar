@@ -389,7 +389,8 @@ public final class NativeCalendarRootModel {
             firstEventEligible: firstEventEligible && !onboardingStore.defersFirstEventPromptForSignUpNudge,
             pointerHintVisible: pointerHintStore.isVisible,
             pointerHintDismissedPermanently: OnboardingGating.pointerHintDismissedPermanently(),
-            isLifeView: viewStore.view == .life)
+            isLifeView: viewStore.view == .life,
+            isUpNextPickerPresented: isUpNextPickerPresented)
     }
 
     public func start() async {

@@ -131,6 +131,7 @@ extension NativeCalendarRootModel {
     public func openUpNextEvent() {
         let window = upNextState.nudgeWindow
         if window.occurrences.count > 1 {
+            pointerHintStore.hide()
             isUpNextPickerPresented = true
             upNextPickerHighlightIndex = 0
             return

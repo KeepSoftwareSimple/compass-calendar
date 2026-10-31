@@ -16,6 +16,7 @@ import {
   digitPickOwnerAttrs,
 } from "@web/shortcuts/digit-pick.util";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
+import { pointerHintActions } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 
 export type UpNextPickerRow = {
@@ -39,6 +40,9 @@ export const UpNextEventPicker: FC<{
   rows: readonly UpNextPickerRow[];
 }> = ({ hasCurrentEvent, onClose, onSelect, rows }) => {
   useFloatingLayer("upNextEventPicker", true);
+  useEffect(() => {
+    pointerHintActions.hide();
+  }, []);
   const listRef = useRef<Array<HTMLButtonElement | null>>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const title = upNextPickerTitle(rows.length, hasCurrentEvent);

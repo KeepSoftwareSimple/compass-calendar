@@ -43,6 +43,24 @@ final class OnboardingSurfaceTests: XCTestCase {
         XCTAssertTrue(eligible)
     }
 
+    func testPointerHintHiddenWhileUpNextPickerPresented() {
+        let input = OnboardingGating.ActiveSurfaceInput(
+            gateStatus: nil,
+            isCheckoutCelebrating: false,
+            showCalendarOnboarding: true,
+            authenticated: false,
+            isWelcomeFirstVisitOpen: false,
+            isWelcomeGuideOpen: false,
+            guestMeetingSetupActive: false,
+            shortcutShowcaseActive: false,
+            connectCalendarEligible: false,
+            firstEventEligible: false,
+            pointerHintVisible: true,
+            isLifeView: false,
+            isUpNextPickerPresented: true)
+        XCTAssertNil(OnboardingGating.selectActiveSurface(input))
+    }
+
     func testWelcomeModalHiddenOnLifeViewViaShowCalendarOnboarding() {
         let input = OnboardingGating.ActiveSurfaceInput(
             gateStatus: nil,

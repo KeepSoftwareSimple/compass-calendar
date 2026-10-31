@@ -50,6 +50,7 @@ import {
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
 import { UpNextBanner } from "@web/components/Sidebar/UpNextCard/UpNextBanner";
+import { useUpNextNudgeUiStore } from "@web/components/Sidebar/UpNextCard/up-next-nudge-ui.store";
 import { WelcomeGuideModal } from "@web/components/WelcomeModal/WelcomeGuideModal";
 import { WelcomeModal } from "@web/components/WelcomeModal/WelcomeModal";
 import {
@@ -119,6 +120,9 @@ export function RootShell() {
   const isShowcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
   const pointerHintEligible = usePointerHintStore(
     selectPointerHintSurfaceEligible,
+  );
+  const isUpNextPickerOpen = useUpNextNudgeUiStore(
+    (state) => state.isPickerOpen,
   );
   const connectCalendarPromptEligible =
     useConnectCalendarPromptSurfaceEligible(isAuthModalOpen);
@@ -191,7 +195,7 @@ export function RootShell() {
       ),
       connectCalendarPrompt: billingGateClear && connectCalendarPromptEligible,
       firstEventPrompt: showCalendarOnboarding && firstEventPromptEligible,
-      pointerHint: !isLifeView && pointerHintEligible,
+      pointerHint: !isLifeView && pointerHintEligible && !isUpNextPickerOpen,
     };
   }, [
     gateStatus,
@@ -207,6 +211,7 @@ export function RootShell() {
     firstEventPromptEligible,
     isLifeView,
     pointerHintEligible,
+    isUpNextPickerOpen,
   ]);
 
   const activeOnboardingSurface = selectActiveSurface(onboardingFlags);
