@@ -255,10 +255,10 @@ export function RootShell() {
         <ConnectCalendarPromptGate />
       )}
       {activeOnboardingSurface === "pointerHint" && <PointerHint />}
+      {!isMobile && !suppressUpNextBanner && <UpNextBanner />}
       <BottomNoticeStack suppressed={suppressBottomNoticeStack}>
         {/* Phone visitors only see MobileGate; a bottom notice card steals
             tray touches and breaks Time Block Party drag/tap. */}
-        {!isMobile && !suppressUpNextBanner && <UpNextBanner />}
         {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
         {!isMobile && <LocalModeConnectPrompt />}
       </BottomNoticeStack>
