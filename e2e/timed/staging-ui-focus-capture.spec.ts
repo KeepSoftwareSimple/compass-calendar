@@ -1,7 +1,7 @@
-import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { seedJourneyOnboarding } from "../journey/journey-leg.util";
 import { ensureSidebarOpen } from "../utils/event-test-utils";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const ARTIFACT_DIR = "/opt/cursor/artifacts/staging-ui-focus";
 const baseUrl =
@@ -80,11 +80,7 @@ const captureWeekFocusSequence = async (
   });
 };
 
-const captureLifeAfterI = async (
-  page: Page,
-  width: number,
-  height: number,
-) => {
+const captureLifeAfterI = async (page: Page, width: number, height: number) => {
   await page.setViewportSize({ width, height });
   await page.goto(`${baseUrl}/life`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Life" })).toBeVisible();
