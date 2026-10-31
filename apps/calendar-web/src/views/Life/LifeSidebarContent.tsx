@@ -196,7 +196,6 @@ export function LifeSidebarContent({
                 event.preventDefault();
               }
             }}
-            readOnly={!isBirthDatePickerOpen}
             onSelect={(date) => {
               if (!date) return;
               setBirthDate(date);
