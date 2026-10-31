@@ -381,7 +381,8 @@ describe("self-host installer", () => {
 
     const deploy = readRepoFile(".github/workflows/_deploy-environment.yml");
     expect(deploy).toContain('ORCHESTRATION_DIR/config.sh"');
-    expect(deploy).toContain('ORCHESTRATION_DIR/api-proxy"');
+    expect(deploy).toContain("api-proxy/nginx.conf");
+    expect(deploy).not.toContain("rm -rf ~/compass/api-proxy");
     expect(deploy).toContain('ORCHESTRATION_DIR/rolling-backend.sh"');
     expect(deploy.indexOf('ORCHESTRATION_DIR/config.sh"')).toBeLessThan(
       deploy.indexOf('ORCHESTRATION_DIR/compass"'),
@@ -580,6 +581,29 @@ describe("self-host helper", () => {
     expect(stdout).toContain("ok compose-wait-timeout-script-check");
     expect(stderr).toBe("");
   });
+
+  it("passes the cutover rollback script check", async () => {
+    const scriptPath = join(
+      import.meta.dir,
+      "rolling-backend.cutover-rollback.test.sh",
+    );
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok cutover-rollback-script-check");
+    expect(stderr).toContain(
+      "rollback active_slot=b after unstable proxy health",
+    );
+  }, 15000);
 
   it("passes the legacy-to-proxy migration script check", async () => {
     const scriptPath = join(
@@ -883,9 +907,14 @@ describe("staging deploy workflow", () => {
 
     expect(nginx).toContain("resolver 127.0.0.11");
     expect(nginx).toContain("worker_shutdown_timeout 30s");
+    expect(nginx).toContain("proxy_connect_timeout 5s");
+    expect(nginx).toContain(
+      "proxy_next_upstream error timeout http_502 http_503 http_504",
+    );
     expect(nginx).toContain("proxy_pass http://$backend_upstream");
     expect(upstream).toContain("set $backend_upstream backend-a:3000");
     expect(rolling).toContain("sync_api_proxy_after_deploy");
+    expect(rolling).toContain("nginx -s reload");
     expect(rolling).toContain("--force-recreate --no-deps api-proxy");
     expect(rolling).toContain("wait_for_proxy_health_stable");
     expect(rolling).toContain("reload_api_proxy_for_cutover");
