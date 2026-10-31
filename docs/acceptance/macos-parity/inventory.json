@@ -825,10 +825,11 @@
       "behavior": "Cancel and Reschedule description links have keyboard eligibility, visible focus and URL help",
       "web": ["e2e/event-form/description-booking-links.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassUITests/DescriptionLinkCopyShortcutTests.swift#testExportedShortcutCopiesAPastedDescriptionLink"
+        "apps/calendar-macos/CompassUITests/DescriptionLinkCopyShortcutTests.swift#testExportedShortcutCopiesAPastedDescriptionLink",
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/BookingDescriptionKeyboardTests.swift#testBothBookingLinksSupportKeyboardSelectionAndDestinationHelp"
       ],
       "status": "missing",
-      "reason": "Single pasted-link clipboard test does not assert two-link traversal, names, help or focus. Separate management buttons do not prove description link keyboard behavior.",
+      "reason": "New isolated AppKit integration regression uses a real window/responder and keyboard word selection for both named links, checks full destination help and unchanged HTML. Pending execution. This native caret-selection path does not establish separate tabbable AX links, visible focus-ring review or real signed-in acceptance; those remain missing.",
       "evidence": "",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
