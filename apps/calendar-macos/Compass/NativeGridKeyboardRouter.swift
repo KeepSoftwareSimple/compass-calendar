@@ -834,6 +834,8 @@ final class NativeGridKeyboardRouter {
                 model.onboardingStore.toggleWelcomeFaq(digit - 1)
             } else if step == 3 {
                 handleWelcomeLastStepKey(char)
+            } else if step == 4 {
+                break
             }
         default:
             break

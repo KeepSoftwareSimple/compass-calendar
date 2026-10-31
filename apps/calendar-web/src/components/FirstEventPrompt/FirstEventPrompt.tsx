@@ -1,6 +1,5 @@
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type FC, useCallback, useContext, useEffect } from "react";
-import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { PH_NO_RAGECLICK_CLASS } from "@web/auth/posthog/posthog-calendar-grid.util";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
@@ -8,7 +7,10 @@ import { useIsEditableFocused } from "@web/common/hooks/useIsEditableFocused";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import { NoticeCard } from "@web/components/BottomNoticeStack/NoticeCard";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
-import { FIRST_EVENT_CREATE_KEYCAPS } from "@web/components/FirstEventPrompt/first-event.constants";
+import {
+  FIRST_EVENT_CREATE_HOTKEY,
+  FIRST_EVENT_CREATE_KEYCAPS,
+} from "@web/components/FirstEventPrompt/first-event.constants";
 import {
   firstEventPromptActions,
   selectFirstEventCelebrating,
@@ -24,9 +26,10 @@ const CELEBRATE_HOLD_MS = 4_000;
 
 export const FIRST_EVENT_PROMPT_ARIA_LABEL = "Create your first event";
 
-export const FIRST_EVENT_PROMPT_MESSAGE = "Add your first event.";
+export const FIRST_EVENT_PROMPT_MESSAGE =
+  "Your calendar is ready. Add something to it.";
 
-export const FIRST_EVENT_PROMPT_PRIMARY_LABEL = "Add Coffee";
+export const FIRST_EVENT_PROMPT_PRIMARY_LABEL = "Add event";
 
 const PromptCard: FC = () => {
   const isCelebrating = useFirstEventPromptStore(selectFirstEventCelebrating);
@@ -57,7 +60,7 @@ const PromptCard: FC = () => {
 
   const shortcutsEnabled = !isCelebrating && !closing;
 
-  useAppShortcut(APP_SHORTCUT_BINDINGS.editSave.hotkey, addFirstEvent, {
+  useAppShortcut(FIRST_EVENT_CREATE_HOTKEY, addFirstEvent, {
     enabled: shortcutsEnabled,
     ignoreInputs: true,
     preventDefault: true,
@@ -73,7 +76,7 @@ const PromptCard: FC = () => {
     <NoticeCard
       ariaLabel={FIRST_EVENT_PROMPT_ARIA_LABEL}
       aria-keyshortcuts={
-        showShortcutKeycaps ? APP_SHORTCUT_BINDINGS.editSave.hotkey : undefined
+        showShortcutKeycaps ? FIRST_EVENT_CREATE_HOTKEY : undefined
       }
       className={PH_NO_RAGECLICK_CLASS}
       closing={closing}

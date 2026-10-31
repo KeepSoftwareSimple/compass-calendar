@@ -18,7 +18,7 @@ public struct OnboardingOverlay: View {
         case .connectCalendarPrompt:
             ConnectCalendarPromptView(model: model)
         case .firstEventPrompt:
-            FirstEventPromptView(onboardingStore: model.onboardingStore)
+            FirstEventPromptView(model: model)
         case .billingGate, .checkoutCelebration, .shortcutShowcase, .pointerHint, .none:
             EmptyView()
         }

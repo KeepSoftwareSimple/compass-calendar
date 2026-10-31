@@ -112,7 +112,7 @@ async function assertBottomLeftStack(page: Page) {
 
 async function assertPrimaryCtas(page: Page) {
   const refresh = page.getByRole("button", { name: /^Refresh/i });
-  const addCoffee = page.getByRole("button", { name: "Add Coffee" });
+  const addCoffee = page.getByRole("button", { name: "Add event" });
   await expect(refresh).toBeVisible();
   await expect(addCoffee).toBeVisible();
 

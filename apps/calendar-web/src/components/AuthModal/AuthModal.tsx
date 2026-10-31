@@ -12,10 +12,6 @@ import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { consumeGoogleAuthNeedsConsentRetry } from "@web/auth/providers/authorization/provider-authorization.storage";
-import {
-  CONNECT_CALENDAR_ACCOUNT_HELPER,
-  CONNECT_CALENDAR_ACCOUNT_LABEL,
-} from "@web/auth/providers/provider-copy.util";
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
 import { useAppConfigQuery } from "@web/billing/billing.query";
@@ -373,14 +369,6 @@ export const AuthModal: FC = () => {
         {/* Google Sign In - at bottom */}
         {showProviderSignIn ? (
           <>
-            <div className="flex w-full flex-col gap-1">
-              <p className="font-semibold text-sm text-text">
-                {CONNECT_CALENDAR_ACCOUNT_LABEL}
-              </p>
-              <p className="text-text-muted text-xs">
-                {CONNECT_CALENDAR_ACCOUNT_HELPER}
-              </p>
-            </div>
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
               <span className="text-sm text-text-muted">or</span>

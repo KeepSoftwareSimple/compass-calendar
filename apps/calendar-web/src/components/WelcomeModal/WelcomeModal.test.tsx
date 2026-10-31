@@ -181,17 +181,22 @@ describe("WelcomeModal", () => {
     expect(mockOpenModal).toHaveBeenCalledTimes(1);
   });
 
-  it("marks the explore action busy while its fade runs", async () => {
+  it("marks the continue action busy while its fade runs", async () => {
     const user = userEvent.setup();
     renderWelcomeModal();
     await goToChooseScreen(user);
-    const explore = screen.getByRole("button", {
-      name: "On this device only",
-    });
-    expect(explore.getAttribute("aria-busy")).toBe("false");
+    await user.click(
+      screen.getByRole("button", { name: "On this device only" }),
+    );
+    expect(screen.getByText("Step 4 of 4")).toBeTruthy();
 
-    await user.click(explore);
-    expect(explore.getAttribute("aria-busy")).toBe("true");
+    const continueButton = screen.getByRole("button", {
+      name: "Continue to calendar",
+    });
+    expect(continueButton.getAttribute("aria-busy")).toBe("false");
+
+    await user.click(continueButton);
+    expect(continueButton.getAttribute("aria-busy")).toBe("true");
 
     await waitFor(() => {
       expect(
@@ -265,7 +270,7 @@ describe("WelcomeModal", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "The Keyboard Calendar" }),
     ).toBeTruthy();
-    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Get started for free" }),
     ).toHaveFocus();
@@ -289,7 +294,7 @@ describe("WelcomeModal", () => {
     await user.click(
       screen.getByRole("button", { name: "Get started for free" }),
     );
-    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
 
     for (const [index, item] of FAQ_ITEMS.entries()) {
       const row = screen.getByRole("button", { name: item.question });
@@ -301,14 +306,18 @@ describe("WelcomeModal", () => {
     }
 
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 3 of 4")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Next" }));
 
     await user.click(
       screen.getByRole("button", { name: "On this device only" }),
+    );
+    expect(screen.getByText("Step 4 of 4")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Continue to calendar" }),
     );
     await waitFor(() => {
       expect(
@@ -329,7 +338,7 @@ describe("WelcomeModal", () => {
     expect(dialog).toHaveFocus();
 
     await user.keyboard("{Enter}");
-    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
   });
 
   it("does not advance with Enter when Log in is focused", async () => {
@@ -342,7 +351,7 @@ describe("WelcomeModal", () => {
 
     await user.keyboard("{Enter}");
     expect(mockOpenModal).toHaveBeenCalledWith("login");
-    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
   });
 
   it("advances with Enter or a click, and Escape steps back", async () => {
@@ -350,14 +359,14 @@ describe("WelcomeModal", () => {
     renderWelcomeModal();
 
     await user.keyboard("{Enter}");
-    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Who is Compass for?" }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Next" })).toHaveFocus();
 
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 3 of 4")).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "Let's get started" }),
     ).toBeTruthy();
@@ -381,15 +390,15 @@ describe("WelcomeModal", () => {
     expect(screen.getByRole("button", { name: "Sign up" })).toHaveFocus();
 
     await user.keyboard("{Escape}");
-    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
 
     // Escape on the first screen is a no-op: the dialog stays and nothing
     // starts the practice game behind the visitor's back.
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog", WELCOME_DIALOG)).toBeTruthy();
-    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBeNull();
   });
@@ -405,7 +414,7 @@ describe("WelcomeModal", () => {
     expect(mockOpenModal).not.toHaveBeenCalled();
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBeNull();
-    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
 
     await user.keyboard("i");
     expect(mockOpenModal).toHaveBeenCalledWith("login");
@@ -562,13 +571,23 @@ describe("WelcomeModal", () => {
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBe("true");
   });
 
-  it("closes without starting the practice after exploring without an account", async () => {
+  it("shows keyboard shortcuts before exploring without an account", async () => {
     const user = userEvent.setup();
 
     renderWelcomeModal();
     await goToChooseScreen(user);
 
     await user.keyboard("s");
+
+    expect(screen.getByText("Step 4 of 4")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Essential shortcuts" }),
+    ).toBeTruthy();
+    expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).not.toBe(
+      "true",
+    );
+
+    await user.keyboard("{Enter}");
 
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBe("true");
     await waitFor(() => {

@@ -22,6 +22,8 @@ const dismissWelcomeWithExplore = async (page: Page) => {
     welcomeDialog.getByRole("button", { name: "On this device only" }),
   ).toBeVisible();
   await page.keyboard.press("s");
+  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
+  await page.keyboard.press("Enter");
   await expect(welcomeDialog).toBeHidden();
 };
 
