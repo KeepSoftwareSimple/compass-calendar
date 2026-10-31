@@ -1,8 +1,7 @@
 import { type Id } from "react-toastify";
 import { appUpdateNoticeActions } from "@web/components/BottomNoticeStack/app-update-notice.store";
 
-export const APP_UPDATE_TOAST_MESSAGE =
-  "Compass just got better. Refresh to update.";
+export const APP_UPDATE_TOAST_MESSAGE = "Compass just got better. Refresh now.";
 
 export const APP_UPDATE_RELOAD_SHORTCUT = ["Mod", "R"] as const;
 

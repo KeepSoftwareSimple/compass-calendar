@@ -4,30 +4,22 @@ import SwiftUI
 
 /// Web `LocalModeConnectPrompt`: trial nudge for anonymous explorers.
 struct LocalModeConnectPromptView: View {
-    @Environment(\.nativeWebTheme) private var theme
     var model: NativeCalendarRootModel
 
     var body: some View {
-        BottomNoticeView {
-            Text("Start your free trial to save this calendar on every device.")
-                .font(.rubik(NativeWebLayoutTokens.fontSizeXS))
-                .foregroundStyle(theme.textMutedColor)
-                .fixedSize(horizontal: false, vertical: true)
-        } actions: {
-            HStack(spacing: 6) {
-                Button {
-                    model.startTrialFromLocalModePrompt()
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("Start free trial")
-                        ShortcutHintChip(label: "S", style: .onAccent)
-                    }
-                }
-                .buttonStyle(CompactPrimaryButtonStyle())
-                NoticeDismissButton {
-                    model.onboardingStore.dismissLocalModeConnectPrompt()
+        BottomNoticeView(
+            message: "Start your free trial to save this calendar on every device.",
+            onDismiss: { model.onboardingStore.dismissLocalModeConnectPrompt() }
+        ) {
+            Button {
+                model.startTrialFromLocalModePrompt()
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Start free trial")
+                    ShortcutHintChip(label: "S", style: .onAccent)
                 }
             }
+            .buttonStyle(NoticeCompactPrimaryButtonStyle())
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Start your free trial")

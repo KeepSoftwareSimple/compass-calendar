@@ -4,12 +4,12 @@ import { type HTMLAttributes, type ReactNode } from "react";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
 import IconButton from "@web/components/IconButton/IconButton";
 
-/** Secondary copy: same scale as sidebar countdown rows (`text-xs`). */
+/** Standard small UI copy (~13px), regular weight. */
 export const BOTTOM_NOTICE_MESSAGE_CLASS =
-  "min-w-0 flex-1 text-xs leading-snug text-text-muted";
+  "min-w-0 flex-1 text-m font-normal leading-snug text-text line-clamp-2";
 
 export const BOTTOM_NOTICE_PANEL_CLASS =
-  "flex w-full flex-wrap items-center gap-x-2 gap-y-2 rounded-xl border border-border bg-surface/95 px-3 py-2.5 text-text shadow-xl backdrop-blur-2xl backdrop-saturate-150";
+  "flex w-full flex-col gap-2 rounded-xl border border-border bg-surface/95 p-3 text-text shadow-[0_4px_12px_var(--color-shadow-default)] backdrop-blur-2xl backdrop-saturate-150";
 
 export function BottomNotice({
   ariaLabel,
@@ -52,23 +52,14 @@ export function BottomNotice({
       <div className={BOTTOM_NOTICE_PANEL_CLASS}>
         {children ?? (
           <>
-            {message ? (
-              <p className={BOTTOM_NOTICE_MESSAGE_CLASS}>{message}</p>
-            ) : null}
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              {showPrimary && primaryLabel && onPrimary ? (
-                <NoticePrimaryButton
-                  className="shrink-0 self-auto px-2.5 py-1"
-                  onClick={onPrimary}
-                  shortcutKeys={primaryShortcutKeys}
-                >
-                  {primaryLabel}
-                </NoticePrimaryButton>
+            <div className="flex items-start gap-2">
+              {message ? (
+                <p className={BOTTOM_NOTICE_MESSAGE_CLASS}>{message}</p>
               ) : null}
               {showDismiss && onDismiss ? (
                 <IconButton
                   aria-label={dismissAriaLabel}
-                  className="shrink-0 text-text-muted hover:text-text"
+                  className="-mt-0.5 shrink-0 text-text-muted hover:text-text"
                   onClick={onDismiss}
                   size="small"
                 >
@@ -76,6 +67,15 @@ export function BottomNotice({
                 </IconButton>
               ) : null}
             </div>
+            {showPrimary && primaryLabel && onPrimary ? (
+              <NoticePrimaryButton
+                className="self-start"
+                onClick={onPrimary}
+                shortcutKeys={primaryShortcutKeys}
+              >
+                {primaryLabel}
+              </NoticePrimaryButton>
+            ) : null}
           </>
         )}
       </div>

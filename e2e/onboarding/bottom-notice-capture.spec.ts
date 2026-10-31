@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
+type CaptureKind = "update" | "first-event" | "context-update";
+
 async function prepareSession(page: Page, blockAppUpdate: boolean) {
   await page.route(/version\.json(\?.*)?$/, async (route) => {
     await route.fulfill({
@@ -47,34 +49,47 @@ async function showAppUpdateNotice(page: Page) {
   });
 }
 
-const captures = [
+const captures: {
+  name: string;
+  width: number;
+  height: number;
+  kind: CaptureKind;
+  path: string;
+}[] = [
   {
     name: "update-1280",
     width: 1280,
     height: 900,
-    kind: "update" as const,
+    kind: "update",
     path: "/opt/cursor/artifacts/bottom-notice-update-1280.png",
   },
   {
     name: "update-360",
     width: 360,
     height: 740,
-    kind: "update" as const,
+    kind: "update",
     path: "/opt/cursor/artifacts/bottom-notice-update-360.png",
   },
   {
     name: "first-event-1280",
     width: 1280,
     height: 900,
-    kind: "first-event" as const,
+    kind: "first-event",
     path: "/opt/cursor/artifacts/bottom-notice-first-event-1280.png",
   },
   {
     name: "first-event-360",
     width: 360,
     height: 740,
-    kind: "first-event" as const,
+    kind: "first-event",
     path: "/opt/cursor/artifacts/bottom-notice-first-event-360.png",
+  },
+  {
+    name: "context-update-1280",
+    width: 1280,
+    height: 900,
+    kind: "context-update",
+    path: "/opt/cursor/artifacts/bottom-notice-context-1280.png",
   },
 ];
 
@@ -90,6 +105,15 @@ test.describe("bottom notice capture", () => {
       });
       await prepareSession(page, capture.kind === "first-event");
       await openWeek(page);
+
+      if (capture.kind === "context-update") {
+        await showAppUpdateNotice(page);
+        await expect(page.locator('[data-app-update-notice=""]')).toBeVisible({
+          timeout: 60_000,
+        });
+        await page.screenshot({ path: capture.path, fullPage: false });
+        return;
+      }
 
       if (capture.kind === "update") {
         await showAppUpdateNotice(page);

@@ -4,17 +4,12 @@ import SwiftUI
 
 /// Web `FirstEventPrompt`: bottom-left notice until the first real event.
 struct FirstEventPromptView: View {
-    @Environment(\.nativeWebTheme) private var theme
     @Bindable var onboardingStore: OnboardingStore
 
     var body: some View {
         Group {
             if onboardingStore.isFirstEventCelebrating {
-                BottomNoticeView {
-                    Text("It's on the calendar.")
-                        .font(.rubik(NativeWebLayoutTokens.fontSizeXS))
-                        .foregroundStyle(theme.textMutedColor)
-                } actions: {
+                BottomNoticeView(message: "It's on the calendar.", onDismiss: nil) {
                     EmptyView()
                 }
                 .task {
@@ -22,24 +17,17 @@ struct FirstEventPromptView: View {
                     onboardingStore.finalizeFirstEventCelebration()
                 }
             } else {
-                BottomNoticeView {
-                    Text("Add your first event.")
-                        .font(.rubik(NativeWebLayoutTokens.fontSizeXS))
-                        .foregroundStyle(theme.textMutedColor)
-                        .fixedSize(horizontal: false, vertical: true)
-                } actions: {
-                    HStack(spacing: 6) {
-                        Button {} label: {
-                            HStack(spacing: 6) {
-                                Text("Add Coffee")
-                                ShortcutHintChip(label: "C", style: .onAccent)
-                            }
-                        }
-                        .buttonStyle(CompactPrimaryButtonStyle())
-                        NoticeDismissButton {
-                            onboardingStore.dismissFirstEventPrompt()
+                BottomNoticeView(
+                    message: "Add your first event.",
+                    onDismiss: { onboardingStore.dismissFirstEventPrompt() }
+                ) {
+                    Button {} label: {
+                        HStack(spacing: 4) {
+                            Text("Add Coffee")
+                            ShortcutHintChip(label: "C", style: .onAccent)
                         }
                     }
+                    .buttonStyle(NoticeCompactPrimaryButtonStyle())
                 }
             }
         }
