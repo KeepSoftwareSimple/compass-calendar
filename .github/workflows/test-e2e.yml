@@ -98,7 +98,7 @@ jobs:
           - shard: 3
             specs: e2e/timed
           - shard: 4
-            specs: e2e/onboarding e2e/calendars e2e/life e2e/navigation e2e/attendees
+            specs: e2e/notices e2e/onboarding e2e/calendars e2e/life e2e/navigation e2e/attendees
           - shard: 5
             specs: e2e/dst e2e/event-form e2e/journey e2e/overlap e2e/parity
     container:

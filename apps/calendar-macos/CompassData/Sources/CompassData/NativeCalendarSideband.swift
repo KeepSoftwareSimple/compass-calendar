@@ -3,11 +3,18 @@ import Foundation
 
 public struct NativeUpNextState: Equatable, Sendable {
     public var snapshot: UpNextSnapshot
+    public var nudgeWindow: UpNextNudgeWindow
     public var conferenceURL: String?
     public var referenceNow: Date
 
-    public init(snapshot: UpNextSnapshot, conferenceURL: String?, referenceNow: Date) {
+    public init(
+        snapshot: UpNextSnapshot,
+        nudgeWindow: UpNextNudgeWindow,
+        conferenceURL: String?,
+        referenceNow: Date
+    ) {
         self.snapshot = snapshot
+        self.nudgeWindow = nudgeWindow
         self.conferenceURL = conferenceURL
         self.referenceNow = referenceNow
     }
@@ -21,6 +28,9 @@ extension NativeCalendarRootModel {
             from: eligible,
             demoEventIds: demoEventIds)
         let snapshot = UpNextProjection.snapshot(now: now, timedCandidates: candidates)
+        let nudgeWindow = UpNextProjection.nudgeWindow(
+            now: now,
+            timedCandidates: candidates)
         let conferenceURL: String? = {
             guard let upNext = snapshot.upNext,
                   let event = eligible.first(where: { $0.id.rawValue == upNext.id })
@@ -31,6 +41,7 @@ extension NativeCalendarRootModel {
         }()
         return NativeUpNextState(
             snapshot: snapshot,
+            nudgeWindow: nudgeWindow,
             conferenceURL: conferenceURL,
             referenceNow: now)
     }
@@ -118,8 +129,30 @@ extension NativeCalendarRootModel {
     }
 
     public func openUpNextEvent() {
-        guard let upNext = upNextState.snapshot.upNext else { return }
+        let window = upNextState.nudgeWindow
+        if window.occurrences.count > 1 {
+            pointerHintStore.hide()
+            isUpNextPickerPresented = true
+            upNextPickerHighlightIndex = 0
+            return
+        }
+        guard let upNext = window.primary else { return }
         focusEventDeepLink(eventId: upNext.id)
+    }
+
+    public func closeUpNextPicker() {
+        isUpNextPickerPresented = false
+    }
+
+    public func selectUpNextPicker(eventId: String) {
+        isUpNextPickerPresented = false
+        focusEventDeepLink(eventId: eventId)
+    }
+
+    public func upNextEventHasMeetingLink(eventId: String) -> Bool {
+        guard let event = upNextEligibleSidebandEvents().first(where: { $0.id.rawValue == eventId })
+        else { return false }
+        return UpNextJoinURL.resolve(event: event) != nil
     }
 
     public func joinUpNextMeeting() {

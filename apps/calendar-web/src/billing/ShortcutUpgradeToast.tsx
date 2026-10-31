@@ -4,7 +4,7 @@ import {
   type CheckoutPanelSource,
   checkoutPanelActions,
 } from "@web/billing/checkout-panel.store";
-import { ToastActionButton } from "@web/common/utils/toast/ToastActionButton";
+import { ContextualToastActionButton } from "@web/common/utils/toast/ToastActionButton";
 import { ToastNotice } from "@web/common/utils/toast/ToastNotice";
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { ShortcutTipParts } from "@web/shortcuts/tips/ShortcutTipParts";
@@ -44,7 +44,9 @@ export function ShortcutUpgradeToast({
         </p>
       )}
       <p className="text-sm text-text">{title}</p>
-      <ToastActionButton onClick={handleUpgrade}>{ctaLabel}</ToastActionButton>
+      <ContextualToastActionButton onClick={handleUpgrade}>
+        {ctaLabel}
+      </ContextualToastActionButton>
     </ToastNotice>
   );
 }

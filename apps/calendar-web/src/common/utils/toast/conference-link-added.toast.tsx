@@ -5,7 +5,7 @@ import {
   getToastDefaultOptions,
 } from "@web/common/constants/toast.constants";
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";
-import { ToastActionButton } from "@web/common/utils/toast/ToastActionButton";
+import { ContextualToastActionButton } from "@web/common/utils/toast/ToastActionButton";
 import { ToastNotice } from "@web/common/utils/toast/ToastNotice";
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { COPY_LINK_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
@@ -49,12 +49,12 @@ export const ConferenceLinkAddedToast = ({
           : `${conference.label ?? "Meeting"} link added`}
       </p>
       {copyState === "idle" && (
-        <ToastActionButton
+        <ContextualToastActionButton
           onClick={handleCopy}
           shortcutKey={COPY_LINK_SHORTCUT_KEY}
         >
           Copy link
-        </ToastActionButton>
+        </ContextualToastActionButton>
       )}
     </ToastNotice>
   );

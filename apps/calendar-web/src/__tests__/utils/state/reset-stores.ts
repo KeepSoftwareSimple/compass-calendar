@@ -40,6 +40,7 @@ import {
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
 import { upNextAvailabilityActions } from "@web/components/Sidebar/UpNextCard/up-next.availability.store";
+import { upNextNudgeUiActions } from "@web/components/Sidebar/UpNextCard/up-next-nudge-ui.store";
 import { useWelcomeGuideStore } from "@web/components/WelcomeModal/welcome.guide.store";
 import { recurrenceScopeOpportunityActions } from "@web/events/recurrence/recurrence-scope-opportunity.store";
 import { resetEventRepositorySourceForTests } from "@web/events/repositories/event.repository.source.store";
@@ -124,6 +125,7 @@ const storeResets: StoreReset[] = [
   resetCollapsedAccountsStoreForTests,
   resetRecentCommandsStoreForTests,
   upNextAvailabilityActions.reset,
+  upNextNudgeUiActions.reset,
   () => useFeedbackStore.setState(useFeedbackStore.getInitialState(), true),
   () => useShortcutShowcaseStore.setState(initialShortcutShowcaseState, true),
   () => useFirstEventPromptStore.setState(initialFirstEventPromptState, true),
