@@ -26,6 +26,7 @@ import {
 import { useCalendarViewShortcuts } from "@web/grid/shortcuts/useCalendarViewShortcuts";
 import { NotificationPermissionBannerGate } from "@web/notifications/NotificationPermissionBannerGate";
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
+import { useCalendarUiFocusLeftShortcut } from "@web/shortcuts/ui-focus/useUiFocusShortcuts";
 import { TimezoneMismatchBannerGate } from "@web/timezone/TimezoneMismatchBannerGate";
 import { DayCalendarGrid } from "@web/views/Day/components/Calendar/DayCalendarGrid";
 import { Header } from "@web/views/Day/components/Header/Header";
@@ -63,6 +64,7 @@ export const DayViewContent = memo(() => {
   useDayEvents(dateInView);
 
   useFocusSidebarShortcut();
+  useCalendarUiFocusLeftShortcut(focusFirstDayCalendarEvent);
   useSidebarShortcuts();
   useAttachPointerIntentTracker();
   const isTrialing = useIsTrialing();
@@ -98,7 +100,6 @@ export const DayViewContent = memo(() => {
   useCalendarViewShortcuts({
     onCreateTimedEvent: handleCreateTimedEvent,
     onCreateAllDayEvent: handleCreateAllDayEvent,
-    onFocusCalendar: focusFirstDayCalendarEvent,
     onNextPeriod: navigateToNextDay,
     onPrevPeriod: navigateToPreviousDay,
     onGoToToday: handleGoToToday,

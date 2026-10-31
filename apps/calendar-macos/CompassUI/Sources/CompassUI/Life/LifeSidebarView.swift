@@ -99,6 +99,11 @@ struct LifeSidebarView: View {
       return .handled
     }
     .onAppear { refreshInputs() }
+    .onChange(of: model.pendingLifeSidebarFieldFocus) { _, pending in
+      guard pending else { return }
+      model.pendingLifeSidebarFieldFocus = false
+      focusedField = .birthDate
+    }
     .onChange(of: model.lifeStore.preferences) { _, _ in refreshInputs() }
     .onChange(of: focusedField) { old, _ in
       if old == .birthDate { commitBirthDate() }

@@ -202,13 +202,13 @@ export const SHORTCUTS_REGISTRY = [
   {
     id: "focus-sidebar",
     keys: [...B.focusSidebar.keycaps],
-    label: "Focus month picker",
+    label: "Move focus right (sidebar or event form)",
     section: "focus",
   },
   {
     id: "focus-event",
     keys: [...B.focusEvent.keycaps],
-    label: "Focus calendar event",
+    label: "Move focus left (calendar grid)",
     section: "focus",
   },
   {

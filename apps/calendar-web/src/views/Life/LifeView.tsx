@@ -22,6 +22,7 @@ import {
 } from "@web/shortcuts/page-jump/page-jump.targets";
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
+import { useLifeUiFocusShortcuts } from "@web/shortcuts/ui-focus/useUiFocusShortcuts";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { LifeGrid } from "./LifeGrid";
 import { LifeSidebarContent } from "./LifeSidebarContent";
@@ -112,6 +113,7 @@ export function LifeView({ today }: LifeViewProps) {
   }, [navigate, preferences.lifespan, preferences.variation]);
 
   useSidebarShortcuts();
+  useLifeUiFocusShortcuts();
   const isTrialing = useIsTrialing();
   const shortcutSections = useMemo(
     () =>

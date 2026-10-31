@@ -71,6 +71,8 @@ public final class NativeCalendarRootModel {
     /// Month picker day holding keyboard focus after `i`, like the web's
     /// focused datepicker day. Nil when the picker does not have focus.
     public internal(set) var monthPickerFocusDate: Date?
+    /// Set by `i` in Life view; the sidebar view focuses birth date and clears this.
+    public var pendingLifeSidebarFieldFocus = false
     /// Banner holding keyboard focus after `p`, like the web's `data-notice` focus.
     public internal(set) var focusedNotice: NativeNotice?
     /// Calendar list whose rows take number keys, like the web's focused

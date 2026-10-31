@@ -249,7 +249,7 @@
       "keys": [
         "i"
       ],
-      "label": "Focus month picker",
+      "label": "Move focus right (sidebar or event form)",
       "section": "focus"
     },
     {
@@ -257,7 +257,7 @@
       "keys": [
         "u"
       ],
-      "label": "Focus calendar event",
+      "label": "Move focus left (calendar grid)",
       "section": "focus"
     },
     {
