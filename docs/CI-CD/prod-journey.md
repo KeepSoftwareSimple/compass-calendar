@@ -47,4 +47,6 @@ write bypass.
 
 Failed workflow runs upload `e2e/test-results/prod-journey/` (traces,
 screenshots, video) for seven days via `actions/upload-artifact`
-(`if: failure()`).
+(`if: failure()`). Account deletion runs in a Playwright `afterEach` hook with
+its own timeout, and a fallback cleanup leg deletes any account left in
+`journey-pending-account.json` when the main leg times out.

@@ -3,6 +3,7 @@ import {
   isBillingAutomationBypassEmail,
   isSyntheticAccountEmail,
   isSyntheticAccountHeaderValue,
+  redactJourneyEmailForLog,
 } from "@core/analytics/synthetic-account.util";
 import { describe, expect, it } from "bun:test";
 
@@ -52,5 +53,13 @@ describe("synthetic account helpers", () => {
     expect(isSyntheticAccountHeaderValue("true")).toBe(true);
     expect(isSyntheticAccountHeaderValue(["1"])).toBe(true);
     expect(isSyntheticAccountHeaderValue("no")).toBe(false);
+  });
+
+  it("redacts journey addresses for logs", () => {
+    expect(
+      redactJourneyEmailForLog(
+        "runner+prod-journey-google+journey1730123456789@gmail.com",
+      ),
+    ).toBe("runner+***@gmail.com");
   });
 });
