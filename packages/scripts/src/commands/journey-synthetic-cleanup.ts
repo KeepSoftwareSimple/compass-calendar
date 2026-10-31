@@ -62,6 +62,12 @@ async function discoverPendingEmail(
   }
 }
 
+export async function resolveJourneySyntheticCleanupEmails(
+  argv: string[],
+): Promise<string[]> {
+  return resolveEmails(parseArgs(argv));
+}
+
 async function resolveEmails(
   args: ReturnType<typeof parseArgs>,
 ): Promise<string[]> {

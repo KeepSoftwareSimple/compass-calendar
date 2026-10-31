@@ -32,11 +32,11 @@ if [ "$DISCOVER" = "true" ] && [ -z "$EMAILS" ]; then
 fi
 
 CLI_ARGS=(--environment "$ENVIRONMENT")
-if [ -n "$EMAILS" ]; then
-  CLI_ARGS+=(--emails "$EMAILS")
-fi
 if [ "$DISCOVER" = "true" ]; then
   CLI_ARGS+=(--discover-pending-file)
+fi
+if [ -n "$EMAILS" ]; then
+  CLI_ARGS+=(--emails "$EMAILS")
 fi
 
 if [ "$DRY_RUN" = "true" ]; then
