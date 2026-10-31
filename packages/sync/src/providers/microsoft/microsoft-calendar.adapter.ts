@@ -38,13 +38,30 @@ export interface MicrosoftGraphCalendar {
   };
 }
 
+export interface MicrosoftGraphCalendarGroup {
+  readonly id?: string;
+  readonly name?: string;
+}
+
 export interface MicrosoftCalendarListPage {
   readonly items: readonly MicrosoftGraphCalendar[];
   readonly nextLink: string | null;
 }
 
+export interface MicrosoftCalendarGroupListPage {
+  readonly items: readonly MicrosoftGraphCalendarGroup[];
+  readonly nextLink: string | null;
+}
+
 export interface MicrosoftCalendarListApi {
   listPage(params: { nextLink?: string }): Promise<MicrosoftCalendarListPage>;
+  listCalendarGroupsPage(params: {
+    nextLink?: string;
+  }): Promise<MicrosoftCalendarGroupListPage>;
+  listGroupCalendarsPage(
+    groupId: string,
+    params: { nextLink?: string },
+  ): Promise<MicrosoftCalendarListPage>;
 }
 
 export type MicrosoftCalendarListApiFactory = (
@@ -54,10 +71,15 @@ export type MicrosoftCalendarListApiFactory = (
 const defaultApiFactory: MicrosoftCalendarListApiFactory = (accessToken) =>
   new FetchMicrosoftCalendarListApi(accessToken);
 
-// Microsoft Graph implementation of the calendar-discovery port. Lists
-// /me/calendars with @odata.nextLink paging and maps each row to provider-neutral
-// facts. Graph has no calendar-list delta token, so discovery always returns a
-// null cursor and relies on periodic re-list sweeps for drift.
+const calendarListQuery = `$select=${MICROSOFT_CALENDAR_LIST_SELECT}`;
+
+// Microsoft Graph implementation of the calendar-discovery port. Lists every
+// calendar group (/me/calendarGroups, then each group's calendars) with paging,
+// deduping by id, and maps each row to provider-neutral facts. A plain
+// /me/calendars read only covers the default group on many Outlook mailboxes,
+// so secondary folders such as a user-created "Diet" calendar are missed unless
+// groups are walked. Graph has no calendar-list delta token, so discovery
+// always returns a null cursor and relies on periodic re-list sweeps for drift.
 export class MicrosoftCalendarAdapter implements ProviderCalendarAdapter {
   #makeApi: MicrosoftCalendarListApiFactory;
   #makeMasterCategoryApi: MicrosoftMasterCategoryApiFactory;
@@ -76,17 +98,47 @@ export class MicrosoftCalendarAdapter implements ProviderCalendarAdapter {
   }): Promise<CalendarDiscovery> {
     void input.cursor;
     const api = this.#makeApi(input.accessToken);
-    const calendars: DiscoveredCalendar[] = [];
-    let nextLink: string | undefined;
+    const calendarsById = new Map<string, DiscoveredCalendar>();
 
-    do {
-      const page = await this.#listPage(api, nextLink);
-      for (const item of page.items) {
+    const absorbPage = (items: readonly MicrosoftGraphCalendar[]) => {
+      for (const item of items) {
         const mapped = mapCalendar(item);
-        if (mapped) calendars.push(mapped);
+        if (mapped && !calendarsById.has(mapped.providerCalendarId)) {
+          calendarsById.set(mapped.providerCalendarId, mapped);
+        }
       }
-      nextLink = page.nextLink ?? undefined;
-    } while (nextLink);
+    };
+
+    let groupsNextLink: string | undefined;
+    do {
+      const groupsPage = await this.#listCalendarGroupsPage(
+        api,
+        groupsNextLink,
+      );
+      for (const group of groupsPage.items) {
+        if (!group.id) continue;
+        let calendarsNextLink: string | undefined;
+        do {
+          const calendarsPage = await this.#listGroupCalendarsPage(
+            api,
+            group.id,
+            calendarsNextLink,
+          );
+          absorbPage(calendarsPage.items);
+          calendarsNextLink = calendarsPage.nextLink ?? undefined;
+        } while (calendarsNextLink);
+      }
+      groupsNextLink = groupsPage.nextLink ?? undefined;
+    } while (groupsNextLink);
+
+    if (calendarsById.size === 0) {
+      let nextLink: string | undefined;
+      do {
+        const page = await this.#listPage(api, nextLink);
+        absorbPage(page.items);
+        nextLink = page.nextLink ?? undefined;
+      } while (nextLink);
+    }
 
     const eventLabels = await listMicrosoftEventLabels(
       input.accessToken,
@@ -94,7 +146,7 @@ export class MicrosoftCalendarAdapter implements ProviderCalendarAdapter {
     );
 
     return {
-      calendars: calendars.map((calendar) => ({
+      calendars: [...calendarsById.values()].map((calendar) => ({
         ...calendar,
         eventLabels,
       })),
@@ -112,6 +164,37 @@ export class MicrosoftCalendarAdapter implements ProviderCalendarAdapter {
       throw new ProviderCalendarError(
         classifyDiscoveryError(error),
         "Microsoft rejected the calendar list read",
+        { cause: microsoftFailureCause(error) },
+      );
+    }
+  }
+
+  async #listCalendarGroupsPage(
+    api: MicrosoftCalendarListApi,
+    nextLink?: string,
+  ): Promise<MicrosoftCalendarGroupListPage> {
+    try {
+      return await api.listCalendarGroupsPage({ nextLink });
+    } catch (error) {
+      throw new ProviderCalendarError(
+        classifyDiscoveryError(error),
+        "Microsoft rejected the calendar group list read",
+        { cause: microsoftFailureCause(error) },
+      );
+    }
+  }
+
+  async #listGroupCalendarsPage(
+    api: MicrosoftCalendarListApi,
+    groupId: string,
+    nextLink?: string,
+  ): Promise<MicrosoftCalendarListPage> {
+    try {
+      return await api.listGroupCalendarsPage(groupId, { nextLink });
+    } catch (error) {
+      throw new ProviderCalendarError(
+        classifyDiscoveryError(error),
+        "Microsoft rejected a calendar group list read",
         { cause: microsoftFailureCause(error) },
       );
     }
@@ -168,7 +251,41 @@ class FetchMicrosoftCalendarListApi implements MicrosoftCalendarListApi {
   }): Promise<MicrosoftCalendarListPage> {
     const url =
       params.nextLink ??
-      `${MICROSOFT_GRAPH_BASE_URL}/me/calendars?$select=${MICROSOFT_CALENDAR_LIST_SELECT}`;
+      `${MICROSOFT_GRAPH_BASE_URL}/me/calendars?${calendarListQuery}`;
+    return this.#readCalendarPage(url);
+  }
+
+  async listCalendarGroupsPage(params: {
+    nextLink?: string;
+  }): Promise<MicrosoftCalendarGroupListPage> {
+    const url =
+      params.nextLink ?? `${MICROSOFT_GRAPH_BASE_URL}/me/calendarGroups`;
+    const data = await microsoftGraphRequest<{
+      value?: MicrosoftGraphCalendarGroup[];
+      "@odata.nextLink"?: string;
+    }>({
+      accessToken: this.#accessToken,
+      url,
+      fallbackError: "microsoft_calendar_group_list_failed",
+    });
+
+    return {
+      items: data.value ?? [],
+      nextLink: data["@odata.nextLink"] ?? null,
+    };
+  }
+
+  async listGroupCalendarsPage(
+    groupId: string,
+    params: { nextLink?: string },
+  ): Promise<MicrosoftCalendarListPage> {
+    const url =
+      params.nextLink ??
+      `${MICROSOFT_GRAPH_BASE_URL}/me/calendarGroups/${encodeURIComponent(groupId)}/calendars?${calendarListQuery}`;
+    return this.#readCalendarPage(url);
+  }
+
+  async #readCalendarPage(url: string): Promise<MicrosoftCalendarListPage> {
     const data = await microsoftGraphRequest<{
       value?: MicrosoftGraphCalendar[];
       "@odata.nextLink"?: string;

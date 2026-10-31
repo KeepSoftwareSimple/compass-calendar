@@ -90,7 +90,12 @@ struct CalendarListView: View {
             }
             if !collapsed {
                 ForEach(Array(group.calendars.enumerated()), id: \.element.id) { index, calendar in
-                    row(calendar, pickKey: model.calendarPickKey(groupKey: group.id, index: index), groupKey: group.id)
+                    row(
+                        calendar,
+                        pickKey: model.calendarPickKey(groupKey: group.id, index: index),
+                        groupKey: group.id,
+                        underAccountHeading: group.account != nil,
+                    )
                 }
             }
         }
@@ -107,7 +112,16 @@ struct CalendarListView: View {
         .accessibilityLabel(group.account.map { "Calendars for \($0)" } ?? "Calendars")
     }
 
-    private func row(_ calendar: CompassCalendar, pickKey: Character?, groupKey: String) -> some View {
+    private func row(
+        _ calendar: CompassCalendar,
+        pickKey: Character?,
+        groupKey: String,
+        underAccountHeading: Bool,
+    ) -> some View {
+        let rowTitle = CalendarSidebarDisplayName.rowTitle(
+            for: calendar,
+            underAccountHeading: underAccountHeading,
+        )
         let isVisible = model.calendarVisibilityStore.isVisible(calendar.id)
         let color = EventCardColorParser.nsColor(hex: calendar.backgroundColor).map(Color.init(nsColor:))
             ?? theme.accentColor
@@ -120,7 +134,7 @@ struct CalendarListView: View {
                     .fill(isVisible ? color : .clear)
                     .overlay(Circle().stroke(color, lineWidth: 2))
                     .frame(width: 14, height: 14)
-                Text(calendar.name)
+                Text(rowTitle)
                     .font(.rubik(12))
                     .foregroundStyle(theme.textMutedColor)
                     .lineLimit(1)
@@ -140,7 +154,7 @@ struct CalendarListView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(calendar.name)
+        .accessibilityLabel(rowTitle)
         .accessibilityValue(isVisible ? "Shown" : "Hidden")
         .accessibilityHint(isVisible ? "Hide this calendar" : "Show this calendar")
     }

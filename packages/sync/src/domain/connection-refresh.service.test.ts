@@ -29,10 +29,13 @@ describe("refreshPrincipalCalendars", () => {
 
     const requeueFailedByConnection = mock(async () => 0);
     const listByPrincipal = mock(async () => [{ _id: "c1" }]);
+    const clearSyncCursor = mock(async () => {});
     const tally = await refreshPrincipalCalendars(
       {
         resources: {
           listEventsByPrincipal: mock(async () => resources),
+          listByConnection: mock(async () => []),
+          clearSyncCursor,
         } as never,
         jobs: { enqueueUrgent, requeueFailedByConnection } as never,
         connections: { listByPrincipal } as never,
@@ -92,6 +95,8 @@ describe("refreshPrincipalCalendars", () => {
       {
         resources: {
           listEventsByPrincipal: mock(async () => resources),
+          listByConnection: mock(async () => []),
+          clearSyncCursor: mock(async () => {}),
         } as never,
         jobs: { enqueueUrgent, requeueFailedByConnection } as never,
         connections: {

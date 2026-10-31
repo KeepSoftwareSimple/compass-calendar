@@ -31,6 +31,10 @@ import {
   assertOauthCredentialStartupReady,
   PLAINTEXT_OAUTH_BOOT_MESSAGE,
 } from "@sync/credentials/oauth-credential-startup";
+import {
+  CALENDAR_LIST_REDISCOVERY_SWEEP_INTERVAL_MS,
+  CALENDAR_LIST_STALE_AFTER_MS,
+} from "@sync/domain/calendar-list-rediscovery.constants";
 import { rediscoverStaleCalendarLists } from "@sync/domain/calendar-list-rediscovery.service";
 import {
   CONNECTION_CACHE_RETENTION_MS,
@@ -380,14 +384,10 @@ const RETENTION_SWEEP_INTERVAL_MS = 60 * 60_000;
 // cheap at a few thousand rows and avoids a credentials-led full scan.
 const CREDENTIAL_USABLE_RECONCILE_INTERVAL_MS = 6 * 60 * 60_000;
 const CONNECTION_STATE_REFRESH_INTERVAL_MS = 10 * 60_000;
-// A connection whose calendar list has not been fully re-discovered within
-// this window is swept: a calendar deleted or unshared at the provider is
-// otherwise never retired, because calendarListSync only ever runs once, at
-// connect. Runs on the sweep's default ~10min interval (like reconcile and
-// bootstrapRecovery below, neither of which overrides it either) — cheap to
-// poll for, and the limit-bounded finder means the eligible population still
-// self-spreads across cycles rather than sweeping the whole fleet at once.
-const CALENDAR_LIST_STALE_AFTER_MS = 24 * 60 * 60_000;
+
+// Calendar-list rediscovery uses CALENDAR_LIST_STALE_AFTER_MS and
+// CALENDAR_LIST_REDISCOVERY_SWEEP_INTERVAL_MS from calendar-list-rediscovery.constants.
+
 // Architecture: one sync_health_snapshot every five minutes.
 const HEALTH_SNAPSHOT_INTERVAL_MS = 5 * 60_000;
 // Cap on how long each background sweep waits before its first tick after
@@ -949,6 +949,7 @@ function buildSchedulers(
       // a full pass, and only this sweep forces one after the initial
       // connect).
       name: "calendarListRediscovery",
+      intervalMs: CALENDAR_LIST_REDISCOVERY_SWEEP_INTERVAL_MS,
       windowMs: -CALENDAR_LIST_STALE_AFTER_MS,
       run: async (before) => {
         const enqueued = await rediscoverStaleCalendarLists(
