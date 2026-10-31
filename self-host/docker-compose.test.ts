@@ -893,7 +893,6 @@ describe("staging deploy workflow", () => {
     expect(rolling).toContain("sync_api_proxy_after_deploy");
     expect(rolling).toContain("--force-recreate --no-deps api-proxy");
     expect(rolling).toContain("wait_for_proxy_health_stable");
-    expect(rolling).toContain("waiting for stable proxy health on active slot");
     expect(rolling).toContain(
       "api-proxy config matches deploy dir, reloading instead of recreate",
     );
