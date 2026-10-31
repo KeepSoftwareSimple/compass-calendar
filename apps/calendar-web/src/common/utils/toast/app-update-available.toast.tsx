@@ -1,11 +1,10 @@
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { createElement } from "react";
 import { type Id } from "react-toastify";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { reloadLocation } from "@web/common/utils/browser/browser-navigation.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
+import { NoticeDismissButton } from "@web/components/BottomNoticeStack/NoticeDismissButton";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
-import IconButton from "@web/components/IconButton/IconButton";
 import { useReloadAppShortcut } from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
 
 export const APP_UPDATE_TOAST_MESSAGE =
@@ -31,14 +30,7 @@ export function AppUpdateAvailableToast({ toastId }: { toastId: Id }) {
         <p className="min-w-0 flex-1 text-sm leading-relaxed">
           {APP_UPDATE_TOAST_MESSAGE}
         </p>
-        <IconButton
-          aria-label="Dismiss update notice"
-          className="shrink-0 text-text-muted hover:text-text"
-          onClick={dismiss}
-          size="small"
-        >
-          <XIcon aria-hidden="true" size={14} />
-        </IconButton>
+        <NoticeDismissButton label="Dismiss update notice" onClick={dismiss} />
       </div>
       <NoticePrimaryButton
         onClick={() => {
