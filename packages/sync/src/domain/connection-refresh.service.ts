@@ -219,6 +219,10 @@ export async function refreshStalePrincipalCalendars(
           calendarList._id,
         );
       }
+      // One coalescingKey per connection (`calendarListSync:<connectionId>`),
+      // so duplicate foreground ticks, backend replicas, or many tabs on the
+      // same account share a single pending/in-flight list job instead of
+      // multiplying Graph/Google list calls.
       await deps.jobs.enqueueForeground(
         calendarListSyncJob(
           { tenantId, principalId, connectionId: connection._id },
