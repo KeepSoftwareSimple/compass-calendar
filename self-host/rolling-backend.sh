@@ -35,10 +35,38 @@ recreate_api_proxy() {
   compose up -d --force-recreate --no-deps api-proxy >/dev/null 2>&1
 }
 
+api_proxy_nginx_checksum() {
+  md5sum "$INSTALL_DIR/api-proxy/nginx.conf" 2>/dev/null | awk '{print $1}'
+}
+
+api_proxy_running_nginx_checksum() {
+  compose exec -T api-proxy sh -c \
+    'md5sum /etc/nginx/nginx.conf 2>/dev/null' | awk '{print $1}'
+}
+
+api_proxy_bind_mount_stale() {
+  if ! api_proxy_running; then
+    return 0
+  fi
+  host_sum=$(api_proxy_nginx_checksum) || return 0
+  running_sum=$(api_proxy_running_nginx_checksum) || return 0
+  [ -n "$host_sum" ] && [ -n "$running_sum" ] && [ "$host_sum" != "$running_sum" ]
+}
+
 # Deploy replaces ~/compass/api-proxy/ as a whole directory. Docker keeps serving
 # the old bind-mounted nginx.conf from the replaced inode until api-proxy is
 # recreated, so reload alone cannot apply resolver-based upstream switching.
 sync_api_proxy_after_deploy() {
+  if api_proxy_bind_mount_stale; then
+    cutover_log "recreating api-proxy (bind mount out of date with deploy dir)"
+    recreate_api_proxy || return 1
+    return 0
+  fi
+  if api_proxy_running; then
+    cutover_log "api-proxy config matches deploy dir, reloading instead of recreate"
+    reload_api_proxy || return 1
+    return 0
+  fi
   recreate_api_proxy || return 1
 }
 
