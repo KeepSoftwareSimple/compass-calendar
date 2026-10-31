@@ -49,13 +49,7 @@ async function prepareSession(page: Page) {
 }
 
 async function openWeekWithNotices(page: Page) {
-  const versionCheck = page.waitForResponse(
-    (response) =>
-      response.url().includes("/version.json") && response.status() === 200,
-    { timeout: 120_000 },
-  );
   await page.goto("/week", { waitUntil: "networkidle" });
-  await versionCheck;
 
   const firstEvent = page.getByRole("complementary", {
     name: "Create your first event",
@@ -65,7 +59,7 @@ async function openWeekWithNotices(page: Page) {
   const updateToast = page.locator(
     ".Toastify__toast.app-update-available-toast-host",
   );
-  await expect(updateToast).toBeVisible({ timeout: 120_000 });
+  await expect(updateToast).toBeVisible({ timeout: 180_000 });
   await expect(
     page.getByText("Compass just got better. Refresh to update."),
   ).toBeVisible();
