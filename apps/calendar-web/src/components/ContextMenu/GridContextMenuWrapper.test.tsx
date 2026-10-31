@@ -11,7 +11,7 @@ import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { createCompassQueryClient } from "@web/api/query-client";
 import { ContextMenuWrapper } from "@web/components/ContextMenu/GridContextMenuWrapper";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
-import { draftActions } from "@web/events/stores/draft.store";
+import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
 import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import { resetContextMenuPointerHintForTests } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import { resetPointerHintPersistenceForTests } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
@@ -100,6 +100,26 @@ describe("GridContextMenuWrapper pointer hint", () => {
 
     openContextMenu(card, 52, 52);
     expect(selectPointerHintPulse(usePointerHintStore.getState())).toBe(1);
+  });
+
+  it("discards the eventRightClick draft when the menu closes without opening the form", () => {
+    render(
+      <ContextMenuWrapper id={WRAPPER_ID}>
+        <div {...{ [WEEK_INTERACTION_EVENT_ID_ATTRIBUTE]: event.id }}>
+          Menu event
+        </div>
+      </ContextMenuWrapper>,
+      { queryClient: seedCacheEntry() },
+    );
+
+    openContextMenu(screen.getByText("Menu event"), 48, 48);
+    expect(useDraftStore.getState().gridDraft?.source?.id).toBe(event.id);
+
+    act(() => {
+      fireEvent.keyDown(document, { key: "Escape" });
+    });
+
+    expect(useDraftStore.getState().gridDraft).toBeNull();
   });
 
   it("does not pulse when the menu opens from Shift+F10 coordinates", () => {

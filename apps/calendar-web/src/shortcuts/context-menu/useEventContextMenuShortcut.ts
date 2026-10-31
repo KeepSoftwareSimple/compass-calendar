@@ -18,8 +18,8 @@ export { EVENT_MENU_LETTER };
 export function useEventContextMenuShortcut() {
   useBareLetterShortcut(
     EVENT_MENU_LETTER,
-    () => {
-      const focused = getFocusedCalendarEvent();
+    (keyboardEvent) => {
+      const focused = getFocusedCalendarEvent(keyboardEvent);
       if (!focused) return false;
 
       const { clientX, clientY } = cardContextMenuPoint(

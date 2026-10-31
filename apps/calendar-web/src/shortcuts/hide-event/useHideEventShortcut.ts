@@ -13,8 +13,8 @@ export function useHideEventShortcut() {
 
   useBareLetterShortcut(
     HIDE_EVENT_LETTER,
-    () => {
-      const focused = getFocusedCalendarEvent();
+    (keyboardEvent) => {
+      const focused = getFocusedCalendarEvent(keyboardEvent);
       if (!focused) return false;
       toggleEventHidden(focused.eventId);
       return true;

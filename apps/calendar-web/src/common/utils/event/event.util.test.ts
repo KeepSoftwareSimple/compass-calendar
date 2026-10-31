@@ -16,11 +16,16 @@ import {
   addId,
   focusCalendarEventElement,
   focusCalendarEventElementAfterDiscard,
+  getFocusedCalendarEvent,
   isEventInRange,
   refocusEventElement,
 } from "@web/common/utils/event/event.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
-import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
+import {
+  GRID_EVENT_READ_ONLY_ATTRIBUTE,
+  WEEK_INTERACTION_EVENT_ID_ATTRIBUTE,
+  WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE,
+} from "@web/grid/interaction/view-event-registry";
 import {
   afterEach,
   beforeEach,
@@ -628,5 +633,61 @@ describe("refocusEventElement", () => {
 
     expect(document.activeElement).not.toBe(staleElement);
     expect(flushes).toBeLessThanOrEqual(31);
+  });
+});
+
+describe("getFocusedCalendarEvent", () => {
+  it("returns the stamped card when focus sits on a child node", () => {
+    const card = document.createElement("div");
+    card.setAttribute(WEEK_INTERACTION_EVENT_ID_ATTRIBUTE, "event-1");
+    card.setAttribute(WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE, "all-day");
+    const title = document.createElement("span");
+    title.tabIndex = -1;
+    card.append(title);
+    document.body.append(card);
+    title.focus();
+
+    const focused = getFocusedCalendarEvent();
+    expect(focused?.eventId).toBe("event-1");
+    expect(focused?.element).toBe(card);
+  });
+
+  it("reads the event id from the keydown target when activeElement is elsewhere", () => {
+    const card = document.createElement("div");
+    card.setAttribute(WEEK_INTERACTION_EVENT_ID_ATTRIBUTE, "event-2");
+    card.setAttribute(WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE, "timed");
+    document.body.append(card);
+
+    const scroller = document.createElement("div");
+    scroller.tabIndex = 0;
+    document.body.append(scroller);
+    scroller.focus();
+
+    const keyboardEvent = new KeyboardEvent("keydown", {
+      key: "x",
+      bubbles: true,
+    });
+    Object.defineProperty(keyboardEvent, "target", { value: card });
+
+    const focused = getFocusedCalendarEvent(keyboardEvent);
+    expect(focused?.eventId).toBe("event-2");
+    expect(focused?.element).toBe(card);
+  });
+
+  it("falls back to a read-only card that is never drag/resize registered", () => {
+    const card = document.createElement("button");
+    card.setAttribute(WEEK_INTERACTION_EVENT_ID_ATTRIBUTE, "read-only-event");
+    card.setAttribute(WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE, "all-day");
+    card.setAttribute(GRID_EVENT_READ_ONLY_ATTRIBUTE, "true");
+    Object.defineProperty(card, "offsetParent", {
+      configurable: true,
+      get: () => document.body,
+    });
+    document.body.append(card);
+    card.focus();
+
+    const focused = getFocusedCalendarEvent();
+    expect(focused?.eventId).toBe("read-only-event");
+    expect(focused?.element).toBe(card);
   });
 });

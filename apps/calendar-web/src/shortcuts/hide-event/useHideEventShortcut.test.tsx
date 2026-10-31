@@ -21,9 +21,13 @@ const pressX = () => {
   );
 };
 
-const addEventCard = (eventId: string) => {
+const addEventCard = (
+  eventId: string,
+  eventType: "all-day" | "timed" = "timed",
+) => {
   const card = document.createElement("div");
   card.setAttribute("data-week-interaction-event-id", eventId);
+  card.setAttribute("data-week-interaction-event-type", eventType);
   card.tabIndex = 0;
   document.body.appendChild(card);
   return card;
@@ -102,6 +106,31 @@ describe("useHideEventShortcut", () => {
 
     await waitFor(() => {
       expect(result.current.size).toBe(0);
+    });
+  });
+
+  it("toggles a focused all-day card when x is dispatched on the card node", async () => {
+    const { result } = renderHook(
+      () => {
+        useHideEventShortcut();
+        return useHiddenEventIds();
+      },
+      { wrapper },
+    );
+    const card = addEventCard("allday-1", "all-day");
+    card.focus();
+
+    act(() => {
+      card.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "x",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    await waitFor(() => {
+      expect(result.current.has("allday-1")).toBe(true);
     });
   });
 
