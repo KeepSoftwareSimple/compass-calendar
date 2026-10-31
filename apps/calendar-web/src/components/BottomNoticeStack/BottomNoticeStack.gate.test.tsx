@@ -11,10 +11,6 @@ import {
   bottomNoticeStackGateActions,
   useBottomNoticeStackGateStore,
 } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.store";
-import {
-  ensureBottomNoticeStackToastGate,
-  resetBottomNoticeStackToastGateForTests,
-} from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.toast";
 import { useBottomNoticeStackGateSync } from "@web/components/BottomNoticeStack/useBottomNoticeStackGateSync";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
@@ -39,13 +35,11 @@ describe("BottomNoticeStack gate", () => {
   beforeEach(() => {
     HotkeyManager.resetInstance();
     bottomNoticeStackGateActions.resetForTests();
-    resetBottomNoticeStackToastGateForTests();
     registerToastPort(port);
-    ensureBottomNoticeStackToastGate();
   });
 
   afterEach(() => {
-    resetBottomNoticeStackToastGateForTests();
+    bottomNoticeStackGateActions.resetForTests();
   });
 
   it("queues the app update toast while suppressed and delivers it after release", async () => {

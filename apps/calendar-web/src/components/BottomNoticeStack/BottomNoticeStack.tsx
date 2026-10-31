@@ -1,7 +1,6 @@
 import classNames from "classnames";
 import { type PropsWithChildren, useLayoutEffect } from "react";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
-import { flushPendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
 import { BottomNoticeToastHost } from "@web/components/BottomNoticeStack/BottomNoticeToastHost";
 import { bottomNoticeStackGateActions } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.store";
 import { flushQueuedBottomNoticeToasts } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.toast";
@@ -25,7 +24,6 @@ export function BottomNoticeStack({
     bottomNoticeStackGateActions.setSuppressed(suppressed);
     if (suppressed) return;
     flushQueuedBottomNoticeToasts();
-    flushPendingShellToast();
   }, [suppressed]);
 
   if (suppressed) {

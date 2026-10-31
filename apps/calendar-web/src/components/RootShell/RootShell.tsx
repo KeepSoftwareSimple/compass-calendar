@@ -217,7 +217,8 @@ export function RootShell() {
   const activeOnboardingSurface = selectActiveSurface(onboardingFlags);
   const noticeSuppression = {
     isAuthModalOpen,
-    activeOnboardingSurface,
+    welcomeModalOpen: onboardingFlags.welcomeModal,
+    shortcutShowcaseOpen: onboardingFlags.shortcutShowcase,
   };
   const suppressBottomNoticeStack =
     isBottomNoticeStackSuppressed(noticeSuppression);

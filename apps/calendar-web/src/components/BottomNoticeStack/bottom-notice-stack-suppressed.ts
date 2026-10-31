@@ -1,20 +1,21 @@
-import { type OnboardingSurfaceKind } from "@web/components/RootShell/onboarding-surface";
-
-/** True while auth or a blocking onboarding surface owns the screen. */
+/** True while auth or a blocking onboarding modal owns the screen. */
 export function isBottomNoticeStackSuppressed(input: {
   isAuthModalOpen: boolean;
-  activeOnboardingSurface: OnboardingSurfaceKind | null;
+  welcomeModalOpen: boolean;
+  shortcutShowcaseOpen: boolean;
 }): boolean {
-  if (input.isAuthModalOpen) return true;
-  if (input.activeOnboardingSurface === null) return false;
-  // First-event prompt renders inside the stack; other surfaces are modals/overlays.
-  return input.activeOnboardingSurface !== "firstEventPrompt";
+  return (
+    input.isAuthModalOpen ||
+    input.welcomeModalOpen ||
+    input.shortcutShowcaseOpen
+  );
 }
 
 /** True while the up-next banner and its shortcuts must stay hidden. */
 export function isUpNextBannerSuppressed(input: {
   isAuthModalOpen: boolean;
-  activeOnboardingSurface: OnboardingSurfaceKind | null;
+  welcomeModalOpen: boolean;
+  shortcutShowcaseOpen: boolean;
 }): boolean {
-  return input.isAuthModalOpen || input.activeOnboardingSurface !== null;
+  return isBottomNoticeStackSuppressed(input);
 }

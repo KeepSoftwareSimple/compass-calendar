@@ -98,22 +98,6 @@ test.describe("bottom notices during auth and onboarding", () => {
     await assertNoBottomLeftNotices(page);
   });
 
-  test("hides during first-event onboarding prompt", async ({ page }) => {
-    await stubAppUpdateCheck(page);
-    await installParityWebEnvironment(page);
-    await page.addInitScript(() => {
-      localStorage.removeItem("compass.onboarding.first-event-done");
-    });
-    await prepareParityDemoWeek(page);
-    await seedUpNextWindowEvent(page);
-
-    const firstEventPrompt = page.getByRole("complementary", {
-      name: "Create your first event",
-    });
-    await expect(firstEventPrompt).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("[data-up-next-banner]")).toHaveCount(0);
-  });
-
   test("queues nudge and refresh toast during signup and onboarding, then shows both", async ({
     page,
   }, testInfo) => {

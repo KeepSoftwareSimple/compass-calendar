@@ -4,51 +4,41 @@ import {
 } from "@web/components/BottomNoticeStack/bottom-notice-stack-suppressed";
 import { describe, expect, it } from "bun:test";
 
+const clear = {
+  isAuthModalOpen: false,
+  welcomeModalOpen: false,
+  shortcutShowcaseOpen: false,
+};
+
 describe("isBottomNoticeStackSuppressed", () => {
-  it("is false when auth and onboarding are clear", () => {
-    expect(
-      isBottomNoticeStackSuppressed({
-        isAuthModalOpen: false,
-        activeOnboardingSurface: null,
-      }),
-    ).toBe(false);
+  it("is false when auth and blocking modals are clear", () => {
+    expect(isBottomNoticeStackSuppressed(clear)).toBe(false);
   });
 
   it("is true while the auth modal is open", () => {
     expect(
-      isBottomNoticeStackSuppressed({
-        isAuthModalOpen: true,
-        activeOnboardingSurface: null,
-      }),
+      isBottomNoticeStackSuppressed({ ...clear, isAuthModalOpen: true }),
     ).toBe(true);
   });
 
-  it("is true while a blocking onboarding surface is active", () => {
+  it("is true while the welcome modal is open", () => {
     expect(
-      isBottomNoticeStackSuppressed({
-        isAuthModalOpen: false,
-        activeOnboardingSurface: "welcomeModal",
-      }),
+      isBottomNoticeStackSuppressed({ ...clear, welcomeModalOpen: true }),
     ).toBe(true);
   });
 
-  it("is false while only the first-event prompt is active", () => {
+  it("is true while the shortcut showcase is open", () => {
     expect(
-      isBottomNoticeStackSuppressed({
-        isAuthModalOpen: false,
-        activeOnboardingSurface: "firstEventPrompt",
-      }),
-    ).toBe(false);
+      isBottomNoticeStackSuppressed({ ...clear, shortcutShowcaseOpen: true }),
+    ).toBe(true);
   });
 });
 
 describe("isUpNextBannerSuppressed", () => {
-  it("is true while the first-event prompt is active", () => {
+  it("matches bottom notice stack suppression", () => {
+    expect(isUpNextBannerSuppressed(clear)).toBe(false);
     expect(
-      isUpNextBannerSuppressed({
-        isAuthModalOpen: false,
-        activeOnboardingSurface: "firstEventPrompt",
-      }),
+      isUpNextBannerSuppressed({ ...clear, shortcutShowcaseOpen: true }),
     ).toBe(true);
   });
 });

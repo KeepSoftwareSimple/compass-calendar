@@ -1,10 +1,10 @@
 import Foundation
 
 extension NativeCalendarRootModel {
-    /// Web parity: hide bottom-left notices while auth or onboarding is up.
+    /// Web parity: hide bottom-left notices during auth or blocking onboarding modals.
     public var suppressBottomNotices: Bool {
         authStore.isModalPresented
-            || activeOnboardingSurface != nil
-            || isLifeViewIntroActive
+            || activeOnboardingSurface == .welcomeModal
+            || activeOnboardingSurface == .shortcutShowcase
     }
 }
