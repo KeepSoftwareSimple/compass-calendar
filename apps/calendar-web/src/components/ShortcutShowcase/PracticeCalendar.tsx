@@ -25,7 +25,7 @@ const TOTAL_MIN = (SHOWCASE_GRID_END_HOUR - SHOWCASE_GRID_START_HOUR) * 60;
 export type PracticeFlash = { eventId: string; seq: number };
 
 const formatTime = (minutes: number) =>
-  dayjs().startOf("day").add(minutes, "minute").format(HOURS_AM_FORMAT);
+  dayjs().startOf("day").minute(minutes).format(HOURS_AM_FORMAT);
 
 const slotGeometry = (startMin: number, endMin: number) =>
   percentBlockStyle(startMin, endMin - startMin, GRID_START_MIN, TOTAL_MIN);
