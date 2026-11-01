@@ -68,7 +68,9 @@ function createStripeBillingGateway(): StripeBillingGateway {
     createCustomer: (params, options) =>
       getStripe().customers.create(params, options),
     deleteCustomer: async (id, options) => {
-      await getStripe().customers.del(id, options);
+      // `del(id, params, options)`: options must not take the params slot, or
+      // Stripe rejects `idempotencyKey` as an unknown body parameter.
+      await getStripe().customers.del(id, {}, options);
     },
     retrieveCustomer: (id, params) =>
       getStripe().customers.retrieve(id, params),

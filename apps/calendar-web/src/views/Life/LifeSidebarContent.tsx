@@ -1,5 +1,6 @@
 import { ShuffleIcon } from "@phosphor-icons/react/dist/csr/Shuffle";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { ID_LIFE_BIRTH_DATE } from "@web/common/constants/web.constants";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import { NumberInput } from "@web/components/NumberInput/NumberInput";
@@ -57,7 +58,7 @@ export function LifeSidebarContent({
 
   useEffect(() => {
     if (!autoFocusBirthDate) return;
-    document.getElementById("life-date-of-birth")?.focus();
+    document.getElementById(ID_LIFE_BIRTH_DATE)?.focus();
   }, [autoFocusBirthDate]);
 
   useEffect(() => {
@@ -145,7 +146,7 @@ export function LifeSidebarContent({
             captionPicker
             calendarClassName="lifeBirthDatePicker"
             dateFormat="MMM d, yyyy"
-            id="life-date-of-birth"
+            id={ID_LIFE_BIRTH_DATE}
             inputClassName="c-life-input w-full max-w-44 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel"
             isClearable
             isOpen={isBirthDatePickerOpen}

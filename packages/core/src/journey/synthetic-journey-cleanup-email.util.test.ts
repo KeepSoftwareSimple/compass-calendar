@@ -1,6 +1,7 @@
 import {
   assertAllowedSyntheticJourneyCleanupEmails,
   isAllowedSyntheticJourneyCleanupEmail,
+  journeyPendingAccountResultsSubdir,
 } from "@core/journey/synthetic-journey-cleanup-email.util";
 import { describe, expect, it } from "bun:test";
 
@@ -51,6 +52,15 @@ describe("synthetic journey cleanup email patterns", () => {
         "staging",
       ),
     ).toBe(false);
+  });
+
+  it("maps environments to the pending-account results subdirectory", () => {
+    expect(journeyPendingAccountResultsSubdir("production")).toBe(
+      "prod-journey",
+    );
+    expect(journeyPendingAccountResultsSubdir("staging")).toBe(
+      "staging-journey",
+    );
   });
 
   it("fails the whole batch before any action when one email is invalid", () => {
