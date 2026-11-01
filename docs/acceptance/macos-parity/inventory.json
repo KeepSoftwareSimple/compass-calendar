@@ -1349,11 +1349,11 @@
       "behavior": "Click welcome heading/body, then Enter advances to second step",
       "web": ["e2e/onboarding/welcome-enter-body.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassUITests/WelcomeKeyboardTests.swift#testWelcomeStepsRemainInteractiveInBothThemes"
+        "apps/calendar-macos/CompassUITests/WelcomeBodyKeyboardTests.swift#testEnterAdvancesAfterClickingWelcomeHeading"
       ],
-      "status": "missing",
-      "reason": "Existing native welcome test clicks CTA on first step and presses Return only on step two. Literal DOM dialog focus is platform-specific; observable native keyboard routing remains required.",
-      "evidence": "",
+      "status": "passing",
+      "reason": "Native heading click then Return advances to How Compass works and exposes Next, without first-step CTA activation. Literal DOM dialog focus is platform-specific; actual native responder routing is exercised. Capture is sampled evidence, not the broad visual or signed-in gate.",
+      "evidence": "Merged5050 at2026-11-01T15:57:36Z, exact2789baeeb4474b060577331313025fcb6535ddef BOTHstrict41320349566 actual native/web PASS/no requiredskips /tmp/compass-clean-welcome-2789-strict; normalFULLnative41320350858PASS. Actual step-two capture inspected /tmp/compass-clean-welcome-2789-shots; Dock overlay not claimed accepted broad visual parity.",
       "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
     },
     {
@@ -1417,10 +1417,181 @@
       "native": [
         "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/BookingDescriptionKeyboardTests.swift#testBothBookingLinksSupportKeyboardSelectionAndDestinationHelp"
       ],
-      "status": "failing",
-      "reason": "Initial isolated real-window keyboard regression confirmed nil destination tooltip on both named links; renderer fix pending fresh full verification. Separate tabbable AX/focus-ring and real UI gates stay open.",
-      "evidence": "Exactfd2 normal41230663752 package job124624185637 actual raw log /tmp/compass-booking-fd2-package.log lines10195-10196: only two tooltip assertions fail; keyboard selection/destination/focus/HTML assertions do not fail.",
+      "status": "passing",
+      "reason": "Real native window and responder keyboard selection checks both named links, full destination tooltips and unchanged HTML. Separate tabbable AX links, visual focus, full UI and signed-in acceptance remain open.",
+      "evidence": "Merged5027 exactaab6066c80a8a339ab403e06163acff65e73cd82 BOTHstrict41232910599 actualPASS/no requiredskips /tmp/compass-booking-aab-both-strict; unchanged integration regressionPASS0.704s; normal41232916088PASS. Originalfd2 failed only two tooltip assertions in actual /tmp/compass-booking-fd2-package.log.",
       "review": "2026-10-31 agent: frozen booking-description URL title assertion mapped to native tooltip. Minimal general native renderer fix; no test weakening."
+    },
+    {
+      "id": "go-to-date-iso",
+      "behavior": "G opens palette, 2026-12-15 offers exact named date, Enter closes palette, reveals 2026-12-15 and announces chosen week",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+      ],
+      "status": "missing",
+      "reason": "Pure vectors cover parsing/label/announcement strings, not actual native keyboard palette integration or visible day/status. Native anchor/view replaces browser URL; pin current year for month-first input.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "go-to-date-slash",
+      "behavior": "G opens palette, 2026/10/29 offers exact named date, Enter closes palette, reveals 2026-10-29 and announces chosen week",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+      ],
+      "status": "missing",
+      "reason": "Pure vectors cover parsing/label/announcement strings, not actual native keyboard palette integration or visible day/status. Native anchor/view replaces browser URL; pin current year for month-first input.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "go-to-date-month-first",
+      "behavior": "G opens palette, 10/29 offers exact named date, Enter closes palette, reveals 2026-10-29 and announces chosen week",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+      ],
+      "status": "missing",
+      "reason": "Pure vectors cover parsing/label/announcement strings, not actual native keyboard palette integration or visible day/status. Native anchor/view replaces browser URL; pin current year for month-first input.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "shortcut-badge-initial",
+      "behavior": "Badge initially shows L1 and accessible Shortcut level 1, Newcomer name",
+      "web": ["e2e/navigation/shortcut-level-badge.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/ShortcutLevelTests.swift#testNewcomerWithNoUsage"
+      ],
+      "status": "unreviewed",
+      "reason": "Native badge view has label/copy and pure math tests, but real initial badge presentation is not verified.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "shortcut-badge-progress",
+      "behavior": "After real Today/Previous shortcuts, hover reveals positive used/total count",
+      "web": ["e2e/navigation/shortcut-level-badge.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassData/Tests/CompassDataTests/LevelsStoreTests.swift#testLevelUpAfterFourthDistinctShortcut"
+      ],
+      "status": "missing",
+      "reason": "Native store usage tests and help string do not prove real keyboard invocation and hover exposure.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "shortcut-badge-hide-relaunch",
+      "behavior": "Palette Hide shortcut level removes badge and absence persists after relaunch",
+      "web": ["e2e/navigation/shortcut-level-badge.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Native catalog command and stored badgeHidden key exist; full CommandPaletteActionsTests has no hide/relaunch UI assertion.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "shortcut-badge-show",
+      "behavior": "Palette Show shortcut level restores badge after persisted hide",
+      "web": ["e2e/navigation/shortcut-level-badge.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Reversible label exists but real native UI restoration is not asserted.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "shortcut-badge-hide-keyboard",
+      "behavior": "Focused badge exposes a keyboard-reachable Hide level action, Enter hides badge",
+      "web": ["e2e/navigation/shortcut-level-badge.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Native badge button opens shortcuts and has no inline Hide level control. Do not infer native keyboard equivalence from separate palette catalog entry or exclude solely because implementation differs.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "week-first-frame-geometry-900",
+      "behavior": "At supported width 900, first frame has 5 aligned day/all-day/timed columns, no horizontal overflow and stable geometry over startup",
+      "web": ["e2e/navigation/week-view-layout.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/CalendarWindowMathTests.swift#testComputeVisibleDayCount",
+        "apps/calendar-macos/CompassUITests/WindowChromeLayoutTests.swift#testHeaderUsesTopChromeWithoutAnEmptyToolbarBand"
+      ],
+      "status": "missing",
+      "reason": "Requires actual native first-frame count/alignment x/right/width and stable main width/positive all-day height. Pure window math, model snapshots and later chrome captures do not prove runtime geometry. Frozen web sampling spans400ms, alignment/main-width spread tolerance1px and all-day height stays positive. Review native logical content-width equivalence; do not assume outer window width equals browser viewport.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "week-first-frame-geometry-1280",
+      "behavior": "At supported width 1280, first frame has 5 aligned day/all-day/timed columns, no horizontal overflow and stable geometry over startup",
+      "web": ["e2e/navigation/week-view-layout.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/CalendarWindowMathTests.swift#testComputeVisibleDayCount",
+        "apps/calendar-macos/CompassUITests/WindowChromeLayoutTests.swift#testHeaderUsesTopChromeWithoutAnEmptyToolbarBand"
+      ],
+      "status": "missing",
+      "reason": "Requires actual native first-frame count/alignment x/right/width and stable main width/positive all-day height. Pure window math, model snapshots and later chrome captures do not prove runtime geometry. Frozen web sampling spans400ms, alignment/main-width spread tolerance1px and all-day height stays positive. Review native logical content-width equivalence; do not assume outer window width equals browser viewport.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "week-first-frame-geometry-1728",
+      "behavior": "At supported width 1728, first frame has 7 aligned day/all-day/timed columns, no horizontal overflow and stable geometry over startup",
+      "web": ["e2e/navigation/week-view-layout.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/CalendarWindowMathTests.swift#testComputeVisibleDayCount",
+        "apps/calendar-macos/CompassUITests/WindowChromeLayoutTests.swift#testHeaderUsesTopChromeWithoutAnEmptyToolbarBand"
+      ],
+      "status": "missing",
+      "reason": "Requires actual native first-frame count/alignment x/right/width and stable main width/positive all-day height. Pure window math, model snapshots and later chrome captures do not prove runtime geometry. Frozen web sampling spans400ms, alignment/main-width spread tolerance1px and all-day height stays positive. Review native logical content-width equivalence; do not assume outer window width equals browser viewport.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "week-persisted-closed-sidebar",
+      "behavior": "At1280 persisted closed sidebar is absent from first frame, seven days visible and geometry remains stable",
+      "web": ["e2e/navigation/week-view-layout.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassUITests/SidebarResizeKeyboardTests.swift#testKeyboardWidthPersistsAcrossRelaunch"
+      ],
+      "status": "missing",
+      "reason": "Existing native sidebar width persistence does not assert closed-state first frame or column alignment at this width.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "week-dark-reduced-motion-geometry",
+      "behavior": "Dark theme with reduced motion at900 shows five days from first frame and keeps geometry stable",
+      "web": ["e2e/navigation/week-view-layout.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Existing both-theme idle screenshots do not sample startup geometry or reduced-motion behavior.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "week-320-phone-window",
+      "behavior": "At320 phone-like width show one day anchored on today",
+      "web": ["e2e/navigation/week-view-layout.spec.ts"],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: native AppDelegate.swift:100 sets minSize720x480, so a320px native window cannot be created. Supported-width behavior remains required; this does not exclude startup or native geometry.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+    },
+    {
+      "id": "week-browser-scrollbar-css",
+      "behavior": "Web scrollbar pseudo-element CSS reports width/height0px",
+      "web": ["e2e/navigation/week-view-layout.spec.ts"],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: AppKit scroll views have no CSS scrollbar pseudo-elements. Observable native horizontal overflow remains explicitly required in supported-width rows.",
+      "evidence": "",
+      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
     }
   ],
   "gates": {
@@ -1455,6 +1626,9 @@
     "e2e/onboarding/initial-paint.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
     "e2e/onboarding/welcome-cta-width.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
     "e2e/onboarding/welcome-enter-body.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
-    "e2e/timed/event-description-links.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    "e2e/timed/event-description-links.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
+    "e2e/navigation/go-to-date.spec.ts": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred.",
+    "e2e/navigation/shortcut-level-badge.spec.ts": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred.",
+    "e2e/navigation/week-view-layout.spec.ts": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
   }
 }
