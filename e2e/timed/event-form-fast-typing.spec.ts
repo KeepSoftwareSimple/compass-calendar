@@ -9,41 +9,6 @@ const FAST_STRING =
   "Quarterly planning workshop with product design and research teams";
 
 test.beforeEach(async ({ page }) => {
-  // Temporary #5039 diagnosis, remove before this branch is ready.
-  await page.addInitScript(() => {
-    const originalFocus = HTMLElement.prototype.focus;
-    HTMLElement.prototype.focus = function (options?: FocusOptions) {
-      if (
-        document.activeElement?.id === "event-form-title" &&
-        this !== document.activeElement
-      ) {
-        console.log(
-          "TITLE_FOCUS_HANDOFF",
-          this.tagName,
-          this.id,
-          new Error().stack,
-        );
-      }
-      originalFocus.call(this, options);
-    };
-    document.addEventListener(
-      "focusout",
-      (event) => {
-        if ((event.target as HTMLElement).id === "event-form-title") {
-          const next = (event as FocusEvent)
-            .relatedTarget as HTMLElement | null;
-          console.log(
-            "TITLE_FOCUS_OUT",
-            next?.tagName,
-            next?.id,
-            (event.target as HTMLElement).isConnected,
-            new Error().stack,
-          );
-        }
-      },
-      true,
-    );
-  });
   await installDeterministicBrowserClock(page);
   await prepareTimedCalendarPage(page);
 });

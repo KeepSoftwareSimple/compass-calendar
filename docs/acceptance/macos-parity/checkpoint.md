@@ -24,6 +24,8 @@ Strict web now reuses the normal E2E Playwright container/Bun setup to avoid
 reinstalling browser OS dependencies. This is not a title-truncation fix.
 Assertions, typing speed, verification order and timeouts are unchanged. New
 head needs fresh full native/web verification; keep draft until actual evidence.
+The temporary E2E focus logging was removed after a passing diagnostic run;
+issue #5039 remains open without a root-cause or production-fix claim.
 
 Named-link help acceptance from merged #5027 is recorded with actual exactaab
 native/web strict PASS and unchanged keyboard integration regression. Separate
