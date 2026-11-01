@@ -147,6 +147,16 @@ export const openJourneySettings = async (page: Page) => {
   return settings;
 };
 
+/**
+ * Settings opens on Accounts; plan, cancel and receipts live on the Billing
+ * page, which only exists when the account has a server-side plan.
+ */
+export const openJourneyBillingSettings = async (page: Page) => {
+  const settings = await openJourneySettings(page);
+  await settings.getByRole("button", { name: "Billing" }).click();
+  return settings;
+};
+
 export const logOutOfJourneyAccount = async (page: Page) => {
   await openJourneySettings(page);
   await page.getByRole("button", { name: "Log out" }).click();
@@ -340,6 +350,10 @@ export const submitSyntheticProdJourneyCheckout = async (
 
 export const cancelJourneySubscriptionIfActive = async (page: Page) => {
   const settings = await openJourneySettings(page);
+  const billingNav = settings.getByRole("button", { name: "Billing" });
+  if (await billingNav.isVisible().catch(() => false)) {
+    await billingNav.click();
+  }
   const cancelButton = settings.getByRole("button", {
     name: "Cancel subscription",
   });
