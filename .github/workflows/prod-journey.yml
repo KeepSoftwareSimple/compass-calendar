@@ -72,7 +72,9 @@ jobs:
           name: prod-journey-${{ matrix.provider }}-${{ github.run_id }}
           path: |
             e2e/test-results/prod-journey/
+            !e2e/test-results/prod-journey/journey-pending-account.json
             test-results/prod-journey/
+            test-results/prod-journey-fallback/
           retention-days: 7
           if-no-files-found: warn
 
