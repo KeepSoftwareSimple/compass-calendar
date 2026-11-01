@@ -17,5 +17,10 @@ export default defineConfig({
     video: "retain-on-failure",
     ...devices["Desktop Chrome"],
   },
-  outputDir: "test-results/prod-journey",
+  // Playwright empties outputDir on start. The workflow's fallback cleanup run
+  // must not wipe the failed leg's traces or its journey-pending-account.json.
+  outputDir:
+    process.env.PROD_JOURNEY_CLEANUP_FALLBACK === "1"
+      ? "test-results/prod-journey-fallback"
+      : "test-results/prod-journey",
 });

@@ -159,7 +159,13 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
   await expectTimedEventVisible(page, editedTitle);
 
   await logOutOfJourneyAccount(page);
+  // Wait for the logout to finish before navigating; a goto mid-logout can
+  // abort it and leave the session alive, so the login form never renders.
+  await expect(page.getByText(/logged out/i)).toBeVisible({ timeout: 30_000 });
 
   await logInJourneyAccount(page, { email: uniqueEmail, password });
+  await page
+    .locator("#mainGrid")
+    .waitFor({ state: "visible", timeout: 60_000 });
   await expectTimedEventVisible(page, editedTitle, 60_000);
 });
