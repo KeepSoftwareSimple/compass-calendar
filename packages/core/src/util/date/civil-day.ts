@@ -29,6 +29,27 @@ export function startOfCivilDay(
   return dayjs.tz(key, timeZone);
 }
 
+/**
+ * `hour`:`minute` wall-clock time on the calendar date of `day` in `timeZone`.
+ *
+ * Use this instead of `.hour(h).minute(m)` on a zoned value: the timezone
+ * plugin keeps the original UTC offset when setting fields, so on a DST
+ * change day `startOf("day").hour(14)` lands at 13:00 (fall-back) or 15:00
+ * (spring-forward). A time inside the spring-forward gap moves forward.
+ */
+export function atCivilTime(
+  day: Dayjs | Date | string,
+  timeZone: string,
+  hour: number,
+  minute = 0,
+): Dayjs {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return dayjs.tz(
+    `${civilDateKey(day, timeZone)}T${pad(hour)}:${pad(minute)}:00`,
+    timeZone,
+  );
+}
+
 function nextCivilDateKey(key: string): string {
   return dayjs.utc(key).add(1, "day").format("YYYY-MM-DD");
 }

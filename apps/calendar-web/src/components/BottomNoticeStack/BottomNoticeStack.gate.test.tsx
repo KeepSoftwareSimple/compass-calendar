@@ -11,12 +11,10 @@ import {
   bottomNoticeStackGateActions,
   useBottomNoticeStackGateStore,
 } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.store";
-import { useBottomNoticeStackGateSync } from "@web/components/BottomNoticeStack/useBottomNoticeStackGateSync";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 function GateHarness() {
   const [suppressed, setSuppressed] = useState(true);
-  useBottomNoticeStackGateSync(suppressed);
   return (
     <HotkeysProvider>
       <button onClick={() => setSuppressed(false)} type="button">
@@ -50,7 +48,6 @@ describe("BottomNoticeStack gate", () => {
     expect(useBottomNoticeStackGateStore.getState().queue).toHaveLength(1);
 
     function ReleaseHarness() {
-      useBottomNoticeStackGateSync(false);
       return (
         <BottomNoticeStack suppressed={false}>
           <BottomNoticeToastHost />

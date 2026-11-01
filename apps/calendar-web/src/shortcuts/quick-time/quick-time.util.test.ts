@@ -8,7 +8,11 @@ import {
   resolveQuickTimeStart,
   timedEventsToBusyIntervals,
 } from "@web/shortcuts/quick-time/quick-time.util";
-import { describe, expect, it } from "bun:test";
+import {
+  resetEffectiveTimeZoneStoreForTests,
+  setPinnedTimeZone,
+} from "@web/timezone/effective-timezone.store";
+import { afterEach, describe, expect, it } from "bun:test";
 
 const DAY = dayjs("2026-08-05T00:00:00");
 const at = (time: string) => dayjs(`2026-08-05T${time}`);
@@ -203,5 +207,30 @@ describe("timedEventsToBusyIntervals", () => {
         endMs: at("10:00").valueOf(),
       },
     ]);
+  });
+});
+
+describe("quick time on a DST change day", () => {
+  afterEach(() => {
+    resetEffectiveTimeZoneStoreForTests();
+  });
+
+  const fallBack = () => {
+    setPinnedTimeZone("America/Denver");
+    return dayjs.tz("2026-11-01", "America/Denver");
+  };
+
+  it("places each slot at its advertised wall-clock hour", () => {
+    const slots = buildQuickTimeSlots({ busy: [], targetDay: fallBack() });
+    const slot = slots.find((candidate) => candidate.sequence === "1400");
+
+    expect(slot?.start).toBe("2026-11-01T14:00:00-07:00");
+    expect(slot?.end).toBe("2026-11-01T15:00:00-07:00");
+  });
+
+  it("creates the typed time, not an hour earlier", () => {
+    expect(resolveQuickTimeStart("1400", fallBack())?.format()).toBe(
+      "2026-11-01T14:00:00-07:00",
+    );
   });
 });
