@@ -58,7 +58,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: staging-journey-${{ matrix.provider }}-${{ github.run_id }}
-          path: e2e/test-results/staging-journey/
+          path: |
+            e2e/test-results/staging-journey/
+            !e2e/test-results/staging-journey/journey-pending-account.json
           retention-days: 14
           if-no-files-found: warn
 
