@@ -146,9 +146,11 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
     .getByRole("dialog", { name: /cancel/i })
     .getByRole("button", { name: "Cancel subscription" })
     .click();
-  await expect(page.getByText(/canceled|cancelled/i)).toBeVisible({
-    timeout: 60_000,
-  });
+  // Billing has no "canceled" copy: once the server schedules the cancel,
+  // the plan shows cancelAtPeriodEnd and the button becomes Resume.
+  await expect(
+    settings.getByRole("button", { name: "Resume subscription" }),
+  ).toBeVisible({ timeout: 60_000 });
   await page.keyboard.press("Escape");
 
   const editedTitle = createEventTitle("Prod journey edit");
