@@ -32,6 +32,7 @@ type BillingGateModalProps = {
 export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
   useAppLockReason("billingGate", true);
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
+  const trialInitialFocusRef = useRef<HTMLDivElement>(null);
   const shownRef = useRef(false);
   const isCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
   const publishableKey = useStripePublishableKey();
@@ -70,13 +71,17 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
       align="center"
       ariaLabel={title}
       backdropClassName={isCheckoutOpen ? "overflow-y-auto" : undefined}
-      initialFocusRef={primaryButtonRef}
+      initialFocusRef={trialInitialFocusRef}
+      onModEnter={isCheckoutOpen ? undefined : openCheckout}
       onDismiss={isCheckoutOpen ? checkoutPanelActions.close : undefined}
       panelClassName={EMBEDDED_CHECKOUT_PANEL_CLASSNAME}
       restoreFocus={() => {
-        primaryButtonRef.current?.focus({ preventScroll: true });
+        trialInitialFocusRef.current?.focus({ preventScroll: true });
       }}
-      widthClassName={isCheckoutOpen ? "w-[560px]" : "w-120"}
+      bodyPaddingClassName="px-4 py-6 sm:p-8"
+      widthClassName={
+        isCheckoutOpen ? "w-[min(560px,calc(100vw-2rem))]" : "w-120"
+      }
     >
       {isCheckoutOpen && publishableKey ? (
         <EmbeddedCheckoutPanel
@@ -86,6 +91,7 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
       ) : isAwaitingCheckout ? (
         <TrialStartAsk
           checkoutSource={null}
+          initialFocusRef={trialInitialFocusRef}
           onBeforeOpenCheckout={() => {
             track("billing_gate_cta_clicked", { cta: "checkout" });
           }}

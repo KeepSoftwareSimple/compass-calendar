@@ -107,9 +107,6 @@ export const APP_SHORTCUT_BINDINGS = {
     hotkey: KEYMAP.openDescriptionLinkAtCaret.hotkey,
     keycaps: [...KEYMAP.openDescriptionLinkAtCaret.keycaps],
   },
-  editOpenDescriptionLinkDigit: {
-    keycaps: [...KEYMAP.openDescriptionLinkByDigit.keycaps],
-  },
   editFieldLeaderInForm: { hotkey: "Mod+E", keycaps: ["Mod+E"] },
   editFormActions: { hotkey: "Mod+0", keycaps: hotkeyKeycaps("Mod+0") },
   editToggleAllDay: {
@@ -174,8 +171,6 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "edit-copy-meeting-link": APP_SHORTCUT_BINDINGS.editCopyMeetingLink.keycaps,
   "edit-open-description-link":
     APP_SHORTCUT_BINDINGS.editOpenDescriptionLink.keycaps,
-  "edit-open-description-link-digit":
-    APP_SHORTCUT_BINDINGS.editOpenDescriptionLinkDigit.keycaps,
   "edit-field-leader-in-form": [
     ...APP_SHORTCUT_BINDINGS.editFieldLeaderInForm.keycaps,
   ],

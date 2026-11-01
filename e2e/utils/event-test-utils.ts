@@ -73,7 +73,10 @@ export const getVisibleDayDates = (page: Page) =>
 
 // Shared timeout for form operations - use a single reasonable timeout instead of short retries
 const FORM_TIMEOUT =
-  process.env.STAGING_JOURNEY_ENABLED === "1" ? 30_000 : 10_000;
+  process.env.STAGING_JOURNEY_ENABLED === "1" ||
+  process.env.PROD_JOURNEY_ENABLED === "1"
+    ? 30_000
+    : 10_000;
 
 /**
  * Dispatch a keyboard shortcut on `document`. Playwright's Control+K is
@@ -251,6 +254,56 @@ export const createEventTitle = (prefix: string) =>
 export const updateEventTitle = (prefix: string) =>
   `${prefix} Updated ${Date.now()}`;
 
+/**
+ * Dismiss the onboarding surfaces that would otherwise cover the grid, and
+ * optionally pin the calendar zones, before the app boots. `storageState` in
+ * `playwright.config.ts` only covers the welcome modal and first-event prompt;
+ * specs that assert on grid chrome need the life-view intro and sidebar too.
+ */
+export const dismissOnboardingBeforeBoot = async (
+  page: Page,
+  options: { calendarTimeZone?: string; secondTimeZone?: string } = {},
+) => {
+  await page.addInitScript((zones) => {
+    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
+    localStorage.setItem("compass.onboarding.has-seen-life-view-intro", "true");
+    localStorage.setItem("compass.view.sidebar-open", "false");
+    if (zones.calendarTimeZone) {
+      localStorage.setItem("compass.timezone.default", zones.calendarTimeZone);
+    }
+    if (zones.secondTimeZone) {
+      localStorage.setItem(
+        "compass.timezone.time-travel",
+        zones.secondTimeZone,
+      );
+    }
+  }, options);
+};
+
+/**
+ * Make `Intl` report UTC however the device zone is emulated, for the specs
+ * that cover a browser whose resolved zone cannot be trusted.
+ */
+export const forceIntlTimeZoneToUtc = async (page: Page) => {
+  await page.addInitScript(() => {
+    const original = Intl.DateTimeFormat.prototype.resolvedOptions;
+    Intl.DateTimeFormat.prototype.resolvedOptions = function (
+      this: Intl.DateTimeFormat,
+    ) {
+      const options = original.call(this);
+      return { ...options, timeZone: "UTC" };
+    };
+  });
+};
+
+export const waitForWeekEventsLoaded = async (page: Page) => {
+  const loader = page.getByRole("status", { name: "Loading events" });
+  if (await loader.count()) {
+    await expect(loader).toBeHidden({ timeout: 120_000 });
+  }
+};
+
 export const prepareCalendarPage = async (page: Page) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
   await waitForCalendarShell(page);
@@ -262,6 +315,7 @@ export const prepareCalendarPage = async (page: Page) => {
 
   await ensureWeekView(page);
   await page.locator("#mainGrid").waitFor({ state: "visible", timeout: 15000 });
+  await waitForWeekEventsLoaded(page);
   await blurActiveElement(page);
   await page.locator("#mainGrid").focus();
 };
@@ -467,15 +521,52 @@ export const dismissBringYourEventsPromptIfOpen = async (page: Page) => {
   }
 };
 
+/**
+ * Server-backed signed-in views ignore create (C) until the calendars query
+ * settles and a default target calendar exists. Wait for that before seeding
+ * drafts in billing and auth e2e flows.
+ */
+export const waitForWritableCalendarsReady = async (page: Page) => {
+  await page
+    .waitForResponse(
+      (response) => response.url().includes("/api/calendars") && response.ok(),
+      { timeout: FORM_TIMEOUT },
+    )
+    .catch(() => undefined);
+  await page
+    .getByRole("button", { name: /^(Show|Hide) primary calendar$/ })
+    .first()
+    .waitFor({ state: "visible", timeout: FORM_TIMEOUT })
+    .catch(() => undefined);
+};
+
 /** Opens a timed draft via the `c` shortcut (KEYMAP.createEvent). */
 export const openTimedEventFormWithKeyboard = async (page: Page) => {
   const titleInput = getFormTitleInput(page);
 
-  if (!(await titleInput.isVisible().catch(() => false))) {
-    await dispatchDocumentKey(page, "c");
+  if (await titleInput.isVisible().catch(() => false)) {
+    return;
   }
 
-  await titleInput.waitFor({ state: "visible", timeout: FORM_TIMEOUT });
+  const deadline = Date.now() + FORM_TIMEOUT;
+  while (Date.now() < deadline) {
+    await dispatchDocumentKey(page, "c");
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+    try {
+      await titleInput.waitFor({
+        state: "visible",
+        timeout: Math.min(2_000, remaining),
+      });
+      return;
+    } catch {
+      // Calendars or billing lock may still be settling; retry C within budget.
+    }
+  }
+
+  await titleInput.waitFor({ state: "visible", timeout: 0 });
 };
 
 /** Opens an all-day draft via the `Shift+C` shortcut. */

@@ -361,6 +361,27 @@ export type CancelBookingReservationInput = z.infer<
   typeof CancelBookingReservationInputSchema
 >;
 
+/** Authenticated host-only rows for the signed-in meet page owner inbox. */
+export const HostUpcomingBookingReservationSchema = z.strictObject({
+  reservationId: BookingReservationIdSchema,
+  guestName: z.string().trim().min(1).max(256),
+  guestEmail: z.string().trim().min(1).max(320),
+  slotStart: DateTimeSchema,
+  slotEnd: DateTimeSchema,
+  durationMinutes: BookingDurationMinutesSchema,
+  meetLink: z.url().nullable(),
+});
+export type HostUpcomingBookingReservation = z.infer<
+  typeof HostUpcomingBookingReservationSchema
+>;
+
+export const HostUpcomingBookingReservationsResponseSchema = z.strictObject({
+  reservations: z.array(HostUpcomingBookingReservationSchema).readonly(),
+});
+export type HostUpcomingBookingReservationsResponse = z.infer<
+  typeof HostUpcomingBookingReservationsResponseSchema
+>;
+
 export const BookingReservationSlotsQuerySchema = z.strictObject({
   token: z.string().trim().min(1).max(256),
   start: DateTimeSchema,

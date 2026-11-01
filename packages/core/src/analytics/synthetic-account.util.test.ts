@@ -3,6 +3,7 @@ import {
   isBillingAutomationBypassEmail,
   isSyntheticAccountEmail,
   isSyntheticAccountHeaderValue,
+  redactJourneyEmailForLog,
 } from "@core/analytics/synthetic-account.util";
 import { describe, expect, it } from "bun:test";
 
@@ -23,6 +24,12 @@ describe("synthetic account helpers", () => {
       isSyntheticAccountEmail("lance.essert+journey1730123456789@gmail.com", [
         "lance.essert@gmail.com",
       ]),
+    ).toBe(true);
+    expect(
+      isSyntheticAccountEmail(
+        "lance.essert+prod-journey-google+journey1730123456789@gmail.com",
+        ["lance.essert+prod-journey-google@gmail.com"],
+      ),
     ).toBe(true);
   });
 
@@ -46,5 +53,16 @@ describe("synthetic account helpers", () => {
     expect(isSyntheticAccountHeaderValue("true")).toBe(true);
     expect(isSyntheticAccountHeaderValue(["1"])).toBe(true);
     expect(isSyntheticAccountHeaderValue("no")).toBe(false);
+  });
+
+  it("redacts journey addresses for logs but keeps +journey digits", () => {
+    expect(
+      redactJourneyEmailForLog(
+        "runner+prod-journey-google+journey1730123456789@gmail.com",
+      ),
+    ).toBe("runner+***+journey1730123456789@gmail.com");
+    expect(
+      redactJourneyEmailForLog("lance.essert+journey1730123456789@gmail.com"),
+    ).toBe("lance.essert+journey1730123456789@gmail.com");
   });
 });

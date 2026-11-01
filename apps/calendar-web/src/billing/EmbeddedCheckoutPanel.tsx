@@ -1,10 +1,25 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type FC, Suspense, useCallback, useLayoutEffect, useRef } from "react";
+import {
+  type FC,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import { BillingApi } from "@web/api/billing.api";
+import {
+  checkoutTelemetrySource,
+  trackCheckoutBack,
+  trackCheckoutOpened,
+} from "@web/auth/posthog/signup-funnel";
 import { fetchEmbeddedCheckoutSecret } from "@web/billing/checkout-client-secret";
+import { useCheckoutPanelStore } from "@web/billing/checkout-panel.store";
 import { completeCheckoutSession } from "@web/billing/complete-checkout-session";
 import { getEmbeddedCheckoutComponent } from "@web/billing/embedded-checkout/embedded-checkout.seam";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
+import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
+import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 export const EMBEDDED_CHECKOUT_PANEL_CLASSNAME =
   "max-w-full gap-4 border border-border bg-surface text-center text-text shadow-xl";
@@ -31,9 +46,35 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
   onCheckoutComplete,
 }) => {
   const backButtonRef = useRef<HTMLButtonElement>(null);
+  const checkoutSource = useCheckoutPanelStore((state) => state.source);
+  const telemetrySource = checkoutTelemetrySource(checkoutSource);
+
+  useEffect(() => {
+    trackCheckoutOpened({ source: telemetrySource });
+  }, [telemetrySource]);
+
+  const handleBack = useCallback(() => {
+    trackCheckoutBack({ source: telemetrySource });
+    onBack?.();
+  }, [onBack, telemetrySource]);
+
+  useAppShortcut(
+    "Escape",
+    () => {
+      handleBack();
+    },
+    {
+      enabled: Boolean(onBack),
+      ignoreAppLock: true,
+      preventDefault: true,
+      stopPropagation: true,
+    },
+  );
+
   useLayoutEffect(() => {
     backButtonRef.current?.focus();
   }, []);
+
   const queryClient = useQueryClient();
   const EmbeddedCheckout = getEmbeddedCheckoutComponent();
   const onComplete = useCallback(() => {
@@ -59,11 +100,14 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
         <button
           ref={backButtonRef}
           className={`${SECONDARY_BUTTON_CLASSNAME} self-center`}
-          onClick={onBack}
+          onClick={handleBack}
           onPointerEnter={focusOnPointerEnter}
           type="button"
         >
           Back
+          <ShortcutHint className="ml-2 pointer-coarse:hidden">
+            Esc
+          </ShortcutHint>
         </button>
       ) : null}
     </div>

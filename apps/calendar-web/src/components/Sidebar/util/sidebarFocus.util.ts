@@ -1,4 +1,28 @@
-import { ID_SIDEBAR } from "@web/common/constants/web.constants";
+import { ID_GRID_MAIN, ID_SIDEBAR } from "@web/common/constants/web.constants";
+
+let sidebarPickerReturnFocus: HTMLElement | null = null;
+
+/** Remember where focus was before `i` moves it into the month picker. */
+export const rememberSidebarPickerReturnFocus = () => {
+  const active = document.activeElement;
+  sidebarPickerReturnFocus = active instanceof HTMLElement ? active : null;
+};
+
+/**
+ * Escape from the sidebar month picker returns here, or the main grid when
+ * the prior target is gone.
+ */
+export const restoreSidebarPickerReturnFocus = (): boolean => {
+  const previous = sidebarPickerReturnFocus;
+  sidebarPickerReturnFocus = null;
+  if (previous && document.contains(previous)) {
+    previous.focus({ preventScroll: true });
+    return true;
+  }
+  const grid = document.getElementById(ID_GRID_MAIN);
+  grid?.focus({ preventScroll: true });
+  return Boolean(grid);
+};
 
 /**
  * Focuses the month picker's tab-stoppable day (react-datepicker keeps
@@ -14,6 +38,8 @@ import { ID_SIDEBAR } from "@web/common/constants/web.constants";
 export const focusFirstSidebarItem = (): boolean => {
   const sidebar = document.getElementById(ID_SIDEBAR);
   if (!sidebar) return false;
+
+  rememberSidebarPickerReturnFocus();
 
   const target =
     sidebar.querySelector<HTMLElement>(

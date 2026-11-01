@@ -111,12 +111,118 @@ describe("StripeService", () => {
         .custom_text,
     ).toBeUndefined();
     expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-      idempotencyKey: `compass-checkout-v8-${userId.toString()}`,
+      idempotencyKey: `compass-checkout-v10-${userId.toString()}`,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
     expect(stored?.billing?.stripeCustomerId).toBe("cus_1");
     expect(stored?.billing?.subscriptionStatus).toBe("awaiting_checkout");
+  });
+
+  it("applies synthetic journey coupon discounts only for configured synthetic accounts", async () => {
+    using _env = mockEnv({
+      ...stripeConfigured,
+      STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: "coupon_synthetic_100",
+      SYNTHETIC_JOURNEY_EMAILS: ["lance.essert+prod-journey-google@gmail.com"],
+    });
+    const syntheticUserId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: syntheticUserId,
+      email: "lance.essert+prod-journey-google+journey1730123456789@gmail.com",
+      name: "Synthetic Journey",
+      firstName: "Synthetic",
+      lastName: "Journey",
+      locale: "en",
+      isSynthetic: true,
+    });
+    const realUserId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: realUserId,
+      email: "real.customer@gmail.com",
+      name: "Real Customer",
+      firstName: "Real",
+      lastName: "Customer",
+      locale: "en",
+    });
+
+    const sessionsCreate = mock(() =>
+      Promise.resolve({ client_secret: "cs_discount" }),
+    );
+    const stripeService = new StripeService(
+      stubBillingGateway({
+        createCustomer: mock(() => Promise.resolve({ id: "cus_discount" })),
+        createCheckoutSession: sessionsCreate,
+      }),
+    );
+
+    await stripeService.createCheckoutSession(syntheticUserId.toString());
+    const syntheticArgs = (
+      sessionsCreate.mock.calls as unknown[][]
+    )[0]?.[0] as {
+      discounts?: Array<{ coupon?: string; promotion_code?: string }>;
+    };
+    expect(syntheticArgs.discounts).toEqual([
+      { coupon: "coupon_synthetic_100" },
+    ]);
+    expect(
+      (syntheticArgs as { payment_method_collection?: string })
+        .payment_method_collection,
+    ).toBe("if_required");
+    expect(
+      (syntheticArgs as { automatic_tax?: { enabled?: boolean } })
+        .automatic_tax,
+    ).toBeUndefined();
+    expect(
+      (syntheticArgs as { billing_address_collection?: string })
+        .billing_address_collection,
+    ).toBeUndefined();
+
+    sessionsCreate.mockClear();
+    await stripeService.createCheckoutSession(realUserId.toString());
+    const realArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
+      discounts?: Array<{ coupon?: string; promotion_code?: string }>;
+    };
+    expect(realArgs.discounts).toBeUndefined();
+    expect(
+      (realArgs as { payment_method_collection?: string })
+        .payment_method_collection,
+    ).toBe("always");
+  });
+
+  it("maps promo_ synthetic journey discount ids to Stripe promotion_code checkout params", async () => {
+    using _env = mockEnv({
+      ...stripeConfigured,
+      STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: "promo_synthetic_100",
+      SYNTHETIC_JOURNEY_EMAILS: ["runner@example.com"],
+    });
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "runner+journey1730123456789@example.com",
+      name: "Runner",
+      firstName: "Runner",
+      lastName: "Bot",
+      locale: "en",
+      isSynthetic: true,
+    });
+
+    const sessionsCreate = mock(() =>
+      Promise.resolve({ client_secret: "cs_promo" }),
+    );
+    const stripeService = new StripeService(
+      stubBillingGateway({
+        createCustomer: mock(() => Promise.resolve({ id: "cus_promo" })),
+        createCheckoutSession: sessionsCreate,
+      }),
+    );
+
+    await stripeService.createCheckoutSession(userId.toString());
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
+      discounts?: Array<{ coupon?: string; promotion_code?: string }>;
+    };
+    expect(sessionArgs.discounts).toEqual([
+      { promotion_code: "promo_synthetic_100" },
+    ]);
   });
 
   it("omits trial when trialStartedAt is set without a subscription", async () => {
@@ -992,7 +1098,7 @@ describe("StripeService", () => {
       expect(sessionArgs.ui_mode).toBeUndefined();
       expect(sessionArgs.redirect_on_completion).toBeUndefined();
       expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-        idempotencyKey: `compass-checkout-v8-desktop-${userId.toString()}`,
+        idempotencyKey: `compass-checkout-v10-desktop-${userId.toString()}`,
       });
     });
 

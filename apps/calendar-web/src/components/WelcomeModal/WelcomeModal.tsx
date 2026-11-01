@@ -1,4 +1,6 @@
 import { useContext, useEffect, useId, useRef, useState } from "react";
+import { BILLING_PLAN } from "@core/constants/billing.constants";
+import { WELCOME_KEYBOARD_SHORTCUTS_CONTINUE_LABEL } from "@core/onboarding/welcome-keyboard-shortcuts.content";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { trackSignupStartedAtClick } from "@web/auth/posthog/signup-funnel";
@@ -10,6 +12,7 @@ import {
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useIsProviderAvailable } from "@web/auth/providers/useIsProviderAvailable";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
+import { useAppConfigQuery } from "@web/billing/billing.query";
 import { MODAL_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { SignInProviderButtons } from "@web/components/AuthModal/components/SignInProviderButtons";
@@ -18,10 +21,12 @@ import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { hasPlayDeepLink } from "@web/components/ShortcutShowcase/play-link";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { PixelPirate } from "./PixelPirate";
 import { useFaqDisclosure } from "./useFaqDisclosure";
 import { useWelcomeJumpShortcuts } from "./useWelcomeJumpShortcuts";
 import { WelcomeFaqList } from "./WelcomeFaqList";
+import { WelcomeKeyboardShortcutsStep } from "./WelcomeKeyboardShortcutsStep";
 import { WelcomeLinks } from "./WelcomeLinks";
 import { WelcomeSteps } from "./WelcomeSteps";
 import { welcomeGuideActions } from "./welcome.guide.store";
@@ -43,6 +48,7 @@ import { shouldDelegateEnterToWelcomePrimary } from "./welcome-modal-enter.util"
 import {
   nextWelcomeStep,
   previousWelcomeStep,
+  WELCOME_KEYBOARD_SHORTCUTS_STEP,
   type WelcomeStep,
 } from "./welcome-steps";
 
@@ -57,6 +63,9 @@ const QUIET_TEXT_CTA_CLASS =
 
 export function WelcomeModal() {
   const { authenticated } = useContext(SessionContext);
+  const trialLengthDays =
+    useAppConfigQuery().data?.billing.trialLengthDays ??
+    BILLING_PLAN.TRIAL_LENGTH_DAYS;
   const { openModal, isOpen: isAuthModalOpen } = useAuthModal();
   const { available, isLoading, loadingKind, startSignIn } = useSignInProviders(
     { signupFlow: true },
@@ -194,6 +203,11 @@ export function WelcomeModal() {
     });
   };
 
+  const advanceToKeyboardShortcuts = () => {
+    if (closing || isAuthHandoffInFlight()) return;
+    setStep(WELCOME_KEYBOARD_SHORTCUTS_STEP);
+  };
+
   const beginAuthHandoff = () => {
     skipFocusRestoreRef.current = true;
     hidingForAuthRef.current = true;
@@ -235,7 +249,7 @@ export function WelcomeModal() {
     }
     if (
       e.key === "Enter" &&
-      (step === 1 || step === 2 || step === 3) &&
+      (step === 1 || step === 2 || step === 3 || step === 4) &&
       shouldDelegateEnterToWelcomePrimary(
         document.activeElement,
         primaryRef.current,
@@ -249,13 +263,15 @@ export function WelcomeModal() {
         } else {
           handOffToAuth("sign_up");
         }
+      } else if (step === 4) {
+        explore();
       } else {
         advance();
       }
       return;
     }
     if (isAuthShortcutBlocked()) return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (hasCommandModifier(e)) return;
     const key = keyboardKey(e).toLowerCase();
     if (key === "i") {
       e.preventDefault();
@@ -275,7 +291,7 @@ export function WelcomeModal() {
       handOffToAuth("sign_up");
     } else if (key === "s") {
       e.preventDefault();
-      explore();
+      advanceToKeyboardShortcuts();
     }
   };
 
@@ -421,7 +437,7 @@ export function WelcomeModal() {
                     <ShortcutHint className="ml-2">Enter</ShortcutHint>
                   </button>
                   <p className="whitespace-nowrap text-center text-text-muted text-xs">
-                    {welcomeTrialCardTermsLine()}
+                    {welcomeTrialCardTermsLine(trialLengthDays)}
                   </p>
                 </>
               ) : (
@@ -471,12 +487,30 @@ export function WelcomeModal() {
               ) : null}
               <button
                 type="button"
-                onClick={explore}
+                onClick={advanceToKeyboardShortcuts}
                 className={QUIET_TEXT_CTA_CLASS}
                 {...navigationBusyProps}
               >
                 {LOCAL_DEVICE_ONLY_LABEL}
                 <ShortcutHint className="ml-2">S</ShortcutHint>
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <WelcomeKeyboardShortcutsStep />
+            <div className="flex w-full flex-col items-center gap-3">
+              <button
+                type="button"
+                ref={primaryRef}
+                onClick={explore}
+                className={PRIMARY_CTA_CLASS}
+                {...navigationBusyProps}
+              >
+                {WELCOME_KEYBOARD_SHORTCUTS_CONTINUE_LABEL}
+                <ShortcutHint className="ml-2">Enter</ShortcutHint>
               </button>
             </div>
           </>

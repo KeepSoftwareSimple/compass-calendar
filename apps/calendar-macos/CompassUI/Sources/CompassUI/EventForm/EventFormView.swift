@@ -65,8 +65,7 @@ public struct EventFormView: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 EventFormCalendarSection(
                                     model: model,
-                                    draft: draft,
-                                    focusField: model.eventFormFocusedField
+                                    draft: draft
                                 )
                                 .disabled(isReadOnly)
                                 EventFormColorSection(
@@ -92,6 +91,7 @@ public struct EventFormView: View {
                                     model: model,
                                     draft: draft
                                 )
+                                .id(EventFormField.conference)
                                 EventFormIconRow(icon: .users, alignTop: true) {
                                     EventFormAttendeesSection(
                                         model: model,
@@ -123,8 +123,7 @@ public struct EventFormView: View {
 
                         EventFormRsvpSection(
                             model: model,
-                            draft: draft,
-                            focusField: model.eventFormFocusedField
+                            draft: draft
                         )
                         .id(EventFormField.rsvp)
                     }
@@ -167,6 +166,7 @@ public struct EventFormView: View {
                 .disabled(model.hasPendingEventMutations)
                 .accessibilityLabel("Save")
                 .accessibilityIdentifier("compass-event-form-save")
+                .focusable()
                 EventFormFooterTipsView(
                     model: model,
                     tabNavigationApplies: model.eventFormDateKeyOwner == nil)
@@ -187,6 +187,9 @@ public struct EventFormView: View {
         .onChange(of: draft.clientId) { _, _ in model.cancelBookedMeetingConfirmation() }
         .onChange(of: model.eventFormFocusedField) { _, field in
             titleFocused = field == .title
+        }
+        .onEventFormFocusRequest(model, field: .title) {
+            titleFocused = true
         }
     }
 

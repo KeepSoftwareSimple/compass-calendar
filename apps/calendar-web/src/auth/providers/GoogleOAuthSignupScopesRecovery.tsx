@@ -22,6 +22,7 @@ import {
   OverlayPanelActions,
 } from "@web/components/OverlayPanel/OverlayPanel";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
+import { isPlainEnterKey } from "@web/shortcuts/keyboard-modifiers.util";
 
 export const GoogleOAuthSignupScopesRecovery: FC = () => {
   const surface = useMissingPermissionsStore(selectMissingPermissionsSurface);
@@ -60,13 +61,7 @@ export const GoogleOAuthSignupScopesRecovery: FC = () => {
       initialFocusRef={retryButtonRef}
       message={GOOGLE_SIGNUP_SCOPES_RECOVERY_MESSAGE}
       onKeyDown={(event) => {
-        if (
-          event.key === "Enter" &&
-          !event.metaKey &&
-          !event.ctrlKey &&
-          !event.shiftKey &&
-          !event.altKey
-        ) {
+        if (isPlainEnterKey(event)) {
           event.preventDefault();
           event.stopPropagation();
           handleRetry();

@@ -4,10 +4,7 @@ import {
   isInternalOrTestHostname,
   isNonHumanUserAgent,
 } from "@core/analytics/posthog-audience.util";
-import {
-  isSyntheticAccountEmail,
-  syntheticAccountPosthogFlags,
-} from "@core/analytics/synthetic-account.util";
+import { isSyntheticAccountEmail } from "@core/analytics/synthetic-account.util";
 
 export const POSTHOG_INTERNAL_OR_TEST_USER_PROPERTY =
   "$internal_or_test_user" as const;
@@ -58,8 +55,4 @@ export function shouldRegisterSyntheticAccount(input: {
     shouldRegisterInternalOrTestUserFromEmail(input.email) ||
     isSyntheticAccountEmail(input.email)
   );
-}
-
-export function syntheticAccountPosthogRegistration(): Record<string, boolean> {
-  return syntheticAccountPosthogFlags();
 }

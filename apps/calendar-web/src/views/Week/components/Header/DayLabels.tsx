@@ -81,8 +81,11 @@ export const DayLabels: FC<Props> = ({
         style={{ width: marginLeft }}
       >
         <GridTimezoneLabel
-          abbreviationAt={weekDays
-            .at(-1)
+          abbreviationAt={(
+            weekDays.find((day) => day.isSame(startOfView, "day")) ??
+            weekDays[Math.floor(weekDays.length / 2)] ??
+            weekDays[0]
+          )
             ?.hour(12)
             .minute(0)
             .second(0)

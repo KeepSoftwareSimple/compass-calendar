@@ -12,6 +12,7 @@ import {
   selectMissingPermissionsSurface,
   useMissingPermissionsStore,
 } from "@web/auth/providers/missing-permissions.store";
+import { flushPendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   afterAll,
@@ -172,6 +173,7 @@ describe("completeProviderAuthCallback (google)", () => {
       navigate,
       search: callbackSearch("unknown-state"),
     });
+    flushPendingShellToast();
 
     expect(mockLoginOrSignup).not.toHaveBeenCalled();
     expect(completeAuthentication).not.toHaveBeenCalled();

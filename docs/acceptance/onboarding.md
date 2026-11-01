@@ -195,8 +195,10 @@ tips**. Sidebar tips, palette pills, and pointer-intent pills share
 ### UX
 
 On hosted billing, email or OAuth signup finishes with a read-only account in
-`awaiting_checkout`, then the auth modal shows the **Start your 7-day free
-trial** step: charge-date copy and embedded Checkout (`trial_period_days: 7`).
+`awaiting_checkout`, then the auth modal shows the **Start your N-day free
+trial** step (`N` from `billing.trialLengthDays`): charge-date copy on
+`TrialStartAsk`, **S** / **Mod+Enter** to open embedded Checkout, and
+`trial_period_days` from config.
 Closing the step without paying opens **Finish starting your trial**
 (`BillingGateModal`) with **Add card**. Completing Checkout runs anonymous event migration once billing becomes writable.
 

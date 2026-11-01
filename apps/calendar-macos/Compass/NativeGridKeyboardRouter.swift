@@ -72,6 +72,7 @@ final class NativeGridKeyboardRouter {
             .navGoToDate,
             .otherSidebar,
             .focusSidebar,
+            .focusEvent,
             .focusNotice,
             .otherSubscribe,
         ]
@@ -400,6 +401,15 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        // Header buttons own activation and traversal, rather than grid edge cycling.
+        if model.isTitleBarControlFocused {
+            if keyEvent.modifiers.isEmpty,
+                keyEvent.key == .named(.enter) || isSpaceKey(keyEvent.key) { return false }
+            if keyEvent.key == .named(.tab), keyEvent.modifiers.isEmpty || keyEvent.modifiers == [.shift] {
+                return false
+            }
+        }
+
         // Sidebar and banner focus own their keys before the grid's draft keys,
         // which would read digits as a typed time and Enter as "open event".
         if !model.isEventFormVisible,
@@ -461,7 +471,8 @@ final class NativeGridKeyboardRouter {
     /// XCUITest typing often misses the SwiftUI title field; mirror keystrokes into the draft.
     /// Probes mirror via `EventFormAccessibilityProbeView` when `-COMPASS_UI_TEST` is set.
     private func handleUITestEventFormTyping(_ keyEvent: KeyEvent) -> Bool {
-        guard UITestLaunchPolicy.mirrorsEventFormTitleTyping else { return false }
+        guard UITestLaunchPolicy.mirrorsEventFormTitleTyping,
+            model.eventFormFocusedField == .title else { return false }
         // The title probe is a fallback, never a replacement for a real text editor.
         if let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isEditable {
             return false
@@ -546,7 +557,7 @@ final class NativeGridKeyboardRouter {
             return true
         }
         if matchesBinding(keyEvent, id: .editOpenDescriptionLink) {
-            guard isDescriptionFormEditorFocused() else { return false }
+            guard model.isEventFormVisible else { return false }
             let opened = NSApp.sendAction(
                 NSSelectorFromString("openDescriptionLinkAtCaret:"),
                 to: nil,
@@ -557,22 +568,6 @@ final class NativeGridKeyboardRouter {
         }
         if handleColorSwatchKeys(keyEvent) {
             return true
-        }
-        if keyEvent.modifiers.isEmpty,
-            case .character(let char) = keyEvent.key,
-            let digit = Int(String(char)),
-            (1...9).contains(digit),
-            !isEditableNonDescriptionTextInputFocused()
-        {
-            let opened = NSApp.sendAction(
-                NSSelectorFromString("openDescriptionLinkDigit:"),
-                to: nil,
-                from: NSNumber(value: digit - 1)
-            )
-            if opened {
-                model.recordShortcut(.editOpenDescriptionLinkDigit)
-                return true
-            }
         }
         if keyEvent.modifiers == [.command], keyEvent.key == .named(.enter) {
             Task { await model.saveDraft() }
@@ -596,12 +591,25 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if keyEvent.modifiers == [.command], case .character(let char) = keyEvent.key {
-            if char.isNumber || char == "-" || char == "=" {
-                model.jumpEventFormField(digit: char)
+        if keyEvent.modifiers == [.command] {
+            let digit: Character?
+            switch keyEvent.key {
+            case .character(let char) where char.isNumber: digit = char
+            case .punctuation("-"): digit = "-"
+            case .punctuation("="): digit = "="
+            default: digit = nil
+            }
+            if let digit {
+                model.jumpEventFormField(digit: digit)
                 model.formFieldDigitHintsVisible = false
                 return true
             }
+        }
+
+        // RSVP radio-style controls own arrows and activation before grid shortcuts.
+        if model.eventFormFocusedField == .rsvp, keyEvent.modifiers.isEmpty,
+            isSpaceKey(keyEvent.key) || [.named(.arrowLeft), .named(.arrowRight), .named(.arrowUp), .named(.arrowDown)].contains(keyEvent.key) {
+            return false
         }
 
         // Header buttons own activation and Tab navigation.
@@ -626,15 +634,18 @@ final class NativeGridKeyboardRouter {
             guard isPalette else { return false }
         }
 
+        // A focused form button is not a text editor. Allow E-field sequences
+        // after the editable first-responder guard above has passed.
+        dispatcher.isTextInputFocused = false
         dispatcher.shortcutContext = model.shortcutContext
         syncEditSequenceFieldGating()
-        if let id = dispatcher.dispatch(keyEvent) {
-            performShortcut(id)
-            return true
-        }
-
+        let shortcut = dispatcher.dispatch(keyEvent)
         if let field = dispatcher.lastResolvedLeaderField {
             handleEditSequenceField(field)
+            return true
+        }
+        if let shortcut {
+            performShortcut(shortcut)
             return true
         }
 
@@ -824,6 +835,8 @@ final class NativeGridKeyboardRouter {
                 model.onboardingStore.toggleWelcomeFaq(digit - 1)
             } else if step == 3 {
                 handleWelcomeLastStepKey(char)
+            } else if step == 4 {
+                break
             }
         default:
             break
@@ -868,6 +881,16 @@ final class NativeGridKeyboardRouter {
             model.commitMonthPickerFocus()
         case .named(.escape):
             model.clearMonthPickerFocus()
+        case .character(let char):
+            if char == "u" {
+                model.clearMonthPickerFocus()
+                model.focusFirstCalendarEvent()
+            } else if char == "i" {
+                break
+            } else {
+                model.clearMonthPickerFocus()
+                return false
+            }
         default:
             model.clearMonthPickerFocus()
             return false

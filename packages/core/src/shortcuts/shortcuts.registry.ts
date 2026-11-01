@@ -202,13 +202,13 @@ export const SHORTCUTS_REGISTRY = [
   {
     id: "focus-sidebar",
     keys: [...B.focusSidebar.keycaps],
-    label: "Focus month picker",
+    label: "Move focus right (sidebar or event form)",
     section: "focus",
   },
   {
     id: "focus-event",
     keys: [...B.focusEvent.keycaps],
-    label: "Focus calendar event",
+    label: "Move focus left (calendar grid)",
     section: "focus",
   },
   {
@@ -396,14 +396,7 @@ export const SHORTCUTS_REGISTRY = [
   {
     id: "edit-open-description-link",
     keys: [...B.editOpenDescriptionLink.keycaps],
-    label: "Open link under description caret",
-    section: "edit",
-    when: { isFormOpen: true },
-  },
-  {
-    id: "edit-open-description-link-digit",
-    keys: [...B.editOpenDescriptionLinkDigit.keycaps],
-    label: "Open description link by number",
+    label: "Open focused description link",
     section: "edit",
     when: { isFormOpen: true },
   },

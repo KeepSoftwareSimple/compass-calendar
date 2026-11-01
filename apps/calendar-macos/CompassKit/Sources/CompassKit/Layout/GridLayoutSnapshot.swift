@@ -152,6 +152,7 @@ public struct GridLayoutTimedEventInput: Sendable {
     public var endDate: String
     public var eventId: String
     public var startDate: String
+    public var timeZone: String?
     public var title: String
 
     public init(
@@ -160,6 +161,7 @@ public struct GridLayoutTimedEventInput: Sendable {
         endDate: String,
         eventId: String,
         startDate: String,
+        timeZone: String? = nil,
         title: String
     ) {
         self.calendarId = calendarId
@@ -167,6 +169,7 @@ public struct GridLayoutTimedEventInput: Sendable {
         self.endDate = endDate
         self.eventId = eventId
         self.startDate = startDate
+        self.timeZone = timeZone
         self.title = title
     }
 }

@@ -71,6 +71,8 @@ public final class NativeCalendarRootModel {
     /// Month picker day holding keyboard focus after `i`, like the web's
     /// focused datepicker day. Nil when the picker does not have focus.
     public internal(set) var monthPickerFocusDate: Date?
+    /// Set by `i` in Life view; the sidebar view focuses birth date and clears this.
+    public var pendingLifeSidebarFieldFocus = false
     /// Banner holding keyboard focus after `p`, like the web's `data-notice` focus.
     public internal(set) var focusedNotice: NativeNotice?
     /// Calendar list whose rows take number keys, like the web's focused
@@ -100,8 +102,10 @@ public final class NativeCalendarRootModel {
     public var eventFormDateKeyOwner: EventFormDateFieldKeys.Owner?
     public var eventFormTimeKeyOwner: String?
     public var eventFormFocusedField: EventFormField = .title
-    public internal(set) var eventFormActionsFocusRequest = 0
-    public internal(set) var eventFormRecurrenceFocusRequest = 0
+    /// Bumps on every `focusEventFormField` so a repeated shortcut can restore
+    /// focus even when the focused field is unchanged.
+    public internal(set) var eventFormFocusRequest = 0
+    public var isTitleBarControlFocused = false
     public var isEventFormActionFocused = false
     /// Keyboard focus inside the color swatches while `eventFormFocusedField == .color`.
     public internal(set) var colorSwatchFocusIndex = 0

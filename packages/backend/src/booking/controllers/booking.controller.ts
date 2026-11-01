@@ -68,6 +68,34 @@ class BookingController {
     }
   };
 
+  getHostUpcomingReservations = async (req: SessionRequest, res: Response) => {
+    try {
+      const userId = zObjectId.parse(req.session?.getUserId());
+      const response = await publicBookingService.listHostUpcomingReservations(
+        userId,
+        routeParam(req.params["slug"]) ?? "",
+      );
+      res.status(Status.OK).json(response);
+    } catch (error) {
+      respondBookingError(res, error);
+    }
+  };
+
+  cancelHostReservation = async (req: SessionRequest, res: Response) => {
+    try {
+      const userId = zObjectId.parse(req.session?.getUserId());
+      const reservationId = zObjectId.parse(req.params["id"]);
+      await publicBookingService.cancelReservationForPageOwner(
+        userId,
+        routeParam(req.params["slug"]) ?? "",
+        reservationId,
+      );
+      res.status(Status.OK).json({ ok: true });
+    } catch (error) {
+      respondBookingError(res, error, "cancel");
+    }
+  };
+
   getPublicPage = async (req: Request, res: Response) => {
     try {
       const response = await publicBookingService.getPublicPage(

@@ -78,7 +78,7 @@
               "height": 57,
               "left": 55,
               "top": 480,
-              "width": 212,
+              "width": 155,
               "zIndex": 1
             },
             "isDraft": false,
@@ -96,9 +96,9 @@
             "focusColorHex": "#3b82f6",
             "frame": {
               "height": 57,
-              "left": 99,
+              "left": 210,
               "top": 510,
-              "width": 212,
+              "width": 155,
               "zIndex": 2
             },
             "isDraft": false,
@@ -217,7 +217,7 @@
               "height": 57,
               "left": 375,
               "top": 480,
-              "width": 212,
+              "width": 155,
               "zIndex": 1
             },
             "isDraft": false,
@@ -235,9 +235,9 @@
             "focusColorHex": "#3b82f6",
             "frame": {
               "height": 57,
-              "left": 419,
+              "left": 530,
               "top": 510,
-              "width": 212,
+              "width": 155,
               "zIndex": 2
             },
             "isDraft": false,
@@ -378,7 +378,7 @@
               "height": 57,
               "left": 385,
               "top": 480,
-              "width": 72,
+              "width": 60,
               "zIndex": 1
             },
             "isDraft": false,
@@ -396,9 +396,9 @@
             "focusColorHex": "#3b82f6",
             "frame": {
               "height": 57,
-              "left": 429,
+              "left": 445,
               "top": 510,
-              "width": 72,
+              "width": 60,
               "zIndex": 2
             },
             "isDraft": false,
@@ -556,7 +556,7 @@
               "height": 57,
               "left": 55,
               "top": 480,
-              "width": 212,
+              "width": 155,
               "zIndex": 1
             },
             "isDraft": false,
@@ -574,9 +574,9 @@
             "focusColorHex": "#3b82f6",
             "frame": {
               "height": 57,
-              "left": 99,
+              "left": 210,
               "top": 510,
-              "width": 212,
+              "width": 155,
               "zIndex": 2
             },
             "isDraft": false,

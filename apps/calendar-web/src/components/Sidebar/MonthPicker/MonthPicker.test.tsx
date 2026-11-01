@@ -17,10 +17,12 @@ import dayjs from "@core/util/date/dayjs";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import * as Track from "@web/auth/posthog/track";
 import { MonthPicker } from "@web/components/Sidebar/MonthPicker/MonthPicker";
+import { rememberSidebarPickerReturnFocus } from "@web/components/Sidebar/util/sidebarFocus.util";
 import {
   pageJumpHintActions,
   usePageJumpHintStore,
 } from "@web/shortcuts/page-jump/page-jump.store";
+import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { MONTH_PICKER_IN_VIEW_CLASS } from "./monthPickerDayClassName";
 import {
   afterEach,
@@ -297,6 +299,7 @@ describe("MonthPicker", () => {
 
     act(() => getTabStopDay()?.focus());
     expect(picker).toHaveTextContent("move by week");
+    expect(picker).toHaveTextContent("returns to the grid");
     expect(picker).not.toHaveTextContent("focuses the picker");
     expect(picker).not.toHaveTextContent("Arrows");
     expect(picker.querySelector("[data-testid='arrowup-icon']")).not.toBeNull();
@@ -622,5 +625,86 @@ describe("MonthPicker", () => {
       expect(screen.getByText(currentMonthLabel)).toBeInTheDocument();
     });
     expect(onSelectDate).not.toHaveBeenCalled();
+  });
+
+  it("Escape restores focus to where the picker was opened from", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    renderPicker(
+      <>
+        <button type="button">Grid</button>
+        <MonthPicker onSelectDate={mock()} {...pickerProps} />
+      </>,
+    );
+
+    screen.getByRole("button", { name: "Grid" }).focus();
+    rememberSidebarPickerReturnFocus();
+    act(() => getTabStopDay()?.focus());
+    await user.keyboard("{Escape}");
+
+    expect(screen.getByRole("button", { name: "Grid" })).toHaveFocus();
+  });
+
+  it("Tab moves to the next focusable item after the picker", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    renderPicker(
+      <>
+        <MonthPicker onSelectDate={mock()} {...pickerProps} />
+        <button type="button">After picker</button>
+      </>,
+    );
+
+    act(() => getTabStopDay()?.focus());
+    await user.tab();
+
+    expect(screen.getByRole("button", { name: "After picker" })).toHaveFocus();
+  });
+
+  it("Shift+Tab leaves the picker instead of trapping focus", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    renderPicker(<MonthPicker onSelectDate={mock()} {...pickerProps} />);
+
+    const tabStop = getTabStopDay();
+    act(() => tabStop?.focus());
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+
+    expect(tabStop).not.toHaveFocus();
+  });
+
+  it("still fires global letter shortcuts while a day is focused", async () => {
+    const onFocusEvent = mock();
+    const ShortcutHarness = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <HotkeysProvider>
+          <FocusEventShortcut onFocusEvent={onFocusEvent} />
+          {children}
+        </HotkeysProvider>
+      </QueryClientProvider>
+    );
+    const FocusEventShortcut = ({
+      onFocusEvent,
+    }: {
+      onFocusEvent: () => void;
+    }) => {
+      useAppShortcutUp("U", onFocusEvent, {
+        ignoreInputs: false,
+        shortcutId: "focus-event",
+      });
+      return null;
+    };
+
+    render(<MonthPicker onSelectDate={mock()} {...pickerProps} />, {
+      wrapper: ShortcutHarness,
+    });
+
+    act(() => getTabStopDay()?.focus());
+    pressKey("u");
+
+    await waitFor(() => {
+      expect(onFocusEvent).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -19,6 +19,7 @@ jobs:
   deploy:
     name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment: ${{ inputs.environment }}
     concurrency:
       group: deploy-${{ inputs.environment }}
@@ -147,6 +148,9 @@ jobs:
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID }}
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          # Same secret name as prod-journey; production Environment must expose it
+          # so deploy can write stripe.syntheticJourneyDiscountId into compass.yaml.
+          STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: ${{ secrets.STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID }}
           EMAIL_PROVIDER: ${{ vars.EMAIL_PROVIDER }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_SCHEDULE_PROFILE: ${{ vars.EMAIL_SCHEDULE_PROFILE }}
@@ -284,6 +288,9 @@ jobs:
                 "  webhookSecret: \"${STRIPE_WEBHOOK_SECRET}\"" \
                 "  priceId: \"${STRIPE_PRICE_ID}\"" \
                 "  publishableKey: \"${STRIPE_PUBLISHABLE_KEY}\""
+              # shellcheck source=.github/scripts/deploy-write-stripe-synthetic-discount.sh
+              . .github/scripts/deploy-write-stripe-synthetic-discount.sh
+              write_stripe_synthetic_journey_discount
             else
               echo "Stripe config: omitting stripe block (environment=${{ inputs.environment }}; secretKey=$([ -n "$STRIPE_SECRET_KEY" ] && echo present || echo empty); webhookSecret=$([ -n "$STRIPE_WEBHOOK_SECRET" ] && echo present || echo empty); priceId=$([ -n "$STRIPE_PRICE_ID" ] && echo present || echo empty); publishableKey=$([ -n "$STRIPE_PUBLISHABLE_KEY" ] && echo present || echo empty))" >&2
             fi
@@ -347,6 +354,14 @@ jobs:
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "mv ~/compass/config.sh.$$ ~/compass/config.sh"
           scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compass" "$SSH_USER@$SSH_HOST:~/compass/compass.$$"
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
+          # Update nginx.conf in place so the api-proxy bind mount keeps the same
+          # inode. Replacing ~/compass/api-proxy/ forces a container recreate and
+          # a brief 502 window during rolling deploys.
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "mkdir -p ~/compass/api-proxy"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/api-proxy/nginx.conf" \
+            "$SSH_USER@$SSH_HOST:~/compass/api-proxy/nginx.conf"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/rolling-backend.sh" "$SSH_USER@$SSH_HOST:~/compass/rolling-backend.sh.$$"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "chmod +x ~/compass/rolling-backend.sh.$$ && mv ~/compass/rolling-backend.sh.$$ ~/compass/rolling-backend.sh"
           # Always enable the booking and sync profiles: their config is always
           # written above, and an explicit COMPOSE_PROFILES var (e.g.
           # `selfhosted`) would otherwise override the helper's

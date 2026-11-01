@@ -12,7 +12,7 @@ import {
   isStripeConfigured,
 } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
-import { isSyntheticAccount } from "@backend/user/synthetic-account.service";
+import { shouldBypassBillingStatusForSynthetic } from "@backend/user/synthetic-account.service";
 
 /**
  * Pure status derivation. Writability is a total map over the status union
@@ -71,7 +71,7 @@ class BillingService {
       isBillingEnforced(CONFIG) &&
       isStripeConfigured(CONFIG) &&
       (isBillingBypassed(CONFIG, user.email) ||
-        isSyntheticAccount(user.email, user.isSynthetic))
+        shouldBypassBillingStatusForSynthetic(user.email, user.isSynthetic))
     ) {
       return {
         subscriptionStatus: "active",

@@ -35,6 +35,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run prod journey leg
+        id: prod_journey
         env:
           DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
           PROD_JOURNEY_PROVIDER: ${{ matrix.provider }}
@@ -46,6 +47,34 @@ jobs:
           PROD_JOURNEY_APPLE_PASSWORD: ${{ secrets.PROD_JOURNEY_APPLE_PASSWORD }}
           STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: ${{ secrets.STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID }}
         run: bash .github/scripts/prod-journey.sh
+
+      - name: Fallback prod journey account cleanup
+        if: always()
+        timeout-minutes: 10
+        env:
+          PROD_JOURNEY_PROVIDER: ${{ matrix.provider }}
+          PROD_JOURNEY_ENABLED: "1"
+          PROD_JOURNEY_CLEANUP_FALLBACK: "1"
+          PROD_JOURNEY_GOOGLE_EMAIL: ${{ secrets.PROD_JOURNEY_GOOGLE_EMAIL }}
+          PROD_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.PROD_JOURNEY_GOOGLE_PASSWORD }}
+          PROD_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.PROD_JOURNEY_MICROSOFT_EMAIL }}
+          PROD_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.PROD_JOURNEY_MICROSOFT_PASSWORD }}
+          PROD_JOURNEY_APPLE_EMAIL: ${{ secrets.PROD_JOURNEY_APPLE_EMAIL }}
+          PROD_JOURNEY_APPLE_PASSWORD: ${{ secrets.PROD_JOURNEY_APPLE_PASSWORD }}
+        run: |
+          bunx playwright install chromium
+          bunx playwright test --config e2e/playwright.prod-journey.config.ts prod-journey-cleanup.spec.ts
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-journey-${{ matrix.provider }}-${{ github.run_id }}
+          path: |
+            e2e/test-results/prod-journey/
+            test-results/prod-journey/
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Notify Discord on failure
         if: failure()

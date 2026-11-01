@@ -262,8 +262,8 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
 
   if (variant === "sidebar-primary") {
     return (
-      <div className="flex flex-col gap-2">
-        <div className="relative" ref={rootRef}>
+      <div className="flex w-full min-w-0 flex-col gap-2">
+        <div className="relative w-full min-w-0" ref={rootRef}>
           <button
             aria-busy={isConnecting || undefined}
             aria-controls={menuId}

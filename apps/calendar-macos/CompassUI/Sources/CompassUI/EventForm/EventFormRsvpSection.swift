@@ -6,7 +6,9 @@ struct EventFormRsvpSection: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable var model: NativeCalendarRootModel
     let draft: GridEventDraft
-    let focusField: EventFormField
+    @FocusState private var focusedResponse: ResponseStatusEnum?
+    // Keep key-loop eligibility stable while a scope dialog temporarily takes focus.
+    @State private var tabStopResponse: ResponseStatusEnum?
 
     private let options: [(ResponseStatusEnum, String)] = [
         (.accepted, "Going"),
@@ -23,7 +25,7 @@ struct EventFormRsvpSection: View {
                 HStack(spacing: 0) {
                     ForEach(options, id: \.0.rawValue) { status, label in
                         Button {
-                            Task { await model.selectRsvpResponse(status) }
+                            respond(status)
                         } label: {
                             Text(label)
                                 .font(.rubik(12))
@@ -31,9 +33,37 @@ struct EventFormRsvpSection: View {
                                 .padding(.vertical, 6)
                                 .frame(maxWidth: .infinity)
                                 .background(selectedStatus == status ? theme.accentColor : theme.surfaceColor)
-                                .foregroundStyle(selectedStatus == status ? theme.surfacePanelColor : theme.textMutedColor)
+                                .foregroundStyle(selectedStatus == status ? theme.onAccentColor : theme.textMutedColor)
                         }
                         .buttonStyle(.plain)
+                        .focusable(status == (tabStopResponse ?? selectedStatus ?? options.first?.0))
+                        .focusEffectDisabled()
+                        .focused($focusedResponse, equals: status)
+                        .onMoveCommand { direction in
+                            guard let index = options.firstIndex(where: { $0.0 == status }) else { return }
+                            let delta: Int
+                            switch direction {
+                            case .left, .up: delta = -1
+                            case .right, .down: delta = 1
+                            @unknown default: return
+                            }
+                            let next = options[(index + delta + options.count) % options.count].0
+                            tabStopResponse = next
+                            DispatchQueue.main.async {
+                                focusedResponse = next
+                                respond(next)
+                            }
+                        }
+                        .onKeyPress(.return) { respond(status); return .handled }
+                        .onKeyPress(.space) { respond(status); return .handled }
+                        .overlay {
+                            if focusedResponse == status {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(theme.accentColor, lineWidth: 2)
+                                    .padding(2)
+                            }
+                        }
+                        .accessibilityValue(selectedStatus == status ? "Selected" : "Not selected")
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -44,11 +74,25 @@ struct EventFormRsvpSection: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(focusField == .rsvp ? theme.accentColor : theme.borderColor, lineWidth: 1)
+                    .stroke(focusedResponse != nil ? theme.accentColor : theme.borderColor, lineWidth: 1)
             )
             .accessibilityIdentifier("compass-event-form-rsvp")
             .pageJumpChipAnchor(id: "form-rsvp")
+            .onChange(of: model.eventFormFocusRequest) { _, _ in
+                guard model.eventFormFocusedField == .rsvp else { return }
+                let target = selectedStatus.flatMap { status in options.contains(where: { $0.0 == status }) ? status : nil }
+                    ?? options.first?.0
+                tabStopResponse = target
+                DispatchQueue.main.async {
+                    guard model.isEventFormVisible, model.eventFormFocusedField == .rsvp else { return }
+                    focusedResponse = target
+                }
+            }
         }
+    }
+
+    private func respond(_ status: ResponseStatusEnum) {
+        Task { await model.selectRsvpResponse(status) }
     }
 
     private var selectedStatus: ResponseStatusEnum? {

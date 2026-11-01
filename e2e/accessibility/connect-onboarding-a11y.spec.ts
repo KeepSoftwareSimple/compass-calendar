@@ -34,6 +34,7 @@ async function prepareSignedInZeroConnectionsPage(
       "compass.onboarding.has-seen-shortcut-showcase",
       "true",
     );
+    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
   });
 
   await page.route("**/api/**", async (route) => {

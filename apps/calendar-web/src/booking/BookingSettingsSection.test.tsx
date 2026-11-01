@@ -55,7 +55,15 @@ import { settingsActions } from "@web/settings/settings.store";
 import { useSettingsShortcuts } from "@web/settings/useSettingsShortcuts";
 import { clearAppLockReasons } from "@web/shortcuts/app-lock";
 import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
-import { afterAll, afterEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  describe,
+  expect,
+  it,
+  mock,
+  setSystemTime,
+} from "bun:test";
 
 const actualUseAppAccess = (await import("@web/billing/useAppAccess"))
   .useAppAccess;
@@ -96,6 +104,7 @@ afterAll(() => {
 afterEach(() => {
   isAppAccessMocked = true;
   mockTrack.mockClear();
+  setSystemTime();
   setPinnedTimeZone(null);
   clearAppLockReasons();
   setClipboard(originalClipboard);
@@ -614,6 +623,10 @@ describe("BookingSettingsSection", () => {
     // Pinned rather than relying on the browser zone: CI runs at TZ=UTC, where
     // a browser-zone assertion would pass even against the "UTC" placeholder.
     setPinnedTimeZone(HOST_TIME_ZONE);
+    // The copy renders the zone's current abbreviation, so the clock has to be
+    // pinned too: on an unpinned clock this asserted CDT and started failing
+    // the moment Chicago fell back to CST on 2026-11-01.
+    setSystemTime(new Date("2026-10-15T12:00:00.000Z"));
 
     server.use(
       http.get(bookingPageUrl, () =>

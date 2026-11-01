@@ -29,7 +29,7 @@ import { isStripeConfigured } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
 
 /** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
-const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v8-";
+const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v10-";
 
 function syntheticJourneyCheckoutDiscounts(user: {
   email: string;
@@ -235,6 +235,7 @@ export class StripeService {
     }
 
     const discounts = syntheticJourneyCheckoutDiscounts(user);
+    const syntheticJourneyCheckout = discounts !== undefined;
 
     const session = await this.stripe
       .createCheckoutSession(
@@ -244,16 +245,23 @@ export class StripeService {
           client_reference_id: userId,
           line_items: [{ price: getStripePriceId(), quantity: 1 }],
           ...(discounts ? { discounts } : {}),
-          // Card is required to start the trial. Default is `always`, but pin
-          // it so a Dashboard setting cannot silently skip collection.
-          payment_method_collection: "always",
-          // Stripe Tax is a create-param, not a Dashboard toggle. Because we
-          // always pass an existing `customer`, these three go together: the
-          // billing address has to be collected and written back to the
-          // Customer or there is no address to calculate tax from.
-          automatic_tax: { enabled: true },
-          customer_update: { address: "auto" },
-          billing_address_collection: "required",
+          // Real checkout always collects a card. Synthetic prod journey uses a
+          // 100% discount and `if_required` so live Stripe never sees test cards.
+          payment_method_collection: syntheticJourneyCheckout
+            ? "if_required"
+            : "always",
+          // Stripe Tax is a create-param, not a Dashboard toggle. Real checkout
+          // passes an existing `customer`, so address collection and
+          // `customer_update` go with `automatic_tax`. Synthetic prod journey is
+          // fully discounted: skip tax and address so embedded Checkout can
+          // complete without a card on live Stripe.
+          ...(syntheticJourneyCheckout
+            ? {}
+            : {
+                automatic_tax: { enabled: true },
+                customer_update: { address: "auto" },
+                billing_address_collection: "required" as const,
+              }),
           ...checkoutReturnParams(options),
           subscription_data: {
             ...trialFields,

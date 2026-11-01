@@ -38,7 +38,7 @@ enum ParityViewSnapshotExporter {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         // Keep the window-server result independent of cacheDisplay's layer changes.
         // Comparing the two exposes export artifacts before we change product rendering.
-        if let windowPNG = windowListPNG(window: window) {
+        if let windowPNG = windowListPNG(window: window, includingPopovers: true) {
             try windowPNG.write(to: folder.appendingPathComponent("\(surface)-window-reference.png"))
         }
 
@@ -146,23 +146,37 @@ enum ParityViewSnapshotExporter {
         }
     }
 
-    private static func windowListPNG(window: NSWindow) -> Data? {
+    private static func windowListPNG(window: NSWindow, includingPopovers: Bool = false) -> Data? {
         window.orderFrontRegardless()
         window.displayIfNeeded()
         let windowID = CGWindowID(window.windowNumber)
-        guard windowID != 0,
-              let cgImage = CGWindowListCreateImage(
-                  .null,
-                  .optionIncludingWindow,
-                  windowID,
-                  [.boundsIgnoreFraming, .bestResolution]
-              )
-        else { return nil }
+        guard windowID != 0 else { return nil }
+        guard let cgImage = CGWindowListCreateImage(
+            .null, .optionIncludingWindow, windowID, [.boundsIgnoreFraming, .bestResolution]
+        ) else { return nil }
         let rep = NSBitmapImageRep(cgImage: cgImage)
-        rep.size = NSSize(
-            width: ParityCaptureGeometry.viewportWidth,
-            height: ParityCaptureGeometry.viewportHeight
-        )
+        rep.size = NSSize(width: ParityCaptureGeometry.viewportWidth, height: ParityCaptureGeometry.viewportHeight)
+        if includingPopovers, let context = NSGraphicsContext(bitmapImageRep: rep) {
+            NSGraphicsContext.saveGraphicsState()
+            defer { NSGraphicsContext.restoreGraphicsState() }
+            NSGraphicsContext.current = context
+            let popovers = (window.childWindows ?? []) + NSApp.windows.filter {
+                String(describing: type(of: $0)).contains("Popover")
+            }
+            var drawn = Set<ObjectIdentifier>()
+            for popover in popovers where popover !== window && popover.isVisible && popover.frame.intersects(window.frame) {
+                guard drawn.insert(ObjectIdentifier(popover)).inserted,
+                      let image = CGWindowListCreateImage(
+                          .null, .optionIncludingWindow, CGWindowID(popover.windowNumber), [.boundsIgnoreFraming, .bestResolution]
+                      )
+                else { continue }
+                NSImage(cgImage: image, size: popover.frame.size).draw(in: NSRect(
+                    x: popover.frame.minX - window.frame.minX,
+                    y: popover.frame.minY - window.frame.minY,
+                    width: popover.frame.width,
+                    height: popover.frame.height), from: .zero, operation: .sourceOver, fraction: 1)
+            }
+        }
         return rep.representation(using: .png, properties: [:])
     }
 

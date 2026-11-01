@@ -80,7 +80,7 @@ describe("GridContextMenuWrapper pointer hint", () => {
     cleanup();
   });
 
-  it("pulses the M hint once on a pointer right-click, not twice", () => {
+  it("pulses the event-menu hint once on a pointer right-click, not twice", () => {
     render(
       <ContextMenuWrapper id={WRAPPER_ID}>
         <div {...{ [WEEK_INTERACTION_EVENT_ID_ATTRIBUTE]: event.id }}>
@@ -94,7 +94,7 @@ describe("GridContextMenuWrapper pointer hint", () => {
     openContextMenu(card, 48, 48);
     expect(selectPointerHintPulse(usePointerHintStore.getState())).toBe(1);
     expect(selectPointerHintAttempt(usePointerHintStore.getState())).toEqual({
-      shortcutKey: ["m"],
+      shortcutKey: ["."],
       source: "pointer",
     });
 

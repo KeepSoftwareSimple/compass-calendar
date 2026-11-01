@@ -129,6 +129,7 @@ export const buildEventFixture = (options: {
   attendees?: AttendeeFixture[];
   organizer?: { email: string; displayName: string | null } | null;
   recurrence?: EventFixture["recurrence"];
+  description?: string;
 }): EventFixture => {
   const start = new Date();
   start.setMinutes(0, 0, 0);
@@ -145,7 +146,7 @@ export const buildEventFixture = (options: {
     content: {
       kind: "details",
       title: options.title,
-      description: "",
+      description: options.description ?? "",
       location: null,
       organizer:
         options.organizer === undefined

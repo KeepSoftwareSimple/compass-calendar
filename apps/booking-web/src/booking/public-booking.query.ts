@@ -53,6 +53,8 @@ export const publicBookingQueryKeys = {
       monthKey,
       timeZone,
     ] as const,
+  ownerUpcoming: (slug: string) =>
+    ["public-booking", "owner-upcoming", slug] as const,
 };
 
 /** A page or reservation that is gone stays gone; retry once for anything else. */
@@ -393,6 +395,44 @@ export function useReschedulePublicBookingReservationMutation(
 
 export function isPublicBookingConflictError(error: unknown): boolean {
   return getErrorStatus(error) === 409;
+}
+
+const retryOwnerInboxUnlessUnauthorized = (
+  failureCount: number,
+  error: Error,
+): boolean => {
+  const status = getErrorStatus(error);
+  if (status === 401 || status === 404) {
+    return false;
+  }
+  return failureCount < 1;
+};
+
+export function usePublicBookingOwnerInboxQuery(slug: string) {
+  return useQuery({
+    queryKey: publicBookingQueryKeys.ownerUpcoming(slug),
+    queryFn: () => PublicBookingApi.getOwnerUpcoming(slug),
+    enabled: slug.length > 0,
+    retry: retryOwnerInboxUnlessUnauthorized,
+    staleTime: 30_000,
+  });
+}
+
+export function useCancelPublicBookingOwnerReservationMutation(slug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (reservationId: string) =>
+      PublicBookingApi.cancelOwnerReservation(slug, reservationId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: publicBookingQueryKeys.ownerUpcoming(slug),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: publicBookingQueryKeys.slotsAll(slug),
+      });
+    },
+  });
 }
 
 type BookingQueryClient = ReturnType<typeof useQueryClient>;

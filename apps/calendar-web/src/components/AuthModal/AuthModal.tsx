@@ -1,5 +1,6 @@
 import { DotIcon } from "@phosphor-icons/react/dist/csr/Dot";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import classNames from "classnames";
 import {
   type FC,
   useCallback,
@@ -8,20 +9,19 @@ import {
   useRef,
   useState,
 } from "react";
+import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { consumeGoogleAuthNeedsConsentRetry } from "@web/auth/providers/authorization/provider-authorization.storage";
-import {
-  CONNECT_CALENDAR_ACCOUNT_HELPER,
-  CONNECT_CALENDAR_ACCOUNT_LABEL,
-} from "@web/auth/providers/provider-copy.util";
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
+import { useAppConfigQuery } from "@web/billing/billing.query";
 import {
   checkoutPanelActions,
   selectCheckoutPanelOpen,
   useCheckoutPanelStore,
 } from "@web/billing/checkout-panel.store";
+import { formatSignupTrialTitle } from "@web/billing/signup-trial-format.util";
 import { useIsEditableFocused } from "@web/common/hooks/useIsEditableFocused";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import {
@@ -34,6 +34,7 @@ import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { dismissSignupTrialStep } from "./dismiss-signup-trial-step";
 import { ForgotPasswordForm } from "./forms/ForgotPasswordForm";
 import { LogInForm } from "./forms/LogInForm";
@@ -70,11 +71,22 @@ function getInitialAuthToken(search: AuthSearch): string | undefined {
  */
 export const AuthModal: FC = () => {
   const navigate = useNavigate();
+  const trialLengthDays =
+    useAppConfigQuery().data?.billing.trialLengthDays ??
+    BILLING_PLAN.TRIAL_LENGTH_DAYS;
   const { isOpen, currentView, closeModal, setView } = useAuthModal();
   const isStartTrialView = currentView === "startTrial";
   const isTrialCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
+  const trialInitialFocusRef = useRef<HTMLDivElement>(null);
+  const openSignupTrialCheckout = useCallback(() => {
+    checkoutPanelActions.open({ kind: "signup_trial_step" });
+  }, []);
   const dismissSignupTrial = useCallback(
     () => dismissSignupTrialStep(navigate),
+    [navigate],
+  );
+  const dismissSignupTrialAfterCheckout = useCallback(
+    () => dismissSignupTrialStep(navigate, { trackAbandon: false }),
     [navigate],
   );
   useSignupTrialBrowserBack(isOpen && isStartTrialView);
@@ -190,7 +202,7 @@ export const AuthModal: FC = () => {
     if (!isOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (hasCommandModifier(event)) return;
       if (isEditableKeyboardTarget(event)) return;
       const key = keyboardKey(event).toLowerCase();
       if (key === "p" && !isPrimaryAuthView) {
@@ -241,7 +253,7 @@ export const AuthModal: FC = () => {
     submitError !== null && (isLoginView || currentView === "signUp");
   const trimmedName = signUpName.trim();
   const title = isStartTrialView
-    ? "Start your 7-day free trial"
+    ? formatSignupTrialTitle(trialLengthDays)
     : currentView === "forgotPassword"
       ? "Reset Password"
       : currentView === "resetPassword"
@@ -251,6 +263,22 @@ export const AuthModal: FC = () => {
             ? `Nice to meet you, ${trimmedName}`
             : "Nice to meet you"
           : "Hey, welcome back";
+
+  const providerSignInBlock = showProviderSignIn ? (
+    <>
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-sm text-text-muted">or</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <SignInProviderButtons
+        available={available}
+        loadingKind={isLoading ? loadingKind : null}
+        onSignIn={handleProviderSignIn}
+        showShortcutKeys={showBareLetterShortcutHints}
+      />
+    </>
+  ) : null;
 
   if (isStartTrialView) {
     const leaveTrialCheckoutOrStep = isTrialCheckoutOpen
@@ -270,16 +298,22 @@ export const AuthModal: FC = () => {
               variant="link"
             >
               Back
-              <ShortcutHint>Esc</ShortcutHint>
+              <ShortcutHint className="pointer-coarse:hidden">Esc</ShortcutHint>
             </AuthButton>
           )
         }
+        bodyPaddingClassName="px-4 py-6 sm:p-8"
+        initialFocusRef={trialInitialFocusRef}
         onDismiss={leaveTrialCheckoutOrStep}
+        onModEnter={isTrialCheckoutOpen ? undefined : openSignupTrialCheckout}
         title={title}
         variant="modal"
-        widthClassName="w-[560px]"
+        widthClassName="w-[min(560px,calc(100vw-2rem))]"
       >
-        <StartTrialStep onDismiss={dismissSignupTrial} />
+        <StartTrialStep
+          initialFocusRef={trialInitialFocusRef}
+          onDismiss={dismissSignupTrialAfterCheckout}
+        />
       </OverlayPanel>
     );
   }
@@ -311,15 +345,27 @@ export const AuthModal: FC = () => {
       widthClassName="w-120"
     >
       <div className="flex w-full flex-col gap-6">
-        {/* Form based on current view */}
-        {currentView === "signUp" && (
-          <SignUpForm
-            onSubmit={handleSignUp}
-            onNameChange={setSignUpName}
-            isSubmitting={isSubmitting}
-            emailInputRef={emailInputRef}
-          />
-        )}
+        {currentView === "signUp" ? (
+          <div
+            className={classNames(
+              "flex w-full flex-col gap-6",
+              showProviderSignIn && "max-sm:flex-col-reverse",
+            )}
+          >
+            <SignUpForm
+              onSubmit={handleSignUp}
+              onNameChange={setSignUpName}
+              isSubmitting={isSubmitting}
+              emailInputRef={emailInputRef}
+            />
+            {showSubmitError ? (
+              <p className="text-center text-error text-sm" role="alert">
+                {submitError}
+              </p>
+            ) : null}
+            {providerSignInBlock}
+          </div>
+        ) : null}
         {isLoginView && (
           <LogInForm
             onSubmit={handleLogin}
@@ -348,35 +394,12 @@ export const AuthModal: FC = () => {
             error={submitError}
           />
         )}
-        {showSubmitError ? (
+        {currentView !== "signUp" && showSubmitError ? (
           <p className="text-center text-error text-sm" role="alert">
             {submitError}
           </p>
         ) : null}
-        {/* Google Sign In - at bottom */}
-        {showProviderSignIn ? (
-          <>
-            <div className="flex w-full flex-col gap-1">
-              <p className="font-semibold text-sm text-text">
-                {CONNECT_CALENDAR_ACCOUNT_LABEL}
-              </p>
-              <p className="text-text-muted text-xs">
-                {CONNECT_CALENDAR_ACCOUNT_HELPER}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-sm text-text-muted">or</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <SignInProviderButtons
-              available={available}
-              loadingKind={isLoading ? loadingKind : null}
-              onSignIn={handleProviderSignIn}
-              showShortcutKeys={showBareLetterShortcutHints}
-            />
-          </>
-        ) : null}
+        {isLoginView ? providerSignInBlock : null}
         {currentView === "signUp" ? (
           <p className="text-center text-text-muted text-xs">
             Signing up also gets you occasional product emails. Unsubscribe

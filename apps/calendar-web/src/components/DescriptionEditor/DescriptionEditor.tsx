@@ -17,7 +17,6 @@ import {
   useState,
 } from "react";
 import { DescriptionEditorLinkChrome } from "@web/components/DescriptionEditor/DescriptionEditorLinkChrome";
-import { DescriptionEditorLinkHints } from "@web/components/DescriptionEditor/DescriptionEditorLinkHints";
 import { DescriptionToolbarButton } from "@web/components/DescriptionEditor/DescriptionToolbarButton";
 import {
   DESCRIPTION_HTML_ALLOWED_ATTR,
@@ -37,7 +36,7 @@ import { useDescriptionEditorCopyLinkShortcut } from "@web/components/Descriptio
 import { useDescriptionEditorOpenLinkAtCaretShortcut } from "@web/components/DescriptionEditor/useDescriptionEditorOpenLinkShortcuts";
 import { useDescriptionLinkPresentation } from "@web/components/DescriptionEditor/useDescriptionLinkPresentation";
 import { Divider } from "@web/components/Divider/Divider";
-import { useDescriptionLinkDigitShortcut } from "@web/shortcuts/description-link/useDescriptionLinkDigitShortcut";
+import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 
 // The allowlist is shared with the desktop export (description-html.policy),
 // which sanitizes the same untrusted provider HTML before emitting the native
@@ -223,17 +222,10 @@ export const DescriptionEditor = ({
   const editorRoot =
     editor?.view.dom instanceof HTMLElement ? editor.view.dom : null;
 
-  // Booking descriptions opt out of the hint affordances entirely; everything
-  // else shows them only while the editor is blurred, so bare digits and the
-  // reserved inline slots belong to one owner at a time. Derived once here:
-  // the keycap chips, the digit shortcut, and the slot-reserving class have to
-  // agree, or a chip renders for a digit nothing is listening to.
-  const linkHintsEnabled = !suppressLinkShortcutHints;
-  const linkHintsVisible = linkHintsEnabled && !isFocused;
+  const linkChromeEnabled = !suppressLinkShortcutHints;
 
   useDescriptionEditorCopyLinkShortcut(editor, editorRoot, editable);
   useDescriptionEditorOpenLinkAtCaretShortcut(editor, editorRoot, editable);
-  useDescriptionLinkDigitShortcut(editorRoot, linkHintsVisible);
 
   useDescriptionLinkPresentation(editor, editorRoot, isFocused);
 
@@ -279,7 +271,7 @@ export const DescriptionEditor = ({
 
   const onDescriptionClickCapture = (event: MouseEvent<HTMLDivElement>) => {
     if (!editable || !editorRoot) return;
-    if (!(event.metaKey || event.ctrlKey) || event.button !== 0) return;
+    if (!isModKeyHeld(event) || event.button !== 0) return;
 
     const link = findLinkElement(editorRoot, event.target);
     if (!link?.href) return;
@@ -335,17 +327,12 @@ export const DescriptionEditor = ({
         editor={editor}
         className={classNames(
           "c-rich-text relative w-full text-sm text-text",
-          linkHintsEnabled && "c-description-link-hints",
           !editable && "cursor-default",
         )}
         onKeyDown={handleDescriptionKeyDown}
       />
-      <DescriptionEditorLinkHints
-        editorRoot={editorRoot}
-        visible={linkHintsVisible}
-      />
-      {linkHintsEnabled && (
-        <DescriptionEditorLinkChrome editorRoot={editorRoot} />
+      {linkChromeEnabled && (
+        <DescriptionEditorLinkChrome editor={editor} editorRoot={editorRoot} />
       )}
       <Divider color={underlineColor} toggled={isFocused} />
     </div>

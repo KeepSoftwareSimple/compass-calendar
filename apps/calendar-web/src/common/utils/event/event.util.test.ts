@@ -90,6 +90,65 @@ describe("handleError", () => {
     expect(EVENT_SAVE_UNAVAILABLE_TOAST_ID).not.toBe(GENERIC_ERROR_TOAST_ID);
   });
 
+  describe("when the backend never answered", () => {
+    const setOnline = (value: boolean) =>
+      Object.defineProperty(navigator, "onLine", {
+        configurable: true,
+        value,
+      });
+
+    afterEach(() => setOnline(true));
+
+    it("does not blame the user's connection when Compass is restarting", () => {
+      // Regression: a save during a production deploy hit the backend's
+      // restart window (gateway 502) while the user was online, and the toast
+      // said "check your connection".
+      setOnline(true);
+
+      handleError(createServerError(Status.BAD_GATEWAY));
+
+      expect(mocks.error.mock.calls[0]?.[0]).toBe(
+        "Couldn't reach Compass, it may be restarting. Your change was not applied.",
+      );
+      expect(mocks.error.mock.calls[0]?.[1]).toMatchObject({
+        toastId: EVENT_SAVE_UNAVAILABLE_TOAST_ID,
+      });
+    });
+
+    it("says the user is offline only when the browser reports offline", () => {
+      setOnline(false);
+      const error = new TypeError("Failed to fetch");
+
+      handleError(error);
+
+      expect(mocks.error.mock.calls[0]?.[0]).toBe(
+        "Couldn't save, you're offline. Your change was not applied.",
+      );
+    });
+
+    it("offers Try again once the automatic retries are used up", () => {
+      setOnline(true);
+      const onRetry = mock(() => {});
+      const error = new Error("Request failed");
+      error.name = "ApiError";
+
+      handleError(error, onRetry);
+
+      const [content, options] = mocks.error.mock.calls[0] ?? [];
+      expect(options).toMatchObject({
+        toastId: EVENT_SAVE_UNAVAILABLE_TOAST_ID,
+      });
+      const props = (
+        content as { props: { message: string; onRetry: () => void } }
+      ).props;
+      expect(props.message).toBe(
+        "Couldn't reach Compass, it may be restarting. Your change was not applied.",
+      );
+      props.onRetry();
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("shows a storage toast on quota or blocked local writes instead of the raw exception", () => {
     const quota = new DOMException("Quota exceeded", "QuotaExceededError");
 

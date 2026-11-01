@@ -5,6 +5,33 @@ import XCTest
 
 @MainActor
 final class EventCardTimeLabelTests: XCTestCase {
+    func testBerlinEventLabelsUsePinnedDenverGridZone() throws {
+        let start = try XCTUnwrap(CompassDateParsing.parseGridDateTime(
+            "2026-10-31T18:00:00.000Z", timeZoneIdentifier: "Europe/Berlin"))
+        let end = try XCTUnwrap(CompassDateParsing.parseGridDateTime(
+            "2026-10-31T19:30:00.000Z", timeZoneIdentifier: "Europe/Berlin"))
+        let state = TimeGridState(
+            referenceNow: start.addingTimeInterval(-3600),
+            scenario: GridLayoutScenario(
+                layoutMode: .week,
+                referenceNow: start.addingTimeInterval(-3600),
+                timedEvents: [
+                    GridLayoutTimedEventInput(
+                        endDate: "2026-10-31T19:30:00.000Z",
+                        eventId: "ritual",
+                        startDate: "2026-10-31T18:00:00.000Z",
+                        timeZone: "Europe/Berlin",
+                        title: "Monthly Ritual"),
+                ],
+                visibleDateKeys: ["2026-10-31"]),
+            effectiveTimeZone: "America/Denver")
+        var card = card()
+        card.eventId = "ritual"
+        card.label = "Monthly Ritual"
+        XCTAssertEqual(EventCardTimeLabel.text(for: card, state: state), "12 - 1:30 PM")
+        _ = end
+    }
+
     func testRangesUseGridZoneAndOmitRepeatedMeridiem() throws {
         let start = try date("2026-10-20T15:00:00Z")
         let end = try date("2026-10-20T16:30:00Z")

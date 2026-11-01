@@ -217,6 +217,31 @@ describe("AuthModal signup trial step", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides the Pricing, Terms, and Privacy footer on the trial step", async () => {
+    await renderTrialFlow(HOSTED_CONFIG, "/day?auth=trial");
+    mockUseSession.mockReturnValue({
+      authenticated: true,
+      userId: "user-1",
+      setAuthenticated: mock(),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("dialog", { name: "Start your 7-day free trial" }),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole("link", { name: /Pricing/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Terms/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Privacy/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("returns to the calendar after closing the trial step", async () => {
     const user = userEvent.setup();
     const { router } = await renderTrialFlow(HOSTED_CONFIG, "/day?auth=trial");
@@ -239,6 +264,28 @@ describe("AuthModal signup trial step", () => {
     });
     expect(
       screen.queryByRole("heading", { name: "Finish starting your trial" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not open checkout on plain Enter", async () => {
+    const user = userEvent.setup();
+    await renderTrialFlow(HOSTED_CONFIG, "/day?auth=trial");
+    mockUseSession.mockReturnValue({
+      authenticated: true,
+      userId: "user-1",
+      setAuthenticated: mock(),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Start free trial" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.keyboard("{Enter}");
+
+    expect(
+      screen.queryByRole("button", { name: "Submit checkout" }),
     ).not.toBeInTheDocument();
   });
 

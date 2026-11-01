@@ -1,4 +1,5 @@
 import { type Page } from "@playwright/test";
+import { putLocalEventRecords } from "../utils/local-event-seed.util";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -125,25 +126,5 @@ export async function expectDemoGrid(page: Page) {
 }
 
 async function seedParityDemoEvents(page: Page) {
-  await page.evaluate(async (records) => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("compass-local");
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-    });
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction("events", "readwrite");
-        const store = tx.objectStore("events");
-        store.clear();
-        for (const record of records) {
-          store.put(record);
-        }
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    } finally {
-      db.close();
-    }
-  }, demoFixture.events);
+  await putLocalEventRecords(page, demoFixture.events, { replaceAll: true });
 }

@@ -7,7 +7,10 @@ enum FixtureLaunchPolicy {
         guard let index = args.firstIndex(of: "-COMPASS_FIXTURE"), index + 1 < args.count else {
             return nil
         }
-        guard args[index + 1].lowercased() == "demo" else { return nil }
-        return try? DemoSeedFixture.load()
+        switch args[index + 1].lowercased() {
+        case "demo": return try? DemoSeedFixture.load()
+        case "demo-attendee": return try? DemoSeedFixture.load().attendeeVariant()
+        default: return nil
+        }
     }
 }

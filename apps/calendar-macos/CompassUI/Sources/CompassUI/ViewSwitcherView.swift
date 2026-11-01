@@ -36,13 +36,14 @@ struct ViewSwitcherView: View {
         } label: {
             HStack(spacing: 6) {
                 Text(model.headerTitle)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.rubik(13, weight: .medium))
                     .foregroundStyle(theme.textColor)
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(theme.textMutedColor)
             }
+            .frame(height: 24, alignment: .center)
             .padding(.horizontal, 4)
             .background(
                 RoundedRectangle(cornerRadius: 4)

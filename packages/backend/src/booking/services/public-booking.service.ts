@@ -17,6 +17,8 @@ import {
   CancelBookingReservationInputSchema,
   CreateBookingReservationInputSchema,
   CreateBookingReservationResponseSchema,
+  type HostUpcomingBookingReservationsResponse,
+  HostUpcomingBookingReservationsResponseSchema,
   isGuestEmail,
   PatchBookingReservationInputSchema,
   type PublicBookingPage,
@@ -90,6 +92,7 @@ import {
 import { type CalendarBookingPort } from "@backend/booking/services/calendar-booking.port";
 import { CalendarBookingService } from "@backend/booking/services/calendar-booking.service";
 import { resolveBookingDestinationConference } from "@backend/booking/services/destination-conference";
+import { resolveMeetLinksByEventId } from "@backend/booking/services/owner-upcoming-meet-links";
 import mongoService from "@backend/common/services/mongo.service";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
 import { enqueueBookingHostEmail } from "@backend/email/booking-host-email.enrollment";
@@ -114,6 +117,29 @@ const assertHostAllowsGuestWrites = async (userId: ObjectId): Promise<void> => {
  */
 const reservationNotFound = () =>
   bookingError("RESERVATION_NOT_FOUND", "Reservation not found");
+
+const pageNotFound = () =>
+  bookingError("PAGE_NOT_FOUND", "Meeting page not found");
+
+const assertPageOwner = async (
+  userId: ObjectId,
+  slug: string,
+): Promise<BookingPageRecord> => {
+  const page = await bookingPageRepository.findBySlug(slug);
+  if (!page?.userId.equals(userId)) {
+    throw pageNotFound();
+  }
+  return page;
+};
+
+const reservationDurationMinutes = (
+  reservation: BookingReservationRecord,
+): number => {
+  const minutes = Math.round(
+    (reservation.slotEnd.getTime() - reservation.slotStart.getTime()) / 60_000,
+  );
+  return BookingDurationMinutesSchema.parse(minutes);
+};
 
 const guestTokenFrom = (raw: unknown): string => {
   if (
@@ -608,6 +634,54 @@ export class PublicBookingService {
       this.calendarBooking,
     );
     return BookingPageStatusResponseSchema.parse(mapProbeToStatus(probe));
+  }
+
+  async listHostUpcomingReservations(
+    userId: ObjectId,
+    slug: string,
+  ): Promise<HostUpcomingBookingReservationsResponse> {
+    const page = await assertPageOwner(userId, slug);
+    const now = new Date();
+    const reservations =
+      await bookingReservationRepository.listUpcomingConfirmedByPageId(
+        page._id,
+        now,
+      );
+    const meetLinksByEventId = await resolveMeetLinksByEventId(
+      page.userId,
+      page.destinationCalendarId,
+      reservations,
+    );
+    return HostUpcomingBookingReservationsResponseSchema.parse({
+      reservations: reservations.map((reservation) => ({
+        reservationId: reservation._id.toHexString(),
+        guestName: reservation.guestName,
+        guestEmail: reservation.guestEmail,
+        slotStart: DateTimeSchema.parse(reservation.slotStart.toISOString()),
+        slotEnd: DateTimeSchema.parse(reservation.slotEnd.toISOString()),
+        durationMinutes: reservationDurationMinutes(reservation),
+        meetLink: reservation.calendarEventId
+          ? (meetLinksByEventId.get(reservation.calendarEventId) ?? null)
+          : null,
+      })),
+    });
+  }
+
+  async cancelReservationForPageOwner(
+    userId: ObjectId,
+    slug: string,
+    reservationId: ObjectId,
+  ): Promise<void> {
+    const page = await assertPageOwner(userId, slug);
+    const reservation =
+      await bookingReservationRepository.findById(reservationId);
+    if (
+      !reservation?.pageId.equals(page._id) ||
+      reservation.status === "cancelled"
+    ) {
+      throw reservationNotFound();
+    }
+    await this.finalizeCancel(reservation);
   }
 
   async getSlots(

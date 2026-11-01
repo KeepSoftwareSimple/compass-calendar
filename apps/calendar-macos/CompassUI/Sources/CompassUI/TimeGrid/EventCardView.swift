@@ -93,6 +93,7 @@ final class EventCardView: NSView {
         isFocused: Bool,
         isSidebarEditing: Bool = false,
         isUnsettled: Bool = false,
+        isPast: Bool = false,
         timeLabel: String? = nil
     ) {
         eventId = card.eventId
@@ -122,7 +123,8 @@ final class EventCardView: NSView {
         setAccessibilityValue(card.isHiddenStrip ? "hidden" : "visible")
         syncFocusAccessibilityAnchor(isFocused: isFocused, label: card.label)
 
-        let fill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? defaultEventFill(for: theme)
+        let baseFill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? defaultEventFill(for: theme)
+        let fill = isPast && !card.isDraft ? EventCardPastFill.color(baseFill) : baseFill
         layer?.backgroundColor = fill.cgColor
         layer?.opacity = card.isHiddenStrip ? 0.6 : 1
         deckEdgeLayer.isHidden = !card.isDeck

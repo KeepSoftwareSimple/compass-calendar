@@ -128,12 +128,8 @@ struct EventFormRecurrenceSection: View {
             }
         }
         .onAppear { reloadFromDraft() }
-        .onChange(of: model.eventFormRecurrenceFocusRequest) { _, _ in
-            // The parent releases title focus for the same request first.
-            DispatchQueue.main.async {
-                guard model.isEventFormVisible, model.eventFormFocusedField == .recurrence else { return }
-                focusedControl = .toggle
-            }
+        .onEventFormFocusRequest(model, field: .recurrence) {
+            focusedControl = .toggle
         }
         .onChange(of: draft.recurrence) { _, _ in reloadFromDraft() }
         .onChange(of: draft.schedule.start) { _, _ in syncDraftRecurrence() }

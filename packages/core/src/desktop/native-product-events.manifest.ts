@@ -13,4 +13,5 @@ export const NATIVE_PRODUCT_EVENT_CALL_SITES = [
   "shortcut_level_up",
   "shortcut_level_badge_toggled",
   "hint_shortcut_first_used",
+  "subscription_cancel_reason_submitted",
 ] as const;

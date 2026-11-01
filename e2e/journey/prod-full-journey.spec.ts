@@ -2,24 +2,37 @@ import { expect, test } from "@playwright/test";
 import { COMPASS_SYNTHETIC_ACCOUNT_HEADER } from "@core/analytics/synthetic-account.util";
 import {
   createEventTitle,
+  dismissBringYourEventsPromptIfOpen,
   expectTimedEventVisible,
   fillTitleAndSaveEventForm,
   openTimedEventFormWithKeyboard,
+  waitForWritableCalendarsReady,
 } from "../utils/event-test-utils";
 import {
-  deleteJourneyAccount,
+  cleanupProdJourneyAccount,
   isJourneyEnabled,
   journeyCredentials,
   journeyProvider,
   logInJourneyAccount,
   logOutOfJourneyAccount,
   openJourneySettings,
+  openJourneyTrialStep,
+  registerJourneyAccountForCleanup,
   seedJourneyOnboarding,
   signUpJourneyAccount,
+  submitSyntheticProdJourneyCheckout,
   uniqueJourneyEmail,
+  waitForJourneySignUpComplete,
+  waitForSyntheticProdJourneyCheckoutSuccess,
 } from "./journey-leg.util";
 
 const provider = journeyProvider("PROD");
+
+const prodJourneyCleanupTarget = {
+  email: "",
+  password: "",
+  pending: false,
+};
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1280, height: 800 } });
@@ -27,6 +40,18 @@ test.use({
   extraHTTPHeaders: {
     [COMPASS_SYNTHETIC_ACCOUNT_HEADER]: "true",
   },
+});
+
+test.afterEach(async ({ page }, testInfo) => {
+  if (!prodJourneyCleanupTarget.pending) return;
+  const { email, password } = prodJourneyCleanupTarget;
+  prodJourneyCleanupTarget.pending = false;
+  testInfo.setTimeout(180_000);
+  await cleanupProdJourneyAccount(page, {
+    email,
+    password,
+    scope: "PROD",
+  });
 });
 
 test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
@@ -37,7 +62,7 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
 
   const { accountEmail, password } = journeyCredentials("PROD");
 
-  await seedJourneyOnboarding(page);
+  await seedJourneyOnboarding(page, { snoozeConnectPrompt: true });
 
   const uniqueEmail = uniqueJourneyEmail(accountEmail);
 
@@ -59,11 +84,20 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
     email: uniqueEmail,
     password,
   });
-
-  const trialDialog = page.getByRole("dialog", {
-    name: "Start your 7-day free trial",
+  await waitForJourneySignUpComplete(page);
+  prodJourneyCleanupTarget.email = uniqueEmail;
+  prodJourneyCleanupTarget.password = password;
+  prodJourneyCleanupTarget.pending = true;
+  await registerJourneyAccountForCleanup("PROD", {
+    email: uniqueEmail,
+    password,
   });
-  await expect(trialDialog).toBeVisible({ timeout: 120_000 });
+
+  const trialDialog = await openJourneyTrialStep(page);
+  await trialDialog.getByRole("button", { name: "Start free trial" }).click();
+  await expect(trialDialog.getByRole("button", { name: "Back" })).toBeVisible({
+    timeout: 120_000,
+  });
 
   await expect
     .poll(() => checkoutClientSecret.length > 0, { timeout: 120_000 })
@@ -72,14 +106,34 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
   const stripeFrame = page
     .frameLocator('iframe[name*="stripe"], iframe[src*="stripe"]')
     .first();
-  await stripeFrame.locator("input").first().waitFor({ timeout: 120_000 });
-  await stripeFrame.getByLabel("Card number").fill("4242424242424242");
-  await stripeFrame.getByLabel("Expiration").fill("12/34");
-  await stripeFrame.getByLabel("CVC").fill("123");
-  await stripeFrame.getByLabel("ZIP").fill("80202");
+  try {
+    await submitSyntheticProdJourneyCheckout(stripeFrame);
+    await waitForSyntheticProdJourneyCheckoutSuccess(
+      page,
+      stripeFrame,
+      trialDialog,
+    );
+  } catch (error) {
+    await trialDialog.screenshot({
+      path: test.info().outputPath("prod-journey-checkout-failure.png"),
+    });
+    const stripeText = await stripeFrame
+      .locator("body")
+      .innerText()
+      .catch(() => "");
+    if (stripeText) {
+      test.info().attach("stripe-frame-on-failure", {
+        body: stripeText.slice(0, 8000),
+        contentType: "text/plain",
+      });
+    }
+    throw error;
+  }
 
-  await page.getByRole("button", { name: "Start free trial" }).click();
-  await expect(trialDialog).toBeHidden({ timeout: 180_000 });
+  await waitForWritableCalendarsReady(page);
+  await dismissBringYourEventsPromptIfOpen(page);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
 
   const createdTitle = createEventTitle("Prod journey create");
   await openTimedEventFormWithKeyboard(page);
@@ -106,6 +160,4 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
 
   await logInJourneyAccount(page, { email: uniqueEmail, password });
   await expectTimedEventVisible(page, editedTitle, 60_000);
-
-  await deleteJourneyAccount(page);
 });

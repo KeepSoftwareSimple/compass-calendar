@@ -4,6 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import { DescriptionEditor } from "@web/components/DescriptionEditor/DescriptionEditor";
+import {
+  collectDescriptionTextRects,
+  rectsIntersect,
+} from "@web/components/DescriptionEditor/description-link-chrome-geometry.test.utils";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const copyTextMock = mock(() => Promise.resolve(true));
@@ -60,7 +64,7 @@ describe("DescriptionEditor link UX", () => {
       { withHotkeys: true },
     );
 
-    const link = screen.getByRole("link", { name: "Join" });
+    const link = screen.getByRole("link", { name: /Join/ });
     expect(link).toHaveAttribute("tabindex", "0");
 
     link.focus();
@@ -97,7 +101,7 @@ describe("DescriptionEditor link UX", () => {
     });
 
     await user.click(document.body);
-    const link = screen.getByRole("link", { name: "example.com" });
+    const link = screen.getByRole("link", { name: /example\.com/ });
     await user.hover(link);
     const copyButton = await waitFor(() =>
       screen.getByRole("button", { name: "Copy link" }),
@@ -109,13 +113,81 @@ describe("DescriptionEditor link UX", () => {
     expect(copyTextMock).toHaveBeenCalledWith("https://example.com/meet");
   });
 
-  it("shows digit keycaps when the description is not focused", async () => {
-    await renderDescriptionEditor({
-      value: `<p><a href="https://one.example/a">https://one.example/a</a></p>`,
-      resetKey: "digit-hints",
-    });
+  it("keeps link hint chrome inside a narrow description panel", async () => {
+    const user = userEvent.setup();
+    const meetingUrl = "https://app.mn.co";
+    render(
+      <section
+        aria-label="Description panel fixture"
+        style={{ width: "240px", overflow: "hidden" }}
+      >
+        <DescriptionEditor
+          value={`<p><a href="${meetingUrl}">${meetingUrl}</a> for the meeting</p>`}
+          onChange={mock()}
+          editable={true}
+          resetKey="narrow-panel"
+        />
+      </section>,
+    );
 
-    expect(screen.getByText("1")).toBeTruthy();
+    const panel = screen.getByRole("region", {
+      name: "Description panel fixture",
+    });
+    const link = screen.getByRole("link", { name: /app\.mn\.co/ });
+    await user.hover(link);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible(),
+    );
+
+    const editor = screen.getByRole("textbox", { name: "Description" });
+    const panelRect = panel.getBoundingClientRect();
+    const hintGroup = screen.getByRole("group", {
+      name: "Link shortcut and copy",
+    });
+    const chromeRect = hintGroup.getBoundingClientRect();
+    const linkRect = link.getBoundingClientRect();
+
+    expect(chromeRect.left).toBeGreaterThanOrEqual(panelRect.left);
+    expect(chromeRect.right).toBeLessThanOrEqual(panelRect.right + 1);
+    expect(chromeRect.top).toBeGreaterThanOrEqual(linkRect.bottom - 1);
+    expect(link).not.toHaveAttribute("title");
+
+    for (const textRect of collectDescriptionTextRects(editor)) {
+      expect(rectsIntersect(chromeRect, textRect)).toBe(false);
+    }
+  });
+
+  it("opens a hovered link with Mod+Shift+Enter", async () => {
+    const user = userEvent.setup();
+    const openSpy = mock();
+    const originalOpen = window.open;
+    window.open = openSpy as typeof window.open;
+
+    const meetingUrl = "https://example.com/meeting-room";
+    await renderDescriptionEditor(
+      {
+        value: `<p><a href="${meetingUrl}">${meetingUrl}</a></p>`,
+        resetKey: "hover-open",
+      },
+      { withHotkeys: true },
+    );
+
+    const link = screen.getByRole("link", { name: /example\.com/ });
+    await user.hover(link);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible(),
+    );
+
+    const modKey = resolveModifier("Mod") === "Meta" ? "Meta" : "Control";
+    await user.keyboard(`{${modKey}>}{Shift>}{Enter}{/Shift}{/${modKey}}`);
+    expect(openSpy).toHaveBeenCalledWith(
+      meetingUrl,
+      "_blank",
+      expect.any(String),
+    );
+
+    window.open = originalOpen;
   });
 
   it("opens the caret link with Mod+Shift+Enter and preserves html on blur", async () => {
@@ -137,7 +209,7 @@ describe("DescriptionEditor link UX", () => {
 
     const description = screen.getByRole("textbox", { name: "Description" });
     await user.click(description);
-    const link = screen.getByRole("link", { name: "example.com" });
+    const link = screen.getByRole("link", { name: /example\.com/ });
     await user.click(link);
     const modKey = resolveModifier("Mod") === "Meta" ? "Meta" : "Control";
     await user.keyboard(`{${modKey}>}{Shift>}{Enter}{/Shift}{/${modKey}}`);
@@ -165,7 +237,7 @@ describe("DescriptionEditor link UX", () => {
       resetKey: "mod-click",
     });
 
-    const link = screen.getByRole("link", { name: "Join" });
+    const link = screen.getByRole("link", { name: /Join/ });
     fireEvent.click(link);
     expect(openSpy).not.toHaveBeenCalled();
 
