@@ -23,6 +23,10 @@ on:
         description: Run full strict verification on an isolated Mac
         type: boolean
         default: false
+      diagnose_web_only:
+        description: Temporary title-focus diagnosis, not full strict acceptance
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -199,7 +203,7 @@ jobs:
           retention-days: 7
 
   strict:
-    if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_verify && !inputs.diagnose_web_only
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -300,7 +304,13 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p build
-          bun run verify --strict web | tee build/web-strict.log
+          # Temporary #5039 evidence: verifier buffers child output until exit.
+          touch build/title-focus.log
+          tail -n +1 -f build/title-focus.log &
+          focus_log_tail=$!
+          trap 'kill "$focus_log_tail" 2>/dev/null || true' EXIT
+          COMPASS_TITLE_FOCUS_LOG="$PWD/build/title-focus.log" \
+            bun run verify --strict web | tee build/web-strict.log
       - name: Upload web strict verification log
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

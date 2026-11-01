@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import {
   installDeterministicBrowserClock,
@@ -10,7 +11,10 @@ const FAST_STRING =
 
 test.beforeEach(async ({ page }) => {
   page.on("console", (message) => {
-    if (message.text().startsWith("TITLE_FOCUS_")) console.log(message.text());
+    if (!message.text().startsWith("TITLE_FOCUS_")) return;
+    console.log(message.text());
+    const path = process.env.COMPASS_TITLE_FOCUS_LOG;
+    if (path) appendFileSync(path, `${message.text()}\n`);
   });
   // Temporary #5039 diagnosis, remove before this branch is ready.
   await page.addInitScript(() => {
