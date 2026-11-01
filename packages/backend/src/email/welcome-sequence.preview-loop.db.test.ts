@@ -81,6 +81,16 @@ describe("welcome sequence preview loop", () => {
       const rowId = previewLoopRowId(previewEmail, 1, step.key);
       await emailSendRepository.markSent(rowId, `msg-${step.key}`);
     }
+    // markSent stamps the real clock. Pin sentAt inside October so the
+    // assertions below don't depend on what day CI runs.
+    await mongoService.emailSend.updateMany(
+      {
+        previewLoop: true,
+        recipientEmail: previewEmail,
+        previewLoopGeneration: 1,
+      },
+      { $set: { sentAt: new Date("2026-10-15T14:00:00.000Z") } },
+    );
 
     const afterCompletion = new Date("2026-10-20T12:00:00.000Z");
     await ensurePreviewLoopForRecipient(previewEmail, afterCompletion);
