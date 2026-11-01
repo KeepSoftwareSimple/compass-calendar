@@ -213,6 +213,38 @@ jobs:
         run: brew install xcodegen
       - name: Render app icon
         run: bash .github/scripts/render-macos-icon.sh
+      - name: Restore SwiftPM build directories
+        id: swift-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            apps/calendar-macos/CompassKit/.build
+            apps/calendar-macos/CompassData/.build
+            apps/calendar-macos/CompassUI/.build
+          key: ${{ runner.os }}-swift-pkgs-v1-${{ hashFiles('apps/calendar-macos/CompassKit/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassUI/**') }}
+          restore-keys: |
+            ${{ runner.os }}-swift-pkgs-v1-
+            ${{ runner.os }}-swift-pkgs-
+
+      # Save compilation before the long UI pass, even if that pass later stops.
+      # The strict verifier still executes every test in its existing order.
+      - name: Build SwiftPM test binaries on a cache miss
+        if: steps.swift-cache.outputs.cache-hit != 'true'
+        run: |
+          for package in CompassKit CompassData CompassUI; do
+            swift build --package-path "apps/calendar-macos/${package}" --build-tests
+          done
+
+      - name: Save SwiftPM test binaries
+        if: steps.swift-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            apps/calendar-macos/CompassKit/.build
+            apps/calendar-macos/CompassData/.build
+            apps/calendar-macos/CompassUI/.build
+          key: ${{ steps.swift-cache.outputs.cache-primary-key }}
+
       - name: Verify Swift contracts and desktop exports
         run: |
           bun cli contracts:swift --check

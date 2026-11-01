@@ -36,7 +36,7 @@ test.describe("staging context menu focus capture", () => {
       .locator("#mainGrid")
       .getByRole("button", { name: title });
     await eventButton.focus();
-    await page.keyboard.press("m");
+    await page.keyboard.press(".");
 
     const menu = page.getByRole("menu");
     await expect(menu).toBeVisible();

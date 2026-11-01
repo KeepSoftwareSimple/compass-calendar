@@ -1,3 +1,4 @@
+import { atCivilTime } from "@core/util/date/civil-day";
 import dayjs from "@core/util/date/dayjs";
 
 export const PREVIEW_LOOP_TIMEZONE = "America/Denver" as const;
@@ -6,13 +7,11 @@ export const PREVIEW_LOOP_LOCAL_START_HOUR = 8;
 /** 8:00 on the 1st of `year`/`month` (1-based) in America/Denver. */
 export function previewLoopMonthStartUtc(year: number, month: number): Date {
   const monthKey = `${year}-${String(month).padStart(2, "0")}-01`;
-  return dayjs
-    .tz(monthKey, PREVIEW_LOOP_TIMEZONE)
-    .hour(PREVIEW_LOOP_LOCAL_START_HOUR)
-    .minute(0)
-    .second(0)
-    .millisecond(0)
-    .toDate();
+  return atCivilTime(
+    monthKey,
+    PREVIEW_LOOP_TIMEZONE,
+    PREVIEW_LOOP_LOCAL_START_HOUR,
+  ).toDate();
 }
 
 /**

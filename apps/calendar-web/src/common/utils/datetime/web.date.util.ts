@@ -10,7 +10,7 @@ import {
   type EventSchedule,
   EventScheduleSchema,
 } from "@core/types/event.contracts";
-import { civilHourLineInstants } from "@core/util/date/civil-day";
+import { atCivilTime, civilHourLineInstants } from "@core/util/date/civil-day";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { ACCEPTED_TIMES } from "@web/common/constants/web.constants";
 import { type SelectOption } from "@web/common/types/component.types";
@@ -222,8 +222,11 @@ export const parseUserTime = (
     ));
   }
 
+  // atCivilTime, not .startOf("day").hour(): the timezone plugin keeps
+  // midnight's UTC offset when setting fields, so on a DST change day a typed
+  // time resolved an hour off ("1400" became 1 PM in Denver on 2026-11-01).
   return getTimeOptionByValue(
-    nowInEffectiveTimeZone().startOf("day").hour(hour).minute(minute),
+    atCivilTime(nowInEffectiveTimeZone(), getEffectiveTimeZone(), hour, minute),
   );
 };
 
@@ -574,13 +577,12 @@ const _addTimesToDates = (dt: SelectedDates, timeZone: string) => {
   const startYmd = inEffectiveTimeZone(dt.startDate, timeZone).format(
     YEAR_MONTH_DAY_FORMAT,
   );
-  const startDate = dayjs
-    .tz(startYmd, timeZone)
-    .hour(start.hour())
-    .minute(start.minute())
-    .second(0)
-    .millisecond(0)
-    .format();
+  const startDate = atCivilTime(
+    startYmd,
+    timeZone,
+    start.hour(),
+    start.minute(),
+  ).format();
 
   const end = getDayjsByTimeValue(dt.endTime.value);
   // Use endDate (not startDate) so overnight / multi-day timed drafts keep
@@ -589,13 +591,12 @@ const _addTimesToDates = (dt: SelectedDates, timeZone: string) => {
   const endYmd = inEffectiveTimeZone(dt.endDate, timeZone).format(
     YEAR_MONTH_DAY_FORMAT,
   );
-  const endDate = dayjs
-    .tz(endYmd, timeZone)
-    .hour(end.hour())
-    .minute(end.minute())
-    .second(0)
-    .millisecond(0)
-    .format();
+  const endDate = atCivilTime(
+    endYmd,
+    timeZone,
+    end.hour(),
+    end.minute(),
+  ).format();
 
   return { startDate, endDate };
 };

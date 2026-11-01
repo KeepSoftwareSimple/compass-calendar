@@ -9,11 +9,14 @@ import {
   memo,
   type ReactNode,
   type SetStateAction,
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
+import { flushSync } from "react-dom";
 import { isEventFormFocusFieldVisible } from "@core/event/event-form-field-visibility";
 import { EVENT_FORM_TOGGLE_ALL_DAY_HOTKEY } from "@core/shortcuts/binding-keycaps.constants";
 import { type EventFormFocusField } from "@core/shortcuts/event-form-focus-field";
@@ -285,6 +288,14 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     const showProviderManagedStagingUx =
       IS_EVENT_SIDEBAR_STAGING_UX && isScheduleLocked;
     const displayTitle = isBusy ? BUSY_EVENT_TITLE : title;
+    // Title edits sync into the draft store on every keystroke so the grid chip
+    // stays live. A controlled value falls behind when deferred store updates
+    // re-render the grid under fast typing, so the field stays uncontrolled
+    // while editable and only mirrors `displayTitle` when it is not focused.
+    const titleInputRef = useRef<HTMLInputElement>(null);
+    const [locationInputValue, setLocationInputValue] = useState(
+      location ?? "",
+    );
     const showBookingFormActions = !isReadOnly && bookingLinks !== null;
     const formDigitRows = useMemo(
       () => visibleFormFieldDigitRows(fieldVisibilityInput),
@@ -345,20 +356,40 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
      ********/
     const datePickers = useOpenSide();
 
+    const contentDraftSyncFrameRef = useRef<number | null>(null);
+
+    const pushDraftToStore = useCallback(
+      (nextDraft: GridEventDraft | null, urgent = false) => {
+        if (nextDraft) {
+          latestDraftRef.current = nextDraft;
+        }
+        const pushDraft = () => setDraft(nextDraft);
+        if (urgent) {
+          pushDraft();
+          return;
+        }
+        startTransition(pushDraft);
+      },
+      [setDraft],
+    );
+
+    const flushContentDraftSync = useCallback(() => {
+      if (contentDraftSyncFrameRef.current !== null) {
+        cancelAnimationFrame(contentDraftSyncFrameRef.current);
+        contentDraftSyncFrameRef.current = null;
+      }
+      pushDraftToStore(latestDraftRef.current, true);
+    }, [pushDraftToStore]);
+
     const setLatestDraft = useCallback(
-      (nextDraft: SetStateAction<GridEventDraft | null>) => {
+      (nextDraft: SetStateAction<GridEventDraft | null>, urgent = false) => {
         const resolvedDraft =
           typeof nextDraft === "function"
             ? nextDraft(latestDraftRef.current)
             : nextDraft;
-
-        if (resolvedDraft) {
-          latestDraftRef.current = resolvedDraft;
-        }
-
-        setDraft(resolvedDraft);
+        pushDraftToStore(resolvedDraft, urgent);
       },
-      [setDraft],
+      [pushDraftToStore],
     );
 
     // Only a "create" draft (new or duplicate) can target a calendar; an
@@ -396,23 +427,33 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
             "title" | "description" | "location" | "color" | "attendees"
           >
         >,
+        options?: { urgent?: boolean },
       ) => {
-        setLatestDraft((current) => {
-          if (!current) return current;
-          return patchGridDraftFields(current, patch);
+        const current = latestDraftRef.current;
+        if (!current) return;
+        latestDraftRef.current = patchGridDraftFields(current, patch);
+        if (contentDraftSyncFrameRef.current !== null) {
+          cancelAnimationFrame(contentDraftSyncFrameRef.current);
+          contentDraftSyncFrameRef.current = null;
+        }
+        if (options?.urgent) {
+          pushDraftToStore(latestDraftRef.current, true);
+          return;
+        }
+        contentDraftSyncFrameRef.current = requestAnimationFrame(() => {
+          contentDraftSyncFrameRef.current = null;
+          pushDraftToStore(latestDraftRef.current);
         });
       },
-      [setLatestDraft],
+      [pushDraftToStore],
     );
 
     const onScheduleChange: OnEventFormScheduleChange = useCallback(
       (schedule) => {
         setLatestDraft((current) => {
           if (!current) return current;
-          const next = replaceGridDraftSchedule(current, schedule);
-          latestDraftRef.current = next;
-          return next;
-        });
+          return replaceGridDraftSchedule(current, schedule);
+        }, true);
       },
       [setLatestDraft],
     );
@@ -420,6 +461,13 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     useEffect(() => {
       latestDraftRef.current = draft;
     }, [draft]);
+
+    useEffect(() => {
+      if (isBusy) return;
+      const titleInput = titleInputRef.current;
+      if (!titleInput || document.activeElement === titleInput) return;
+      titleInput.value = displayTitle;
+    }, [displayTitle, isBusy]);
 
     useEffect(() => {
       if (!showProviderManagedStagingUx) {
@@ -460,6 +508,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     };
 
     const onChangeLocation = (nextLocation: string) => {
+      flushSync(() => setLocationInputValue(nextLocation));
       patchDraftFields({ location: nextLocation });
     };
 
@@ -497,13 +546,10 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       }
     };
 
-    const handleTitleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-      handleIgnoredKeys(e);
-    };
-
     const onSubmitForm = (
       invocationMethod: "keyboard" | "click" = "keyboard",
     ) => {
+      flushContentDraftSync();
       // Belt for the read-only gate above: the Save button doesn't render,
       // but Enter/Mod+Enter shortcuts below call this directly regardless
       // of what's on screen, so the block has to live here too (packet 08
@@ -938,6 +984,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
             <div className="min-w-0">
               <Focusable
                 id={EVENT_FORM_TITLE_ID}
+                ref={titleInputRef}
                 Component="input"
                 className={classNames(
                   INPUT_RESET_CLASSNAME,
@@ -947,15 +994,18 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                 )}
                 autoFocus
                 disabled={isReadOnly}
+                onBlur={flushContentDraftSync}
                 onChange={onChangeTitle}
-                onKeyDown={handleTitleKeyDown}
+                onKeyDown={handleIgnoredKeys}
                 placeholder="Title"
                 aria-label="Title"
                 name="Event Title"
                 aria-invalid={titleError ? true : undefined}
                 aria-describedby={titleErrorDescribedBy}
                 underlineColor={eventColor}
-                value={displayTitle}
+                {...(isBusy
+                  ? { value: BUSY_EVENT_TITLE }
+                  : { defaultValue: displayTitle })}
                 withUnderline
               />
             </div>
@@ -1036,9 +1086,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
               <FormCard>
                 <FormCardIconRow
                   icon={
-                    location ? (
+                    locationInputValue ? (
                       <a
-                        href={mapsUrlForLocation(location)}
+                        href={mapsUrlForLocation(locationInputValue)}
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="Open in Google Maps"
@@ -1057,8 +1107,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                     className={FORM_CARD_FIELD_INPUT_CLASSNAME}
                     disabled={isReadOnly}
                     onChange={onChangeLocation}
+                    onBlur={flushContentDraftSync}
                     onKeyDown={handleIgnoredKeys}
-                    value={location}
+                    value={locationInputValue}
                   />
                 </FormCardIconRow>
                 {conferenceKind && draft.kind === "create" && (
@@ -1094,7 +1145,10 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                         id={EVENT_FORM_ATTENDEES_ID}
                         value={attendeeChips}
                         onChange={(next) =>
-                          patchDraftFields({ attendees: next })
+                          patchDraftFields(
+                            { attendees: next },
+                            { urgent: true },
+                          )
                         }
                         statusByEmail={attendeeRsvpByEmail}
                         suggestionSource={contactSuggestionSource}
