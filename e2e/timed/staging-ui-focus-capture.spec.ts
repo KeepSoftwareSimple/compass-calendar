@@ -1,6 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
 import { seedJourneyOnboarding } from "../journey/journey-leg.util";
-import { ensureSidebarOpen } from "../utils/event-test-utils";
+import {
+  ensureSidebarOpen,
+  waitForWeekEventsLoaded,
+} from "../utils/event-test-utils";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const ARTIFACT_DIR = "/opt/cursor/artifacts/staging-ui-focus";
@@ -98,9 +101,11 @@ const captureWeekFocusSequence = async (
   await dismissTrialBanner(page);
   await ensureSidebarOpen(page);
   await waitForSidebarIdle(page);
+  await waitForWeekEventsLoaded(page);
   await page.locator("#mainGrid").focus();
 
   await expect(page.locator("#mainGrid")).toBeFocused();
+  await expect(page.getByTestId("grid-focus-indicator")).toBeVisible();
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-grid-focused-${width}.png`,
   });
@@ -109,6 +114,11 @@ const captureWeekFocusSequence = async (
   await page.keyboard.press("i");
   const pickerDay = page.locator('.react-datepicker__day[tabindex="0"]');
   await expect(pickerDay).toBeFocused();
+  await expect(
+    page.locator(
+      '.c-month-picker[data-picker-unit="week"] .react-datepicker__week:has(.react-datepicker__day:focus)',
+    ),
+  ).toBeVisible();
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-month-picker-after-i-${width}.png`,
   });
@@ -116,6 +126,8 @@ const captureWeekFocusSequence = async (
 
   await page.keyboard.press("u");
   await expectFocusReturnedToWeekGrid(page);
+  await expect(page.locator("#mainGrid")).toBeFocused();
+  await expect(page.getByTestId("grid-focus-indicator")).toBeVisible();
   await page.screenshot({
     path: `${ARTIFACT_DIR}/week-grid-after-u-${width}.png`,
   });

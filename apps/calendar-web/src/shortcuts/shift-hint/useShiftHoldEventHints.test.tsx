@@ -325,7 +325,7 @@ describe("useShiftHoldEventHints", () => {
     expect(focus).not.toHaveBeenCalled();
   });
 
-  it("leaves bare m to the event menu while an event is focused", () => {
+  it("does not claim bare m while an event is focused", () => {
     const { focus, elements } = mountHints([
       timedFixture(EVENT_A, "2026-08-03T09:00:00.000Z"),
     ]);

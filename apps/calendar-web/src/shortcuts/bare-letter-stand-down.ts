@@ -5,7 +5,7 @@ import { isEditSequenceArmed } from "@web/shortcuts/useEditSequenceShortcut";
 
 /**
  * Shared yield for capture-phase bare-letter shortcuts (`p` focus-notice,
- * `m` event menu). Stands down while the app is locked, the user is typing,
+ * `.` event menu). Stands down while the app is locked, the user is typing,
  * an `e`… sequence is armed, or event-jump chips own the letters.
  */
 export const shouldStandDownBareLetterShortcut = (

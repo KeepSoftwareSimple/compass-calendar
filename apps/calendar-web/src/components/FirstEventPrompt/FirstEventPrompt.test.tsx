@@ -188,7 +188,7 @@ describe("FirstEventPrompt", () => {
     expect(screen.getByText("C")).toBeTruthy();
   });
 
-  it("lifts the shared bottom stack above the sidebar footer on wide layouts", () => {
+  it("lifts the shared bottom stack above the sidebar footer when the sidebar is open", () => {
     markShowcaseSeen();
     act(() => viewActions.setSidebarOpen(true));
     render(
@@ -201,9 +201,27 @@ describe("FirstEventPrompt", () => {
     expect(stack).toHaveAttribute("data-clears-sidebar-footer", "true");
   });
 
-  it("uses the shared bottom stack width on narrow layouts", () => {
+  it("lifts the bottom stack above the footer on narrow layouts with the sidebar open", () => {
     isNarrowSidebarLayout = true;
     markShowcaseSeen();
+    act(() => viewActions.setSidebarOpen(true));
+    render(
+      <BottomNoticeStack>
+        <FirstEventPrompt />
+      </BottomNoticeStack>,
+    );
+
+    const stack = screen.getByRole("region", { name: "Notifications" });
+    expect(stack).toHaveAttribute("data-clears-sidebar-footer", "true");
+    expect(
+      screen.getByRole("complementary", { name: "Create your first event" }),
+    ).toBeTruthy();
+  });
+
+  it("uses the shared bottom stack width on narrow layouts when the sidebar is closed", () => {
+    isNarrowSidebarLayout = true;
+    markShowcaseSeen();
+    act(() => viewActions.setSidebarOpen(false));
     render(
       <BottomNoticeStack>
         <FirstEventPrompt />
@@ -214,6 +232,8 @@ describe("FirstEventPrompt", () => {
     expect(
       screen.getByRole("complementary", { name: "Create your first event" }),
     ).toBeTruthy();
+    const stack = screen.getByRole("region", { name: "Notifications" });
+    expect(stack.getAttribute("data-clears-sidebar-footer")).toBeNull();
   });
 
   it("creates the default first event when Add event is clicked", async () => {
