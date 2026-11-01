@@ -8,22 +8,22 @@ Native UI XCTest runs only on isolated GitHub Macs. No local desktop takeover.
 
 ## Current package
 
-Branch `test/macos-booking-link-accessibility`, fixes #5026. New isolated AppKit
-integration regression creates a real window and rich editor with both named
-booking links. Real keyboard word selection must reach each link, expose its
-full destination help and preserve HTML. It never activates external URLs.
-Native caret selection is a platform-specific keyboard path; separate tabbable
-AX elements, focus-ring visual review, full UI and signed-in evidence stay open.
-The initial isolated package run confirmed both named links lacked destination
-help; keyboard selection, destinations, focus and unchanged HTML passed. The
-shared native link renderer now assigns full destination tooltips. Keep the
-regression unchanged and require new exact-head native/web strict before ready/queue.
-Do not run this AppKit test locally.
-Existing description Tab routing and cancellation/clipboard tests are untouched.
+Branch `chore/macos-parity-review-ledger`: record merged welcome-body #5050
+and named-link destination-help #5027 acceptance using actual exact-head logs
+and inspected evidence. All broad gates remain open. Transfer complete frozen
+source reviews for go-to-date, shortcut-level badge and week-view layout into
+specific missing/unreviewed native behavior rows and narrow reviewed exclusions.
 
-Accounting PR #5020 merged 2026-10-31T18:16:32Z with exact0e0 native/web strict
-PASS and no required skips. Five completed frozen source reviews are recorded;
-future web changes remain deferred. All broad gates and parent #4783 stay open.
+Pure parser/math/model tests do not prove real keyboard or first-frame geometry.
+Keep supported 900/1280/1728 widths, stored closed sidebar, reduced motion and
+alignment/stability requirements open. Exclude only the impossible 320px native
+window against AppDelegate minSize720, and literal CSS scrollbar mechanics.
+Native overflow remains required. No product or test behavior changes.
+
+Next actionable work: missing real native go-to-date keyboard/palette/date and
+announcement regression, or confirmed failing keyboard behavior after reviewing
+current evidence. Keep #4783 open for signed-in RSVP and signed-build acceptance.
+Human-closed #5037 stays closed; all its diagnostics remain outside main.
 
 ## Verified history, do not repeat
 
