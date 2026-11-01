@@ -279,14 +279,20 @@ export class GoogleEventWriter implements ProviderEventWriter {
         input.schedule,
         input.recurrence,
         input.attendees,
-        input.providerManaged,
+        {
+          providerManaged: input.providerManaged,
+          writeSchedule: input.writeSchedule,
+          colorOnly: input.colorOnly,
+        },
       );
       try {
         const patched = await api.patch({
           calendarId: input.calendarId,
           eventId: input.providerEventId,
           requestBody: mainBody,
-          sendUpdates: toSendUpdates(input.invitation),
+          sendUpdates: input.colorOnly
+            ? "none"
+            : toSendUpdates(input.invitation),
           ifMatch,
         });
         return toResult(patched);
@@ -405,14 +411,23 @@ function toResult(event: gSchema$Event): ProviderWriteResult {
 // untouched, exactly as before. content.attendees itself is read-reflected
 // state and never reaches the body. sendUpdates still notifies existing
 // attendees of the changes we do write.
+type GoogleWriteBodyOptions = {
+  providerManaged?: true;
+  writeSchedule?: boolean;
+  colorOnly?: true;
+};
+
 function toGoogleBody(
   content: SyncEventContent,
   schedule: EventSchedule,
   recurrence: ProviderWriteRecurrence,
   attendees?: readonly Attendee[],
-  providerManaged?: true,
+  options?: GoogleWriteBodyOptions,
 ): gSchema$Event {
-  if (providerManaged) {
+  if (options?.colorOnly) {
+    return { ...googleColorIdFields(content.color) };
+  }
+  if (options?.providerManaged) {
     return {
       ...googleColorIdFields(content.color),
       ...attendeesField(attendees),
@@ -423,7 +438,7 @@ function toGoogleBody(
     description: content.description,
     location: content.location,
     ...googleColorIdFields(content.color),
-    ...scheduleFields(schedule),
+    ...(options?.writeSchedule !== false ? scheduleFields(schedule) : {}),
     ...recurrenceField(recurrence),
     ...attendeesField(attendees),
   };

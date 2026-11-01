@@ -257,6 +257,7 @@ function resolveRemoteReplaceSchedule(
   seriesMasterSchedule: EventSchedule | undefined,
 ): ReplaceEventInput {
   if (source !== "remote" || input.scope !== "all") return input;
+  if (input.schedule === undefined) return input;
 
   const parts = decodeOccurrenceId(id);
   if (!parts) return input;
@@ -739,6 +740,14 @@ export function useEventMutations(
           variables.input,
           variables.seriesMasterSchedule,
         );
+        const repositoryInput: ReplaceEventInput = {
+          ...input,
+          schedule:
+            input.schedule ??
+            (source === "local"
+              ? findEventInCache(queryClient, variables.id, source)?.schedule
+              : undefined),
+        };
         const wrote = await writeAfterPreceding(
           variables.writeKey,
           // Must be the exact variables object mutate registered — a spread
@@ -752,8 +761,8 @@ export function useEventMutations(
               .replace(
                 variables.id,
                 {
-                  ...input,
-                  content: editableContent(input.content),
+                  ...repositoryInput,
+                  content: editableContent(repositoryInput.content),
                 },
                 signal,
               )
@@ -997,6 +1006,7 @@ export function useEventMutations(
         }
         if (
           original?.providerManaged === true &&
+          payload.input.schedule !== undefined &&
           !eventSchedulesEqual(original.schedule, payload.input.schedule)
         ) {
           showErrorToast(PROVIDER_MANAGED_SCHEDULE_TOAST);

@@ -147,7 +147,7 @@ export function mergeReplaceInput(
     ...existing,
     calendarId: input.calendarId ?? existing.calendarId,
     content: mergeReplaceContent(existing.content, input.content),
-    schedule: input.schedule,
+    schedule: input.schedule ?? existing.schedule,
     recurrence,
     updatedAt: nowDateTime(),
   };

@@ -1,5 +1,6 @@
 import { type z } from "zod/v4";
 import { type EventId } from "@core/types/domain-primitives";
+import { type Event, EventScheduleSchema } from "@core/types/event.contracts";
 import {
   type CreateEventInput,
   CreateEventInputSchema,
@@ -7,6 +8,7 @@ import {
   ReplaceEventInputSchema,
 } from "@core/types/event-command.contracts";
 import dayjs from "@core/util/date/dayjs";
+import { eventSchedulesEqual } from "@core/util/event/event-schedule-equal";
 import {
   type EditEventDraft,
   type EditEventRecurrenceDraft,
@@ -173,7 +175,14 @@ function toFieldErrors(error: z.ZodError): Record<string, string> {
   return fieldErrors;
 }
 
-export function parseEventDraft(draft: EventDraft): ParseEventDraftResult {
+function eventScheduleFromCandidate(candidate: ScheduleCandidate) {
+  return EventScheduleSchema.parse(candidate);
+}
+
+export function parseEventDraft(
+  draft: EventDraft,
+  sourceEvent?: Event,
+): ParseEventDraftResult {
   const fieldErrors: Record<string, string> = {};
 
   if (draft.mode === "create" && draft.values.calendarId === null) {
@@ -235,9 +244,15 @@ export function parseEventDraft(draft: EventDraft): ParseEventDraftResult {
   }
 
   const editDraft: EditEventDraft = draft;
+  const scheduleUnchanged =
+    sourceEvent !== undefined &&
+    eventSchedulesEqual(
+      eventScheduleFromCandidate(schedule),
+      sourceEvent.schedule,
+    );
   const candidate = {
     content,
-    schedule,
+    ...(scheduleUnchanged ? {} : { schedule }),
     recurrence,
     scope: editDraft.values.scope,
   };

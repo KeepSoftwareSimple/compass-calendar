@@ -142,6 +142,7 @@ export function useUpdateEvent(dependencies: EventMutationDependencies = {}) {
 
       if (
         sourceEvent.providerManaged === true &&
+        parsed.input.schedule !== undefined &&
         !eventSchedulesEqual(sourceEvent.schedule, parsed.input.schedule)
       ) {
         showErrorToast(PROVIDER_MANAGED_SCHEDULE_TOAST);
