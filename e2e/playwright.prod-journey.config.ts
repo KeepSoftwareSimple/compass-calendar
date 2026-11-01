@@ -24,4 +24,3 @@ export default defineConfig({
       ? "test-results/prod-journey-fallback"
       : "test-results/prod-journey",
 });
-
