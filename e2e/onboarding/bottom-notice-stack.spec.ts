@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { ensureSidebarOpen } from "../utils/event-test-utils";
 
 type LayoutBox = { x: number; y: number; width: number; height: number };
 
@@ -179,6 +180,36 @@ async function assertNoticeStackLayout(page: Page) {
   );
 }
 
+/**
+ * Tyler's rule: the lowest bottom-left notice sits as far from the viewport
+ * bottom as from its left edge, unless something real (sidebar footer, Up Next
+ * banner) is under the stack.
+ */
+async function assertBottomGapMatchesLeftGap(page: Page) {
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error("Expected viewport");
+  const notices = noticeLocators(page);
+  await waitForNoticesFullyInViewport(page, notices);
+
+  await expect
+    .poll(
+      async () => {
+        const boxes: LayoutBox[] = [];
+        for (const notice of notices) {
+          const box = await notice.boundingBox();
+          if (box) boxes.push(box);
+        }
+        const lowest = boxes.reduce((a, b) =>
+          b.y + b.height > a.y + a.height ? b : a,
+        );
+        const bottomGap = viewport.height - (lowest.y + lowest.height);
+        return Math.abs(Math.round(bottomGap) - Math.round(lowest.x));
+      },
+      { timeout: 10_000 },
+    )
+    .toBeLessThanOrEqual(1);
+}
+
 test.describe("bottom notice stack", () => {
   test.describe.configure({ mode: "serial" });
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -225,5 +256,33 @@ test.describe("bottom notice stack", () => {
         fullPage: false,
       });
     }
+  });
+
+  for (const width of [360, 560, 1280]) {
+    test(`${width}px keeps the bottom gap equal to the left gap`, async ({
+      page,
+    }, testInfo) => {
+      testInfo.setTimeout(240_000);
+      await page.setViewportSize({ width, height: 800 });
+      await prepareSession(page);
+      await openWeekWithNotices(page);
+
+      await assertBottomGapMatchesLeftGap(page);
+    });
+  }
+
+  test("1280px with the right sidebar open keeps the bottom gap equal to the left gap", async ({
+    page,
+  }, testInfo) => {
+    testInfo.setTimeout(240_000);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await prepareSession(page);
+    await openWeekWithNotices(page);
+    await ensureSidebarOpen(page);
+
+    await expect(
+      page.locator("section.compass-bottom-notice-stack"),
+    ).not.toHaveAttribute("data-clears-sidebar-footer", "true");
+    await assertBottomGapMatchesLeftGap(page);
   });
 });

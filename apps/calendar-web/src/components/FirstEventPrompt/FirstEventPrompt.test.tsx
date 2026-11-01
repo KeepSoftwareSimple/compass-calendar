@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { ID_MAIN } from "@web/common/constants/web.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import { BottomNoticeStack } from "@web/components/BottomNoticeStack/BottomNoticeStack";
@@ -188,52 +189,97 @@ describe("FirstEventPrompt", () => {
     expect(screen.getByText("C")).toBeTruthy();
   });
 
-  it("lifts the shared bottom stack above the sidebar footer when the sidebar is open", () => {
+  const rectOf = (left: number, right: number) =>
+    ({
+      left,
+      right,
+      x: left,
+      width: right - left,
+      top: 0,
+      bottom: 0,
+      y: 0,
+      height: 0,
+      toJSON: () => ({}),
+    }) as DOMRect;
+
+  /** Places the stack and the main column, which ends where the sidebar begins. */
+  const withStackGeometry = (
+    geometry: { stackRight: number; mainRight: number },
+    run: () => void,
+  ) => {
+    const main = document.createElement("div");
+    main.id = ID_MAIN;
+    document.body.appendChild(main);
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+      if (this.id === ID_MAIN) return rectOf(0, geometry.mainRight);
+      if (this.classList.contains("compass-bottom-notice-stack")) {
+        return rectOf(16, geometry.stackRight);
+      }
+      return original.call(this);
+    };
+    try {
+      run();
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = original;
+      main.remove();
+    }
+  };
+
+  it("keeps the default bottom inset at 1280px when the right sidebar is open", () => {
     markShowcaseSeen();
     act(() => viewActions.setSidebarOpen(true));
-    render(
-      <BottomNoticeStack>
-        <FirstEventPrompt />
-      </BottomNoticeStack>,
-    );
+    withStackGeometry({ stackRight: 400, mainRight: 903 }, () => {
+      render(
+        <BottomNoticeStack>
+          <FirstEventPrompt />
+        </BottomNoticeStack>,
+      );
 
-    const stack = screen.getByRole("region", { name: "Notifications" });
-    expect(stack).toHaveAttribute("data-clears-sidebar-footer", "true");
+      const stack = screen.getByRole("region", { name: "Notifications" });
+      expect(stack.getAttribute("data-clears-sidebar-footer")).toBeNull();
+      expect(stack.className).not.toContain(
+        "compass-bottom-notice-stack--clears-footer",
+      );
+    });
   });
 
   it("lifts the bottom stack above the footer on narrow layouts with the sidebar open", () => {
     isNarrowSidebarLayout = true;
     markShowcaseSeen();
     act(() => viewActions.setSidebarOpen(true));
-    render(
-      <BottomNoticeStack>
-        <FirstEventPrompt />
-      </BottomNoticeStack>,
-    );
+    withStackGeometry({ stackRight: 344, mainRight: 96 }, () => {
+      render(
+        <BottomNoticeStack>
+          <FirstEventPrompt />
+        </BottomNoticeStack>,
+      );
 
-    const stack = screen.getByRole("region", { name: "Notifications" });
-    expect(stack).toHaveAttribute("data-clears-sidebar-footer", "true");
-    expect(
-      screen.getByRole("complementary", { name: "Create your first event" }),
-    ).toBeTruthy();
+      const stack = screen.getByRole("region", { name: "Notifications" });
+      expect(stack).toHaveAttribute("data-clears-sidebar-footer", "true");
+      expect(
+        screen.getByRole("complementary", { name: "Create your first event" }),
+      ).toBeTruthy();
+    });
   });
 
   it("uses the shared bottom stack width on narrow layouts when the sidebar is closed", () => {
     isNarrowSidebarLayout = true;
     markShowcaseSeen();
     act(() => viewActions.setSidebarOpen(false));
-    render(
-      <BottomNoticeStack>
-        <FirstEventPrompt />
-      </BottomNoticeStack>,
-    );
+    withStackGeometry({ stackRight: 344, mainRight: 360 }, () => {
+      render(
+        <BottomNoticeStack>
+          <FirstEventPrompt />
+        </BottomNoticeStack>,
+      );
 
-    expect(screen.getByRole("region", { name: "Notifications" })).toBeTruthy();
-    expect(
-      screen.getByRole("complementary", { name: "Create your first event" }),
-    ).toBeTruthy();
-    const stack = screen.getByRole("region", { name: "Notifications" });
-    expect(stack.getAttribute("data-clears-sidebar-footer")).toBeNull();
+      expect(
+        screen.getByRole("complementary", { name: "Create your first event" }),
+      ).toBeTruthy();
+      const stack = screen.getByRole("region", { name: "Notifications" });
+      expect(stack.getAttribute("data-clears-sidebar-footer")).toBeNull();
+    });
   });
 
   it("creates the default first event when Add event is clicked", async () => {
