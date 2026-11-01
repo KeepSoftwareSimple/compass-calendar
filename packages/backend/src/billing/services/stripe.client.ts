@@ -7,7 +7,7 @@ export const STRIPE_API_VERSION = "2026-09-30.endive" as const;
 
 let client: Stripe | undefined;
 
-function getStripe(): Stripe {
+function getConfiguredStripe(): Stripe {
   if (!isStripeConfigured(CONFIG) || !CONFIG.STRIPE_SECRET_KEY) {
     throw new Error("Stripe is not configured");
   }
@@ -63,12 +63,17 @@ export interface StripeBillingGateway {
   ): Promise<Stripe.Event>;
 }
 
-function createStripeBillingGateway(): StripeBillingGateway {
+export function createStripeBillingGateway(
+  getStripe: () => Stripe = getConfiguredStripe,
+): StripeBillingGateway {
   return {
     createCustomer: (params, options) =>
       getStripe().customers.create(params, options),
     deleteCustomer: async (id, options) => {
-      await getStripe().customers.del(id, options);
+      // del(id, params, options): request options go third. Passed second,
+      // stripe-node 23 sends idempotencyKey as a request param and Stripe rejects
+      // the delete, so account deletion failed for every billed account.
+      await getStripe().customers.del(id, {}, options);
     },
     retrieveCustomer: (id, params) =>
       getStripe().customers.retrieve(id, params),
