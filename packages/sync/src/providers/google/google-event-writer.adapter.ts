@@ -12,10 +12,10 @@ import { type SyncEventContent } from "@core/types/sync/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { googleColorIdFields } from "@sync/providers/google/google-color.map";
 import {
+  describeGoogleRequestBodyForLog,
   formatGoogleErrorEntriesForLog,
   googleErrorReasons,
   googleFailureCause,
-  googleRequestBodyKeys,
   googleStatus,
   hasGoogleRateLimitReason,
 } from "@sync/providers/google/google-error";
@@ -232,9 +232,7 @@ export class GoogleEventWriter implements ProviderEventWriter {
         "Google declined to change this event",
         {
           operation: "events.insert",
-          requestBodyKeys: googleRequestBodyKeys(
-            requestBody as Record<string, unknown>,
-          ),
+          requestBody,
         },
       );
     }
@@ -254,11 +252,12 @@ export class GoogleEventWriter implements ProviderEventWriter {
         typeof input.content.color === "string" &&
         input.usesEventLabelColor === true
       ) {
+        const clearBody = { eventLabelId: "" };
         try {
           const cleared = await api.patch({
             calendarId: input.calendarId,
             eventId: input.providerEventId,
-            requestBody: { eventLabelId: "" },
+            requestBody: clearBody,
             sendUpdates: "none",
             ifMatch,
             eventLabelVersion: 1,
@@ -270,7 +269,7 @@ export class GoogleEventWriter implements ProviderEventWriter {
             "Google declined to clear the event label",
             {
               operation: "events.patch(clearEventLabel)",
-              requestBodyKeys: ["eventLabelId"],
+              requestBody: clearBody,
             },
           );
         }
@@ -297,9 +296,7 @@ export class GoogleEventWriter implements ProviderEventWriter {
           "Google declined to change this event",
           {
             operation: "events.patch",
-            requestBodyKeys: googleRequestBodyKeys(
-              mainBody as Record<string, unknown>,
-            ),
+            requestBody: mainBody,
           },
         );
       }
@@ -335,7 +332,6 @@ export class GoogleEventWriter implements ProviderEventWriter {
         "Google declined to delete this event",
         {
           operation: "events.delete",
-          requestBodyKeys: [],
         },
       );
     }
@@ -648,13 +644,15 @@ function googleUnsupportedCapability(
   });
 }
 
+type GoogleWriteContext = { operation: string; requestBody?: gSchema$Event };
+
 function classifyGoogle400(
   error: unknown,
   message: string,
-  context: { operation: string; requestBodyKeys: readonly string[] },
+  context: GoogleWriteContext,
 ): ProviderWriteError {
   googleWriteLog.warn(
-    `Google ${context.operation} HTTP 400: ${formatGoogleErrorEntriesForLog(error)}; bodyKeys=[${context.requestBodyKeys.join(",")}]`,
+    `Google ${context.operation} HTTP 400: ${formatGoogleErrorEntriesForLog(error)}; ${describeGoogleRequestBodyForLog(context.requestBody)}`,
   );
   if (
     googleErrorReasons(error).some((reason) =>
@@ -669,14 +667,14 @@ function classifyGoogle400(
 }
 
 // Every Google write catch triages the same way: a 400 is Google declining
-// this particular change (logged with its `errors[]` entries and the request's
-// top-level body keys), anything else falls through to the shared table. One
+// this particular change (logged with its `errors[]` entries and the request
+// body's shape), anything else falls through to the shared table. One
 // funnel keeps the four call sites from drifting on which statuses get the 400
 // treatment.
 function classifyWriteFailure(
   error: unknown,
   declinedMessage: string,
-  context: { operation: string; requestBodyKeys: readonly string[] },
+  context: GoogleWriteContext,
 ): ProviderWriteError {
   if (googleStatus(error) === 400) {
     return classifyGoogle400(error, declinedMessage, context);

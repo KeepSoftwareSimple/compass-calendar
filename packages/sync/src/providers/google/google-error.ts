@@ -63,14 +63,6 @@ export function googleErrorReasons(error: unknown): string[] {
   );
 }
 
-/** Top-level keys on a Google request body, for logs only (no values/PII). */
-export function googleRequestBodyKeys(
-  body: Record<string, unknown> | undefined,
-): string[] {
-  if (!body) return [];
-  return Object.keys(body).sort();
-}
-
 export function formatGoogleErrorEntriesForLog(error: unknown): string {
   const entries = googleErrorEntries(error);
   if (entries.length === 0) return "(no errors[] entries)";
@@ -90,19 +82,75 @@ export function formatGoogleErrorEntriesForLog(error: unknown): string {
 
 /** Field-presence summary for skipped Google events (no titles, attendees, etc.). */
 export function summarizeGoogleEventFieldsForLog(item: gSchema$Event): string {
-  const start = item.start;
-  const end = item.end;
   return [
     `status=${item.status ?? "none"}`,
     `eventType=${item.eventType ?? "default"}`,
-    `start.date=${start?.date ? "y" : "n"}`,
-    `start.dateTime=${start?.dateTime ? "y" : "n"}`,
-    `start.timeZone=${start?.timeZone ? "y" : "n"}`,
-    `end.date=${end?.date ? "y" : "n"}`,
-    `end.dateTime=${end?.dateTime ? "y" : "n"}`,
-    `end.timeZone=${end?.timeZone ? "y" : "n"}`,
+    ...dateTimeFieldsForLog("start", item.start),
+    ...dateTimeFieldsForLog("end", item.end),
     `recurringEventId=${item.recurringEventId ? "y" : "n"}`,
   ].join(", ");
+}
+
+const SCHEDULE_BODY_KEYS = new Set(["start", "end", "recurrence"]);
+
+/**
+ * Top-level keys of a Google write body, plus the shape of its schedule and
+ * rules when it writes them, for 400 logs only. A 400 like "Invalid start
+ * time" names the field but not the fault; this says which fields are set, how
+ * start compares to end, and which recurrence line types were sent, never the
+ * times, zones, or rules.
+ */
+export function describeGoogleRequestBodyForLog(
+  body: gSchema$Event | undefined,
+): string {
+  const keys = body ? Object.keys(body).sort() : [];
+  const bodyKeys = `bodyKeys=[${keys.join(",")}]`;
+  if (!body || !keys.some((key) => SCHEDULE_BODY_KEYS.has(key))) {
+    return bodyKeys;
+  }
+  const { start, end, recurrence } = body;
+  const schedule = [
+    ...dateTimeFieldsForLog("start", start),
+    ...dateTimeFieldsForLog("end", end),
+    `sameTimeZone=${start?.timeZone === end?.timeZone ? "y" : "n"}`,
+    `startVsEnd=${compareStartToEnd(start, end)}`,
+    `recurrence=${recurrenceShape(recurrence)}`,
+  ];
+  return `${bodyKeys}; schedule={${schedule.join(", ")}}`;
+}
+
+type EventDateTime = NonNullable<gSchema$Event["start"]>;
+
+function dateTimeFieldsForLog(
+  prefix: "start" | "end",
+  value: EventDateTime | undefined,
+): string[] {
+  return [
+    `${prefix}.date=${value?.date ? "y" : "n"}`,
+    `${prefix}.dateTime=${value?.dateTime ? "y" : "n"}`,
+    `${prefix}.timeZone=${value?.timeZone ? "y" : "n"}`,
+  ];
+}
+
+function compareStartToEnd(
+  start: EventDateTime | undefined,
+  end: EventDateTime | undefined,
+): string {
+  const startMs = Date.parse(start?.dateTime ?? start?.date ?? "");
+  const endMs = Date.parse(end?.dateTime ?? end?.date ?? "");
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return "unparsed";
+  if (startMs < endMs) return "before";
+  if (startMs === endMs) return "equal";
+  return "after";
+}
+
+// A null clears the rules (convert to single); an absent key is an instance
+// write.
+function recurrenceShape(recurrence: gSchema$Event["recurrence"]): string {
+  if (recurrence === undefined) return "omitted";
+  if (recurrence === null) return "cleared";
+  const lineTypes = recurrence.map((line) => line.split(/[:;]/, 1)[0]);
+  return `series[${lineTypes.join(",")}]`;
 }
 
 // Quota/rate 403s mean "slow down", not "forbidden".
