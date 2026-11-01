@@ -627,6 +627,54 @@ describe("syncCalendarList", () => {
     expect(primary?.["active"]).toBe(true);
   });
 
+  it("adds a new calendar and retires a removed one across full discovery passes", async () => {
+    const conn = connection();
+    await syncCalendarList(
+      deps(
+        new FakeDiscovery([
+          {
+            calendars: [discovered("primary"), discovered("old-sub")],
+            cursor: null,
+          },
+        ]),
+      ),
+      conn,
+      now,
+    );
+
+    const listResource = await calendarListResource(conn);
+    await resources.clearSyncCursor(
+      conn.tenantId,
+      conn.principalId,
+      String(listResource?._id),
+    );
+
+    await syncCalendarList(
+      deps(
+        new FakeDiscovery([
+          {
+            calendars: [discovered("primary"), discovered("diet")],
+            cursor: null,
+          },
+        ]),
+      ),
+      conn,
+      now,
+    );
+
+    const byId = Object.fromEntries(
+      (await calendarDocs(conn)).map((doc) => [
+        doc["providerCalendarId"],
+        doc["active"],
+      ]),
+    );
+    expect(byId).toEqual({
+      primary: true,
+      diet: true,
+      "old-sub": false,
+    });
+  });
+
   it("does not retire absent calendars on an incremental pass", async () => {
     const conn = connection();
     // Seed a full pass that stores a cursor, so the next pass is incremental.

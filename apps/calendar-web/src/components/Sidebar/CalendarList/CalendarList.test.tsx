@@ -199,15 +199,40 @@ describe("CalendarList", () => {
   });
 
   it("relabels the primary provider calendar as 'primary' since the header already shows its name", () => {
-    const primary = makeCalendar({ name: "ahab@pequod.com", isPrimary: true });
+    const primary = makeCalendar({
+      name: "ahab@pequod.com",
+      accountEmail: "ahab@pequod.com",
+      isPrimary: true,
+    });
 
-    renderCalendarList([primary]);
+    renderCalendarList([primary], {
+      connections: [makeConnection("ahab@pequod.com")],
+    });
 
     expect(
       screen.getByRole("button", { name: "Hide primary calendar" }),
     ).toBeInTheDocument();
     expect(screen.getByText("primary")).toBeInTheDocument();
-    expect(screen.queryByText("ahab@pequod.com")).not.toBeInTheDocument();
+    // Account email belongs in the section header only, not repeated on the row.
+    expect(screen.getAllByText("ahab@pequod.com")).toHaveLength(1);
+  });
+
+  it("shows Microsoft's default Calendar title instead of 'primary' under the account heading", () => {
+    const primary = makeCalendar({
+      name: "Calendar",
+      accountEmail: "user@outlook.com",
+      provider: "microsoft",
+      isPrimary: true,
+    });
+
+    renderCalendarList([primary], {
+      connections: [
+        makeConnection("user@outlook.com", { provider: "microsoft" }),
+      ],
+    });
+
+    expect(screen.getByText("Calendar")).toBeInTheDocument();
+    expect(screen.queryByText("primary")).not.toBeInTheDocument();
   });
 
   it("shows a single row labeled 'On this device only' for anonymous users, without repeating a heading", () => {

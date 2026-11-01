@@ -29,6 +29,7 @@ import {
 } from "@sync/providers/microsoft/microsoft-auth.adapter";
 import {
   MicrosoftCalendarAdapter,
+  type MicrosoftCalendarGroupListPage,
   type MicrosoftCalendarListApi,
   type MicrosoftCalendarListPage,
 } from "@sync/providers/microsoft/microsoft-calendar.adapter";
@@ -211,6 +212,14 @@ describeAuthCases(
 );
 
 class ContractCalendarListApi implements MicrosoftCalendarListApi {
+  async listCalendarGroupsPage(): Promise<MicrosoftCalendarGroupListPage> {
+    return { items: [], nextLink: null };
+  }
+
+  async listGroupCalendarsPage(): Promise<MicrosoftCalendarListPage> {
+    return { items: [], nextLink: null };
+  }
+
   async listPage(): Promise<MicrosoftCalendarListPage> {
     return {
       items: [

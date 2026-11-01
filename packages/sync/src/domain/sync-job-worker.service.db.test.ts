@@ -464,7 +464,8 @@ describe("SyncJobWorker", () => {
       connection._id,
     );
     expect(after?.state).toBe("healthy");
-    expect(after?.lastSyncedAt).toEqual(later);
+    // Event-only progress cannot advance lastSyncedAt past a stale calendar-list pass.
+    expect(after?.lastSyncedAt).toEqual(now());
 
     const feed = await storage
       .db()

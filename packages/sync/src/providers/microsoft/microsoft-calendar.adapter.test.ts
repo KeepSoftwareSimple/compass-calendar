@@ -1,8 +1,10 @@
 import {
   MicrosoftCalendarAdapter,
+  type MicrosoftCalendarGroupListPage,
   type MicrosoftCalendarListApi,
   type MicrosoftCalendarListPage,
   type MicrosoftGraphCalendar,
+  type MicrosoftGraphCalendarGroup,
 } from "@sync/providers/microsoft/microsoft-calendar.adapter";
 import { MICROSOFT_CALENDAR_COLOR_HEX } from "@sync/providers/microsoft/microsoft-calendar-colors";
 import { type MicrosoftMasterCategoryApi } from "@sync/providers/microsoft/microsoft-master-categories";
@@ -10,12 +12,25 @@ import { type ProviderCalendarError } from "@sync/providers/provider-calendar.po
 
 class FakeCalendarListApi implements MicrosoftCalendarListApi {
   calls: Array<{ nextLink?: string }> = [];
+  groupCalls: Array<{ nextLink?: string }> = [];
+  groupCalendarCalls: Array<{ groupId: string; nextLink?: string }> = [];
   #pages: MicrosoftCalendarListPage[];
+  #groupPages: MicrosoftCalendarGroupListPage[];
+  #groupCalendars: Record<string, MicrosoftCalendarListPage[]>;
   #error?: unknown;
 
-  constructor(pages: MicrosoftCalendarListPage[], error?: unknown) {
+  constructor(
+    pages: MicrosoftCalendarListPage[],
+    options: {
+      groupPages?: MicrosoftCalendarGroupListPage[];
+      groupCalendars?: Record<string, MicrosoftCalendarListPage[]>;
+      error?: unknown;
+    } = {},
+  ) {
     this.#pages = pages;
-    this.#error = error;
+    this.#groupPages = options.groupPages ?? [{ items: [], nextLink: null }];
+    this.#groupCalendars = options.groupCalendars ?? {};
+    this.#error = options.error;
   }
 
   async listPage(params: {
@@ -27,7 +42,48 @@ class FakeCalendarListApi implements MicrosoftCalendarListApi {
     if (!page) throw new Error("FakeCalendarListApi: no page scripted");
     return page;
   }
+
+  async listCalendarGroupsPage(params: {
+    nextLink?: string;
+  }): Promise<MicrosoftCalendarGroupListPage> {
+    this.groupCalls.push(params);
+    if (this.#error) throw this.#error;
+    const page = this.#groupPages.shift();
+    if (!page) throw new Error("FakeCalendarListApi: no group page scripted");
+    return page;
+  }
+
+  async listGroupCalendarsPage(
+    groupId: string,
+    params: { nextLink?: string },
+  ): Promise<MicrosoftCalendarListPage> {
+    this.groupCalendarCalls.push({ groupId, nextLink: params.nextLink });
+    if (this.#error) throw this.#error;
+    const pages = this.#groupCalendars[groupId];
+    if (!pages?.length) {
+      return { items: [], nextLink: null };
+    }
+    const page = pages.shift();
+    if (!page) throw new Error("FakeCalendarListApi: no group calendar page");
+    return page;
+  }
 }
+
+const group = (
+  overrides: Partial<MicrosoftGraphCalendarGroup>,
+): MicrosoftGraphCalendarGroup => ({
+  id: "group-my-calendars",
+  name: "My Calendars",
+  ...overrides,
+});
+
+const groupPage = (
+  overrides: Partial<MicrosoftCalendarGroupListPage>,
+): MicrosoftCalendarGroupListPage => ({
+  items: [],
+  nextLink: null,
+  ...overrides,
+});
 
 const calendar = (
   overrides: Partial<MicrosoftGraphCalendar>,
@@ -75,18 +131,27 @@ function adapterWith(
 
 describe("MicrosoftCalendarAdapter", () => {
   it("maps a single page and returns a null cursor", async () => {
-    const api = new FakeCalendarListApi([
-      page({
-        items: [
-          calendar({
-            id: "default-cal",
-            name: "Calendar",
-            isDefaultCalendar: true,
-            hexColor: "#112233",
+    const api = new FakeCalendarListApi([], {
+      groupPages: [
+        groupPage({
+          items: [group()],
+        }),
+      ],
+      groupCalendars: {
+        "group-my-calendars": [
+          page({
+            items: [
+              calendar({
+                id: "default-cal",
+                name: "Calendar",
+                isDefaultCalendar: true,
+                hexColor: "#112233",
+              }),
+            ],
           }),
         ],
-      }),
-    ]);
+      },
+    });
     const { adapter, tokensSeen } = adapterWith(api);
 
     const result = await adapter.discoverCalendars({ accessToken: "at-1" });
@@ -115,15 +180,21 @@ describe("MicrosoftCalendarAdapter", () => {
   });
 
   it("follows @odata.nextLink pagination and accumulates every page", async () => {
-    const api = new FakeCalendarListApi([
-      page({
-        items: [calendar({ id: "a", name: "A" })],
-        nextLink: "https://graph.microsoft.com/v1.0/me/calendars?$skiptoken=2",
-      }),
-      page({
-        items: [calendar({ id: "b", name: "B" })],
-      }),
-    ]);
+    const api = new FakeCalendarListApi([], {
+      groupPages: [groupPage({ items: [group()] })],
+      groupCalendars: {
+        "group-my-calendars": [
+          page({
+            items: [calendar({ id: "a", name: "A" })],
+            nextLink:
+              "https://graph.microsoft.com/v1.0/me/calendarGroups/group-my-calendars/calendars?$skiptoken=2",
+          }),
+          page({
+            items: [calendar({ id: "b", name: "B" })],
+          }),
+        ],
+      },
+    });
     const { adapter } = adapterWith(api);
 
     const result = await adapter.discoverCalendars({ accessToken: "at" });
@@ -132,12 +203,61 @@ describe("MicrosoftCalendarAdapter", () => {
       "a",
       "b",
     ]);
-    expect(api.calls).toEqual([
-      { nextLink: undefined },
+    expect(api.groupCalendarCalls).toEqual([
+      { groupId: "group-my-calendars", nextLink: undefined },
       {
-        nextLink: "https://graph.microsoft.com/v1.0/me/calendars?$skiptoken=2",
+        groupId: "group-my-calendars",
+        nextLink:
+          "https://graph.microsoft.com/v1.0/me/calendarGroups/group-my-calendars/calendars?$skiptoken=2",
       },
     ]);
+  });
+
+  it("merges calendars from every group and picks up a folder added between syncs", async () => {
+    const api = new FakeCalendarListApi([], {
+      groupPages: [groupPage({ items: [group()] })],
+      groupCalendars: {
+        "group-my-calendars": [
+          page({
+            items: [
+              calendar({
+                id: "default-cal",
+                name: "Calendar",
+                isDefaultCalendar: true,
+              }),
+              calendar({ id: "diet-cal", name: "Diet" }),
+            ],
+          }),
+        ],
+      },
+    });
+    const { adapter } = adapterWith(api);
+
+    const result = await adapter.discoverCalendars({ accessToken: "at" });
+
+    expect(result.calendars.map((entry) => entry.displayName).sort()).toEqual([
+      "Calendar",
+      "Diet",
+    ]);
+  });
+
+  it("falls back to /me/calendars when calendarGroups returns nothing", async () => {
+    const api = new FakeCalendarListApi(
+      [
+        page({
+          items: [calendar({ id: "fallback", name: "Fallback" })],
+        }),
+      ],
+      { groupPages: [groupPage({ items: [] })] },
+    );
+    const { adapter } = adapterWith(api);
+
+    const result = await adapter.discoverCalendars({ accessToken: "at" });
+
+    expect(result.calendars.map((entry) => entry.providerCalendarId)).toEqual([
+      "fallback",
+    ]);
+    expect(api.calls).toEqual([{ nextLink: undefined }]);
   });
 
   it("ignores an incremental cursor input and still returns null", async () => {
@@ -263,7 +383,9 @@ describe("MicrosoftCalendarAdapter", () => {
   });
 
   it("maps a 401 to authExpired", async () => {
-    const api = new FakeCalendarListApi([], { response: { status: 401 } });
+    const api = new FakeCalendarListApi([], {
+      error: { response: { status: 401 } },
+    });
     const { adapter } = adapterWith(api);
 
     const error = (await adapter
@@ -274,7 +396,9 @@ describe("MicrosoftCalendarAdapter", () => {
   });
 
   it("maps a 429 to transient", async () => {
-    const api = new FakeCalendarListApi([], { response: { status: 429 } });
+    const api = new FakeCalendarListApi([], {
+      error: { response: { status: 429 } },
+    });
     const { adapter } = adapterWith(api);
 
     const error = (await adapter
@@ -285,7 +409,9 @@ describe("MicrosoftCalendarAdapter", () => {
   });
 
   it("maps a 503 to transient", async () => {
-    const api = new FakeCalendarListApi([], { response: { status: 503 } });
+    const api = new FakeCalendarListApi([], {
+      error: { response: { status: 503 } },
+    });
     const { adapter } = adapterWith(api);
 
     const error = (await adapter
@@ -302,7 +428,7 @@ describe("MicrosoftCalendarAdapter", () => {
       },
       response: { status: 403, data: { error: { code: "ErrorAccessDenied" } } },
     });
-    const api = new FakeCalendarListApi([], leaky);
+    const api = new FakeCalendarListApi([], { error: leaky });
     const { adapter } = adapterWith(api);
 
     const error = (await adapter
@@ -319,7 +445,9 @@ describe("MicrosoftCalendarAdapter", () => {
   });
 
   it("maps a network failure to transient", async () => {
-    const api = new FakeCalendarListApi([], new Error("socket hang up"));
+    const api = new FakeCalendarListApi([], {
+      error: new Error("socket hang up"),
+    });
     const { adapter } = adapterWith(api);
 
     const error = (await adapter
