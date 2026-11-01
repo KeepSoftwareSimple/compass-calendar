@@ -19,6 +19,9 @@ python3 -B -m unittest discover -s docs/acceptance/macos-parity -p '*_test.py'
 A file inventory is only a discovery queue. For each source, read every test and
 parameterized case, extract observable behaviors, and add stable behavior IDs with
 web test names/line anchors, native test methods, equivalence review, status and evidence.
+Before mapping a source, compare it with `inventory.json`'s `baselineCommit` and
+read `git show <baselineCommit>:<path>` when it differs. Map the frozen assertions;
+record later web changes separately without silently changing this scope.
 Only mark a source reviewed after all of its behaviors are mapped or explicitly
 excluded. Multiple behaviors per source and multiple sources per behavior are expected.
 Exclude only after recording the platform-specific reason and review. No native

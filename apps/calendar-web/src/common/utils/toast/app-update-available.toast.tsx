@@ -4,6 +4,7 @@ import { type Id } from "react-toastify";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { reloadLocation } from "@web/common/utils/browser/browser-navigation.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
+import { deliverOrQueueBottomNoticeToast } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.toast";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
 import IconButton from "@web/components/IconButton/IconButton";
 import { useReloadAppShortcut } from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
@@ -60,11 +61,14 @@ export function showAppUpdateAvailableToast(version: string): Id {
     return toastId;
   }
 
-  return toast(createElement(AppUpdateAvailableToast, { toastId }), {
-    ...getToastDefaultOptions(),
-    toastId,
-    autoClose: false,
-    closeOnClick: false,
-    className: "app-update-available-toast-host",
-  });
+  return deliverOrQueueBottomNoticeToast(
+    createElement(AppUpdateAvailableToast, { toastId }),
+    {
+      ...getToastDefaultOptions(),
+      toastId,
+      autoClose: false,
+      closeOnClick: false,
+      className: "app-update-available-toast-host",
+    },
+  );
 }

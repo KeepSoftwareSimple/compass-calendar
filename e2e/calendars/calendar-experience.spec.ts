@@ -345,7 +345,7 @@ async function expectEventCardWidth(
 }
 
 async function hideFocusedEventViaMenu(page: Page) {
-  await page.keyboard.press("m");
+  await page.keyboard.press(".");
   const hideItem = page
     .getByRole("menu")
     .getByRole("menuitem", { name: "Hide event", exact: true });
@@ -759,10 +759,10 @@ test("a read-only event opens as a read-only form", async ({ page }) => {
     .getByRole("button", { name: EVENT_B_TITLE })
     .last();
 
-  // Opens via the context menu's View action, driven by the keyboard: m
+  // Opens via the context menu's View action, driven by the keyboard: .
   // opens the menu on the focused card, and Enter runs the seeded item.
   await card.focus();
-  await page.keyboard.press("m");
+  await page.keyboard.press(".");
   const viewItem = page
     .getByRole("menu")
     .getByRole("menuitem", { name: "View" });
@@ -790,7 +790,7 @@ test("a read-only event's context menu offers view, duplicate, and hide but not 
     .last();
 
   await card.focus();
-  await page.keyboard.press("m");
+  await page.keyboard.press(".");
 
   const menu = page.getByRole("menu");
   await expect(menu.getByRole("menuitem", { name: "View" })).toBeVisible();

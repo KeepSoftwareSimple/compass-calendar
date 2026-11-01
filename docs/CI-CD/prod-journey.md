@@ -45,5 +45,8 @@ Checkout. Production must deploy `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` so
 synthetic journey inboxes stay on `awaiting_checkout` instead of the staging
 write bypass.
 
-Failed workflow runs upload `e2e/test-results/` for seven days via
-`actions/upload-artifact` (`if: always()`).
+Failed workflow runs upload `e2e/test-results/prod-journey/` (traces,
+screenshots, video) for seven days via `actions/upload-artifact`
+(`if: failure()`). Account deletion runs in a Playwright `afterEach` hook with
+its own timeout, and a fallback cleanup leg deletes any account left in
+`journey-pending-account.json` when the main leg times out.

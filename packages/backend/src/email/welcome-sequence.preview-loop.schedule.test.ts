@@ -7,8 +7,13 @@ import { describe, expect, it } from "bun:test";
 
 describe("preview loop monthly schedule (America/Denver)", () => {
   it("anchors on the 1st at 8:00 local", () => {
+    const oct = previewLoopMonthStartUtc(2026, 10);
+    expect(oct.toISOString()).toBe("2026-10-01T14:00:00.000Z");
+  });
+
+  it("uses standard time on a 1st that is also the DST fall-back day", () => {
     const nov = previewLoopMonthStartUtc(2026, 11);
-    expect(nov.toISOString()).toBe("2026-11-01T14:00:00.000Z");
+    expect(nov.toISOString()).toBe("2026-11-01T15:00:00.000Z");
   });
 
   it("picks the upcoming 1st when still before it this month", () => {
@@ -21,7 +26,7 @@ describe("preview loop monthly schedule (America/Denver)", () => {
   it("skips to the next month after the 1st has passed", () => {
     const from = new Date("2026-10-28T12:00:00.000Z");
     expect(nextPreviewLoopMonthlyStart(from).toISOString()).toBe(
-      "2026-11-01T14:00:00.000Z",
+      "2026-11-01T15:00:00.000Z",
     );
   });
 
@@ -50,7 +55,7 @@ describe("preview loop monthly schedule (America/Denver)", () => {
     const completed = new Date("2026-10-15T20:00:00.000Z");
     expect(
       nextPreviewLoopMonthlyStartAfterCompletion(completed).toISOString(),
-    ).toBe("2026-11-01T14:00:00.000Z");
+    ).toBe("2026-11-01T15:00:00.000Z");
   });
 
   it("rolls completion into January after a December finish", () => {

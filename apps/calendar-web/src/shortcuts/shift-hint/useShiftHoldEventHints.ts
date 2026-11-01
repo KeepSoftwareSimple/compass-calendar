@@ -92,7 +92,7 @@ const focusedColumnDay = (): Dayjs | null => {
 
 /**
  * Day columns are entered with Shift so they never race the bare-letter
- * commands they used to lose to (`t` today, `p` notice focus, `m` event menu).
+ * commands they used to lose to (`t` today, `p` notice focus, `.` event menu).
  */
 const isShiftedSingleChar = (event: KeyboardEvent) => {
   const key = keyboardKey(event);

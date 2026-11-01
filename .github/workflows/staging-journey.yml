@@ -3,6 +3,11 @@ name: Staging journey
 # Nightly full user-journey smoke against staging only. Never targets production.
 on:
   workflow_dispatch:
+    inputs:
+      artifact_probe:
+        description: Run signup-only artifact and cleanup probe (one synthetic account)
+        type: boolean
+        default: false
   schedule:
     - cron: "40 7 * * *"
 
@@ -38,6 +43,7 @@ jobs:
       - name: Run staging journey leg
         env:
           DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
+          STAGING_JOURNEY_ARTIFACT_PROBE: ${{ inputs.artifact_probe == true && '1' || '' }}
           STAGING_JOURNEY_PROVIDER: ${{ matrix.provider }}
           STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
           STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
@@ -48,13 +54,13 @@ jobs:
         run: bash .github/scripts/staging-journey.sh
 
       - name: Upload Playwright artifacts
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: staging-journey-${{ matrix.provider }}-${{ github.run_id }}
           path: e2e/test-results/staging-journey/
           retention-days: 14
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Notify Discord on failure
         if: failure()

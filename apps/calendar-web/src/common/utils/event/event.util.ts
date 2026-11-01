@@ -149,7 +149,7 @@ const resolveFocusedCalendarEventFromTarget = (
 /**
  * The focused event card and its id, or null when focus sits anywhere else.
  * The precondition every shortcut that acts on "the event you are on" shares
- * (`m` opens its menu, `x` hides it), so none of them has to re-derive what
+ * (`.` opens its menu, `x` hides it), so none of them has to re-derive what
  * counts as a card.
  *
  * Resolves the stamped card node (not a descendant) so coordinates and
