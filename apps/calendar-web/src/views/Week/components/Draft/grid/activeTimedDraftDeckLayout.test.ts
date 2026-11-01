@@ -50,7 +50,9 @@ describe("getActiveTimedDraftDeckLayout", () => {
 
     expect(getActiveTimedDraftDeckLayout(ritual!, events)).toEqual({
       groupSize: 2,
-      order: 1,
+      left: 0.5,
+      width: 0.5,
+      zIndex: 2,
     });
   });
 
@@ -78,7 +80,9 @@ describe("getActiveTimedDraftDeckLayout", () => {
 
     expect(getActiveTimedDraftDeckLayout(draft, events)).toEqual({
       groupSize: 2,
-      order: 0,
+      left: 0,
+      width: 0.5,
+      zIndex: 1,
     });
   });
 
@@ -112,7 +116,9 @@ describe("getActiveTimedDraftDeckLayout", () => {
 
     expect(getActiveTimedDraftDeckLayout(draft, events)).toEqual({
       groupSize: 2,
-      order: 0,
+      left: 0,
+      width: 0.5,
+      zIndex: 1,
     });
   });
 
@@ -126,7 +132,9 @@ describe("getActiveTimedDraftDeckLayout", () => {
 
     expect(getActiveTimedDraftDeckLayout(draft, [draft, overlap])).toEqual({
       groupSize: 2,
-      order: 0,
+      left: 0,
+      width: 1,
+      zIndex: 1,
     });
     expect(getActiveTimedDraftDeckLayout(draft, [draft])).toBeNull();
   });
@@ -160,7 +168,7 @@ describe("getActiveTimedDraftDeckLayout", () => {
 
     expect(
       getActiveTimedDraftDeckLayout(draft, events, new Set(["draft"])),
-    ).toEqual({ groupSize: 2, order: 0 });
+    ).toEqual({ groupSize: 2, left: 0, width: 1, zIndex: 1 });
   });
 
   it("ignores all-day drafts", () => {

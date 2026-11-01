@@ -1,4 +1,5 @@
 import dayjs from "@core/util/date/dayjs";
+import { DECK_CASCADE_INDENT_RATIO } from "@web/grid/grid.constants";
 import { getTimedEventPosition } from "@web/grid/layout/event.position";
 import {
   applyTimedEventDisplayPosition,
@@ -41,9 +42,13 @@ describe("Tyler Oct 31 overlap deck regression", () => {
 
     expect(unwind?.deckLayout?.groupSize).toBe(2);
     expect(ritual?.deckLayout?.groupSize).toBe(2);
-    expect(unwind?.deckLayout?.order).not.toBe(ritual?.deckLayout?.order);
-    expect(demo?.deckLayout).toEqual({ order: 1, groupSize: 2 });
-    expect(festival?.deckLayout).toEqual({ order: 0, groupSize: 2 });
+    expect(unwind?.deckLayout?.left).not.toBe(ritual?.deckLayout?.left);
+    // The demo starts 30 minutes into the festival, so it cascades over it.
+    expect(festival?.deckLayout).toMatchObject({ groupSize: 2, left: 0 });
+    expect(demo?.deckLayout).toMatchObject({
+      groupSize: 2,
+      left: DECK_CASCADE_INDENT_RATIO,
+    });
 
     const measurements = {
       allDayRow: null,
@@ -98,7 +103,7 @@ describe("Tyler Oct 31 overlap deck regression", () => {
 
     expect(unwind?.deckLayout?.groupSize).toBe(2);
     expect(ritual?.deckLayout?.groupSize).toBe(2);
-    expect(unwind?.deckLayout?.order).not.toBe(ritual?.deckLayout?.order);
+    expect(unwind?.deckLayout?.left).not.toBe(ritual?.deckLayout?.left);
   });
 
   it("groups legacy naive ritual end with Unwind on a UTC host", () => {
@@ -112,6 +117,6 @@ describe("Tyler Oct 31 overlap deck regression", () => {
 
     expect(unwind?.deckLayout?.groupSize).toBe(2);
     expect(ritual?.deckLayout?.groupSize).toBe(2);
-    expect(unwind?.deckLayout?.order).not.toBe(ritual?.deckLayout?.order);
+    expect(unwind?.deckLayout?.left).not.toBe(ritual?.deckLayout?.left);
   });
 });

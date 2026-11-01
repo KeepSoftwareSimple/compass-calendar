@@ -4,14 +4,17 @@ import { type Dayjs } from "@core/util/date/dayjs";
 export const GRID_TIMED_EVENT_MIN_DURATION_MINUTES = 15;
 
 /**
- * End instant for overlap grouping when parsed grid bounds invert or collapse.
+ * End instant for overlap grouping: the span the card is actually painted at.
  *
- * Mixed sync encodings (Z `startDate` + naive `endDate` wall clock before start)
- * still paint using the minimum duration; deck grouping must use the same
- * effective span or overlapping columns stay full width.
+ * Cards paint at least the minimum duration, so a 5 minute task still covers
+ * 15 minutes of grid. Grouping on the painted span keeps a following short
+ * event from being drawn on top of it. The same floor absorbs mixed sync
+ * encodings (Z `startDate` + naive `endDate` wall clock before start).
  */
 export function gridOverlapIntervalEnd(start: Dayjs, end: Dayjs): Dayjs {
-  if (end.diff(start, "minute", true) >= 1) {
+  if (
+    end.diff(start, "minute", true) >= GRID_TIMED_EVENT_MIN_DURATION_MINUTES
+  ) {
     return end;
   }
 

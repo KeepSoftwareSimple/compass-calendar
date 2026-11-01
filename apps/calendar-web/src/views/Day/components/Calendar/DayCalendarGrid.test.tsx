@@ -420,7 +420,7 @@ describe("DayCalendarGrid", () => {
       createTimedEvent({
         _id: "late-overlap",
         endDate: "2026-05-20T10:45:00.000",
-        startDate: "2026-05-20T09:30:00.000",
+        startDate: "2026-05-20T09:15:00.000",
         title: "Late overlap",
       }),
       createTimedEvent({

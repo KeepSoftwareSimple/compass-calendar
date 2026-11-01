@@ -21,16 +21,20 @@
         {
           "eventId": "first",
           "deckLayout": {
-            "order": 0,
-            "groupSize": 2
+            "groupSize": 2,
+            "left": 0,
+            "width": 1,
+            "zIndex": 1
           },
           "isHidden": false
         },
         {
           "eventId": "second",
           "deckLayout": {
-            "order": 1,
-            "groupSize": 2
+            "groupSize": 2,
+            "left": 0.15,
+            "width": 0.85,
+            "zIndex": 2
           },
           "isHidden": false
         }
@@ -57,42 +61,109 @@
         {
           "eventId": "unwind",
           "deckLayout": {
-            "order": 0,
-            "groupSize": 2
+            "groupSize": 2,
+            "left": 0,
+            "width": 1,
+            "zIndex": 1
           },
           "isHidden": false
         },
         {
           "eventId": "ritual",
           "deckLayout": {
-            "order": 1,
-            "groupSize": 2
+            "groupSize": 2,
+            "left": 0.15,
+            "width": 0.85,
+            "zIndex": 2
           },
           "isHidden": false
         }
       ]
     },
     {
-      "id": "applyTimedDeckPosition",
+      "id": "createTimedEventLayout-near-and-far-starts",
       "input": {
-        "position": {
-          "height": 60,
-          "left": 20,
-          "top": 30,
-          "width": 180
-        },
-        "deckLayout": {
-          "order": 1,
-          "groupSize": 2
-        }
+        "events": [
+          {
+            "_id": "a",
+            "startDate": "2026-05-20T10:00:00",
+            "endDate": "2026-05-20T11:00:00"
+          },
+          {
+            "_id": "b",
+            "startDate": "2026-05-20T10:20:00",
+            "endDate": "2026-05-20T11:00:00"
+          },
+          {
+            "_id": "c",
+            "startDate": "2026-05-20T11:00:00",
+            "endDate": "2026-05-20T12:00:00"
+          },
+          {
+            "_id": "d",
+            "startDate": "2026-05-20T11:40:00",
+            "endDate": "2026-05-20T12:30:00"
+          },
+          {
+            "_id": "e",
+            "startDate": "2026-05-20T12:00:00",
+            "endDate": "2026-05-20T13:00:00"
+          }
+        ],
+        "hiddenEventIds": []
       },
-      "output": {
-        "height": 60,
-        "left": 110,
-        "top": 30,
-        "width": 90,
-        "zIndex": 2
-      }
+      "output": [
+        {
+          "eventId": "a",
+          "deckLayout": {
+            "groupSize": 2,
+            "left": 0,
+            "width": 0.5,
+            "zIndex": 1
+          },
+          "isHidden": false
+        },
+        {
+          "eventId": "b",
+          "deckLayout": {
+            "groupSize": 2,
+            "left": 0.5,
+            "width": 0.5,
+            "zIndex": 2
+          },
+          "isHidden": false
+        },
+        {
+          "eventId": "c",
+          "deckLayout": {
+            "groupSize": 3,
+            "left": 0,
+            "width": 1,
+            "zIndex": 1
+          },
+          "isHidden": false
+        },
+        {
+          "eventId": "d",
+          "deckLayout": {
+            "groupSize": 3,
+            "left": 0.15,
+            "width": 0.425,
+            "zIndex": 2
+          },
+          "isHidden": false
+        },
+        {
+          "eventId": "e",
+          "deckLayout": {
+            "groupSize": 3,
+            "left": 0.575,
+            "width": 0.425,
+            "zIndex": 3
+          },
+          "isHidden": false
+        }
+      ]
     },
     {
       "id": "getTimedEventPosition",
@@ -220,17 +291,19 @@
           "width": 310
         },
         "deckLayout": {
-          "order": 0,
-          "groupSize": 2
+          "groupSize": 2,
+          "left": 0.5,
+          "width": 0.5,
+          "zIndex": 2
         },
         "isHidden": false
       },
       "output": {
         "height": 57,
-        "left": 55,
+        "left": 210,
         "top": 480,
         "width": 155,
-        "zIndex": 1
+        "zIndex": 2
       }
     }
   ]
