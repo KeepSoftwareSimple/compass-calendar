@@ -367,9 +367,10 @@ export const cancelJourneySubscriptionIfActive = async (page: Page) => {
     .getByRole("button", { name: "Cancel subscription" });
   if (await confirm.isVisible().catch(() => false)) {
     await confirm.click();
-    await expect(page.getByText(/canceled|cancelled/i)).toBeVisible({
-      timeout: 60_000,
-    });
+    // A scheduled cancel swaps the Billing button to Resume subscription.
+    await expect(
+      settings.getByRole("button", { name: "Resume subscription" }),
+    ).toBeVisible({ timeout: 60_000 });
   }
   await page.keyboard.press("Escape");
 };
