@@ -93,7 +93,7 @@ describe("welcome sequence preview loop", () => {
     });
     expect(generationTwo).toBe(0);
 
-    const novemberStart = new Date("2026-11-01T14:05:00.000Z");
+    const novemberStart = new Date("2026-11-01T15:05:00.000Z");
     await ensurePreviewLoopForRecipient(previewEmail, novemberStart);
 
     const generationTwoRows = await mongoService.emailSend
@@ -105,7 +105,7 @@ describe("welcome sequence preview loop", () => {
       .toArray();
     expect(generationTwoRows).toHaveLength(WELCOME_SEQUENCE.length);
     expect(generationTwoRows[0]?.sendAt?.toISOString()).toBe(
-      "2026-11-01T14:00:00.000Z",
+      "2026-11-01T15:00:00.000Z",
     );
   });
 
