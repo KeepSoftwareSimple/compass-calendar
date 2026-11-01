@@ -15,6 +15,13 @@ and production behavior are unchanged. Pending isolated exact-head native/web
 strict verification and actual capture review before acceptance/ready/queue.
 No local native UI execution or authentication flow.
 
+The first head's full native suite and inspected step-two screenshot passed,
+but strict web fast-typing cases failed on two runs. Focused unchanged tests
+pass locally, including CPU throttling; no root cause or fix is claimed.
+Strict CI now retains failed Playwright test-results for trace-based diagnosis.
+Assertions, typing speed and timeouts are unchanged. New head needs fresh full
+native/web verification; keep draft until successful actual evidence.
+
 Named-link help acceptance from merged #5027 is recorded with actual exactaab
 native/web strict PASS and unchanged keyboard integration regression. Separate
 AX link focus, broad visual, real UI and signed-in gates remain open. Clock
