@@ -222,8 +222,11 @@ export const parseUserTime = (
     ));
   }
 
+  // atCivilTime, not .startOf("day").hour(): the timezone plugin keeps
+  // midnight's UTC offset when setting fields, so on a DST change day a typed
+  // time resolved an hour off ("1400" became 1 PM in Denver on 2026-11-01).
   return getTimeOptionByValue(
-    nowInEffectiveTimeZone().startOf("day").hour(hour).minute(minute),
+    atCivilTime(nowInEffectiveTimeZone(), getEffectiveTimeZone(), hour, minute),
   );
 };
 
