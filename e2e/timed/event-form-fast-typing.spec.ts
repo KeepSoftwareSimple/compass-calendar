@@ -1,10 +1,10 @@
-import { appendFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import {
   installDeterministicBrowserClock,
   openTimedEventFormWithKeyboard,
   prepareTimedCalendarPage,
 } from "../utils/event-test-utils";
+import { appendFileSync } from "node:fs";
 
 const FAST_STRING =
   "Quarterly planning workshop with product design and research teams";
