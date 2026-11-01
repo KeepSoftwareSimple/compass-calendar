@@ -15,7 +15,7 @@ import {
   journeyProvider,
   logInJourneyAccount,
   logOutOfJourneyAccount,
-  openJourneySettings,
+  openJourneyBillingSettings,
   openJourneyTrialStep,
   registerJourneyAccountForCleanup,
   seedJourneyOnboarding,
@@ -140,7 +140,7 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
   await fillTitleAndSaveEventForm(page, createdTitle);
   await expectTimedEventVisible(page, createdTitle);
 
-  const settings = await openJourneySettings(page);
+  const settings = await openJourneyBillingSettings(page);
   await settings.getByRole("button", { name: "Cancel subscription" }).click();
   await page
     .getByRole("dialog", { name: /cancel/i })
