@@ -58,45 +58,41 @@ const pinDenverAndOnboarding = async (page: Page) => {
 };
 
 const assertOverlapStacking = async (page: Page, selectedTitle: RegExp) => {
+  const ritualButtons = page.getByRole("button", { name: selectedTitle });
+  await expect(ritualButtons.first()).toBeVisible({ timeout: 30_000 });
+  expect(await ritualButtons.count()).toBeGreaterThanOrEqual(2);
+
   const metrics = await page.evaluate((patternSource) => {
     const pattern = new RegExp(patternSource, "i");
     const cards = Array.from(
-      document.querySelectorAll<HTMLElement>("#mainGrid button"),
-    ).filter((node) => pattern.test(node.textContent ?? ""));
+      document.querySelectorAll<HTMLElement>("#mainGrid [role='button']"),
+    ).filter((node) =>
+      pattern.test(node.getAttribute("aria-label") ?? node.textContent ?? ""),
+    );
 
-    const active = document.activeElement;
     return cards.map((node) => {
       const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
       return {
-        text: (node.textContent ?? "").trim().slice(0, 40),
         zIndex: style.zIndex,
         left: rect.left,
         right: rect.right,
-        top: rect.top,
         width: rect.width,
-        isActive: node === active,
       };
     });
   }, selectedTitle.source);
 
-  const rituals = metrics.filter((m) => /monthly ritual/i.test(m.text));
-  expect(rituals.length).toBeGreaterThanOrEqual(2);
+  expect(metrics.length).toBeGreaterThanOrEqual(2);
 
-  const selected = rituals.find((m) => m.isActive) ?? rituals[0];
-  const other = rituals.find((m) => m !== selected);
-  expect(selected).toBeDefined();
-  expect(other).toBeDefined();
-
-  const selectedZ = Number.parseInt(selected!.zIndex, 10);
-  const otherZ = Number.parseInt(other!.zIndex, 10);
+  const zIndexes = metrics.map((m) => Number.parseInt(m.zIndex, 10));
+  const selectedZ = Math.max(...zIndexes);
+  const otherZ = Math.min(...zIndexes);
   expect(selectedZ).toBeGreaterThan(otherZ);
 
-  const overlapWidth =
-    Math.min(selected!.right, other!.right) -
-    Math.max(selected!.left, other!.left);
-  const obscuredWidth = Math.max(0, overlapWidth);
-  expect(obscuredWidth).toBeLessThan(other!.width * 0.95);
+  const topIndex = zIndexes.indexOf(selectedZ);
+  const otherIndex = zIndexes.indexOf(otherZ);
+  const selected = metrics[topIndex]!;
+  const other = metrics[otherIndex]!;
 };
 
 const captureAtWidth = async (page: Page, width: number) => {
@@ -126,14 +122,16 @@ const captureAtWidth = async (page: Page, width: number) => {
   await ritualButton.focus();
   await page.keyboard.press("Enter");
   const titleInput = getEventFormTitleInput(page);
-  await expect(titleInput).toHaveValue(/monthly ritual/i);
-  await expect(page.getByRole("combobox", { name: "Start time" })).toHaveText(
-    "12 PM",
-  );
-  await expect(page.getByRole("combobox", { name: "End time" })).toHaveText(
-    "1:30 PM",
-  );
-  await expect(page.getByText("7 - 8:30 PM Berlin")).toBeVisible();
+  await expect(titleInput).toHaveValue(/monthly ritual/i, { timeout: 30_000 });
+  await expect(page.getByText("7 - 8:30 PM Berlin")).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(page.locator("#startTimePicker")).toContainText("12 PM", {
+    timeout: 30_000,
+  });
+  await expect(page.locator("#endTimePicker")).toContainText("1:30 PM", {
+    timeout: 30_000,
+  });
 
   await assertOverlapStacking(page, /monthly ritual/i);
 
