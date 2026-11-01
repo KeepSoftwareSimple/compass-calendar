@@ -1,7 +1,4 @@
-import {
-  isBottomNoticeStackSuppressed,
-  isUpNextBannerSuppressed,
-} from "@web/components/BottomNoticeStack/bottom-notice-stack-suppressed";
+import { isBottomNoticeStackSuppressed } from "@web/components/BottomNoticeStack/bottom-notice-stack-suppressed";
 import { describe, expect, it } from "bun:test";
 
 const clear = {
@@ -30,15 +27,6 @@ describe("isBottomNoticeStackSuppressed", () => {
   it("is true while the shortcut showcase is open", () => {
     expect(
       isBottomNoticeStackSuppressed({ ...clear, shortcutShowcaseOpen: true }),
-    ).toBe(true);
-  });
-});
-
-describe("isUpNextBannerSuppressed", () => {
-  it("matches bottom notice stack suppression", () => {
-    expect(isUpNextBannerSuppressed(clear)).toBe(false);
-    expect(
-      isUpNextBannerSuppressed({ ...clear, shortcutShowcaseOpen: true }),
     ).toBe(true);
   });
 });

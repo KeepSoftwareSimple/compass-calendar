@@ -18,7 +18,10 @@ export const consumeUiFocusTextInsertSuppress = (key: string): boolean => {
   return true;
 };
 
-const stripTrailingLetter = (input: HTMLInputElement, key: string): boolean => {
+export const stripTrailingLetter = (
+  input: HTMLInputElement,
+  key: string,
+): boolean => {
   if (!input.value.endsWith(key)) return false;
   input.value = input.value.slice(0, -1);
   input.dispatchEvent(new Event("input", { bubbles: true }));

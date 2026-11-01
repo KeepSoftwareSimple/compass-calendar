@@ -503,17 +503,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       patchDraftFields({ title: e.target.value });
     };
 
-    const onTitleBlur = () => {
-      flushContentDraftSync();
-    };
-
     const onChangeLocation = (nextLocation: string) => {
       flushSync(() => setLocationInputValue(nextLocation));
       patchDraftFields({ location: nextLocation });
-    };
-
-    const onLocationBlur = () => {
-      flushContentDraftSync();
     };
 
     const onClose = useCallback(() => {
@@ -548,10 +540,6 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       if (e.shiftKey && MOD_SHIFT_CHORDS_IGNORED_BY_FORM.includes(key)) {
         e.preventDefault();
       }
-    };
-
-    const handleTitleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-      handleIgnoredKeys(e);
     };
 
     const onSubmitForm = (
@@ -993,9 +981,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                 )}
                 autoFocus
                 disabled={isReadOnly}
-                onBlur={onTitleBlur}
+                onBlur={flushContentDraftSync}
                 onChange={onChangeTitle}
-                onKeyDown={handleTitleKeyDown}
+                onKeyDown={handleIgnoredKeys}
                 placeholder="Title"
                 aria-label="Title"
                 name="Event Title"
@@ -1106,7 +1094,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                     className={FORM_CARD_FIELD_INPUT_CLASSNAME}
                     disabled={isReadOnly}
                     onChange={onChangeLocation}
-                    onBlur={onLocationBlur}
+                    onBlur={flushContentDraftSync}
                     onKeyDown={handleIgnoredKeys}
                     value={locationInputValue}
                   />
