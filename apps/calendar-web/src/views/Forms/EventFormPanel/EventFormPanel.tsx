@@ -6,6 +6,7 @@ import {
   useCallback,
 } from "react";
 import { type GridEventDraft } from "@web/events/event-draft.types";
+import { getGridDraftId } from "@web/events/grid-event-draft.adapter";
 import { LazyEventForm as EventForm } from "@web/views/Forms/EventForm/EventForm.lazy";
 
 export type EventFormPanelConfirmation = {
@@ -56,6 +57,7 @@ export function EventFormPanel({
   return (
     <Suspense fallback={null}>
       <EventForm
+        key={getGridDraftId(draft) ?? draft.kind}
         draft={draft}
         fieldErrors={fieldErrors}
         isDraft={isDraft}

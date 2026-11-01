@@ -406,7 +406,6 @@ export const PlanSection: FC<PlanSectionProps> = ({
           <TrialStartAsk
             checkoutSource={{ kind: "settings_trial_ask" }}
             onCheckoutComplete={closeTrialAsk}
-            priceLineContext="settings"
             showTitle
             title="Start your free trial"
           />

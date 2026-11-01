@@ -3,6 +3,7 @@ import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { trackTrialStepViewed } from "@web/auth/posthog/signup-funnel";
 import {
   useAppConfigQuery,
+  useBillingSubscriptionQuery,
   useStripePublishableKey,
 } from "@web/billing/billing.query";
 import {
@@ -14,16 +15,17 @@ import {
 import { EmbeddedCheckoutPanel } from "@web/billing/EmbeddedCheckoutPanel";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
 import { readSignupTrialMethod } from "@web/billing/signup-trial.util";
+import { formatTrialStepWriteLead } from "@web/billing/signup-trial-format.util";
 import {
-  formatTrialAskChargeLine,
-  formatTrialStepWriteLead,
-} from "@web/billing/signup-trial-format.util";
-import { type TrialStartPriceLineContext } from "@web/billing/trial-start-display.util";
+  formatTrialAskSubline,
+  resolveBillingDisplayPrice,
+} from "@web/billing/trial-start-display.util";
 import { consumeTrialStepTrigger } from "@web/billing/trial-step-request";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { PixelPirateScouting } from "@web/components/WelcomeModal/PixelPirateScouting";
+import { isPlainEnterKey } from "@web/shortcuts/keyboard-modifiers.util";
 import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
@@ -39,7 +41,6 @@ type TrialStartAskProps = {
   showMascot?: boolean;
   trackSignupView?: boolean;
   onBeforeOpenCheckout?: () => void;
-  priceLineContext?: TrialStartPriceLineContext;
   /** OverlayPanel seats focus here so plain Enter does not activate Start. */
   initialFocusRef?: RefObject<HTMLElement | null>;
 };
@@ -57,15 +58,18 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
   showMascot = false,
   trackSignupView = false,
   onBeforeOpenCheckout,
-  priceLineContext: _priceLineContext = "default",
   initialFocusRef,
 }) => {
   const isCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
   const publishableKey = useStripePublishableKey();
   const configQuery = useAppConfigQuery();
+  const subscriptionQuery = useBillingSubscriptionQuery(true);
   const trialLengthDays =
     configQuery.data?.billing.trialLengthDays ?? BILLING_PLAN.TRIAL_LENGTH_DAYS;
-  const chargeLine = formatTrialAskChargeLine(trialLengthDays);
+  const chargeLine = formatTrialAskSubline(
+    resolveBillingDisplayPrice(subscriptionQuery.data?.price),
+    trialLengthDays,
+  );
   const viewedRef = useRef(false);
   const writeLeadRef = useRef(consumeTrialStepTrigger() === "write");
 
@@ -126,13 +130,7 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
           className="c-button c-button-primary c-button-elevated inline-flex items-center justify-center rounded-full px-6 py-2"
           onClick={openCheckout}
           onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              !event.metaKey &&
-              !event.ctrlKey &&
-              !event.altKey &&
-              !event.shiftKey
-            ) {
+            if (isPlainEnterKey(event)) {
               event.preventDefault();
             }
           }}

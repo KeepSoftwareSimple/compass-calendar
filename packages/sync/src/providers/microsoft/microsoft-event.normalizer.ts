@@ -1,4 +1,3 @@
-import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   type Attendee,
   type Conference,
@@ -19,6 +18,7 @@ import {
   type ProviderEventRead,
   type ProviderEventRecurrence,
 } from "@sync/providers/provider-event.port";
+import { parseProviderSchedule } from "@sync/providers/provider-schedule.util";
 
 const RFC3339_OFFSET = dayjs.DateFormat.RFC3339_OFFSET;
 const DATE_ONLY = dayjs.DateFormat.YEAR_MONTH_DAY_FORMAT;
@@ -285,7 +285,7 @@ function mapSchedule(item: GraphEvent) {
         "All-day event start/end could not be resolved to dates",
       );
     }
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "allDay",
       start: startDate,
       end: endDate,
@@ -297,7 +297,7 @@ function mapSchedule(item: GraphEvent) {
       start.timeZone ?? end.timeZone ?? "UTC",
     );
     const timeZone = resolveTimedEventTimeZone(item, startFieldZone);
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "timed",
       start: toOffsetIso(start, timeZone),
       end: toOffsetIso(end, timeZone),
@@ -339,18 +339,6 @@ function resolveTimedEventTimeZone(
     return originalStartZone;
   }
   return "UTC";
-}
-
-function parseSchedule(candidate: unknown) {
-  const parsed = EventScheduleSchema.safeParse(candidate);
-  if (!parsed.success) {
-    throw new ProviderEventError(
-      "unmappableSchedule",
-      "Event start/end could not be resolved to a schedule",
-      { cause: parsed.error },
-    );
-  }
-  return parsed.data;
 }
 
 function mapRecurrence(

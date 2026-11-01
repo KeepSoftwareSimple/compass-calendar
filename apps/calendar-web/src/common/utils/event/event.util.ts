@@ -132,7 +132,7 @@ export const getCalendarEventIdFromElement = (element: HTMLElement) =>
 /**
  * The focused event card and its id, or null when focus sits anywhere else.
  * The precondition every shortcut that acts on "the event you are on" shares
- * (`m` opens its menu, `x` hides it), so none of them has to re-derive what
+ * (`.` opens its menu, `x` hides it), so none of them has to re-derive what
  * counts as a card.
  */
 export const getFocusedCalendarEvent = (): {
@@ -295,6 +295,22 @@ const mutationToastMessage = (
   );
 };
 
+const OFFLINE_SAVE_MESSAGE =
+  "Couldn't save, you're offline. Your change was not applied.";
+const BACKEND_UNREACHABLE_SAVE_MESSAGE =
+  "Couldn't reach Compass, it may be restarting. Your change was not applied.";
+
+/**
+ * Only blame the user's connection when the browser itself says it is
+ * offline. Otherwise the request left the device and Compass did not answer
+ * (a deploy restart or a gateway 502/503/504), which "check your connection"
+ * used to misreport as the user's network.
+ */
+const backendUnavailableSaveMessage = (): string =>
+  typeof navigator !== "undefined" && navigator.onLine === false
+    ? OFFLINE_SAVE_MESSAGE
+    : BACKEND_UNREACHABLE_SAVE_MESSAGE;
+
 export const handleError = (
   error: Error,
   onRetry?: () => void,
@@ -315,10 +331,17 @@ export const handleError = (
 
   if (isBackendUnavailableError(error)) {
     // No HTTP response reached us at all (offline, DNS, dropped connection)
-    // or a 502/503/504 - the optimistic edit is about to roll back with
-    // nothing else on screen to explain why.
+    // or a 502/503/504, and the mutation layer has already re-sent the write
+    // for about 45 seconds (event-write-retry.ts). The optimistic edit is
+    // about to roll back with nothing else on screen to explain why.
     showErrorToast(
-      "Couldn't save - check your connection. Your change was not applied.",
+      onRetry
+        ? createElement(RetryableSaveToast, {
+            message: backendUnavailableSaveMessage(),
+            toastId: EVENT_SAVE_UNAVAILABLE_TOAST_ID,
+            onRetry,
+          })
+        : backendUnavailableSaveMessage(),
       { toastId: EVENT_SAVE_UNAVAILABLE_TOAST_ID },
     );
     return;

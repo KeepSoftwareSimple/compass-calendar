@@ -118,11 +118,13 @@ describe("BillingGateModal", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the trial charge date line", () => {
+  it("shows trial price and charge date on the ask line", () => {
     renderGate();
 
     expect(
-      screen.getByText(/No charge until .+\. Cancel anytime\./),
+      screen.getByText(
+        /\$7\.99\/mo after\. No charge until .+\. Cancel anytime\./,
+      ),
     ).toBeInTheDocument();
   });
 

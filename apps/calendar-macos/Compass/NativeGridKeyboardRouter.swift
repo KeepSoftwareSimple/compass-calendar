@@ -72,6 +72,7 @@ final class NativeGridKeyboardRouter {
             .navGoToDate,
             .otherSidebar,
             .focusSidebar,
+            .focusEvent,
             .focusNotice,
             .otherSubscribe,
         ]
@@ -400,6 +401,15 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        // Header buttons own activation and traversal, rather than grid edge cycling.
+        if model.isTitleBarControlFocused {
+            if keyEvent.modifiers.isEmpty,
+                keyEvent.key == .named(.enter) || isSpaceKey(keyEvent.key) { return false }
+            if keyEvent.key == .named(.tab), keyEvent.modifiers.isEmpty || keyEvent.modifiers == [.shift] {
+                return false
+            }
+        }
+
         // Sidebar and banner focus own their keys before the grid's draft keys,
         // which would read digits as a typed time and Enter as "open event".
         if !model.isEventFormVisible,
@@ -547,7 +557,7 @@ final class NativeGridKeyboardRouter {
             return true
         }
         if matchesBinding(keyEvent, id: .editOpenDescriptionLink) {
-            guard isDescriptionFormEditorFocused() else { return false }
+            guard model.isEventFormVisible else { return false }
             let opened = NSApp.sendAction(
                 NSSelectorFromString("openDescriptionLinkAtCaret:"),
                 to: nil,
@@ -558,22 +568,6 @@ final class NativeGridKeyboardRouter {
         }
         if handleColorSwatchKeys(keyEvent) {
             return true
-        }
-        if keyEvent.modifiers.isEmpty,
-            case .character(let char) = keyEvent.key,
-            let digit = Int(String(char)),
-            (1...9).contains(digit),
-            !isEditableNonDescriptionTextInputFocused()
-        {
-            let opened = NSApp.sendAction(
-                NSSelectorFromString("openDescriptionLinkDigit:"),
-                to: nil,
-                from: NSNumber(value: digit - 1)
-            )
-            if opened {
-                model.recordShortcut(.editOpenDescriptionLinkDigit)
-                return true
-            }
         }
         if keyEvent.modifiers == [.command], keyEvent.key == .named(.enter) {
             Task { await model.saveDraft() }
@@ -841,6 +835,8 @@ final class NativeGridKeyboardRouter {
                 model.onboardingStore.toggleWelcomeFaq(digit - 1)
             } else if step == 3 {
                 handleWelcomeLastStepKey(char)
+            } else if step == 4 {
+                break
             }
         default:
             break
@@ -885,6 +881,16 @@ final class NativeGridKeyboardRouter {
             model.commitMonthPickerFocus()
         case .named(.escape):
             model.clearMonthPickerFocus()
+        case .character(let char):
+            if char == "u" {
+                model.clearMonthPickerFocus()
+                model.focusFirstCalendarEvent()
+            } else if char == "i" {
+                break
+            } else {
+                model.clearMonthPickerFocus()
+                return false
+            }
         default:
             model.clearMonthPickerFocus()
             return false

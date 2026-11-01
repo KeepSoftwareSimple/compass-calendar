@@ -8,6 +8,7 @@ import {
   anchorDateForWindowOffset,
   computeVisibleDayCount,
   computeVisibleWindowOffset,
+  currentWeekWindowStart,
   isAllDayEventInVisibleDays,
   isTimedEventInVisibleDays,
   WEEK_DAY_COUNT,
@@ -48,6 +49,33 @@ describe("computeVisibleDayCount", () => {
     // (890 - 50) / 140 = 6 days; (890 - 100) / 140 = 5 days
     expect(computeVisibleDayCount(890)).toBe(6);
     expect(computeVisibleDayCount(890, 100)).toBe(5);
+  });
+});
+
+describe("currentWeekWindowStart", () => {
+  it("keeps Friday visible in a five-day window (staging journey viewport)", () => {
+    const friday = dayjs("2026-10-30T09:00:00");
+    const start = currentWeekWindowStart(friday, 5);
+
+    expect(start.format("YYYY-MM-DD")).toBe("2026-10-27");
+    expect(
+      [...Array(5)].map((_, index) =>
+        start.add(index, "day").format("YYYY-MM-DD"),
+      ),
+    ).toEqual([
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+    ]);
+  });
+
+  it("uses Sunday at full week width", () => {
+    const wednesday = dayjs("2026-07-07T09:00:00");
+    expect(currentWeekWindowStart(wednesday, 7).format("YYYY-MM-DD")).toBe(
+      "2026-07-05",
+    );
   });
 });
 

@@ -6,7 +6,8 @@ actor PostHogCapture {
     static let shared = PostHogCapture()
 
     private var client = PostHogBatchClient(configuration: nil)
-    private var activeDistinctId: String?
+    private var identityController = PostHogIdentityController()
+    private var sessionController = PostHogSessionController()
     private var flushTask: Task<Void, Never>?
     private var environmentLabel = PosthogEnvironment.resolve(hostname: nil)
     private let lib = "compass-macos"
@@ -15,25 +16,35 @@ actor PostHogCapture {
         environmentLabel = PosthogEnvironment.resolve(hostname: hostname)
     }
 
+    func disableCapture() {
+        client = PostHogBatchClient(configuration: nil)
+    }
+
+    private var isCaptureEnabled: Bool {
+        UITestLaunchPolicy.capturesProductAnalytics
+    }
+
     func configure(posthog: AppConfigPosthog?) {
+        guard isCaptureEnabled else {
+            disableCapture()
+            return
+        }
         guard let posthog else {
             client = PostHogBatchClient(configuration: nil)
             return
         }
-        let configuration = PostHogCaptureConfiguration(
-            apiKey: posthog.key,
-            host: posthog.host,
-            lib: lib)
-        client = PostHogBatchClient(
-            configuration: configuration,
-            transport: PostHogBatchTransport { request in
-                let (data, response) = try await URLSession.shared.data(for: request)
-                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-                return (status, data)
-            })
+        applyConfiguration(
+            PostHogCaptureConfiguration(
+                apiKey: posthog.key,
+                host: posthog.host,
+                lib: lib))
     }
 
     func configureFromBundle() async {
+        guard isCaptureEnabled else {
+            disableCapture()
+            return
+        }
         let key = Bundle.main.object(forInfoDictionaryKey: "COMPASS_POSTHOG_KEY") as? String
         let host = Bundle.main.object(forInfoDictionaryKey: "COMPASS_POSTHOG_HOST") as? String
         guard let key, let host, !key.isEmpty, !host.isEmpty else {
@@ -44,22 +55,29 @@ actor PostHogCapture {
     }
 
     func identify(distinctId: String) {
-        activeDistinctId = distinctId
-        client.setDistinctId(distinctId)
+        if let aliasEvent = identityController.identify(userId: distinctId) {
+            enqueueAliasIfNeeded(aliasEvent)
+        }
     }
 
     func resetIdentity() {
-        activeDistinctId = nil
-        client.setDistinctId(nil)
+        _ = identityController.resetSignedOutIdentity()
+        sessionController.resetSession()
     }
 
     func capture(_ event: ProductEvent, properties: ProductEventProperties = [:]) {
-        _ = ensureDistinctId()
+        guard isCaptureEnabled else { return }
+        let distinctId = identityController.distinctIdForCapture()
+        let sessionId = sessionController.touchSessionId()
         var merged = properties
         merged["environment"] = .string(environmentLabel)
         merged["version"] = .string(AppBuildInfo.marketingVersion)
         do {
-            try client.enqueue(event: event.rawValue, properties: merged)
+            try client.enqueue(
+                event: event.rawValue,
+                distinctId: distinctId,
+                sessionId: sessionId,
+                properties: merged)
             scheduleFlush()
         } catch {
             // Analytics must never interrupt product actions.
@@ -70,7 +88,8 @@ actor PostHogCapture {
         guard client.isConfigured else {
             throw PostHogBatchClientError.notConfigured
         }
-        _ = ensureDistinctId()
+        let distinctId = identityController.distinctIdForCapture()
+        let sessionId = sessionController.touchSessionId()
         let properties: ProductEventProperties = [
             "$survey_id": .string(DesktopFeedbackSurvey.surveyId),
             "$survey_name": .string(DesktopFeedbackSurvey.surveyName),
@@ -82,29 +101,42 @@ actor PostHogCapture {
             "feedback_source": .string("help_menu"),
             "feedback_type": .string("feedback"),
         ]
-        try client.enqueue(event: "survey sent", properties: properties)
+        try client.enqueue(
+            event: "survey sent",
+            distinctId: distinctId,
+            sessionId: sessionId,
+            properties: properties)
         await flushQueuedEvents()
-    }
-
-    private func ensureDistinctId() -> String {
-        if let activeDistinctId {
-            return activeDistinctId
-        }
-        let key = "COMPASS_POSTHOG_ANON_DISTINCT_ID"
-        if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
-            identify(distinctId: stored)
-            return stored
-        }
-        let generated = UUID().uuidString
-        UserDefaults.standard.set(generated, forKey: key)
-        identify(distinctId: generated)
-        return generated
     }
 
     func flushNow() async {
         flushTask?.cancel()
         flushTask = nil
         await flushQueuedEvents()
+    }
+
+    private func applyConfiguration(_ configuration: PostHogCaptureConfiguration) {
+        client = PostHogBatchClient(
+            configuration: configuration,
+            transport: PostHogBatchTransport { request in
+                let (data, response) = try await URLSession.shared.data(for: request)
+                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                return (status, data)
+            })
+    }
+
+    private func enqueueAliasIfNeeded(_ event: PostHogIdentityEvent) {
+        guard case let .alias(previousAnonymousId, userId) = event else { return }
+        let sessionId = sessionController.touchSessionId()
+        let aliasCapture = identityController.makeAliasCapture(
+            previousAnonymousId: previousAnonymousId,
+            userId: userId)
+        do {
+            try client.enqueue(aliasCapture, sessionId: sessionId)
+            scheduleFlush()
+        } catch {
+            // Analytics must never interrupt product actions.
+        }
     }
 
     private func scheduleFlush() {

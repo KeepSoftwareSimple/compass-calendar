@@ -76,7 +76,8 @@ they cannot use).
 Welcome → signup → first-event contract:
 
 - unauthenticated users who have not seen welcome get `WelcomeModal`
-- welcome is three screens in one dialog, each with one focused primary
+- welcome is four screens in one dialog for local explorers (three through
+  the account choice, then essential shortcuts), each with one focused primary
   button so Enter (or a click) is always the obvious next thing: **Get
   started for free** (headline, tagline, one-sentence pitch) → **Next** over
   the five FAQ rows (digits `1`–`5` toggle them, only on this screen) →
@@ -96,8 +97,8 @@ Welcome → signup → first-event contract:
   because the scopes Compass requests include the calendar, so that one round
   trip signs the user up *and* connects it, the moment the product starts
   being worth keeping
-- **On this device only** closes the welcome dialog and leaves the
-  Shortcut Showcase closed until the visitor opts in
+- **On this device only** opens a keyboard-shortcuts screen, then continues
+  to the calendar without starting Block Party until the visitor opts in
 - **Log in** opens the auth modal and leaves the showcase flags alone, so a
   returning user is not handed the practice or the first-event prompt
 - **Practice the shortcuts** in the welcome footer (or `?play=1`, or the

@@ -1,7 +1,13 @@
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { countLocalNonDemoEvents } from "@web/auth/posthog/anon-events-created.util";
-import { track } from "@web/auth/posthog/track";
+import {
+  type SignupStep,
+  signupStepViewedProperties,
+} from "@web/auth/posthog/signup-step-viewed.properties";
+import { captureProductEvent, track } from "@web/auth/posthog/track";
 import { type CheckoutPanelSource } from "@web/billing/checkout-panel.store";
+
+export type { SignupStep } from "@web/auth/posthog/signup-step-viewed.properties";
 
 /**
  * The signup funnel, as one enumerable vocabulary.
@@ -15,30 +21,6 @@ import { type CheckoutPanelSource } from "@web/billing/checkout-panel.store";
  * with its existing name and properties. `signup_step_viewed` is additive: a
  * second, complete view of the same journey that existing insights ignore.
  */
-export type SignupStep =
-  | "welcome_viewed"
-  | "signup_cta_clicked"
-  | "auth_modal_opened"
-  | "signup_form_submitted"
-  | "oauth_redirect_started"
-  /**
-   * Fired before any branch in the provider callback, so a user who returns
-   * from the provider is counted even when the exchange then fails. This is
-   * what separates "never came back" from "came back and we broke it".
-   */
-  | "oauth_callback_returned"
-  | "account_created"
-  | "connect_prompt_shown"
-  | "calendar_connected"
-  /** Fired when the missing-permissions modal opens, replacing the old toast. */
-  | "permissions_explainer_shown"
-  | "google_oauth_scopes_recovery_viewed"
-  | "google_oauth_scopes_recovery_retry_clicked"
-  | "google_oauth_scopes_recovery_succeeded"
-  | "trial_step_viewed"
-  | "trial_step_completed"
-  | "trial_step_abandoned";
-
 export type SignupMethod = "email" | ProviderKind;
 
 const SIGNUP_METHODS: readonly SignupMethod[] = [
@@ -109,11 +91,10 @@ export function trackSignupStep(
   step: SignupStep,
   properties: StepProperties = {},
 ): void {
-  track("signup_step_viewed", {
-    step_name: step,
-    step,
-    ...compact(properties),
-  });
+  captureProductEvent(
+    "signup_step_viewed",
+    signupStepViewedProperties(step, compact(properties)),
+  );
 }
 
 export function trackSignupFailed(
@@ -190,9 +171,12 @@ export function trackLocalModeSelected(source: LocalModeSource): void {
 }
 
 /** Legacy `signup_completed` plus its funnel step. */
-export function trackSignupCompleted(method: SignupMethod): void {
-  track("signup_completed", { method });
-  trackSignupStep("account_created", { method });
+export function trackSignupCompleted(
+  method: SignupMethod,
+  extraProperties?: Record<string, boolean | number | string>,
+): void {
+  track("signup_completed", { method, ...extraProperties });
+  trackSignupStep("account_created", { method, ...extraProperties });
 }
 
 /** PostHog renders an explicit `undefined` as a property; drop those instead. */

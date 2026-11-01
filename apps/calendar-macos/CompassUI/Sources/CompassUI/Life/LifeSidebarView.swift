@@ -45,6 +45,13 @@ struct LifeSidebarView: View {
               .padding(.vertical, 8).frame(width: 176)
               .background(theme.surfaceColor).foregroundStyle(theme.textColor)
               .clipShape(RoundedRectangle(cornerRadius: 4))
+              .overlay {
+                if focusedField == .birthDate {
+                  RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(theme.accentColor, lineWidth: 2)
+                    .padding(-2)
+                }
+              }
               // Typing stays in the field; the button opens web's calendar picker.
               .overlay(alignment: .trailing) {
                 Button {
@@ -99,6 +106,14 @@ struct LifeSidebarView: View {
       return .handled
     }
     .onAppear { refreshInputs() }
+    .onChange(of: model.pendingLifeSidebarFieldFocus) { _, pending in
+      guard pending else { return }
+      model.pendingLifeSidebarFieldFocus = false
+      // Defer so the key that opened the sidebar cannot append into the field.
+      DispatchQueue.main.async {
+        focusedField = .birthDate
+      }
+    }
     .onChange(of: model.lifeStore.preferences) { _, _ in refreshInputs() }
     .onChange(of: focusedField) { old, _ in
       if old == .birthDate { commitBirthDate() }

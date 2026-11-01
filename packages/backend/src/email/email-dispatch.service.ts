@@ -22,6 +22,7 @@ import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
   buildUnsubscribeTokenForUser,
   buildUnsubscribeUrls,
+  type EmailUnsubscribeScope,
   isBookingHostEmailStopped,
   isEmailSequenceStopped,
 } from "@backend/email/email-unsubscribe";
@@ -63,12 +64,31 @@ const isAllowlistedRecipient = (email: string): boolean => {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-const listUnsubscribeHeaders = (
-  unsubscribe: NonNullable<ReturnType<typeof buildUnsubscribeUrls>>,
-): Record<string, string> => ({
-  "List-Unsubscribe": unsubscribe.listUnsubscribeHeader,
-  "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-});
+/**
+ * The unsubscribe links for a recipient and the headers that carry them.
+ * Both are absent when the signing secret is unset: a send without a token
+ * goes out with no unsubscribe affordance rather than a broken one.
+ */
+const resolveUnsubscribe = (
+  userIdHex: string,
+  scope?: EmailUnsubscribeScope,
+): {
+  readonly unsubscribe: ReturnType<typeof buildUnsubscribeUrls> | undefined;
+  readonly headers: Record<string, string>;
+} => {
+  const token = buildUnsubscribeTokenForUser(userIdHex);
+  if (token === null) {
+    return { unsubscribe: undefined, headers: {} };
+  }
+  const unsubscribe = buildUnsubscribeUrls(token, scope);
+  return {
+    unsubscribe,
+    headers: {
+      "List-Unsubscribe": unsubscribe.listUnsubscribeHeader,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  };
+};
 
 const isInvalidRecipientError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
@@ -272,14 +292,15 @@ export class EmailDispatchService {
     };
     const skip = (reason: string) => this.#skipRow(context, reason);
 
-    if (!row.reservationId) {
+    const reservationId = row.reservationId;
+    if (!reservationId) {
       await skip("Missing reservation");
       return;
     }
 
     const booking = await loadBookingHostEmailDispatchContext({
       userId: row.userId,
-      reservationId: row.reservationId,
+      reservationId,
     });
     if (!booking) {
       await skip("Missing booking context");
@@ -303,11 +324,10 @@ export class EmailDispatchService {
 
     const reservation = booking.reservation;
 
-    const unsubscribeToken = buildUnsubscribeTokenForUser(userIdHex);
-    const unsubscribe =
-      unsubscribeToken !== null
-        ? buildUnsubscribeUrls(unsubscribeToken, "booking-host")
-        : undefined;
+    const { unsubscribe, headers } = resolveUnsubscribe(
+      userIdHex,
+      "booking-host",
+    );
 
     const rendered = renderBookingHostEmail({
       kind,
@@ -325,13 +345,11 @@ export class EmailDispatchService {
       unsubscribe,
     });
 
-    const headers = unsubscribe ? listUnsubscribeHeaders(unsubscribe) : {};
-
     await this.#deliverRow(context, {
       stillSendable: async () => {
         const fresh = await loadBookingHostEmailDispatchContext({
           userId: row.userId,
-          reservationId: row.reservationId!,
+          reservationId,
         });
         return (
           !!fresh && !isBookingHostEmailStopped(fresh.user.emailPreferences)
@@ -411,11 +429,7 @@ export class EmailDispatchService {
       return;
     }
 
-    const unsubscribeToken = buildUnsubscribeTokenForUser(userIdHex);
-    const unsubscribe =
-      unsubscribeToken !== null
-        ? buildUnsubscribeUrls(unsubscribeToken)
-        : undefined;
+    const { unsubscribe, headers } = resolveUnsubscribe(userIdHex);
 
     const ctaUrl = appendWelcomeEmailUtm(ctaBaseHref, row.stepKey);
     const templateVariables = buildWelcomeResendTemplateVariables({
@@ -423,8 +437,6 @@ export class EmailDispatchService {
       unsubscribeUrl: unsubscribe?.httpsUrl ?? "",
       firstName: user.firstName,
     });
-
-    const headers = unsubscribe ? listUnsubscribeHeaders(unsubscribe) : {};
 
     await this.#deliverRow(context, {
       stillSendable: async () => {

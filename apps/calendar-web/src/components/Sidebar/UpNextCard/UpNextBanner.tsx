@@ -8,17 +8,16 @@ import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { formatEventStatus } from "./UpNextCard";
+import { useUpNextBannerHorizontalCenter } from "./useUpNextBannerHorizontalCenter";
 import { useUpNextEvent } from "./useUpNextEvent";
 import { useUpNextOsNotification } from "./useUpNextOsNotification";
 
 const MINUTES_BEFORE_START = 2;
+const BANNER_BOTTOM_OFFSET_PX = 24;
 
 /**
- * A centered banner that surfaces the next timed event when it is about to
- * start, mirroring Vimcal. N opens the event's details from anywhere. V joins
- * the Up Next meeting whenever that event has a conference URL, not only
- * while this banner is visible. The banner's primary action switches to Join
- * when a link exists.
+ * Centered banner for the next timed event when it is about to start or in
+ * progress. N opens details; V joins when a conference URL exists.
  */
 export const UpNextBanner: FC = () => {
   const { now, openEventDetails, upNext, conferenceUrl, isCurrentEvent } =
@@ -32,6 +31,7 @@ export const UpNextBanner: FC = () => {
       dayjs(upNext?.startDate).diff(now, "minute", true) <=
         MINUTES_BEFORE_START);
   const isVisible = isWithinWindow && upNext?._id !== dismissedId;
+  const centerX = useUpNextBannerHorizontalCenter(isVisible);
 
   useUpNextOsNotification(
     upNext?._id
@@ -47,8 +47,6 @@ export const UpNextBanner: FC = () => {
   const openConference = () =>
     window.open(conferenceUrl, "_blank", "noopener,noreferrer");
 
-  // Keeps the banner mounted for one fade-out beat instead of yanking it
-  // instantly.
   const dismiss = () => {
     beginDismiss(() => setDismissedId(upNext?._id));
   };
@@ -63,13 +61,9 @@ export const UpNextBanner: FC = () => {
     enabled: Boolean(conferenceUrl),
     shortcutId: "nav-join-meeting",
   });
-  // Only active while the banner itself is showing. Fires alongside any
-  // other Escape handling (e.g. useEscapeToCloseForm closing the event form)
-  // the same way every other Escape shortcut in the app does - Escape is
-  // never scoped to "not while typing" here, matching that convention.
   useAppShortcutUp("Escape", dismiss, { enabled: isVisible });
 
-  if (!isVisible || !upNext) {
+  if (!isVisible || !upNext || centerX === null) {
     return null;
   }
 
@@ -83,13 +77,19 @@ export const UpNextBanner: FC = () => {
   return (
     <div
       aria-atomic="true"
-      className="fixed bottom-6 left-1/2 flex w-72 -translate-x-1/2 starting:translate-y-2 items-center gap-3 rounded-lg border border-border bg-surface-panel/80 px-3 py-2 text-sm text-text starting:opacity-0 shadow-xl backdrop-blur-md transition-all duration-300 ease-out data-closing:opacity-0 motion-reduce:transition-none"
+      className="pointer-events-none fixed flex w-72 starting:translate-y-2 items-center gap-3 rounded-lg border border-border bg-surface-panel/80 px-3 py-2 text-sm text-text starting:opacity-0 shadow-xl backdrop-blur-md transition-all duration-300 ease-out data-closing:opacity-0 motion-reduce:transition-none"
       data-closing={closing || undefined}
       data-notice=""
+      data-up-next-banner=""
       role="status"
-      style={{ zIndex: Z_INDEX_FLOATING_MENU }}
+      style={{
+        zIndex: Z_INDEX_FLOATING_MENU,
+        bottom: `max(${BANNER_BOTTOM_OFFSET_PX}px, env(safe-area-inset-bottom))`,
+        left: centerX,
+        transform: "translateX(-50%)",
+      }}
     >
-      <div className="min-w-0 flex-1">
+      <div className="pointer-events-auto min-w-0 flex-1">
         <div className="text-text-muted text-xs">{countdown}</div>
         <div className="flex items-center gap-1.5">
           <span
@@ -105,7 +105,7 @@ export const UpNextBanner: FC = () => {
         shortcutId={conferenceUrl ? "nav-join-meeting" : "nav-up-next"}
       >
         <button
-          className="c-focus-ring flex shrink-0 items-center gap-1.5 rounded bg-accent-secondary px-2 py-1 font-medium text-on-accent"
+          className="c-focus-ring pointer-events-auto flex shrink-0 items-center gap-1.5 rounded bg-accent-secondary px-2 py-1 font-medium text-on-accent"
           onClick={
             conferenceUrl ? openConference : () => openEventDetails("gridClick")
           }
@@ -118,7 +118,7 @@ export const UpNextBanner: FC = () => {
       <TooltipWrapper description="Dismiss banner" shortcut="Esc">
         <button
           aria-label="Dismiss"
-          className="c-focus-ring shrink-0 rounded-xs px-1 text-text-muted hover:text-text"
+          className="c-focus-ring pointer-events-auto shrink-0 rounded-xs px-1 text-text-muted hover:text-text"
           onClick={dismiss}
           type="button"
         >

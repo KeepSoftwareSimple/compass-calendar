@@ -12,7 +12,6 @@ import {
 } from "@web/events/grid-event-draft.adapter";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
 import { GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW } from "@web/grid/components/calendar-accent.util";
-import { DECK_MIN_WIDTH } from "@web/grid/grid.constants";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import { GridDraft } from "./GridDraft";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -154,7 +153,7 @@ describe("GridDraft", () => {
     });
   });
 
-  it("keeps an active overlapping saved draft at its stacked width and stack order", () => {
+  it("keeps an active overlapping saved draft in its overlap column slot", () => {
     const deckLayout = { groupSize: 2, order: 0 };
 
     renderGridDraft({
@@ -165,7 +164,7 @@ describe("GridDraft", () => {
       name: /Timed event: Planning/,
     });
 
-    expect(draftBlock.style.width).toBe(`${DECK_MIN_WIDTH}px`);
+    expect(parseFloat(draftBlock.style.width)).toBe(45);
     expect(Number(draftBlock.style.zIndex)).toBe(deckLayout.order + 1);
   });
 

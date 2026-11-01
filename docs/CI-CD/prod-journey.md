@@ -25,9 +25,28 @@ Production backend deploy config must also set:
 
 | Deploy env / yaml | Purpose |
 |---|---|
-| `SYNTHETIC_JOURNEY_EMAILS` | Same base emails as the secrets above |
-| `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` | Same discount id (applied only for synthetic accounts) |
+| `SYNTHETIC_JOURNEY_EMAILS` | Same base emails as the secrets above (comma-separated), e.g. `lance.essert+prod-journey-google@gmail.com,lance.essert+prod-journey-microsoft@gmail.com,lance.essert+prod-journey-apple@gmail.com` |
+| `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` | Same discount id as the `prod-journey` Environment secret (written to `stripe.syntheticJourneyDiscountId`; applied only for synthetic accounts) |
 
-The spec completes embedded Checkout with a test card, cancels the subscription
-in Settings, then continues logout/login/delete. Accounts are tagged synthetic
+Add `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` to the **production** GitHub
+Environment under the same name as `prod-journey` (copy the value once in the
+GitHub UI; deploy references the secret, it does not embed the coupon id).
+
+The spec completes embedded Checkout without a card: production checkout uses
+`payment_method_collection: if_required` with the 100% journey discount, fills
+billing address when Stripe Tax requires it, then submits. It cancels the
+subscription in Settings, continues logout/login, and always deletes the account
+in a `finally` block (including after failures). Accounts are tagged synthetic
 server-side and must not receive welcome email or pollute billing funnels.
+
+After email signup the calendar uses the explore-first trial path: the spec
+opens `?auth=trial` (same as staging signup trial capture), then embedded
+Checkout. Production must deploy `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` so
+synthetic journey inboxes stay on `awaiting_checkout` instead of the staging
+write bypass.
+
+Failed workflow runs upload `e2e/test-results/prod-journey/` (traces,
+screenshots, video) for seven days via `actions/upload-artifact`
+(`if: failure()`). Account deletion runs in a Playwright `afterEach` hook with
+its own timeout, and a fallback cleanup leg deletes any account left in
+`journey-pending-account.json` when the main leg times out.

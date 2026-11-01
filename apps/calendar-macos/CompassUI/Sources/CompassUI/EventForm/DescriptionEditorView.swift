@@ -90,10 +90,8 @@ struct DescriptionEditorView: NSViewRepresentable {
         }
 
         func shouldShowLinkHintOverlay(isFocused: Bool, html: String, isEditable: Bool) -> Bool {
-            guard isEditable, !isFocused, !suppressLinkHintSlots, container?.window != nil else { return false }
-            if !DescriptionLinkPresentation.linkHrefs(in: html).isEmpty { return true }
-            guard let textView else { return false }
-            return linkHintSlotsReserved(for: textView)
+            _ = (isFocused, html, isEditable)
+            return false
         }
 
         func applyTheme(_ theme: NativeWebTheme) {
@@ -139,9 +137,8 @@ struct DescriptionEditorView: NSViewRepresentable {
         }
 
         private func linkHintSlotsReserved(for textView: DescriptionTextView) -> Bool {
-            guard textView.isEditable, !suppressLinkHintSlots else { return false }
-            guard descriptionHasNonBookingLinks(in: textView) else { return false }
-            return true
+            _ = (textView, suppressLinkHintSlots)
+            return false
         }
 
         private func descriptionHasNonBookingLinks(in textView: DescriptionTextView) -> Bool {
@@ -452,6 +449,15 @@ public final class DescriptionTextView: NSTextView {
         }
         didChangeText()
         onFormattingChange?()
+    }
+
+    public override func insertTab(_ sender: Any?) {
+        let paragraph = paragraphRange(containing: selectedRange())
+        let listKind = paragraph.length > 0
+            ? textStorage?.attribute(HTMLFragmentAppKit.listKindKey, at: paragraph.location, effectiveRange: nil)
+            : typingAttributes[HTMLFragmentAppKit.listKindKey]
+        guard listKind == nil else { super.insertTab(sender); return }
+        window?.selectNextKeyView(self)
     }
 
     public override func insertNewline(_ sender: Any?) {

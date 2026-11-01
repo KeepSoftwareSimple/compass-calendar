@@ -14,6 +14,7 @@ import { getFocusableElements } from "@web/common/utils/focusable-elements";
 import { useOverlayEscape } from "@web/components/OverlayPanel/overlay-escape";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
+import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 
 /** Stable, low-cardinality label for a panel's app-lock reason. */
 function lockLabel(name: string | undefined): string {
@@ -214,7 +215,7 @@ export const OverlayPanel = ({
         return;
       }
     }
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && onModEnter) {
+    if (e.key === "Enter" && isModKeyHeld(e) && onModEnter) {
       // Prevent the focused button (often Cancel) from activating on Enter.
       e.preventDefault();
       e.stopPropagation();

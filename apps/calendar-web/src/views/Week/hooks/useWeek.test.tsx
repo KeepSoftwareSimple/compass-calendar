@@ -78,6 +78,23 @@ describe("useWeek", () => {
     expect(result.current.component.isCurrentWeek).toBe(true);
   });
 
+  it("defaults the anchor so today stays visible on partial-week widths", () => {
+    const today = dayjs("2026-10-30", DATE_FORMAT); // Friday
+
+    const { result } = renderHook(() => useWeek(today, 5));
+
+    expect(
+      result.current.component.weekDays.map((d) => d.format(DATE_FORMAT)),
+    ).toEqual([
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+    ]);
+    expect(result.current.component.isCurrentWeek).toBe(true);
+  });
+
   it("defaults the anchor to today at single-day (phone) width when no dateString", () => {
     const today = dayjs("2026-07-07", DATE_FORMAT); // Tuesday
 
@@ -177,6 +194,21 @@ describe("useWeek", () => {
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/week/$dateString",
       params: { dateString: "2026-05-17" },
+    });
+  });
+
+  it("navigates to a window that includes today on partial-week goToToday", () => {
+    mockParams.dateString = "2026-01-01";
+    const today = dayjs("2026-10-30", DATE_FORMAT);
+    const { result } = renderHook(() => useWeek(today, 5));
+
+    act(() => {
+      result.current.util.goToToday();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/week/$dateString",
+      params: { dateString: "2026-10-27" },
     });
   });
 

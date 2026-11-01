@@ -18,6 +18,7 @@ CONFIG_FILE=${COMPASS_CONFIG_FILE:-"$INSTALL_DIR/compass.yaml"}
 COMPOSE_FILE=$INSTALL_DIR/compose.yaml
 COMPOSE_SELFHOSTED_FILE=$INSTALL_DIR/compose.selfhosted.yaml
 CONFIG_HELPER_FILE=$INSTALL_DIR/config.sh
+ROLLING_BACKEND_FILE=$INSTALL_DIR/rolling-backend.sh
 ENV_LOADED=0
 PROJECT_NAME=$(basename "$INSTALL_DIR")
 APP_URL=http://localhost:9080
@@ -105,9 +106,7 @@ require_stack() {
   docker compose version >/dev/null 2>&1 || fail "Docker Compose is not available. Install Docker Desktop or Docker Engine with Compose."
 }
 
-compose() {
-  require_stack
-  set_compose_env
+compose_docker() {
   # Cloud/Atlas (no selfhosted profile) uses only the base file. Selfhosted
   # adds the overlay that hard-waits for healthy mongo before backend. Putting
   # that dependency in the base file breaks profile-less cloud deploys, and
@@ -118,11 +117,17 @@ compose() {
       if [ -f "$COMPOSE_SELFHOSTED_FILE" ]; then
         docker compose --project-name "$PROJECT_NAME" \
           -f "$COMPOSE_FILE" -f "$COMPOSE_SELFHOSTED_FILE" "$@"
-        return
+        return $?
       fi
       ;;
   esac
   docker compose --project-name "$PROJECT_NAME" -f "$COMPOSE_FILE" "$@"
+}
+
+compose() {
+  require_stack
+  set_compose_env
+  compose_docker "$@"
 }
 
 check_health() {
@@ -171,8 +176,22 @@ open_browser() {
   fi
 }
 
+load_rolling_backend() {
+  [ -f "$ROLLING_BACKEND_FILE" ] || fail "Missing rolling backend helper: $ROLLING_BACKEND_FILE. Run ./compass update or reinstall Compass."
+  # shellcheck source=rolling-backend.sh
+  . "$ROLLING_BACKEND_FILE"
+}
+
 start_stack() {
+  load_rolling_backend
+  migrate_from_legacy_backend ||
+    fail "Legacy backend migration failed. Run './compass logs' for details."
+  active=$(read_backend_active_slot)
+  inactive=$(inactive_backend_slot "$active")
+  write_upstream_for_slot "$active"
+  printf '%s\n' "$active" > "$INSTALL_DIR/.backend-active-slot"
   compose up -d || fail "Docker Compose failed to start Compass."
+  compose stop -t 1 "backend-$inactive" >/dev/null 2>&1 || true
   if wait_for_health; then
     info "Compass is running at $APP_URL"
   else
@@ -187,6 +206,17 @@ rebuild_stack() {
   else
     fail "Compass built, but the backend health check did not pass. Run './compass logs' for details."
   fi
+}
+
+run_compose_wait() {
+  wait_sec=$1
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    # GNU timeout execs argv[1]; compose() is a shell function and cannot run under it.
+    timeout "$wait_sec" "$0" __internal_compose_docker up -d --remove-orphans --wait "$@"
+    return $?
+  fi
+  compose up -d --remove-orphans --wait "$@"
 }
 
 prune_unused_images() {
@@ -205,6 +235,13 @@ prune_unused_images() {
 command_name=${1:-}
 
 case $command_name in
+  __internal_compose_docker)
+    shift
+    require_stack
+    set_compose_env
+    compose_docker "$@"
+    exit $?
+    ;;
   start)
     start_stack
     ;;
@@ -231,19 +268,46 @@ case $command_name in
     ;;
   update)
     require_stack
+    load_rolling_backend
     prune_unused_images
     compose pull || fail "Could not pull updated Compass images from Docker Hub."
-    if ! compose up -d --remove-orphans --wait; then
+    case ",${COMPOSE_PROFILES}," in
+      *,selfhosted,*)
+        compose up -d --force-recreate --no-deps supertokens >/dev/null 2>&1 || true
+        ;;
+    esac
+    if ! rolling_backend_update; then
       compose ps -a >&2 || true
-      compose logs --tail=100 mongo backend sync >&2 || true
-      fail "Docker Compose failed to start updated Compass."
+      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
+      fail "Rolling backend update failed. Run './compass logs' for details."
     fi
+    secondary_services="web booking-web sync"
+    case ",${COMPOSE_PROFILES}," in
+      *,selfhosted,*)
+        secondary_services="$secondary_services mongo supertokens supertokens-db"
+        ;;
+    esac
+    if ! compose up -d --force-recreate --no-deps web booking-web; then
+      compose ps -a web booking-web >&2 || true
+      compose logs --tail=80 web booking-web >&2 || true
+      fail "Docker Compose failed to recreate the web containers."
+    fi
+    compose_wait_sec=${COMPASS_COMPOSE_WAIT_SEC:-900}
+    # shellcheck disable=SC2086
+    if ! run_compose_wait "$compose_wait_sec" $secondary_services; then
+      compose ps -a >&2 || true
+      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
+      fail "Docker Compose failed to start updated Compass services."
+    fi
+    active=$(read_backend_active_slot)
+    inactive=$(inactive_backend_slot "$active")
+    compose stop -t 1 "backend-$inactive" >/dev/null 2>&1 || true
     prune_unused_images
     if wait_for_health; then
       info "Compass updated and running at $APP_URL"
     else
       compose ps -a >&2 || true
-      compose logs --tail=100 mongo backend sync >&2 || true
+      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
       fail "Compass updated, but the backend health check did not pass. Run './compass logs' for details."
     fi
     ;;

@@ -5,7 +5,7 @@ import {
   getToastDefaultOptions,
 } from "@web/common/constants/toast.constants";
 import { getToast } from "@web/common/utils/toast/toast.port";
-import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
 import { type RecurrenceScopePromotion } from "@web/events/recurrence/recurrence-scope";
 import {
   type RecurrenceScopeOpportunity,
@@ -16,9 +16,6 @@ import {
 export const RECURRENCE_SCOPE_TOAST_ID = "recurrence-scope-opportunity";
 
 const MAX_EVENT_NAME_LENGTH = 28;
-
-const actionClassName =
-  "flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm font-medium text-text hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 const truncateEventName = (title: string) => {
   const name = title.trim() || "Untitled event";
@@ -55,33 +52,31 @@ function ScopeToastContent({
         {verb} “{eventName}”
       </p>
       <p className="mt-1 text-sm text-text-muted">Apply to series?</p>
-      <div className="mt-1 grid gap-1">
-        <button
-          type="button"
-          className={actionClassName}
+      <div className="mt-2 grid gap-2">
+        <NoticePrimaryButton
+          className="w-full justify-between self-stretch"
           onClick={() =>
             recurrenceScopeOpportunityActions.requestPromotion(
               opportunity.id,
               "thisAndFollowing",
             )
           }
+          shortcutKeys="1"
         >
-          <span>Following</span>
-          <ShortcutKeys keys="1" />
-        </button>
-        <button
-          type="button"
-          className={actionClassName}
+          Following
+        </NoticePrimaryButton>
+        <NoticePrimaryButton
+          className="w-full justify-between self-stretch"
           onClick={() =>
             recurrenceScopeOpportunityActions.requestPromotion(
               opportunity.id,
               "all",
             )
           }
+          shortcutKeys="2"
         >
-          <span>All</span>
-          <ShortcutKeys keys="2" />
-        </button>
+          All
+        </NoticePrimaryButton>
       </div>
     </div>
   );

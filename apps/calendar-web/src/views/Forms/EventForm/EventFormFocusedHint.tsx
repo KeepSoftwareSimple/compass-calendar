@@ -50,11 +50,11 @@ export function EventFormCalendarPopoverHints() {
   return (
     <span
       data-testid="event-form-calendar-hint"
-      className="flex pointer-coarse:hidden items-center gap-1"
+      className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-1 gap-y-0.5"
     >
       <EventFormHintKeys
-        keys={["ArrowUp", "ArrowDown"]}
-        label="Up and down arrows move in the calendar"
+        keys={["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]}
+        label="Arrow keys move in the calendar"
       />
       <span aria-hidden className="text-text-muted">
         ·

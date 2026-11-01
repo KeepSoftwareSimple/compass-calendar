@@ -18,6 +18,7 @@ import {
   scanBunDockerfilePins,
   scanConstraints,
   scanRuntimeStageCopies,
+  signupStepViewedDirectTrackHits,
   stripUnusedPhosphorWeights,
   WEB_LOCATOR_ALLOWLIST,
   ZOD_V3_ALLOWLIST,
@@ -142,6 +143,19 @@ describe("keydownListenerHits", () => {
   });
 });
 
+describe("signupStepViewedDirectTrackHits", () => {
+  it("flags bare track calls for signup_step_viewed", () => {
+    expect(
+      signupStepViewedDirectTrackHits(
+        'track("signup_step_viewed", { step_name: "welcome_viewed" });\n',
+      ),
+    ).toEqual([1]);
+    expect(
+      signupStepViewedDirectTrackHits('trackSignupStep("welcome_viewed");\n'),
+    ).toEqual([]);
+  });
+});
+
 describe("formatHit", () => {
   it("prints the path, rule, detail, and how to fix it", () => {
     const text = formatHit({
@@ -165,6 +179,7 @@ describe("formatHit", () => {
       "zod-import",
       "em-dash",
       "keydown-listener",
+      "signup-step-viewed-track",
     ]) {
       expect(RULE_HELP[rule]?.length ?? 0).toBeGreaterThan(20);
     }

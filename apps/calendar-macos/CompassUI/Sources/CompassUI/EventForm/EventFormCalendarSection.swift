@@ -52,7 +52,7 @@ struct EventFormCalendarSection: View {
             EventFormCalendarMenuControl(
                 calendars: model.writableEventCalendars,
                 selectedId: draft.calendarId?.rawValue,
-                focusRequest: model.eventFormCalendarFocusRequest,
+                focusRequest: model.eventFormFocusRequest,
                 requestsFocus: model.eventFormFocusedField == .calendar,
                 isFocused: $calendarFocused,
                 onSelect: { model.updateDraftFromForm(calendarId: CalendarId(rawValue: $0)) }

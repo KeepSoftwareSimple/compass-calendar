@@ -105,7 +105,8 @@ public enum GridLayoutSnapshotBuilder {
             let base = EventPositionCalculator.getTimedEventPosition(
                 EventPositionCalculator.TimedEventInput(
                     startDate: timed.startDate,
-                    endDate: timed.endDate
+                    endDate: timed.endDate,
+                    timeZone: timed.timeZone
                 ),
                 measurements: measurements,
                 visibleDates: visibleDates,

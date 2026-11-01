@@ -126,11 +126,17 @@ export type ProductEvent =
 
 export type ProductEventProperties = Record<string, boolean | number | string>;
 
+/** Events that must use a typed funnel helper instead of a bare `track` call. */
+export type DirectTrackProductEvent = Exclude<
+  ProductEvent,
+  "signup_step_viewed"
+>;
+
 /**
- * Fire-and-forget capture for the small set of product-activation events.
- * No-ops when PostHog isn't initialized (disabled, or not yet booted).
+ * Low-level capture for funnel modules that attach required properties.
+ * Do not call this for `signup_step_viewed` outside `signup-funnel.ts`.
  */
-export function track(
+export function captureProductEvent(
   event: ProductEvent,
   properties?: ProductEventProperties,
 ): void {
@@ -140,4 +146,18 @@ export function track(
     // Analytics must never interrupt the product action it observes. The SDK
     // owns transport retries and unload flushing for successfully queued data.
   }
+}
+
+/**
+ * Fire-and-forget capture for the small set of product-activation events.
+ * No-ops when PostHog isn't initialized (disabled, or not yet booted).
+ *
+ * `signup_step_viewed` is excluded: use {@link trackSignupStep} so `step` is
+ * always present for funnel insights.
+ */
+export function track(
+  event: DirectTrackProductEvent,
+  properties?: ProductEventProperties,
+): void {
+  captureProductEvent(event, properties);
 }

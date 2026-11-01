@@ -1,17 +1,19 @@
 import { Origin } from "@core/constants/core.constants";
+import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
-  DECK_INDENT,
-  DECK_MIN_WIDTH,
-  DECK_RIGHT_RESERVE,
   EVENT_WIDTH_MINIMUM,
   HIDDEN_EVENT_STRIP_WIDTH,
   TIMED_EVENT_COLUMN_INSET,
-  TIMED_EVENT_FAN_GUTTER,
-  TIMED_EVENT_FAN_INDENT,
   TIMED_EVENT_WIDTH_RATIO,
 } from "@web/grid/grid.constants";
+import {
+  resetEffectiveTimeZoneStoreForTests,
+  setBrowserTimeZoneForTests,
+  setCalendarTimeZoneHint,
+  setPinnedTimeZone,
+} from "@web/timezone/effective-timezone.store";
 import {
   applyTimedDeckPosition,
   applyTimedEventDisplayPosition,
@@ -33,6 +35,8 @@ const createTimedEvent = (
   ...overrides,
   position: { ...gridEventDefaultPosition, ...overrides.position },
 });
+
+const denver = "America/Denver";
 
 const event = (id: string, startDate: string, endDate: string) =>
   createTimedEvent({
@@ -145,6 +149,44 @@ describe("createTimedEventLayout", () => {
     expect(deckOf(laid, "afternoon")).toBeNull();
   });
 
+  it("decks same-start overlaps when one event is UTC Z and the other is wall clock", () => {
+    resetEffectiveTimeZoneStoreForTests();
+    setBrowserTimeZoneForTests("Etc/UTC");
+    setCalendarTimeZoneHint(denver);
+    setPinnedTimeZone(denver);
+
+    const events = [
+      createTimedEvent({
+        _id: "ritual",
+        calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439012"),
+        endDate: "2026-10-31T20:30:00",
+        startDate: "2026-11-01T01:00:00.000Z",
+        title: "Deutsch …",
+      }),
+      createTimedEvent({
+        _id: "unwind",
+        calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439011"),
+        endDate: "2026-10-31T20:00:00-06:00",
+        recurrence: { eventId: "series-unwind", rule: ["RRULE:FREQ=WEEKLY"] },
+        startDate: "2026-10-31T19:00:00-06:00",
+        timeZone: denver,
+        title: "Unwind",
+      }),
+      createTimedEvent({
+        _id: "update",
+        endDate: "2026-10-31T19:00:00-06:00",
+        startDate: "2026-10-31T18:00:00-06:00",
+        title: "Update",
+      }),
+    ];
+
+    const laid = createTimedEventLayout(events);
+
+    expect(deckOf(laid, "ritual")).toEqual({ order: 0, groupSize: 2 });
+    expect(deckOf(laid, "unwind")).toEqual({ order: 1, groupSize: 2 });
+    expect(deckOf(laid, "update")).toBeNull();
+  });
+
   it("excludes a hidden event from overlap fanning", () => {
     const events = [
       event("visible-a", "2026-05-20T09:00:00", "2026-05-20T10:00:00"),
@@ -167,18 +209,16 @@ describe("createTimedEventLayout", () => {
 describe("applyTimedDeckPosition", () => {
   const basePosition = { height: 60, left: 20, top: 30, width: 180 };
 
-  it("shrinks deck width by the reserve and group indents", () => {
+  it("splits the column width evenly across the overlap group", () => {
     const deck = applyTimedDeckPosition(basePosition, {
       order: 0,
       groupSize: 3,
     });
 
-    expect(deck.width).toBe(
-      basePosition.width - DECK_RIGHT_RESERVE - 2 * DECK_INDENT,
-    );
+    expect(deck.width).toBe(basePosition.width / 3);
   });
 
-  it("indents left by order and sets zIndex", () => {
+  it("offsets left by order and sets zIndex", () => {
     const back = applyTimedDeckPosition(basePosition, {
       order: 0,
       groupSize: 3,
@@ -188,13 +228,13 @@ describe("applyTimedDeckPosition", () => {
       groupSize: 3,
     });
 
-    expect(front.left - back.left).toBe(2 * DECK_INDENT);
+    expect(front.left - back.left).toBe(2 * (basePosition.width / 3));
     expect(back.zIndex).toBe(1);
     expect(front.zIndex).toBe(3);
     expect(front.width).toBe(back.width);
   });
 
-  it("leaves a wider visible rail for cards behind a same-time overlap", () => {
+  it("places side-by-side cards without covering each other", () => {
     const back = applyTimedDeckPosition(basePosition, {
       order: 0,
       groupSize: 2,
@@ -204,16 +244,17 @@ describe("applyTimedDeckPosition", () => {
       groupSize: 2,
     });
 
-    expect(front.left - back.left).toBe(DECK_INDENT);
+    expect(front.left).toBe(back.left + back.width);
+    expect(front.width).toBe(back.width);
   });
 
-  it("floors deck width for dense groups", () => {
+  it("shrinks slot width for dense groups", () => {
     const deck = applyTimedDeckPosition(
       { ...basePosition, width: 150 - TIMED_EVENT_COLUMN_INSET * 2 },
       { order: 0, groupSize: 8 },
     );
 
-    expect(deck.width).toBe(DECK_MIN_WIDTH);
+    expect(deck.width).toBe((150 - TIMED_EVENT_COLUMN_INSET * 2) / 8);
   });
 
   it("keeps narrow-column decks inside the usable column", () => {
@@ -230,7 +271,7 @@ describe("applyTimedDeckPosition", () => {
       groupSize: 2,
     });
 
-    expect(back.width).toBe(narrowBase.width - DECK_INDENT);
+    expect(back.width).toBe(narrowBase.width / 2);
     expect(front.width).toBe(back.width);
     expect(front.left + front.width).toBe(narrowBase.left + narrowBase.width);
   });
@@ -267,8 +308,7 @@ describe("applyTimedEventDisplayPosition", () => {
     expect(position.width).toBe(extraWide.width * TIMED_EVENT_WIDTH_RATIO);
   });
 
-  it("fans overlapping cards farther without widening the cards", () => {
-    const cardWidth = widePosition.width * TIMED_EVENT_WIDTH_RATIO;
+  it("splits overlapping cards into equal side-by-side columns", () => {
     const back = applyTimedEventDisplayPosition(widePosition, {
       order: 0,
       groupSize: 2,
@@ -278,19 +318,19 @@ describe("applyTimedEventDisplayPosition", () => {
       groupSize: 2,
     });
 
-    expect(front.left - back.left).toBe(TIMED_EVENT_FAN_INDENT);
-    expect(back.width).toBe(cardWidth - DECK_RIGHT_RESERVE - DECK_INDENT);
+    expect(back.width).toBe(widePosition.width / 2);
     expect(front.width).toBe(back.width);
+    expect(front.left).toBe(back.left + back.width);
   });
 
-  it("keeps dense fans inside the right-side gutter", () => {
+  it("keeps dense overlap groups inside the column", () => {
     const front = applyTimedEventDisplayPosition(widePosition, {
       order: 19,
       groupSize: 20,
     });
 
     expect(front.left + front.width).toBeLessThanOrEqual(
-      widePosition.left + widePosition.width - TIMED_EVENT_FAN_GUTTER,
+      widePosition.left + widePosition.width,
     );
   });
 

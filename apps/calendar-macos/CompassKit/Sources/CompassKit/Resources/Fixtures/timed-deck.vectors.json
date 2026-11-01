@@ -37,6 +37,42 @@
       ]
     },
     {
+      "id": "createTimedEventLayout-inverted-end-overlap",
+      "input": {
+        "events": [
+          {
+            "_id": "unwind",
+            "startDate": "2026-10-31T19:00:00.000Z",
+            "endDate": "2026-10-31T20:00:00.000Z"
+          },
+          {
+            "_id": "ritual",
+            "startDate": "2026-10-31T19:30:00.000Z",
+            "endDate": "2026-10-31T19:00:00.000"
+          }
+        ],
+        "hiddenEventIds": []
+      },
+      "output": [
+        {
+          "eventId": "unwind",
+          "deckLayout": {
+            "order": 0,
+            "groupSize": 2
+          },
+          "isHidden": false
+        },
+        {
+          "eventId": "ritual",
+          "deckLayout": {
+            "order": 1,
+            "groupSize": 2
+          },
+          "isHidden": false
+        }
+      ]
+    },
+    {
       "id": "applyTimedDeckPosition",
       "input": {
         "position": {
@@ -52,9 +88,9 @@
       },
       "output": {
         "height": 60,
-        "left": 36,
+        "left": 110,
         "top": 30,
-        "width": 140,
+        "width": 90,
         "zIndex": 2
       }
     },
@@ -193,7 +229,7 @@
         "height": 57,
         "left": 55,
         "top": 480,
-        "width": 212,
+        "width": 155,
         "zIndex": 1
       }
     }

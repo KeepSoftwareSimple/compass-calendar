@@ -7,12 +7,35 @@ on:
         description: 'Release tag being deployed, such as v1.2.3'
         required: true
         type: string
+      run_save_loop_proof:
+        description: 'Run authenticated save loop during the rolling backend deploy'
+        required: false
+        type: boolean
+        default: false
+      save_loop_proof_target:
+        description: 'Staging target that rolls while the save loop runs'
+        required: false
+        type: string
+        default: staging-cloud
   workflow_dispatch:
     inputs:
       tag:
         description: 'Release tag being deployed, such as v1.2.3'
         required: true
         type: string
+      run_save_loop_proof:
+        description: 'Run authenticated save loop during the rolling backend deploy'
+        required: false
+        type: boolean
+        default: false
+      save_loop_proof_target:
+        description: 'Staging target that rolls while the save loop runs'
+        required: false
+        type: choice
+        options:
+          - staging-cloud
+          - staging-selfhosted
+        default: staging-cloud
 
 permissions:
   contents: read
@@ -26,14 +49,72 @@ jobs:
       - health-check-cloud
       - deploy-selfhosted
       - health-check-selfhosted
+      - save-loop-during-deploy
     uses: ./.github/workflows/_notify-failure.yml
     with:
       tag: ${{ inputs.tag }}
       needs_json: ${{ toJSON(needs) }}
     secrets: inherit
 
+  save-loop-bootstrap:
+    name: Bootstrap staging journey auth before deploy
+    if: ${{ inputs.run_save_loop_proof }}
+    runs-on: ubuntu-latest
+    environment: staging-journey
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Sign in and verify one write before cutover
+        env:
+          SAVE_LOOP_BOOTSTRAP_ONLY: '1'
+          SAVE_LOOP_BASE_URL: >-
+            ${{ inputs.save_loop_proof_target == 'staging-selfhosted'
+              && 'https://selfhosted.compasscalendar.com'
+              || (vars.STAGING_BASE_URL || vars.FRONTEND_URL || 'https://staging.compasscalendar.com') }}
+          STAGING_JOURNEY_PROVIDER: ${{ vars.STAGING_JOURNEY_PROVIDER || 'google' }}
+          STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
+          STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
+          STAGING_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.STAGING_JOURNEY_MICROSOFT_EMAIL }}
+          STAGING_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.STAGING_JOURNEY_MICROSOFT_PASSWORD }}
+          STAGING_JOURNEY_APPLE_EMAIL: ${{ secrets.STAGING_JOURNEY_APPLE_EMAIL }}
+          STAGING_JOURNEY_APPLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_APPLE_PASSWORD }}
+        run: bash .github/scripts/deploy-save-loop.sh
+
+  save-loop-during-deploy:
+    name: Save loop during ${{ inputs.save_loop_proof_target }} deploy
+    if: ${{ inputs.run_save_loop_proof }}
+    needs: save-loop-bootstrap
+    runs-on: ubuntu-latest
+    environment: staging-journey
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Run continuous authenticated save loop
+        env:
+          SAVE_LOOP_DURATION_SEC: '1200'
+          SAVE_LOOP_INTERVAL_SEC: '1'
+          SAVE_LOOP_BASE_URL: >-
+            ${{ inputs.save_loop_proof_target == 'staging-selfhosted'
+              && 'https://selfhosted.compasscalendar.com'
+              || (vars.STAGING_BASE_URL || vars.FRONTEND_URL || 'https://staging.compasscalendar.com') }}
+          STAGING_JOURNEY_PROVIDER: ${{ vars.STAGING_JOURNEY_PROVIDER || 'google' }}
+          STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
+          STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
+          STAGING_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.STAGING_JOURNEY_MICROSOFT_EMAIL }}
+          STAGING_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.STAGING_JOURNEY_MICROSOFT_PASSWORD }}
+          STAGING_JOURNEY_APPLE_EMAIL: ${{ secrets.STAGING_JOURNEY_APPLE_EMAIL }}
+          STAGING_JOURNEY_APPLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_APPLE_PASSWORD }}
+        run: bash .github/scripts/deploy-save-loop.sh
+
   deploy-cloud:
     name: Deploy to staging-cloud
+    needs: save-loop-bootstrap
+    if: >-
+      always() &&
+      (!inputs.run_save_loop_proof || inputs.save_loop_proof_target == 'staging-cloud') &&
+      (!inputs.run_save_loop_proof || needs.save-loop-bootstrap.result == 'success')
     uses: ./.github/workflows/_deploy-environment.yml
     with:
       tag: ${{ inputs.tag }}
@@ -43,6 +124,7 @@ jobs:
   health-check-cloud:
     name: Health check staging-cloud
     needs: deploy-cloud
+    if: ${{ always() && needs.deploy-cloud.result == 'success' }}
     uses: ./.github/workflows/deploy-health-check.yml
     with:
       tag: ${{ inputs.tag }}
@@ -52,6 +134,11 @@ jobs:
 
   deploy-selfhosted:
     name: Deploy to staging-selfhosted
+    needs: save-loop-bootstrap
+    if: >-
+      always() &&
+      (!inputs.run_save_loop_proof || inputs.save_loop_proof_target == 'staging-selfhosted') &&
+      (!inputs.run_save_loop_proof || needs.save-loop-bootstrap.result == 'success')
     uses: ./.github/workflows/_deploy-environment.yml
     with:
       tag: ${{ inputs.tag }}
@@ -61,6 +148,7 @@ jobs:
   health-check-selfhosted:
     name: Health check staging-selfhosted
     needs: deploy-selfhosted
+    if: ${{ always() && needs.deploy-selfhosted.result == 'success' }}
     uses: ./.github/workflows/deploy-health-check.yml
     with:
       tag: ${{ inputs.tag }}

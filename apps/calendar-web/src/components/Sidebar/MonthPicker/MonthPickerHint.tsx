@@ -17,9 +17,9 @@ function statusText(
 ): string {
   if (!isFocused) return "I focuses the picker";
   if (hasMovedWithArrows) {
-    return `Up and down arrows move by ${unit}. Enter opens it.`;
+    return `Up and down arrows move by ${unit}. Enter opens it. U returns to the grid.`;
   }
-  return `Up and down arrows move by ${unit}`;
+  return `Up and down arrows move by ${unit}. U returns to the grid.`;
 }
 
 /**
@@ -70,6 +70,9 @@ export const MonthPickerHint: FC<Props> = ({ children, unit }) => {
                 <span aria-hidden>opens it</span>
               </>
             ) : null}
+            <span aria-hidden>·</span>
+            <ShortcutKeys keys="U" />
+            <span aria-hidden>returns to the grid</span>
           </>
         ) : (
           <>

@@ -50,7 +50,7 @@ export function arePointerHintEnvironmentGatesClosed(
  * function is what stops one surface from quietly teaching past a mute, the
  * session cap, or the Explorer retirement the others respect.
  *
- * The right-click `m` tip in `context-menu/context-menu-pointer-hint.ts` is the
+ * The right-click event-menu tip in `context-menu/context-menu-pointer-hint.ts` is the
  * one holdout: it still carries its own narrower checks, because importing this
  * gate from the context menu pulls the level reader, the app lock and the tips
  * store into that boot chunk for about 750 B of boot gzip (measured, #4145).

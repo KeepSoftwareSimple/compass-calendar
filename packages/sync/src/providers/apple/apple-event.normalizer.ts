@@ -1,5 +1,4 @@
 import ICAL from "ical.js";
-import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   type Attendee,
   type Conference,
@@ -14,6 +13,7 @@ import {
   type ProviderEventRead,
   type ProviderEventRecurrence,
 } from "@sync/providers/provider-event.port";
+import { parseProviderSchedule } from "@sync/providers/provider-schedule.util";
 import { toIanaTimeZoneOrUtc } from "@sync/providers/provider-timezone.util";
 
 const RFC3339_OFFSET = dayjs.DateFormat.RFC3339_OFFSET;
@@ -281,7 +281,7 @@ function mapSchedule(event: ICAL.Event, connectionTimeZone: string) {
   }
 
   if (start.isDate && end.isDate) {
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "allDay",
       start: compactDateToDateOnly(start.toICALString()),
       end: compactDateToDateOnly(end.toICALString()),
@@ -290,7 +290,7 @@ function mapSchedule(event: ICAL.Event, connectionTimeZone: string) {
 
   if (!start.isDate && !end.isDate) {
     const timeZone = resolveTimeZone(start, connectionTimeZone);
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "timed",
       start: toOffsetIso(start, timeZone, connectionTimeZone),
       end: toOffsetIso(end, timeZone, connectionTimeZone),
@@ -423,16 +423,4 @@ function stringParam(
 ): string | undefined {
   const value = property.getParameter(name);
   return typeof value === "string" ? value : undefined;
-}
-
-function parseSchedule(candidate: unknown) {
-  const parsed = EventScheduleSchema.safeParse(candidate);
-  if (!parsed.success) {
-    throw new ProviderEventError(
-      "unmappableSchedule",
-      "Event start/end could not be resolved to a schedule",
-      { cause: parsed.error },
-    );
-  }
-  return parsed.data;
 }
