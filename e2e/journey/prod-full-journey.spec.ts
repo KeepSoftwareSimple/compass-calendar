@@ -2,9 +2,11 @@ import { expect, test } from "@playwright/test";
 import { COMPASS_SYNTHETIC_ACCOUNT_HEADER } from "@core/analytics/synthetic-account.util";
 import {
   createEventTitle,
+  dismissBringYourEventsPromptIfOpen,
   expectTimedEventVisible,
   fillTitleAndSaveEventForm,
   openTimedEventFormWithKeyboard,
+  waitForWritableCalendarsReady,
 } from "../utils/event-test-utils";
 import {
   cleanupProdJourneyAccount,
@@ -60,7 +62,7 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
 
   const { accountEmail, password } = journeyCredentials("PROD");
 
-  await seedJourneyOnboarding(page);
+  await seedJourneyOnboarding(page, { snoozeConnectPrompt: true });
 
   const uniqueEmail = uniqueJourneyEmail(accountEmail);
 
@@ -127,6 +129,11 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
     }
     throw error;
   }
+
+  await waitForWritableCalendarsReady(page);
+  await dismissBringYourEventsPromptIfOpen(page);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
 
   const createdTitle = createEventTitle("Prod journey create");
   await openTimedEventFormWithKeyboard(page);

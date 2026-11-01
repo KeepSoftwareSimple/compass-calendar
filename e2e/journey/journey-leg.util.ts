@@ -66,8 +66,8 @@ export const journeyCredentials = (scope: JourneyScope): JourneyCredentials => {
 
 /**
  * Onboarding surfaces steal focus from the grid shortcuts the legs drive.
- * `snoozeConnectPrompt` also pre-dismisses the connect sidebar, which only the
- * staging leg can skip (the prod leg asserts the trial dialog first).
+ * `snoozeConnectPrompt` pre-dismisses the connect sidebar so keyboard
+ * shortcuts are not blocked after signup (both journey legs pass this).
  */
 export const seedJourneyOnboarding = async (
   page: Page,
