@@ -885,7 +885,7 @@ test("x hides a recurring all-day event after keyboard focus", async ({
   page,
 }) => {
   await setupBirthdayExperiencePage(page);
-  const card = await focusAllDayBirthdayWithKeyboard(page);
+  await focusAllDayBirthdayWithKeyboard(page);
   await pressBareLetterOnFocusedCard(page, "x");
   await expectAllDayEventHidden(page, BIRTHDAY_TITLE);
 });
@@ -1087,7 +1087,7 @@ test("artifact: recurring all-day x hide screenshots at 1280px", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  const card = await setupBirthdayExperiencePage(page);
+  await setupBirthdayExperiencePage(page);
   await focusAllDayBirthdayWithKeyboard(page);
   await page.locator("#allDayRow").scrollIntoViewIfNeeded();
   await page.screenshot({

@@ -18,7 +18,7 @@ export { EVENT_MENU_LETTER };
 export function useEventContextMenuShortcut() {
   useBareLetterShortcut(
     EVENT_MENU_LETTER,
-    (keyboardEvent) => {
+    () => {
       const focused = getFocusedCalendarEvent();
       if (!focused) return false;
 
