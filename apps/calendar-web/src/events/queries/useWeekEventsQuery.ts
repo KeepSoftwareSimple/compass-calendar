@@ -6,7 +6,10 @@ import { weekEventsViewQueryOptions } from "@web/events/queries/event.query.opti
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
 import { useCalendarEventViewModel } from "./useCalendarEventViewModel";
 import { useEventListCalendarIds } from "./useEventListCalendarIds";
-import { useRemoteEventsEnabled } from "./useRemoteEventsEnabled";
+import {
+  useRemoteEventsAwaitingSignIn,
+  useRemoteEventsEnabled,
+} from "./useRemoteEventsEnabled";
 
 type WeekEventsQueryArgs = {
   startOfView: Dayjs;
@@ -26,6 +29,7 @@ export function useWeekEventsQuery({
   const source = useEventRepositorySource();
   const calendarIds = useEventListCalendarIds();
   const enabled = useRemoteEventsEnabled(source);
+  const isAwaitingSignIn = useRemoteEventsAwaitingSignIn(source);
   const query = useQuery({
     ...weekEventsViewQueryOptions({
       startOfView,
@@ -41,7 +45,7 @@ export function useWeekEventsQuery({
         endDate: toUTCOffset(endOfView),
       }),
   });
-  return { ...query, calendarIds };
+  return { ...query, calendarIds, isAwaitingSignIn };
 }
 
 export function useWeekEventViewModel(args: WeekEventsQueryArgs) {

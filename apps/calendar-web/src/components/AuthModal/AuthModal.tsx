@@ -24,10 +24,6 @@ import {
 import { formatSignupTrialTitle } from "@web/billing/signup-trial-format.util";
 import { useIsEditableFocused } from "@web/common/hooks/useIsEditableFocused";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
-import {
-  dismissErrorToast,
-  SESSION_EXPIRED_TOAST_ID,
-} from "@web/common/utils/toast/error-toast.util";
 import { AuthButton } from "@web/components/AuthModal/components/AuthButton";
 import { SignInProviderButtons } from "@web/components/AuthModal/components/SignInProviderButtons";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
@@ -92,9 +88,6 @@ export const AuthModal: FC = () => {
   useSignupTrialBrowserBack(isOpen && isStartTrialView);
   useAppLockReason("authModal", isOpen);
   useAppLockReason("signupTrialStep", isStartTrialView);
-  const handleGoogleAuthStart = useCallback(() => {
-    dismissErrorToast(SESSION_EXPIRED_TOAST_ID);
-  }, []);
   // Consumed once per fresh mount (i.e. once per return from a failed
   // attempt): Google withholds a refresh token on a repeat consent, so a
   // signup that failed after Google-side consent but before Compass finished
@@ -104,7 +97,6 @@ export const AuthModal: FC = () => {
     {
       signupFlow: currentView === "signUp",
       google: {
-        onStart: handleGoogleAuthStart,
         prompt: needsConsentRetry ? "consent" : undefined,
       },
     },

@@ -317,4 +317,11 @@ describe("EventGrid", () => {
     expect(isEventGridLoading(false, true, false)).toBe(false);
     expect(isEventGridLoading(false, false, true)).toBe(false);
   });
+
+  it("hides the loader while a remote read waits on sign-in (#5033)", () => {
+    // The query is disabled, so it stays pending forever; the loader must not.
+    expect(isEventGridLoading(true, false, false, true)).toBe(false);
+    expect(isEventGridLoading(false, true, true, true)).toBe(false);
+    expect(isEventGridLoading(true, false, false, false)).toBe(true);
+  });
 });

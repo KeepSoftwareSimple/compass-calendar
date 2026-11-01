@@ -125,11 +125,16 @@ export const EventGrid: FC<EventGridProps> = ({
   </div>
 );
 
-/** First load, or a Retry refetch after failure — both should show the loader. */
+/**
+ * First load, or a Retry refetch after failure — both should show the loader.
+ * A remote read waiting on sign-in never starts, so it shows no loader (#5033).
+ */
 export function isEventGridLoading(
   isPending: boolean,
   isError: boolean,
   isFetching: boolean,
+  isAwaitingSignIn = false,
 ): boolean {
+  if (isAwaitingSignIn) return false;
   return isPending || (isError && isFetching);
 }

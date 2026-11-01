@@ -90,12 +90,13 @@ export function DayCalendarGrid() {
     error: eventsError,
     events: dayEvents,
     isError: isErrorEvents,
+    isAwaitingSignIn,
     isFetching,
     isPending,
     refetch,
     timedEvents,
   } = useDayEventViewModel({ startDate, endDate });
-  // Session expiry already surfaces SessionExpiredToast — don't also show
+  // Session expiry already opens the login modal — don't also show
   // "Couldn't load events" / Retry for the same failure.
   const showEventsLoadError = shouldShowContextualLoadError(
     isErrorEvents,
@@ -105,6 +106,7 @@ export function DayCalendarGrid() {
     isPending,
     showEventsLoadError,
     isFetching,
+    isAwaitingSignIn,
   );
   const { connection, refresh, state: googleState } = useConnectGoogle();
   const { isImportingEmpty, isImportFailed } = eventGridFirstImportFlags({
