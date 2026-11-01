@@ -1,6 +1,5 @@
 import { useLayoutEffect, useState } from "react";
-
-const MAIN_GRID_ID = "mainGrid";
+import { ID_GRID_MAIN } from "@web/common/constants/web.constants";
 
 /** Keeps a fixed banner centered over the timed grid as the sidebar resizes. */
 export function useUpNextBannerHorizontalCenter(
@@ -15,7 +14,7 @@ export function useUpNextBannerHorizontalCenter(
     }
 
     const update = () => {
-      const grid = document.getElementById(MAIN_GRID_ID);
+      const grid = document.getElementById(ID_GRID_MAIN);
       if (!grid) {
         setCenterX(window.innerWidth / 2);
         return;
@@ -27,7 +26,7 @@ export function useUpNextBannerHorizontalCenter(
     update();
     window.addEventListener("resize", update);
     window.visualViewport?.addEventListener("resize", update);
-    const grid = document.getElementById(MAIN_GRID_ID);
+    const grid = document.getElementById(ID_GRID_MAIN);
     const observer =
       grid && typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(update)

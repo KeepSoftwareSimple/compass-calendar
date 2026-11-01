@@ -2,6 +2,7 @@ import { redactJourneyEmailForLog } from "@core/analytics/synthetic-account.util
 import {
   assertAllowedSyntheticJourneyCleanupEmails,
   type JourneyCleanupEnvironment,
+  journeyPendingAccountResultsSubdir,
 } from "@core/journey/synthetic-journey-cleanup-email.util";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -41,16 +42,46 @@ function parseArgs(argv: string[]): {
   };
 }
 
+function logJourneyCleanup(
+  email: string,
+  fields: Readonly<Record<string, string>>,
+): void {
+  const extras = Object.entries(fields)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(" ");
+  console.log(
+    `journey-cleanup email=${redactJourneyEmailForLog(email)} ${extras}`,
+  );
+}
+
+function logStripeLegSkipped(emails: readonly string[]): void {
+  for (const email of emails) {
+    logJourneyCleanup(email, {
+      stripe_leg: "skipped (app delete handles customer)",
+    });
+  }
+}
+
+async function invokeStripeCleanup(input: {
+  emails: readonly string[];
+  environment: JourneyCleanupEnvironment;
+  dryRun: boolean;
+  secretKey: string;
+}): Promise<void> {
+  const { runJourneySyntheticStripeCleanup } = await import(
+    "@backend/billing/services/journey-synthetic-stripe-cleanup.service"
+  );
+  await runJourneySyntheticStripeCleanup(input);
+}
+
 async function discoverPendingEmail(
   environment: JourneyCleanupEnvironment,
 ): Promise<string | null> {
-  const scopeDir =
-    environment === "production" ? "prod-journey" : "staging-journey";
   const path = join(
     process.cwd(),
     "e2e",
     "test-results",
-    scopeDir,
+    journeyPendingAccountResultsSubdir(environment),
     "journey-pending-account.json",
   );
   try {
@@ -91,9 +122,7 @@ export async function runJourneySyntheticCleanup(): Promise<void> {
 
   if (args.validateOnly) {
     for (const email of emails) {
-      console.log(
-        `journey-cleanup email=${redactJourneyEmailForLog(email)} action=validated`,
-      );
+      logJourneyCleanup(email, { action: "validated" });
     }
     process.exit(0);
   }
@@ -104,17 +133,10 @@ export async function runJourneySyntheticCleanup(): Promise<void> {
     }
     const secretKey = process.env["STRIPE_SECRET_KEY"]?.trim();
     if (!secretKey) {
-      for (const email of emails) {
-        console.log(
-          `journey-cleanup email=${redactJourneyEmailForLog(email)} stripe_leg=skipped (app delete handles customer)`,
-        );
-      }
+      logStripeLegSkipped(emails);
       process.exit(0);
     }
-    const { runStripeSyntheticJourneyCleanup } = await import(
-      "@scripts/commands/journey-synthetic-cleanup/stripe"
-    );
-    await runStripeSyntheticJourneyCleanup({
+    await invokeStripeCleanup({
       emails,
       environment: args.environment,
       dryRun: false,
@@ -124,25 +146,20 @@ export async function runJourneySyntheticCleanup(): Promise<void> {
   }
 
   for (const email of emails) {
-    console.log(
-      `journey-cleanup email=${redactJourneyEmailForLog(email)} action=${args.dryRun ? "would_delete_compass_account" : "compass_account_delete_scheduled"}`,
-    );
+    logJourneyCleanup(email, {
+      action: args.dryRun
+        ? "would_delete_compass_account"
+        : "compass_account_delete_scheduled",
+    });
   }
 
   const secretKey = process.env["STRIPE_SECRET_KEY"]?.trim();
   if (!secretKey) {
-    for (const email of emails) {
-      console.log(
-        `journey-cleanup email=${redactJourneyEmailForLog(email)} stripe_leg=skipped (app delete handles customer)`,
-      );
-    }
+    logStripeLegSkipped(emails);
     process.exit(0);
   }
 
-  const { runStripeSyntheticJourneyCleanup } = await import(
-    "@scripts/commands/journey-synthetic-cleanup/stripe"
-  );
-  await runStripeSyntheticJourneyCleanup({
+  await invokeStripeCleanup({
     emails,
     environment: args.environment,
     dryRun: args.dryRun,

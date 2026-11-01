@@ -16,7 +16,6 @@ export function BottomNoticeStack({
   suppressed = false,
 }: PropsWithChildren<{ suppressed?: boolean }>) {
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
-  const clearsSidebarFooter = isSidebarOpen;
 
   useFlushPendingShellToast();
 
@@ -35,9 +34,9 @@ export function BottomNoticeStack({
       aria-label="Notifications"
       className={classNames(
         "compass-bottom-notice-stack pointer-events-none fixed flex flex-col items-stretch justify-end gap-3",
-        clearsSidebarFooter && "compass-bottom-notice-stack--clears-footer",
+        isSidebarOpen && "compass-bottom-notice-stack--clears-footer",
       )}
-      data-clears-sidebar-footer={clearsSidebarFooter || undefined}
+      data-clears-sidebar-footer={isSidebarOpen || undefined}
       style={{ zIndex: Z_INDEX_TOOLTIP }}
     >
       <BottomNoticeToastHost />

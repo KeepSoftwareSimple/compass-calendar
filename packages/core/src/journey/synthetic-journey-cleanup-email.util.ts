@@ -19,6 +19,12 @@ export function isAllowedSyntheticJourneyCleanupEmail(
   return STAGING_SYNTHETIC_JOURNEY_CLEANUP_EMAIL_PATTERN.test(normalized);
 }
 
+export function journeyPendingAccountResultsSubdir(
+  environment: JourneyCleanupEnvironment,
+): "prod-journey" | "staging-journey" {
+  return environment === "production" ? "prod-journey" : "staging-journey";
+}
+
 export function assertAllowedSyntheticJourneyCleanupEmails(
   emails: readonly string[],
   environment: JourneyCleanupEnvironment,
