@@ -1,9 +1,10 @@
-import { type FC, useState } from "react";
+import { type FC, useLayoutEffect, useRef, useState } from "react";
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import dayjs from "@core/util/date/dayjs";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
+import { upNextBannerBoxActions } from "@web/components/BottomNoticeStack/up-next-banner-box.store";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
@@ -32,6 +33,42 @@ export const UpNextBanner: FC = () => {
         MINUTES_BEFORE_START);
   const isVisible = isWithinWindow && upNext?._id !== dismissedId;
   const centerX = useUpNextBannerHorizontalCenter(isVisible);
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const isShown = isVisible && Boolean(upNext) && centerX !== null;
+
+  // Publish the banner's resting box (ignoring its enter transform) so the
+  // bottom-left stack lifts above it only while it is on screen.
+  useLayoutEffect(() => {
+    const banner = bannerRef.current;
+    if (!isShown || centerX === null || !banner) {
+      upNextBannerBoxActions.setBox(null);
+      return;
+    }
+
+    const publish = () => {
+      const bottom = Number.parseFloat(getComputedStyle(banner).bottom) || 0;
+      const halfWidth = banner.offsetWidth / 2;
+      upNextBannerBoxActions.setBox({
+        left: Math.round(centerX - halfWidth),
+        right: Math.round(centerX + halfWidth),
+        top: Math.round(window.innerHeight - bottom - banner.offsetHeight),
+      });
+    };
+
+    publish();
+    window.addEventListener("resize", publish);
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(publish);
+    observer?.observe(banner);
+
+    return () => {
+      window.removeEventListener("resize", publish);
+      observer?.disconnect();
+      upNextBannerBoxActions.setBox(null);
+    };
+  }, [isShown, centerX]);
 
   useUpNextOsNotification(
     upNext?._id
@@ -76,6 +113,7 @@ export const UpNextBanner: FC = () => {
 
   return (
     <div
+      ref={bannerRef}
       aria-atomic="true"
       className="pointer-events-none fixed flex w-72 starting:translate-y-2 items-center gap-3 rounded-lg border border-border bg-surface-panel/80 px-3 py-2 text-sm text-text starting:opacity-0 shadow-xl backdrop-blur-md transition-all duration-300 ease-out data-closing:opacity-0 motion-reduce:transition-none"
       data-closing={closing || undefined}
