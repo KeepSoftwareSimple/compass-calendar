@@ -9,10 +9,8 @@ import { hasUserEverAuthenticated } from "@web/auth/compass/state/auth.state.uti
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
-import {
-  showErrorToast,
-  showSessionExpiredToast,
-} from "@web/common/utils/toast/error-toast.util";
+import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
+import { VIEW_TO_PARAM } from "@web/components/AuthModal/hooks/useAuthModal";
 import {
   type ApiError,
   type ApiRequestConfig,
@@ -88,7 +86,7 @@ export const getErrorStatus = (error: unknown): number | undefined => {
 
 /**
  * GONE/UNAUTHORIZED are session-level failures — the API interceptor signs the
- * user out and shows SessionExpiredToast, so callers must not add a second
+ * user out and opens the login modal, so callers must not add a second
  * recovery UI (load-error overlays, mutation toasts, etc.).
  */
 export const isSessionLevelError = (error: unknown): boolean => {
@@ -140,28 +138,39 @@ export const parseGoogleConnectError = (
 };
 
 export const signOut = async (status: SignoutStatus) => {
-  // since there are currently duplicate event fetches,
-  // this prevents triggering a separate alert for each fetch
-  // this can be removed once we have logic to cancel subsequent requests
-  // after one failed
-  if (status === Status.UNAUTHORIZED) {
-    showSessionExpiredToast();
-  } else {
+  // An expired session gets one clean prompt: the login modal. No toast,
+  // because notices are hidden while the modal is open and a queued
+  // "signed out" toast would surface after the user signs back in.
+  if (status !== Status.UNAUTHORIZED) {
     showErrorToast("Login required, cuz security");
   }
 
   await session.signOut();
 
-  if (window.location.pathname.startsWith(DEFAULT_CALENDAR_ROUTE)) {
+  const isOnCalendar = window.location.pathname.startsWith(
+    DEFAULT_CALENDAR_ROUTE,
+  );
+  if (isOnCalendar && status !== Status.UNAUTHORIZED) {
     return;
   }
   // Navigate in-app rather than assigning window.location: a document
-  // navigation tears down the toast we just raised, so the one message telling
-  // the user they were signed out was destroyed on every route that needed it.
-  // Imported dynamically for the same module-cycle reason SessionExpiredToast
-  // documents (this file sits on the API error path the router pulls back in).
+  // navigation would reload the app and drop the prompt it needs to show.
+  // Imported dynamically to avoid a module cycle (this file sits on the API
+  // error path the router pulls back in).
   const { router } = await importOrReload(() => import("@web/routers"));
-  await router.navigate({ to: DEFAULT_CALENDAR_ROUTE });
+  if (status !== Status.UNAUTHORIZED) {
+    await router.navigate({ to: DEFAULT_CALENDAR_ROUTE });
+    return;
+  }
+  const auth = VIEW_TO_PARAM.login;
+  await router.navigate(
+    isOnCalendar
+      ? {
+          to: ".",
+          search: (prev: Record<string, unknown>) => ({ ...prev, auth }),
+        }
+      : { to: DEFAULT_CALENDAR_ROUTE, search: { auth } },
+  );
 };
 
 export const getRequestUrl = (url: string): string => {

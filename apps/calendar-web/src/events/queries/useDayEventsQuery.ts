@@ -4,7 +4,10 @@ import { dayEventsQueryOptions } from "@web/events/queries/event.query.options";
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
 import { useCalendarEventViewModel } from "./useCalendarEventViewModel";
 import { useEventListCalendarIds } from "./useEventListCalendarIds";
-import { useRemoteEventsEnabled } from "./useRemoteEventsEnabled";
+import {
+  useRemoteEventsAwaitingSignIn,
+  useRemoteEventsEnabled,
+} from "./useRemoteEventsEnabled";
 
 type DayEventsQueryArgs = {
   startDate: string;
@@ -16,6 +19,7 @@ export function useDayEventsQuery({ startDate, endDate }: DayEventsQueryArgs) {
   const source = useEventRepositorySource();
   const calendarIds = useEventListCalendarIds();
   const enabled = useRemoteEventsEnabled(source);
+  const isAwaitingSignIn = useRemoteEventsAwaitingSignIn(source);
   const query = useQuery({
     ...dayEventsQueryOptions({ source, startDate, endDate, calendarIds }),
     enabled,
@@ -26,7 +30,7 @@ export function useDayEventsQuery({ startDate, endDate }: DayEventsQueryArgs) {
         endDate,
       }),
   });
-  return { ...query, calendarIds };
+  return { ...query, calendarIds, isAwaitingSignIn };
 }
 
 export function useDayEventViewModel(args: DayEventsQueryArgs) {

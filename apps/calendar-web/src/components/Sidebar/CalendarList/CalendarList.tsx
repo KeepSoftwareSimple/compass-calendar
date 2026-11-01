@@ -53,7 +53,7 @@ export const CalendarList: FC = () => {
   // directly beneath the control that solves it.
   const showConnectCta =
     authenticated && connections.length === 0 && availableProviders.length > 0;
-  // Session expiry already surfaces SessionExpiredToast — don't also show
+  // Session expiry already opens the login modal — don't also show
   // "Couldn't load calendars" / Retry (or a false empty-list story) for it.
   const showCalendarsLoadError = shouldShowContextualLoadError(isError, error);
   const hideCalendarsBody = isPending || (isError && !showCalendarsLoadError);

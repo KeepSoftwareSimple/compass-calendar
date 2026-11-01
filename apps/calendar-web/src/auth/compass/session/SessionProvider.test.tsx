@@ -1,6 +1,10 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { act, useContext } from "react";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import {
+  readSessionResolved,
+  resetAuthSessionStoreForTests,
+} from "@web/auth/compass/session/auth-session.store";
 import { session } from "@web/auth/compass/session/Session";
 import * as realAuthStateUtil from "@web/auth/compass/state/auth.state.util";
 import { DEFAULT_AUTH_STATE } from "@web/auth/compass/state/auth.state.util";
@@ -113,6 +117,7 @@ describe("SessionProvider sessionInit", () => {
       expect(refreshUserMetadata).toHaveBeenCalledTimes(1);
     });
     expect(openStream).toHaveBeenCalledTimes(1);
+    expect(readSessionResolved()).toBe(true);
   });
 
   it("refreshes metadata on session creation and clears it on sign out", async () => {
@@ -148,10 +153,13 @@ describe("SessionProvider sessionInit", () => {
         },
       ],
     });
+    resetAuthSessionStoreForTests();
     session.emit({ action: "SIGN_OUT", userContext: undefined });
 
     expect(useUserMetadataStore.getState()).toEqual(initialUserMetadataState);
     expect(closeStream).toHaveBeenCalledTimes(2);
+    // A settled "no session" lets grids stop waiting on remote reads (#5033).
+    expect(readSessionResolved()).toBe(true);
   });
 
   it("updates session consumers when SuperTokens creates a session", async () => {

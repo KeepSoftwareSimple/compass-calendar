@@ -8,7 +8,7 @@ import { session } from "@web/auth/compass/session/Session";
 import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { createExternalStore } from "@web/common/utils/external-store.util";
-import { openAuthModalFromOutsideRouter } from "@web/common/utils/toast/session-expired.toast";
+import { openAuthModalFromOutsideRouter } from "@web/components/AuthModal/open-auth-modal.util";
 
 // The backend publishes one `message` SSE event per B10; its JSON `data` is a
 // ServerMessageSchema member. This module is the single parse point: every

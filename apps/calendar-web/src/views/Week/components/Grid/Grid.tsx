@@ -40,6 +40,7 @@ export const Grid: FC<Props> = ({
   const {
     allDayEvents,
     error: eventsError,
+    isAwaitingSignIn,
     isPending,
     isFetching,
     isError: isErrorEvents,
@@ -52,7 +53,7 @@ export const Grid: FC<Props> = ({
     endOfView: weekProps.query.endOfView,
   });
   const { connection, refresh, state: googleState } = useConnectGoogle();
-  // Session expiry already surfaces SessionExpiredToast — don't also show
+  // Session expiry already opens the login modal — don't also show
   // "Couldn't load events" / Retry for the same failure.
   const showEventsLoadError = shouldShowContextualLoadError(
     isErrorEvents,
@@ -62,6 +63,7 @@ export const Grid: FC<Props> = ({
     isPending,
     showEventsLoadError,
     isFetching,
+    isAwaitingSignIn,
   );
   const { isImportingEmpty, isImportFailed } = eventGridFirstImportFlags({
     connection,

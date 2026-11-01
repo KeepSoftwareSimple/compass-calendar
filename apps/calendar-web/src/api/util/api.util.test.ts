@@ -7,6 +7,7 @@ import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { session } from "@web/auth/compass/session/Session";
 import { markUserAsAuthenticated } from "@web/auth/compass/state/auth.state.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import * as errorToast from "@web/common/utils/toast/error-toast.util";
 import * as realRouters from "@web/routers";
 import {
   type ApiError,
@@ -391,8 +392,6 @@ describe("handleErrorResponse", () => {
   });
 
   it("still signs the user out on an unauthorized data-endpoint response", async () => {
-    // Already on the calendar route, so signOut skips the (jsdom-unsupported)
-    // navigation and we can assert purely on the sign-out call.
     window.history.pushState({}, "", "/week");
     markUserAsAuthenticated("person@example.com");
     const signOutSpy = spyOn(session, "signOut").mockResolvedValue(undefined);
@@ -409,10 +408,46 @@ describe("handleErrorResponse", () => {
     signOutSpy.mockRestore();
   });
 
+  it("opens the login modal in place, with no signed-out toast, on an unauthorized response (#5033)", async () => {
+    // Notices are hidden while the auth modal is open, so a toast raised here
+    // would queue and surface after the user signs back in.
+    window.history.pushState({}, "", "/week");
+    markUserAsAuthenticated("person@example.com");
+    mockNavigate.mockClear();
+    const showErrorToast = spyOn(errorToast, "showErrorToast").mockReturnValue(
+      "toast-id",
+    );
+    const signOutSpy = spyOn(session, "signOut").mockResolvedValue(undefined);
+    const error = createApiError(
+      { status: Status.UNAUTHORIZED },
+      { url: "/event" },
+    );
+
+    await expect(
+      handleErrorResponse(error, { onGoogleRevoked: undefined }),
+    ).rejects.toBe(error);
+
+    expect(signOutSpy).toHaveBeenCalledTimes(1);
+    expect(showErrorToast).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    const [options] = mockNavigate.mock.calls[0] as unknown as [
+      {
+        to: string;
+        search: (prev: Record<string, unknown>) => Record<string, unknown>;
+      },
+    ];
+    expect(options.to).toBe(".");
+    expect(options.search({ date: "2026-07-31" })).toEqual({
+      date: "2026-07-31",
+      auth: "login",
+    });
+    showErrorToast.mockRestore();
+    signOutSpy.mockRestore();
+  });
+
   it("leaves a non-calendar route through the router, not a document navigation", async () => {
-    // A document navigation tears down the toast signOut just raised, so on
-    // every route that actually needed it the "you've been signed out" message
-    // was destroyed before it could be read. Routing in-app keeps it alive.
+    // A document navigation would reload the app and drop the login prompt,
+    // so signOut routes in-app straight to the calendar with the modal open.
     window.history.pushState({}, "", "/day/2026-07-31");
     markUserAsAuthenticated("person@example.com");
     mockNavigate.mockClear();
@@ -428,7 +463,10 @@ describe("handleErrorResponse", () => {
 
     expect(signOutSpy).toHaveBeenCalledTimes(1);
     expect(mockNavigate).toHaveBeenCalledTimes(1);
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/week" });
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/week",
+      search: { auth: "login" },
+    });
     signOutSpy.mockRestore();
     window.history.pushState({}, "", "/week");
   });
