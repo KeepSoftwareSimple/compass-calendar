@@ -27,6 +27,13 @@ export default class CompassCLI {
         await runPurgeUser();
         break;
       }
+      case cmd === "journey-synthetic-cleanup": {
+        const { runJourneySyntheticCleanup } = await import(
+          "@scripts/commands/journey-synthetic-cleanup"
+        );
+        await runJourneySyntheticCleanup();
+        break;
+      }
       case cmd === "backfill-billing": {
         const { runBackfillBilling } = await import(
           "@scripts/commands/backfill-billing"
@@ -127,6 +134,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "delete every Compass row for one email, across the API db, Sync db, and SuperTokens (--apply to write)",
+      );
+
+    program
+      .command("journey-synthetic-cleanup")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "delete Tyler-approved synthetic journey accounts (UI via Playwright + Stripe; default dry-run)",
       );
 
     program

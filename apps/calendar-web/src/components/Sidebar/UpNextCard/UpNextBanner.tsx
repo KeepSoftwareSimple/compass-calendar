@@ -1,19 +1,24 @@
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type FC, useState } from "react";
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import dayjs from "@core/util/date/dayjs";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
+import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
-import { NoticeCard } from "@web/components/BottomNoticeStack/NoticeCard";
-import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
-import IconButton from "@web/components/IconButton/IconButton";
-import { formatEventStatus } from "@web/components/Sidebar/UpNextCard/UpNextCard";
-import { useUpNextEvent } from "@web/components/Sidebar/UpNextCard/useUpNextEvent";
-import { useUpNextOsNotification } from "@web/components/Sidebar/UpNextCard/useUpNextOsNotification";
+import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
+import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
+import { formatEventStatus } from "./UpNextCard";
+import { useUpNextBannerHorizontalCenter } from "./useUpNextBannerHorizontalCenter";
+import { useUpNextEvent } from "./useUpNextEvent";
+import { useUpNextOsNotification } from "./useUpNextOsNotification";
 
 const MINUTES_BEFORE_START = 2;
+const BANNER_BOTTOM_OFFSET_PX = 24;
 
+/**
+ * Centered banner for the next timed event when it is about to start or in
+ * progress. N opens details; V joins when a conference URL exists.
+ */
 export const UpNextBanner: FC = () => {
   const { now, openEventDetails, upNext, conferenceUrl, isCurrentEvent } =
     useUpNextEvent();
@@ -26,6 +31,7 @@ export const UpNextBanner: FC = () => {
       dayjs(upNext?.startDate).diff(now, "minute", true) <=
         MINUTES_BEFORE_START);
   const isVisible = isWithinWindow && upNext?._id !== dismissedId;
+  const centerX = useUpNextBannerHorizontalCenter(isVisible);
 
   useUpNextOsNotification(
     upNext?._id
@@ -57,7 +63,7 @@ export const UpNextBanner: FC = () => {
   });
   useAppShortcutUp("Escape", dismiss, { enabled: isVisible });
 
-  if (!isVisible || !upNext) {
+  if (!isVisible || !upNext || centerX === null) {
     return null;
   }
 
@@ -68,43 +74,57 @@ export const UpNextBanner: FC = () => {
     isCurrentEvent,
   );
 
-  const primaryLabel = conferenceUrl ? "Join" : "Open";
-  const primaryShortcut = conferenceUrl ? "V" : "N";
-  const onPrimary = conferenceUrl
-    ? openConference
-    : () => openEventDetails("gridClick");
-
   return (
-    <NoticeCard
-      ariaLabel="Up next event"
-      aria-live="polite"
-      closing={closing}
+    <div
+      aria-atomic="true"
+      className="pointer-events-none fixed flex w-72 starting:translate-y-2 items-center gap-3 rounded-lg border border-border bg-surface-panel/80 px-3 py-2 text-sm text-text starting:opacity-0 shadow-xl backdrop-blur-md transition-all duration-300 ease-out data-closing:opacity-0 motion-reduce:transition-none"
+      data-closing={closing || undefined}
+      data-notice=""
       data-up-next-banner=""
       role="status"
+      style={{
+        zIndex: Z_INDEX_FLOATING_MENU,
+        bottom: `max(${BANNER_BOTTOM_OFFSET_PX}px, env(safe-area-inset-bottom))`,
+        left: centerX,
+        transform: "translateX(-50%)",
+      }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="text-text-muted text-xs">{countdown}</div>
-          <div className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="size-1.5 shrink-0 rounded-full bg-accent"
-            />
-            <span className="truncate font-medium text-sm">{upNext.title}</span>
-          </div>
+      <div className="pointer-events-auto min-w-0 flex-1">
+        <div className="text-text-muted text-xs">{countdown}</div>
+        <div className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="size-1.5 shrink-0 rounded-full bg-accent"
+          />
+          <span className="truncate font-medium">{upNext.title}</span>
         </div>
-        <IconButton
-          aria-label="Dismiss"
-          className="shrink-0 text-text-muted hover:text-text"
-          onClick={dismiss}
-          size="small"
-        >
-          <XIcon aria-hidden="true" size={14} />
-        </IconButton>
       </div>
-      <NoticePrimaryButton onClick={onPrimary} shortcutKeys={primaryShortcut}>
-        {primaryLabel}
-      </NoticePrimaryButton>
-    </NoticeCard>
+      <TooltipWrapper
+        description={conferenceUrl ? "Join meeting" : "Open Up Next event"}
+        shortcut={conferenceUrl ? "V" : "N"}
+        shortcutId={conferenceUrl ? "nav-join-meeting" : "nav-up-next"}
+      >
+        <button
+          className="c-focus-ring pointer-events-auto flex shrink-0 items-center gap-1.5 rounded bg-accent-secondary px-2 py-1 font-medium text-on-accent"
+          onClick={
+            conferenceUrl ? openConference : () => openEventDetails("gridClick")
+          }
+          type="button"
+        >
+          {conferenceUrl ? "Join" : "Open"}
+          <ShortcutHint>{conferenceUrl ? "V" : "N"}</ShortcutHint>
+        </button>
+      </TooltipWrapper>
+      <TooltipWrapper description="Dismiss banner" shortcut="Esc">
+        <button
+          aria-label="Dismiss"
+          className="c-focus-ring pointer-events-auto shrink-0 rounded-xs px-1 text-text-muted hover:text-text"
+          onClick={dismiss}
+          type="button"
+        >
+          &times;
+        </button>
+      </TooltipWrapper>
+    </div>
   );
 };

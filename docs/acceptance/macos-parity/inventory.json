@@ -825,10 +825,11 @@
       "behavior": "Cancel and Reschedule description links have keyboard eligibility, visible focus and URL help",
       "web": ["e2e/event-form/description-booking-links.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassUITests/DescriptionLinkCopyShortcutTests.swift#testExportedShortcutCopiesAPastedDescriptionLink"
+        "apps/calendar-macos/CompassUITests/DescriptionLinkCopyShortcutTests.swift#testExportedShortcutCopiesAPastedDescriptionLink",
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/BookingDescriptionKeyboardTests.swift#testBothBookingLinksSupportKeyboardSelectionAndDestinationHelp"
       ],
       "status": "missing",
-      "reason": "Single pasted-link clipboard test does not assert two-link traversal, names, help or focus. Separate management buttons do not prove description link keyboard behavior.",
+      "reason": "New isolated AppKit integration regression uses a real window/responder and keyboard word selection for both named links, checks full destination help and unchanged HTML. Pending execution. This native caret-selection path does not establish separate tabbable AX links, visible focus-ring review or real signed-in acceptance; those remain missing.",
       "evidence": "",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
@@ -849,11 +850,12 @@
         "e2e/event-form/description-list-editing.spec.ts#description bullet list applies only to the selected lines"
       ],
       "native": [
+        "apps/calendar-macos/CompassUITests/DescriptionBulletSelectionTests.swift#testSelectedPlaceLinesBecomeBulletsWithoutChangingPrecedingTextAfterReopen",
         "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/DescriptionEditorTests.swift#testPartialSelectionBulletsOnlySelectedLinesInHardBreakParagraph"
       ],
-      "status": "missing",
-      "reason": "Native editor unit fixture omits preceding LIST/-Frames and asserts absence, not preservation. It toggles off rather than saving/reopening through the real UI.",
-      "evidence": "",
+      "status": "passing",
+      "reason": "Equivalent rich text setup with soft breaks; real keyboard selection, toolbar action and save/reopen assert exact preserved text and semantic list state on every selected and preceding line. Sample capture is not broad visual or signed-in acceptance.",
+      "evidence": "Merged #5015 exact084d2f84708ebd869c5bbf8f5787266b60c1a76b strict41214896040 native/web PASS/no required skips; normal41214809252 PASS. Actual logs /tmp/compass-bullets-084-both-strict and inspected final-row capture /tmp/compass-bullets-084-shots.",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
     {
@@ -865,9 +867,9 @@
       "native": [
         "apps/calendar-macos/CompassUITests/DescriptionListPersistenceTests.swift#testNumberedListContinuesExitsAndSurvivesSaveAndReopen"
       ],
-      "status": "unreviewed",
-      "reason": "Uses an existing editable demo event instead of creating the web fixture. Checks exact three-item text, semantic ordered-list state at every saved item, exit to normal paragraph and persisted content; no acceptance pass until exercised.",
-      "evidence": "New #4983 real native toolbar/keyboard/save/reopen regression, pending isolated exact-head native/web verification.",
+      "status": "passing",
+      "reason": "Native uses an existing editable demo event instead of creating the web setup fixture. The same observable three-item continuation, exit, normal paragraph and save/reopen semantics are exercised. Sample capture is not broad visual or real signed-in acceptance.",
+      "evidence": "Merged #4984 exact e1763dd494457d3455477f8d57663c3cba257644 isolated native/web strict41142347442 PASS/no required skips; normal41142348480 PASS. Screenshot inspected /tmp/compass-list-e176-shots, with full text and each item semantic list state independently asserted.",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
     {
@@ -1261,6 +1263,164 @@
       "reason": "Reviewed platform exclusion: native SwiftUI/AppKit has no HTML attributes, browser theme-color meta or inline JS boot scripts. Observable stored-theme launch behavior remains separately tracked.",
       "evidence": "",
       "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "local-trial-nudge",
+      "behavior": "After first anonymous write and completed onboarding, show trial nudge, exact cross-device copy and named CTA",
+      "web": ["e2e/onboarding/local-mode-connect-prompt.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Native demo fixture suppresses this nudge. AnonymousCalendarRowTests exercises a different row; NoticeEngagementTests write counters do not prove visible non-demo nudge.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "local-trial-dismissal",
+      "behavior": "Dismiss trial nudge and keep it absent after reload/relaunch",
+      "web": ["e2e/onboarding/local-mode-connect-prompt.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "No real non-demo native UI dismissal/relaunch regression; model storage alone is insufficient.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "initial-paint-native-themes",
+      "behavior": "First visible calendar frame uses persisted light/dark background and today accent before startup completes",
+      "web": ["e2e/onboarding/initial-paint.spec.ts"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Later idle theme screenshots and pure mappings do not establish initial-frame/no-flash behavior. Reuse boot stored-theme requirements; do not exclude native first paint.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "initial-paint-calendar-content",
+      "behavior": "Initial frame shows month/date/today and five visible columns with sixth hidden at supported 1280 width",
+      "web": ["e2e/onboarding/initial-paint.spec.ts"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Native first-frame content and sidebar/column geometry require direct evidence, separately from later screenshots.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "initial-paint-responsive-handoff",
+      "behavior": "Startup presents responsive content and transitions to welcome after loading",
+      "web": ["e2e/onboarding/initial-paint.spec.ts"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Native startup responsiveness and welcome handoff need direct cold-launch evidence; no native performance exclusion.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "initial-paint-browser-mechanics",
+      "behavior": "Stall index.js/font CSS, inspect aria-busy/status and browser first-contentful-paint entry, remove DOM boot shell",
+      "web": ["e2e/onboarding/initial-paint.spec.ts"],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: AppKit has no web script/font requests, DOM boot shell or PerformanceEntry API. Observable initial content/theme/responsiveness and native accessibility remain separate unresolved behaviors.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "welcome-configured-actions",
+      "behavior": "Third welcome step displays configured provider trial, email signup and local-only actions",
+      "web": ["e2e/onboarding/welcome-cta-width.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "WelcomeKeyboardTests covers general navigation but not provider configuration and all three visible actions. Actual OAuth is not required to inspect controls.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "welcome-cta-width",
+      "behavior": "Provider trial and email signup controls have equal positive visible widths",
+      "web": ["e2e/onboarding/welcome-cta-width.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Frozen source compares only these two widths, despite broader test name. Native geometry unasserted; explore width equivalence is not inferred.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "welcome-body-enter",
+      "behavior": "Click welcome heading/body, then Enter advances to second step",
+      "web": ["e2e/onboarding/welcome-enter-body.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassUITests/WelcomeKeyboardTests.swift#testWelcomeStepsRemainInteractiveInBothThemes"
+      ],
+      "status": "missing",
+      "reason": "Existing native welcome test clicks CTA on first step and presses Return only on step two. Literal DOM dialog focus is platform-specific; observable native keyboard routing remains required.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "description-autolink-persistence",
+      "behavior": "Type URL with notes, save/reopen, shorten visible URL to host while retaining full destination",
+      "web": ["e2e/timed/event-description-links.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/DescriptionEditorTests.swift"
+      ],
+      "status": "unreviewed",
+      "reason": "Existing native presentation and HTML tests do not establish complete typed-autolink/save/reopen UI sequence.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "description-url-help",
+      "behavior": "Shortened description link exposes full destination as URL help",
+      "web": ["e2e/timed/event-description-links.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/DescriptionEditorTests.swift"
+      ],
+      "status": "unreviewed",
+      "reason": "Native tooltip lower-level coverage exists; real reopened editor help exposure still needs review.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "description-hover-copy",
+      "behavior": "Hover link then hover Copy link control without losing it, copy exact destination",
+      "web": ["e2e/timed/event-description-links.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Existing keyboard clipboard test does not exercise hover-control persistence; no duplicate keyboard-copy regression needed.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "description-digit-open",
+      "behavior": "Title focus reveals first-link keycap; after leaving text input, bare 1 opens destination",
+      "web": ["e2e/timed/event-description-links.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Frozen baseline explicitly asserts this policy. Later web removal is deferred. Pure document-order open callback does not prove native keyboard integration.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "description-focused-open",
+      "behavior": "With description link focused, command-shift-Enter opens exact destination",
+      "web": ["e2e/timed/event-description-links.spec.ts"],
+      "native": [],
+      "status": "missing",
+      "reason": "Native open callbacks alone do not prove actual focused responder/shortcut routing; use isolated acceptance without real external account actions.",
+      "evidence": "",
+      "review": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
+    },
+    {
+      "id": "booking-named-link-help",
+      "behavior": "Both named booking links retain full destination URL help without changing labels or HTML",
+      "web": ["e2e/event-form/description-booking-links.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/BookingDescriptionKeyboardTests.swift#testBothBookingLinksSupportKeyboardSelectionAndDestinationHelp"
+      ],
+      "status": "failing",
+      "reason": "Initial isolated real-window keyboard regression confirmed nil destination tooltip on both named links; renderer fix pending fresh full verification. Separate tabbable AX/focus-ring and real UI gates stay open.",
+      "evidence": "Exactfd2 normal41230663752 package job124624185637 actual raw log /tmp/compass-booking-fd2-package.log lines10195-10196: only two tooltip assertions fail; keyboard selection/destination/focus/HTML assertions do not fail.",
+      "review": "2026-10-31 agent: frozen booking-description URL title assertion mapped to native tooltip. Minimal general native renderer fix; no test weakening."
     }
   ],
   "gates": {
@@ -1290,6 +1450,11 @@
     "apps/calendar-web/src/__tests__/boot-size-report.test.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
     "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
     "apps/calendar-web/src/__tests__/guest-meet-cutover.test.ts": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior.",
-    "apps/calendar-web/src/__tests__/boot-shell.test.ts": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    "apps/calendar-web/src/__tests__/boot-shell.test.ts": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior.",
+    "e2e/onboarding/local-mode-connect-prompt.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
+    "e2e/onboarding/initial-paint.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
+    "e2e/onboarding/welcome-cta-width.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
+    "e2e/onboarding/welcome-enter-body.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence.",
+    "e2e/timed/event-description-links.spec.ts": "2026-10-31 agent: read complete frozen cf5 source and every assertion; compared native candidates. Later web changes deferred. No count equivalence."
   }
 }

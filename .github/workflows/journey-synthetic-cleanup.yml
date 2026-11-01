@@ -1,0 +1,89 @@
+name: Journey synthetic cleanup
+
+# Manual cleanup for Tyler-approved synthetic journey leftover accounts only.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment target (staging or production)
+        type: choice
+        options:
+          - staging
+          - production
+        required: true
+      emails:
+        description: Comma-separated synthetic journey emails (optional with discover_pending_file)
+        type: string
+        required: false
+        default: ""
+      dry_run:
+        description: When true, only log planned actions (default)
+        type: boolean
+        required: true
+        default: true
+      discover_pending_file:
+        description: Read email from journey-pending-account.json in test-results
+        type: boolean
+        required: true
+        default: false
+      bootstrap_staging_probe_account:
+        description: When true with environment=staging, sign up one probe account before cleanup (same job)
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: "journey synthetic cleanup (${{ inputs.environment }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment == 'production' && 'prod-journey' || 'staging-journey' }}
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Bootstrap staging probe account
+        if: inputs.bootstrap_staging_probe_account && inputs.environment == 'staging'
+        env:
+          STAGING_JOURNEY_PROVIDER: google
+          STAGING_JOURNEY_ENABLED: "1"
+          STAGING_JOURNEY_CLEANUP_BOOTSTRAP: "1"
+          STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
+          STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
+          STAGING_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.STAGING_JOURNEY_MICROSOFT_EMAIL }}
+          STAGING_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.STAGING_JOURNEY_MICROSOFT_PASSWORD }}
+          STAGING_JOURNEY_APPLE_EMAIL: ${{ secrets.STAGING_JOURNEY_APPLE_EMAIL }}
+          STAGING_JOURNEY_APPLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_APPLE_PASSWORD }}
+        run: bash .github/scripts/staging-journey.sh
+
+      - name: Run synthetic journey cleanup
+        env:
+          JOURNEY_CLEANUP_ENVIRONMENT: ${{ inputs.environment }}
+          JOURNEY_CLEANUP_EMAILS: ${{ inputs.emails }}
+          JOURNEY_CLEANUP_DRY_RUN: ${{ inputs.dry_run }}
+          JOURNEY_CLEANUP_DISCOVER_PENDING: ${{ inputs.discover_pending_file || inputs.bootstrap_staging_probe_account }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          PROD_JOURNEY_GOOGLE_EMAIL: ${{ secrets.PROD_JOURNEY_GOOGLE_EMAIL }}
+          PROD_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.PROD_JOURNEY_GOOGLE_PASSWORD }}
+          PROD_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.PROD_JOURNEY_MICROSOFT_EMAIL }}
+          PROD_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.PROD_JOURNEY_MICROSOFT_PASSWORD }}
+          PROD_JOURNEY_APPLE_EMAIL: ${{ secrets.PROD_JOURNEY_APPLE_EMAIL }}
+          PROD_JOURNEY_APPLE_PASSWORD: ${{ secrets.PROD_JOURNEY_APPLE_PASSWORD }}
+          STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
+          STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
+          STAGING_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.STAGING_JOURNEY_MICROSOFT_EMAIL }}
+          STAGING_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.STAGING_JOURNEY_MICROSOFT_PASSWORD }}
+          STAGING_JOURNEY_APPLE_EMAIL: ${{ secrets.STAGING_JOURNEY_APPLE_EMAIL }}
+          STAGING_JOURNEY_APPLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_APPLE_PASSWORD }}
+        run: bash .github/scripts/journey-synthetic-cleanup.sh

@@ -73,7 +73,10 @@ export const getVisibleDayDates = (page: Page) =>
 
 // Shared timeout for form operations - use a single reasonable timeout instead of short retries
 const FORM_TIMEOUT =
-  process.env.STAGING_JOURNEY_ENABLED === "1" ? 30_000 : 10_000;
+  process.env.STAGING_JOURNEY_ENABLED === "1" ||
+  process.env.PROD_JOURNEY_ENABLED === "1"
+    ? 30_000
+    : 10_000;
 
 /**
  * Dispatch a keyboard shortcut on `document`. Playwright's Control+K is

@@ -6,6 +6,7 @@ import {
   CIVIL_DAY_US_SPRING_FORWARD_YMD,
 } from "@core/test/civil-day.vectors.data";
 import {
+  atCivilTime,
   civilDayLengthMinutes,
   civilHourLineInstants,
   civilHourSlotCount,
@@ -136,5 +137,34 @@ describe("formatInstantInTimeZone", () => {
       CIVIL_DAY_DENVER,
     );
     expect(formatted).toBe("2026-10-31T19:30:00-06:00");
+  });
+});
+
+describe("atCivilTime", () => {
+  it("keeps the wall-clock hour after a fall-back change", () => {
+    expect(
+      atCivilTime(CIVIL_DAY_US_FALL_BACK_YMD, CIVIL_DAY_DENVER, 14).format(),
+    ).toBe("2026-11-01T14:00:00-07:00");
+  });
+
+  it("keeps the wall-clock hour after a spring-forward change", () => {
+    expect(
+      atCivilTime(
+        CIVIL_DAY_US_SPRING_FORWARD_YMD,
+        CIVIL_DAY_DENVER,
+        14,
+        30,
+      ).format(),
+    ).toBe("2027-03-14T14:30:00-06:00");
+  });
+
+  it("reads the calendar date of a zoned instant", () => {
+    const lateEvening = startOfCivilDay(
+      CIVIL_DAY_US_FALL_BACK_YMD,
+      CIVIL_DAY_DENVER,
+    ).add(23, "hour");
+    expect(atCivilTime(lateEvening, CIVIL_DAY_DENVER, 9).format()).toBe(
+      "2026-11-01T09:00:00-07:00",
+    );
   });
 });

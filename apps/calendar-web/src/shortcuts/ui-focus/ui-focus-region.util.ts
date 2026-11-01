@@ -1,5 +1,6 @@
 import {
   ID_GRID_MAIN,
+  ID_LIFE_BIRTH_DATE,
   ID_MAIN,
   ID_SIDEBAR,
 } from "@web/common/constants/web.constants";
@@ -20,13 +21,14 @@ import {
   markUiFocusTextInsertSuppress,
   scheduleUiFocusInsertScrub,
   shouldSuppressUiFocusTextInsert,
+  stripTrailingLetter,
 } from "@web/shortcuts/ui-focus/ui-focus-text-insert.util";
 
 /** Horizontal focus regions, left to right, for Day and Week. */
-export type CalendarUiFocusRegion = "grid" | "sidebar" | "eventPanel";
+type CalendarUiFocusRegion = "grid" | "sidebar" | "eventPanel";
 
 /** Life view: grid (main) then sidebar details. */
-export type LifeUiFocusRegion = "grid" | "sidebar";
+type LifeUiFocusRegion = "grid" | "sidebar";
 
 const EVENT_DETAILS_SELECTOR = '[aria-label="Event details"]';
 const LIFE_DETAILS_SELECTOR = '[aria-label="Life details"]';
@@ -34,14 +36,11 @@ const LIFE_DETAILS_SELECTOR = '[aria-label="Life details"]';
 const INTERACTIVE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-const isElementIn = (element: HTMLElement, selector: string): boolean =>
-  Boolean(element.closest(selector));
-
 export const detectCalendarUiFocusRegion = (): CalendarUiFocusRegion => {
   const active = document.activeElement;
   if (!(active instanceof HTMLElement)) return "grid";
 
-  if (isElementIn(active, EVENT_DETAILS_SELECTOR)) return "eventPanel";
+  if (active.closest(EVENT_DETAILS_SELECTOR)) return "eventPanel";
   if (active.closest(`#${ID_SIDEBAR}`)) return "sidebar";
   if (active.closest(`#${ID_MAIN}`)) return "grid";
   return "grid";
@@ -65,15 +64,6 @@ const focusGridShell = (): boolean => {
   return true;
 };
 
-const stripTrailingShortcutLetter = (
-  input: HTMLInputElement,
-  key: string,
-): void => {
-  if (!input.value.endsWith(key)) return;
-  input.value = input.value.slice(0, -1);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-};
-
 const deferFocus = (
   target: HTMLElement | null | undefined,
   suppressInsertKey?: string,
@@ -88,7 +78,7 @@ const deferFocus = (
       target instanceof HTMLInputElement &&
       shouldSuppressUiFocusTextInsert(suppressInsertKey)
     ) {
-      stripTrailingShortcutLetter(target, suppressInsertKey);
+      stripTrailingLetter(target, suppressInsertKey);
     }
   };
   setTimeout(() => {
@@ -102,21 +92,29 @@ const deferFocus = (
   return true;
 };
 
-const LIFE_BIRTH_DATE_INPUT_ID = "life-date-of-birth";
-
 const focusFirstLifeSidebarField = (): boolean => {
   const anchor = document.querySelector<HTMLElement>(LIFE_DETAILS_SELECTOR);
   if (!anchor) return false;
   const target =
-    anchor.querySelector<HTMLElement>(`#${LIFE_BIRTH_DATE_INPUT_ID}`) ??
+    anchor.querySelector<HTMLElement>(`#${ID_LIFE_BIRTH_DATE}`) ??
     anchor.querySelector<HTMLElement>(INTERACTIVE_SELECTOR);
-  scheduleUiFocusInsertScrub(LIFE_BIRTH_DATE_INPUT_ID, "i");
+  scheduleUiFocusInsertScrub(ID_LIFE_BIRTH_DATE, "i");
   return deferFocus(target, "i");
 };
 
 const openSidebarForFocus = (): void => {
   if (selectIsSidebarOpen(useViewStore.getState())) return;
   viewActions.setSidebarOpen(true);
+};
+
+const focusAfterOpeningSidebar = (focus: () => boolean): boolean => {
+  const wasOpen = selectIsSidebarOpen(useViewStore.getState());
+  openSidebarForFocus();
+  if (wasOpen) return focus();
+  requestAnimationFrame(() => {
+    focus();
+  });
+  return true;
 };
 
 /**
@@ -127,17 +125,9 @@ export const moveCalendarUiFocusLeft = (
 ): boolean => {
   const region = detectCalendarUiFocusRegion();
   if (region === "sidebar" || region === "eventPanel") {
-    if (restoreSidebarPickerReturnFocus()) {
-      return true;
-    }
-    if (focusGridShell()) {
-      focusGridEvent();
-      return true;
-    }
-    focusGridEvent();
-    return true;
+    if (restoreSidebarPickerReturnFocus()) return true;
+    focusGridShell();
   }
-
   focusGridEvent();
   return true;
 };
@@ -163,19 +153,13 @@ export const moveCalendarUiFocusRight = (): boolean => {
     return focusEventFormField("title");
   }
 
-  const wasOpen = selectIsSidebarOpen(useViewStore.getState());
-  openSidebarForFocus();
-  if (wasOpen) {
-    return focusFirstSidebarItem();
-  }
-  requestAnimationFrame(() => focusFirstSidebarItem());
-  return true;
+  return focusAfterOpeningSidebar(focusFirstSidebarItem);
 };
 
 export const moveLifeUiFocusLeft = (): boolean => {
   if (detectLifeUiFocusRegion() === "grid") return true;
 
-  scheduleUiFocusInsertScrub(LIFE_BIRTH_DATE_INPUT_ID, "u");
+  scheduleUiFocusInsertScrub(ID_LIFE_BIRTH_DATE, "u");
 
   const gridTarget = getPageJumpFocusElement("life-grid");
   if (gridTarget) {
@@ -189,12 +173,5 @@ export const moveLifeUiFocusRight = (): boolean => {
   if (detectLifeUiFocusRegion() === "sidebar") return true;
 
   markUiFocusTextInsertSuppress("i");
-
-  const wasOpen = selectIsSidebarOpen(useViewStore.getState());
-  openSidebarForFocus();
-  if (wasOpen) {
-    return focusFirstLifeSidebarField();
-  }
-  requestAnimationFrame(() => focusFirstLifeSidebarField());
-  return true;
+  return focusAfterOpeningSidebar(focusFirstLifeSidebarField);
 };

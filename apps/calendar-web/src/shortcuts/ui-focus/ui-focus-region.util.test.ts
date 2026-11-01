@@ -1,5 +1,6 @@
 import {
   ID_GRID_MAIN,
+  ID_LIFE_BIRTH_DATE,
   ID_MAIN,
   ID_SIDEBAR,
 } from "@web/common/constants/web.constants";
@@ -92,7 +93,7 @@ describe("ui-focus-region", () => {
     const details = document.createElement("section");
     details.setAttribute("aria-label", "Life details");
     const birth = document.createElement("input");
-    birth.id = "life-date-of-birth";
+    birth.id = ID_LIFE_BIRTH_DATE;
     details.appendChild(birth);
     sidebar.appendChild(details);
     document.body.append(main, sidebar);
@@ -117,7 +118,7 @@ describe("ui-focus-region", () => {
     const details = document.createElement("section");
     details.setAttribute("aria-label", "Life details");
     const birth = document.createElement("input");
-    birth.id = "life-date-of-birth";
+    birth.id = ID_LIFE_BIRTH_DATE;
     details.appendChild(birth);
     sidebar.appendChild(details);
     document.body.append(main, sidebar);
