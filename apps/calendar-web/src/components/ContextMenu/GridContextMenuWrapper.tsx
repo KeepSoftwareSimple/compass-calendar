@@ -12,6 +12,7 @@ import {
 import { findEventInCache } from "@web/events/queries/event.query.cache";
 import {
   draftActions,
+  isEventFormOpen,
   selectGridDraft,
   useDraftStore,
 } from "@web/events/stores/draft.store";
@@ -38,13 +39,19 @@ export const ContextMenuWrapper = ({
 
   const [isOpen, setIsOpen] = useState(false);
 
+  const discardMenuDraftIfFormClosed = () => {
+    if (!isEventFormOpen()) {
+      draftActions.discard();
+    }
+  };
+
   const { refs, floatingStyles, context } = useFloating({
     ...CONTEXT_MENU_FLOATING_OPTIONS,
     open: isOpen,
-    onOpenChange(newIsOpen, _, reason) {
+    onOpenChange(newIsOpen) {
       setIsOpen(newIsOpen);
-      if (newIsOpen === false && reason === "escape-key") {
-        handleDiscard();
+      if (!newIsOpen) {
+        discardMenuDraftIfFormClosed();
       }
     },
   });
@@ -70,7 +77,6 @@ export const ContextMenuWrapper = ({
 
   const handleDiscard = () => {
     closeMenu();
-    draftActions.discard();
   };
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {

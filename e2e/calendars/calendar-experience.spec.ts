@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import dayjs from "@core/util/date/dayjs";
+import { composeOccurrenceId } from "@core/util/occurrence-id";
 import {
   ensureSidebarOpen,
   getViewSwitcherButton,
@@ -42,6 +43,8 @@ const GOOGLE_ACCOUNT_EMAIL = "e2e@example.com";
 
 const EVENT_A_TITLE = "Team sync";
 const EVENT_B_TITLE = "Reader event";
+const BIRTHDAY_SERIES_ID = objectId("4");
+const BIRTHDAY_TITLE = "Lara Jonson birthday";
 
 const TIME_ZONE = "America/Denver";
 
@@ -146,6 +149,10 @@ function buildAllDayEvent(
   title: string,
   startYmd: string,
   icalUid?: string,
+  recurrence:
+    | { kind: "single" }
+    | { kind: "series"; rules: string[] }
+    | { kind: "occurrence"; seriesId: string } = { kind: "single" },
 ) {
   const [year, month, day] = startYmd.split("-").map(Number);
   const end = new Date(year!, month! - 1, day! + 1);
@@ -155,7 +162,7 @@ function buildAllDayEvent(
     calendarId,
     content: { kind: "details", title, description: "" },
     schedule: { kind: "allDay", start: startYmd, end: endYmd },
-    recurrence: { kind: "single" },
+    recurrence,
     createdAt: toOffsetDateTime(new Date()),
     updatedAt: null,
     ...(icalUid ? { icalUid } : {}),
@@ -281,6 +288,38 @@ function gridEventCard(page: Page, title: string, hidden: boolean) {
   return page.locator("#mainGrid").getByRole("button", {
     name: new RegExp(`${prefix}${title}.*calendar`),
   });
+}
+
+function allDayEventCard(page: Page, title: string, hidden: boolean) {
+  const prefix = hidden ? "^Hidden " : "^";
+  return page.locator("#allDayRow").getByRole("button", {
+    name: new RegExp(`${prefix}(Recurring )?All-day event: ${title}`, "i"),
+  });
+}
+
+async function expectAllDayEventHidden(page: Page, title: string) {
+  await expect(allDayEventCard(page, title, false)).toHaveCount(0);
+  const strip = allDayEventCard(page, title, true);
+  await expect(strip).toBeVisible();
+  await expect
+    .poll(async () => (await strip.boundingBox())?.width ?? 999)
+    .toBeLessThan(12);
+}
+
+async function focusAllDayBirthdayWithKeyboard(page: Page) {
+  const timedAnchor = page
+    .locator("#mainGrid")
+    .getByRole("button", { name: EVENT_A_TITLE })
+    .last();
+  await timedAnchor.focus();
+  const birthday = allDayEventCard(page, BIRTHDAY_TITLE, false);
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await page.keyboard.press("ArrowUp");
+    if (await birthday.evaluate((node) => node === document.activeElement)) {
+      return birthday;
+    }
+  }
+  throw new Error("Could not keyboard-focus the all-day birthday card");
 }
 
 async function expectEventCardWidth(
@@ -803,6 +842,68 @@ test("a read-only event can be hidden from the menu, shown with x, and stays hid
   await expectEventCardWidth(page, EVENT_B_TITLE, true);
 });
 
+async function setupBirthdayExperiencePage(page: Page) {
+  const birthdayYmd = dayjs().tz(TIME_ZONE).format("YYYY-MM-DD");
+  const occurrenceId = composeOccurrenceId({
+    eventId: BIRTHDAY_SERIES_ID,
+    recurrenceId: `${birthdayYmd}T00:00:00.000Z`,
+  });
+  const events: FixtureEvent[] = [
+    buildEvent(EVENT_A_ID, CALENDAR_A_ID, EVENT_A_TITLE, 9),
+    buildEvent(EVENT_B_ID, CALENDAR_B_ID, EVENT_B_TITLE, 13),
+    buildAllDayEvent(
+      occurrenceId,
+      CALENDAR_B_ID,
+      BIRTHDAY_TITLE,
+      birthdayYmd,
+      "birthday-lara@google.com",
+      { kind: "occurrence", seriesId: BIRTHDAY_SERIES_ID },
+    ),
+  ];
+  await setupCalendarExperiencePage(page, events);
+  const card = allDayEventCard(page, BIRTHDAY_TITLE, false);
+  await expect(card).toBeVisible();
+  await expect(card).toHaveAccessibleName(
+    new RegExp(`All-day event: ${BIRTHDAY_TITLE}.*${CALENDAR_B_NAME}`, "i"),
+  );
+  return card;
+}
+
+test("x hides a focused recurring read-only all-day event from the grid", async ({
+  page,
+}) => {
+  const card = await setupBirthdayExperiencePage(page);
+
+  await card.click();
+  await expect(card).toBeFocused();
+  await pressBareLetterOnFocusedCard(page, "x");
+  await expectAllDayEventHidden(page, BIRTHDAY_TITLE);
+});
+
+test("x hides a recurring all-day event after keyboard focus", async ({
+  page,
+}) => {
+  await setupBirthdayExperiencePage(page);
+  await focusAllDayBirthdayWithKeyboard(page);
+  await pressBareLetterOnFocusedCard(page, "x");
+  await expectAllDayEventHidden(page, BIRTHDAY_TITLE);
+});
+
+test("x hides a recurring all-day event after the context menu closes", async ({
+  page,
+}) => {
+  const card = await setupBirthdayExperiencePage(page);
+  await card.focus();
+  await page.keyboard.press(".");
+  await expect(page.getByRole("menu")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+
+  await card.focus();
+  await pressBareLetterOnFocusedCard(page, "x");
+  await expectAllDayEventHidden(page, BIRTHDAY_TITLE);
+});
+
 test("a writable event can be hidden from the menu and shown with x", async ({
   page,
 }) => {
@@ -980,6 +1081,44 @@ function microsoftHolidayCalendar(): FixtureCalendar {
     accountEmail: MICROSOFT_ACCOUNT_EMAIL,
   });
 }
+
+test("artifact: recurring all-day x hide screenshots at 1280px", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await setupBirthdayExperiencePage(page);
+  await focusAllDayBirthdayWithKeyboard(page);
+  await page.locator("#allDayRow").scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: "/opt/cursor/artifacts/x-hide-before-1280.png",
+    fullPage: false,
+  });
+  await pressBareLetterOnFocusedCard(page, "x");
+  await expectAllDayEventHidden(page, BIRTHDAY_TITLE);
+  await page.screenshot({
+    path: "/opt/cursor/artifacts/x-hide-after-1280.png",
+    fullPage: false,
+  });
+});
+
+test("artifact: recurring all-day x hide screenshots at 360px", async ({
+  page,
+}) => {
+  const card = await setupBirthdayExperiencePage(page);
+  await page.setViewportSize({ width: 360, height: 740 });
+  await card.click();
+  await page.locator("#allDayRow").scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: "/opt/cursor/artifacts/x-hide-before-360.png",
+    fullPage: false,
+  });
+  await pressBareLetterOnFocusedCard(page, "x");
+  await expectAllDayEventHidden(page, BIRTHDAY_TITLE);
+  await page.screenshot({
+    path: "/opt/cursor/artifacts/x-hide-after-360.png",
+    fullPage: false,
+  });
+});
 
 test("week all-day row dedupes the same holiday across connected holiday calendars", async ({
   page,
