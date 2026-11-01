@@ -19,8 +19,11 @@ The first head's full native suite and inspected step-two screenshot passed,
 but strict web fast-typing cases failed on two runs. Focused unchanged tests
 pass locally, including CPU throttling; no root cause or fix is claimed.
 Strict CI now retains failed Playwright test-results for trace-based diagnosis.
-Assertions, typing speed and timeouts are unchanged. New head needs fresh full
-native/web verification; keep draft until successful actual evidence.
+A later web run hit its unchanged job cap before a verdict or failure upload.
+Strict web now reuses the normal E2E Playwright container/Bun setup to avoid
+reinstalling browser OS dependencies. This is not a title-truncation fix.
+Assertions, typing speed, verification order and timeouts are unchanged. New
+head needs fresh full native/web verification; keep draft until actual evidence.
 
 Named-link help acceptance from merged #5027 is recorded with actual exactaab
 native/web strict PASS and unchanged keyboard integration regression. Separate
