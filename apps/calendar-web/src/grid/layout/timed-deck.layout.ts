@@ -83,6 +83,12 @@ export const applyTimedEventDisplayPosition = (
   );
 };
 
+/** Raise a deck card above overlap partners without changing its column slot. */
+export const elevateTimedDeckZIndex = (
+  deckLayout: TimedDeckLayout,
+  zIndex: number,
+): number => Math.max(zIndex, deckLayout.groupSize + 1 + deckLayout.order);
+
 export const timedDeckBoxShadow = (isFocused: boolean): string => {
   const ring = "0 0 0 0.75px var(--background)";
   const drop = isFocused

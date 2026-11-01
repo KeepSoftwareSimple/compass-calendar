@@ -15,6 +15,7 @@ import {
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { parseGridScheduleDate } from "@web/timezone/parse-grid-schedule-date";
+import { getFormDatesForTimedInstants } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/form.datetime.util";
 import { afterEach, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -168,5 +169,12 @@ describe("prod overlap export → grid deck layout", () => {
         ritual!.timeZone,
       ),
     ).toBe("12 - 1:30 PM");
+
+    const form = getFormDatesForTimedInstants(
+      new Date(ritual!.startDate),
+      new Date(ritual!.endDate),
+    );
+    expect(form.startTime.label).toBe("12 PM");
+    expect(form.endTime.label).toBe("1:30 PM");
   });
 });

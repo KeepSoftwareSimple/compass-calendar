@@ -15,6 +15,16 @@ struct EventFormScheduleSection: View {
         VStack(alignment: .leading, spacing: 8) {
             if draft.schedule.kind == .timed {
                 timedRangeRow
+                if let hint = EventFormScheduleTimeZoneHint.text(
+                    eventTimeZone: draft.timeZone?.rawValue,
+                    scheduleStart: draft.schedule.start,
+                    scheduleEnd: draft.schedule.end
+                ) {
+                    Text(hint)
+                        .font(.rubik(11))
+                        .foregroundStyle(theme.textMutedColor)
+                        .accessibilityIdentifier("compass-event-form-schedule-timezone-hint")
+                }
             } else {
                 allDayDateRow
             }
