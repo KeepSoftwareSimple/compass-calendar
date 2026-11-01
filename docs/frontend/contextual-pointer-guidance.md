@@ -20,7 +20,7 @@ the working click. `/life` and mobile skip the tracker entirely.
 | Horizontal swipe week nav | `nav-next` or `nav-previous` | Next time, press {0}. |
 | Header or other chrome click with a registry shortcut | that id | Next time, press … (default pill shape) |
 | Form field click (location, etc.) | `edit-jump-field-digit` | Mod+digit chip flash plus pill |
-| Right-click opens event menu | `edit-menu` | Next time, press M. |
+| Right-click opens event menu | `edit-menu` | Next time, press the period key. |
 | Hover-hunt (4s, 3+ targets) | `focus-page-jump` | Hold Mod/Cmd to see where you can jump. |
 
 Card click also arms event jump (`requestPointerEventJump`) so Enter opens the

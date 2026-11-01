@@ -538,7 +538,11 @@ export function useEventMutations(
         void queryClient.invalidateQueries({
           queryKey: billingQueryKeys.status,
         });
-        void requestTrialStep({ trigger: "write", eventAction: operation });
+        void requestTrialStep({
+          trigger: "write",
+          eventAction: operation,
+          serverBillingRequired: true,
+        });
       }
       reportError(
         error,

@@ -2,7 +2,7 @@ import CompassData
 import SwiftUI
 
 /// Web `MeetingPageNudge`: sidebar card after the first event until a meeting
-/// page is live or the host dismisses it. `M` opens Meeting settings.
+/// page is live or the host dismisses it. `/` opens Meeting settings.
 struct MeetingPageNudgeView: View {
     @Environment(\.nativeWebTheme) private var theme
     var model: NativeCalendarRootModel
@@ -31,7 +31,7 @@ struct MeetingPageNudgeView: View {
             } label: {
                 HStack(spacing: 8) {
                     Text("Set up meeting page")
-                    ShortcutHintChip(label: "M")
+                    ShortcutHintChip(label: "/")
                 }
             }
             .buttonStyle(CompactPrimaryButtonStyle())

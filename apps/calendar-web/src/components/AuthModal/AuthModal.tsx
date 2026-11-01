@@ -85,6 +85,10 @@ export const AuthModal: FC = () => {
     () => dismissSignupTrialStep(navigate),
     [navigate],
   );
+  const dismissSignupTrialAfterCheckout = useCallback(
+    () => dismissSignupTrialStep(navigate, { trackAbandon: false }),
+    [navigate],
+  );
   useSignupTrialBrowserBack(isOpen && isStartTrialView);
   useAppLockReason("authModal", isOpen);
   useAppLockReason("signupTrialStep", isStartTrialView);
@@ -308,7 +312,7 @@ export const AuthModal: FC = () => {
       >
         <StartTrialStep
           initialFocusRef={trialInitialFocusRef}
-          onDismiss={dismissSignupTrial}
+          onDismiss={dismissSignupTrialAfterCheckout}
         />
       </OverlayPanel>
     );

@@ -1,3 +1,4 @@
+import { atCivilTime } from "@core/util/date/civil-day";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import {
   getDayjsByTimeValue,
@@ -36,7 +37,12 @@ export function resolveQuickTimeStart(
   const time = getDayjsByTimeValue(parsed.value);
   if (!time.isValid()) return null;
 
-  return targetDay.startOf("day").hour(time.hour()).minute(time.minute());
+  return atCivilTime(
+    targetDay,
+    getEffectiveTimeZone(),
+    time.hour(),
+    time.minute(),
+  );
 }
 
 /**
@@ -132,14 +138,14 @@ export function buildQuickTimeSlots({
   busy: readonly QuickTimeBusyInterval[];
   targetDay: Dayjs;
 }): QuickTimeSlot[] {
-  const day = targetDay.startOf("day");
+  const timeZone = getEffectiveTimeZone();
   const slots: QuickTimeSlot[] = [];
 
   for (let hour = 1; hour < 24; hour += 1) {
     const sequence = quickTimeSequenceForHour(hour);
     if (!sequence) continue;
 
-    const start = day.hour(hour);
+    const start = atCivilTime(targetDay, timeZone, hour);
     const end = start.add(1, "hour");
     const startMs = start.valueOf();
     const endMs = end.valueOf();

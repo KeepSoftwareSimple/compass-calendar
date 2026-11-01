@@ -16,7 +16,7 @@ read_backend_active_slot() {
   printf '%s\n' "a"
 }
 
-write_backend_inactive_slot() {
+inactive_backend_slot() {
   active=$1
   case "$active" in
     a) printf '%s\n' "b" ;;
@@ -35,12 +35,22 @@ recreate_api_proxy() {
   compose up -d --force-recreate --no-deps api-proxy >/dev/null 2>&1
 }
 
+nginx_reload() {
+  compose exec -T api-proxy nginx -s reload >/dev/null 2>&1
+}
+
+# Compose ps + recent logs for the named services. Best effort: only called on
+# a path that is already failing, so it must never mask the original error.
+dump_service_diagnostics() {
+  compose ps -a "$@" >&2 || true
+  compose logs --tail=80 "$@" >&2 || true
+}
+
 # Staging deploy updates api-proxy/nginx.conf in place (see _deploy-environment.yml).
 # Prefer nginx reload so the save-loop proof does not hit a proxy recreate gap.
 sync_api_proxy_after_deploy() {
   if api_proxy_running; then
-    if compose exec -T api-proxy nginx -t >/dev/null 2>&1 &&
-      compose exec -T api-proxy nginx -s reload >/dev/null 2>&1; then
+    if compose exec -T api-proxy nginx -t >/dev/null 2>&1 && nginx_reload; then
       return 0
     fi
   fi
@@ -51,15 +61,10 @@ cutover_log() {
   printf 'compass-backend-cutover: %s\n' "$*" >&2
 }
 
-reload_api_proxy() {
-  compose exec -T api-proxy nginx -s reload >/dev/null 2>&1 ||
-    recreate_api_proxy >/dev/null 2>&1
-}
-
 reload_api_proxy_for_cutover() {
   try=1
   while [ "$try" -le 5 ]; do
-    if compose exec -T api-proxy nginx -s reload >/dev/null 2>&1; then
+    if nginx_reload; then
       return 0
     fi
     try=$((try + 1))
@@ -197,8 +202,7 @@ migrate_from_legacy_backend() {
   write_upstream_for_slot "$active"
   compose up -d --no-deps "backend-$active" || return 1
   if ! wait_for_backend_slot "$active"; then
-    compose ps -a "backend-$active" >&2 || true
-    compose logs --tail=80 "backend-$active" >&2 || true
+    dump_service_diagnostics "backend-$active"
     return 1
   fi
 
@@ -212,8 +216,7 @@ migrate_from_legacy_backend() {
   fi
 
   if ! wait_for_host_api_health; then
-    compose ps -a api-proxy "backend-$active" >&2 || true
-    compose logs --tail=80 api-proxy "backend-$active" >&2 || true
+    dump_service_diagnostics api-proxy "backend-$active"
     rollback_legacy_cutover "$legacy_id" "$active" || return 1
     return 1
   fi
@@ -227,16 +230,9 @@ migrate_from_legacy_backend() {
   return 0
 }
 
-ensure_api_proxy() {
-  migrate_from_legacy_backend || return 1
-  write_upstream_for_slot "$(read_backend_active_slot)"
-  compose up -d api-proxy || return 1
-  wait_for_backend_slot "$(read_backend_active_slot)" || return 1
-}
-
 rolling_backend_update() {
   active=$(read_backend_active_slot)
-  inactive=$(write_backend_inactive_slot "$active") || return 1
+  inactive=$(inactive_backend_slot "$active") || return 1
 
   cutover_log "starting rolling update active_slot=${active} target_slot=${inactive}"
 
@@ -246,21 +242,18 @@ rolling_backend_update() {
   compose up -d "backend-$active" api-proxy || return 1
   sync_api_proxy_after_deploy || return 1
   if ! wait_for_backend_slot "$active"; then
-    compose ps -a "backend-$active" api-proxy >&2 || true
-    compose logs --tail=80 "backend-$active" api-proxy >&2 || true
+    dump_service_diagnostics "backend-$active" api-proxy
     return 1
   fi
 
   cutover_log "recreating backend-${inactive} with new image"
   if ! compose up -d --force-recreate --no-deps "backend-$inactive"; then
-    compose ps -a "backend-$inactive" >&2 || true
-    compose logs --tail=80 "backend-$inactive" >&2 || true
+    dump_service_diagnostics "backend-$inactive"
     return 1
   fi
 
   if ! wait_for_backend_slot "$inactive"; then
-    compose ps -a "backend-$inactive" >&2 || true
-    compose logs --tail=80 "backend-$inactive" >&2 || true
+    dump_service_diagnostics "backend-$inactive"
     compose stop -t 10 "backend-$inactive" >/dev/null 2>&1 || true
     return 1
   fi

@@ -10,6 +10,7 @@ export const ID_GRID_MAIN = "mainGrid";
 export const ID_MAIN = "mainSection";
 export const ID_DATEPICKER_SIDEBAR = "sidebarDatePicker";
 export const ID_SIDEBAR = "sidebar";
+export const ID_LIFE_BIRTH_DATE = "life-date-of-birth";
 export const DATA_TIMED_GRID_ROW = "data-calendar-timed-grid-row";
 export const ID_CONTEXT_MENU_ITEMS = "context-menu-items";
 

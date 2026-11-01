@@ -76,7 +76,7 @@ export const EventGrid: FC<EventGridProps> = ({
     {/* Sibling overlay, not an outline on TimedGrid itself, so the ring isn't clipped by overflow-y-auto and includes the all-day row above. */}
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 hidden outline outline-1 outline-[var(--accent)] peer-focus-visible:block"
+      className="pointer-events-none absolute inset-0 hidden outline outline-2 outline-accent outline-offset-0 peer-focus:block peer-focus-visible:block"
       data-testid="grid-focus-indicator"
     />
     {isLoadingEvents && (
