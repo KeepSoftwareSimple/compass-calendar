@@ -133,6 +133,10 @@ import {
   UNRECORDED_HISTORY_ENTRY,
   undoEntryForWrite,
 } from "./event.mutation-history";
+import {
+  eventWriteRetryDelay,
+  shouldRetryEventWrite,
+} from "./event-write-retry";
 
 type EventMutationContext = {
   previousQueries: Array<[QueryKey, unknown]>;
@@ -349,6 +353,8 @@ export type EventMutationDependencies = {
   repository?: EventRepository;
   markWrite?: () => Promise<unknown>;
   reportError?: (error: Error, onRetry?: () => void) => void;
+  /** Delay before re-sending a write the backend never answered. */
+  writeRetryDelay?: (attempt: number) => number;
 };
 
 export function useEventMutations(
@@ -367,6 +373,7 @@ export function useEventMutations(
       ? noteAnonymousWriteEngagementIfEligible
       : undefined;
   const baseReportError = dependencies.reportError ?? handleError;
+  const writeRetryDelay = dependencies.writeRetryDelay ?? eventWriteRetryDelay;
   const reportError = (
     error: Error,
     onRetry?: () => void,
@@ -493,6 +500,14 @@ export function useEventMutations(
   ) => ({
     mutationKey: eventMutationKeys.operation(operation),
     mutationFn,
+    // A write the backend never answered (deploy restart, dropped
+    // connection, gateway 502/503/504) is re-sent automatically. The
+    // optimistic edit stays on screen and the mutation stays pending while
+    // it retries, so a save made mid-deploy lands instead of rolling back.
+    // Paused, not failed, while the browser reports offline (TanStack's
+    // default online network mode).
+    retry: shouldRetryEventWrite,
+    retryDelay: (attempt: number) => writeRetryDelay(attempt),
     onMutate: async (variables: Variables): Promise<EventMutationContext> => {
       await queryClient.cancelQueries({ queryKey: eventQueryKeys.all });
       const previousQueries = queryClient.getQueriesData<unknown>({
@@ -522,7 +537,11 @@ export function useEventMutations(
         void queryClient.invalidateQueries({
           queryKey: billingQueryKeys.status,
         });
-        void requestTrialStep({ trigger: "write", eventAction: operation });
+        void requestTrialStep({
+          trigger: "write",
+          eventAction: operation,
+          serverBillingRequired: true,
+        });
       }
       reportError(
         error,

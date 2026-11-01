@@ -288,6 +288,12 @@ describe("PublicBookingService", () => {
             value: { calendars },
           }),
         ),
+        listFullEvents: mock(() =>
+          Promise.resolve({
+            ok: true as const,
+            value: { instances: [], nextCursor: null },
+          }),
+        ),
       } as never),
     );
   };
@@ -1317,6 +1323,62 @@ describe("PublicBookingService", () => {
     await expect(
       service.cancelReservation(reservationId, { token }),
     ).rejects.toMatchObject({ bookingCode: "RESERVATION_NOT_FOUND" });
+
+    expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.status).toBe("cancelled");
+  });
+
+  it("lists upcoming host reservations only for the page owner", async () => {
+    const { slug, userId } = await enableBookingPage();
+    const rivalId = await createNamedUser("Rival Host");
+    const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z`;
+    await service.createReservation(slug, {
+      slotStart,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+
+    await expect(
+      service.listHostUpcomingReservations(userId, slug),
+    ).resolves.toMatchObject({
+      reservations: [
+        expect.objectContaining({
+          guestName: "Ada Lovelace",
+          guestEmail: "ada@example.com",
+          durationMinutes: 30,
+        }),
+      ],
+    });
+
+    await expect(
+      service.listHostUpcomingReservations(rivalId, slug),
+    ).rejects.toMatchObject({ bookingCode: "PAGE_NOT_FOUND" });
+  });
+
+  it("returns an empty upcoming list for the owner with no bookings", async () => {
+    const { slug, userId } = await enableBookingPage();
+    await expect(
+      service.listHostUpcomingReservations(userId, slug),
+    ).resolves.toEqual({ reservations: [] });
+  });
+
+  it("cancels through the owner meet page path", async () => {
+    const { slug, userId } = await enableBookingPage();
+    const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z`;
+    const created = await service.createReservation(slug, {
+      slotStart,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const reservationId = new ObjectId(created.reservationId);
+    deleteBookingEvent.mockClear();
+
+    await service.cancelReservationForPageOwner(userId, slug, reservationId);
 
     expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
     const stored = await bookingReservationRepository.findById(reservationId);

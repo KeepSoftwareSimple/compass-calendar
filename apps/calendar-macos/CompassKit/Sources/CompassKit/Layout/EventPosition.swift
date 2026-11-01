@@ -39,17 +39,20 @@ public enum EventPositionCalculator {
     public struct TimedEventInput: Sendable {
         public var startDate: String
         public var endDate: String
+        public var timeZone: String?
         public var widthMultiplier: Double
         public var isDraft: Bool
 
         public init(
             startDate: String,
             endDate: String,
+            timeZone: String? = nil,
             widthMultiplier: Double = 1,
             isDraft: Bool = false
         ) {
             self.startDate = startDate
             self.endDate = endDate
+            self.timeZone = timeZone
             self.widthMultiplier = widthMultiplier
             self.isDraft = isDraft
         }
@@ -65,6 +68,7 @@ public enum EventPositionCalculator {
         guard let slot = resolveTimedSlot(
             startDate: input.startDate,
             endDate: input.endDate,
+            eventTimeZone: input.timeZone,
             measurements: measurements,
             visibleDates: visibleDates,
             columnIndex: columnIndex,
@@ -133,13 +137,17 @@ public enum EventPositionCalculator {
     private static func resolveTimedSlot(
         startDate: String,
         endDate: String,
+        eventTimeZone: String? = nil,
         measurements: GridMetrics,
         visibleDates: [GridVisibleDate],
         columnIndex: Int?,
         hasSecondaryTimeZone: Bool
     ) -> TimedSlot? {
-        guard let start = CompassDateParsing.parseInEffectiveTimeZone(startDate),
-              let end = CompassDateParsing.parseInEffectiveTimeZone(endDate)
+        let parseZone = eventTimeZone ?? EffectiveTimeZone.identifier
+        guard let start = CompassDateParsing.parseGridDateTime(
+            startDate, timeZoneIdentifier: parseZone),
+            let end = CompassDateParsing.parseGridDateTime(
+                endDate, timeZoneIdentifier: parseZone)
         else {
             return nil
         }

@@ -7,6 +7,7 @@ struct EventFormMeetingLinkRow: View {
     @Bindable var model: NativeCalendarRootModel
     let url: String
     let label: String
+    @FocusState private var linkFocused: Bool
 
     private var shortcutKeycaps: [String] {
         model.shortcutRegistry.entries.first { $0.id == .editCopyMeetingLink }?.displayKeycaps ?? []
@@ -24,12 +25,24 @@ struct EventFormMeetingLinkRow: View {
                             .truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .accessibilityIdentifier("compass-event-form-conference")
                     .buttonStyle(.plain)
+                    .focusable()
+                    .focusEffectDisabled()
+                    .focused($linkFocused)
+                    .overlay {
+                        if linkFocused {
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(theme.accentColor, lineWidth: 1)
+                                .padding(-3)
+                        }
+                    }
                 } else {
                     Text(label)
                         .font(.rubik(12))
                         .foregroundStyle(theme.textColor)
                         .lineLimit(1)
+                        .accessibilityIdentifier("compass-event-form-conference")
                 }
                 EventFormCopyLinkButton(
                     label: "copy meeting link",
@@ -39,7 +52,12 @@ struct EventFormMeetingLinkRow: View {
                 )
             }
         }
-        .accessibilityIdentifier("compass-event-form-conference")
         .pageJumpChipAnchor(id: "form-conference")
+        .onEventFormFocusRequest(model, field: .conference) {
+            linkFocused = true
+        }
+        .onChange(of: model.eventFormFocusedField) { _, field in
+            if field != .conference { linkFocused = false }
+        }
     }
 }

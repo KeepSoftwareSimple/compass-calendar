@@ -2,6 +2,7 @@ import { PublicBookingAlert } from "@booking-web/booking/PublicBookingAlert";
 import { PublicBookingDetailsStep } from "@booking-web/booking/PublicBookingDetailsStep";
 import { PublicBookingGuestForm } from "@booking-web/booking/PublicBookingGuestForm";
 import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
+import { PublicBookingOwnerInbox } from "@booking-web/booking/PublicBookingOwnerInbox";
 import { PublicBookingPicker } from "@booking-web/booking/PublicBookingPicker";
 import { PublicBookingSkipLink } from "@booking-web/booking/PublicBookingSkipLink";
 import {
@@ -183,6 +184,11 @@ export function PublicBookingPage() {
               Select a time to continue.
             </p>
           )}
+
+          <PublicBookingOwnerInbox
+            hostTimeZone={page.timeZone}
+            slug={username}
+          />
         </>
       )}
     </PublicBookingLayout>

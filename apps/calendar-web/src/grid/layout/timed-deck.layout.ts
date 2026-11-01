@@ -1,5 +1,6 @@
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Dayjs } from "@core/util/date/dayjs";
+import { gridOverlapIntervalEnd } from "@core/util/date/grid-overlap-interval";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
   EMPTY_HIDDEN_EVENT_IDS,
@@ -8,16 +9,13 @@ import {
 import {
   applyHiddenEventStripWidth,
   DECK_INDENT,
-  DECK_MIN_WIDTH,
-  DECK_RIGHT_RESERVE,
-  TIMED_EVENT_FAN_GUTTER,
   TIMED_EVENT_FAN_INDENT,
   TIMED_EVENT_MIN_WIDTH,
   TIMED_EVENT_WIDTH_RATIO,
 } from "@web/grid/grid.constants";
 import { type EventPosition } from "@web/grid/types/grid.types";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
-import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
+import { parseGridScheduleDate } from "@web/timezone/parse-grid-schedule-date";
 
 export interface TimedDeckLayout {
   groupSize: number;
@@ -78,14 +76,8 @@ export const applyTimedEventDisplayPosition = (
     return { ...position, width: cardWidth };
   }
 
-  const deckWidth = getTimedEventDeckWidth({
-    availableWidth: position.width,
-    cardWidth,
-    groupSize: deckLayout.groupSize,
-  });
-
   return applyTimedDeckPositionWithIndent(
-    { ...position, width: deckWidth },
+    position,
     deckLayout,
     TIMED_EVENT_FAN_INDENT,
   );
@@ -109,21 +101,14 @@ export const applyTimedDeckPosition = (
 const applyTimedDeckPositionWithIndent = (
   position: EventPosition,
   deckLayout: TimedDeckLayout,
-  indentMax: number,
+  _indentMax: number,
 ): EventPosition => {
-  const indent = getDeckIndent(position.width, deckLayout.groupSize, indentMax);
-  const maxIndent = (deckLayout.groupSize - 1) * indent;
-  const fanned = position.width - DECK_RIGHT_RESERVE - maxIndent;
-  const maxWidthWithinColumn = Math.max(0, position.width - maxIndent);
-  const width = Math.min(
-    Math.max(DECK_MIN_WIDTH, fanned),
-    maxWidthWithinColumn,
-  );
+  const slotWidth = position.width / deckLayout.groupSize;
 
   return {
     ...position,
-    left: position.left + deckLayout.order * indent,
-    width,
+    left: position.left + deckLayout.order * slotWidth,
+    width: slotWidth,
     zIndex: deckLayout.order + 1,
   };
 };
@@ -138,46 +123,17 @@ const getTimedEventCardWidth = (availableWidth: number) => {
   return Math.min(availableWidth, boundedWidth);
 };
 
-const getTimedEventDeckWidth = ({
-  availableWidth,
-  cardWidth,
-  groupSize,
-}: {
-  availableWidth: number;
-  cardWidth: number;
-  groupSize: number;
-}) => {
-  const extraIndent = Math.max(0, TIMED_EVENT_FAN_INDENT - DECK_INDENT);
-  const spreadWidth = cardWidth + (groupSize - 1) * extraIndent;
-  const gutteredWidth = Math.max(
-    cardWidth,
-    availableWidth - TIMED_EVENT_FAN_GUTTER,
+const toDeckCandidate = (item: TimedEventLayoutItem): DeckCandidate => {
+  const calendarZone = getEffectiveTimeZone();
+  const eventZone = item.event.timeZone ?? calendarZone;
+  const start = parseGridScheduleDate(item.event.startDate, eventZone);
+  const end = gridOverlapIntervalEnd(
+    start,
+    parseGridScheduleDate(item.event.endDate, eventZone),
   );
 
-  return Math.min(availableWidth, spreadWidth, gutteredWidth);
-};
-
-const getDeckIndent = (
-  width: number,
-  groupSize: number,
-  indentMax: number = DECK_INDENT,
-) => {
-  if (groupSize < 2) return 0;
-
-  const minimumVisibleWidth =
-    width >= DECK_MIN_WIDTH ? DECK_MIN_WIDTH : width / groupSize;
-  const maxIndentForMinWidth = Math.max(0, width - minimumVisibleWidth);
-
-  return Math.min(indentMax, maxIndentForMinWidth / (groupSize - 1));
-};
-
-const toDeckCandidate = (item: TimedEventLayoutItem): DeckCandidate => {
-  const timeZone = item.event.timeZone ?? getEffectiveTimeZone();
-  const start = inEffectiveTimeZone(item.event.startDate, timeZone);
-  const end = inEffectiveTimeZone(item.event.endDate, timeZone);
-
   return {
-    dayKey: start.format(YEAR_MONTH_DAY_FORMAT),
+    dayKey: start.tz(calendarZone).format(YEAR_MONTH_DAY_FORMAT),
     end,
     item,
     start,

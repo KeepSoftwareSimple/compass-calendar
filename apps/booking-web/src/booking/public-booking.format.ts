@@ -178,9 +178,18 @@ export function formatBookingSlotDateHeading(
   return slotDateHeadingFormatter(timeZone).format(new Date(slotStart));
 }
 
+function splitDurationMinutes(minutes: number): {
+  hours: number;
+  remainder: number;
+} {
+  return {
+    hours: Math.floor(minutes / 60),
+    remainder: minutes % 60,
+  };
+}
+
 export function formatDurationMinutes(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
+  const { hours, remainder } = splitDurationMinutes(minutes);
   if (hours === 0) {
     return `${minutes} minutes`;
   }
@@ -189,6 +198,37 @@ export function formatDurationMinutes(minutes: number): string {
     return hourLabel;
   }
   return `${hourLabel} ${remainder} minutes`;
+}
+
+const ownerInboxDateFormatter = perTimeZoneFormatter({
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
+/** Compact schedule line for the meet page owner inbox row. */
+export function formatOwnerInboxScheduleLine(
+  slotStart: string,
+  durationMinutes: number,
+  timeZone: string,
+): string {
+  const datePart = ownerInboxDateFormatter(timeZone).format(
+    new Date(slotStart),
+  );
+  const timePart = formatBookingSlotTime(slotStart, timeZone);
+  const durationPart = formatDurationMinutesCompact(durationMinutes);
+  return `${datePart} · ${timePart} · ${durationPart}`;
+}
+
+export function formatDurationMinutesCompact(minutes: number): string {
+  const { hours, remainder } = splitDurationMinutes(minutes);
+  if (hours === 0) {
+    return `${minutes} min`;
+  }
+  if (remainder === 0) {
+    return hours === 1 ? "1 hr" : `${hours} hr`;
+  }
+  return `${hours} hr ${remainder} min`;
 }
 
 /** YYYY-MM-DD in `timeZone`. */

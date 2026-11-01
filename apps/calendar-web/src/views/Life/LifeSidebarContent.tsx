@@ -1,10 +1,16 @@
 import { ShuffleIcon } from "@phosphor-icons/react/dist/csr/Shuffle";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { ID_LIFE_BIRTH_DATE } from "@web/common/constants/web.constants";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import { NumberInput } from "@web/components/NumberInput/NumberInput";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
+import {
+  clearUiFocusTextInsertSuppress,
+  consumeUiFocusTextInsertSuppress,
+  shouldSuppressUiFocusTextInsert,
+} from "@web/shortcuts/ui-focus/ui-focus-text-insert.util";
 import { LifeQuote } from "./LifeQuote";
 import {
   clampLifespan,
@@ -52,7 +58,7 @@ export function LifeSidebarContent({
 
   useEffect(() => {
     if (!autoFocusBirthDate) return;
-    document.getElementById("life-date-of-birth")?.focus();
+    document.getElementById(ID_LIFE_BIRTH_DATE)?.focus();
   }, [autoFocusBirthDate]);
 
   useEffect(() => {
@@ -140,8 +146,8 @@ export function LifeSidebarContent({
             captionPicker
             calendarClassName="lifeBirthDatePicker"
             dateFormat="MMM d, yyyy"
-            id="life-date-of-birth"
-            inputClassName="c-life-input w-44"
+            id={ID_LIFE_BIRTH_DATE}
+            inputClassName="c-life-input w-full max-w-44 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel"
             isClearable
             isOpen={isBirthDatePickerOpen}
             maxDate={today}
@@ -150,7 +156,12 @@ export function LifeSidebarContent({
             onCalendarOpen={() => setIsBirthDatePickerOpen(true)}
             onChange={(date) => (date ? setBirthDate(date) : clearBirthDate())}
             onChangeRaw={(event) => {
-              const value = event.currentTarget.value;
+              let value = event.currentTarget.value;
+              if (shouldSuppressUiFocusTextInsert("i") && value.endsWith("i")) {
+                clearUiFocusTextInsertSuppress();
+                value = value.slice(0, -1);
+                event.currentTarget.value = value;
+              }
               const date = parseLifeDate(value);
               if (date) {
                 setBirthDate(date);
@@ -163,16 +174,28 @@ export function LifeSidebarContent({
             // arrows open via click so react-datepicker's internal open state
             // stays in sync (Escape / day-grid focus depend on it).
             onKeyDown={(event) => {
-              if (isBirthDatePickerOpen) return;
-              if (
-                event.key !== "Enter" &&
-                event.key !== "ArrowDown" &&
-                event.key !== "ArrowUp"
-              ) {
+              if (consumeUiFocusTextInsertSuppress(event.key)) {
+                event.preventDefault();
                 return;
               }
-              event.preventDefault();
-              (event.target as HTMLElement).click();
+              if (isBirthDatePickerOpen) return;
+              if (
+                event.key === "Enter" ||
+                event.key === "ArrowDown" ||
+                event.key === "ArrowUp"
+              ) {
+                event.preventDefault();
+                (event.target as HTMLElement).click();
+                return;
+              }
+              if (
+                event.key.length === 1 &&
+                !event.ctrlKey &&
+                !event.metaKey &&
+                !event.altKey
+              ) {
+                event.preventDefault();
+              }
             }}
             onSelect={(date) => {
               if (!date) return;

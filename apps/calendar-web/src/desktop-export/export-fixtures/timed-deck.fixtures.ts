@@ -91,6 +91,21 @@ export const buildTimedDeckFixtures = () => {
   ];
 
   const deckLayout = createTimedEventLayout(overlapEvents);
+
+  const invertedEndEvents = [
+    createTimedEvent({
+      _id: "unwind",
+      startDate: "2026-10-31T19:00:00.000Z",
+      endDate: "2026-10-31T20:00:00.000Z",
+    }),
+    createTimedEvent({
+      _id: "ritual",
+      startDate: "2026-10-31T19:30:00.000Z",
+      endDate: "2026-10-31T19:00:00.000",
+    }),
+  ];
+  const invertedEndLayout = createTimedEventLayout(invertedEndEvents);
+
   const basePosition = { height: 60, left: 20, top: 30, width: 180 };
   const deckPosition = applyTimedDeckPosition(basePosition, {
     order: 1,
@@ -157,6 +172,22 @@ export const buildTimedDeckFixtures = () => {
           hiddenEventIds: [],
         },
         output: deckLayout.map((item) => ({
+          eventId: item.event._id,
+          deckLayout: item.deckLayout,
+          isHidden: item.isHidden,
+        })),
+      },
+      {
+        id: "createTimedEventLayout-inverted-end-overlap",
+        input: {
+          events: invertedEndEvents.map(({ _id, startDate, endDate }) => ({
+            _id,
+            startDate,
+            endDate,
+          })),
+          hiddenEventIds: [],
+        },
+        output: invertedEndLayout.map((item) => ({
           eventId: item.event._id,
           deckLayout: item.deckLayout,
           isHidden: item.isHidden,

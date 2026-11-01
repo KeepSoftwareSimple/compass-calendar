@@ -8,7 +8,7 @@ struct SidebarRefreshButton: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable var model: NativeCalendarRootModel
 
-    private let slotWidth: CGFloat = 76
+    private let slotSize: CGFloat = 36
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 5)) { context in
@@ -17,21 +17,16 @@ struct SidebarRefreshButton: View {
                     Button {
                         model.refreshFromSidebar()
                     } label: {
-                        HStack(spacing: 6) {
-                            PhosphorIconView(icon: .arrowClockwise, size: 16)
-                            Text("Refresh")
-                                .font(.rubik(12))
-                                .foregroundStyle(theme.textMutedColor)
-                        }
-                        .padding(.horizontal, 8)
-                        .frame(height: 36)
-                        .contentShape(Rectangle())
+                        PhosphorIconView(icon: .arrowClockwise, size: 16)
+                            .frame(width: slotSize, height: slotSize)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Reload for the latest version")
+                    .help("Reload for the latest version (⌘R)")
+                    .accessibilityLabel("Reload for the latest version")
                 }
             }
-            .frame(width: slotWidth, height: 36, alignment: .leading)
+            .frame(width: slotSize, height: slotSize, alignment: .leading)
         }
     }
 }

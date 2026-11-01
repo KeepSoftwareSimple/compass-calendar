@@ -13,7 +13,7 @@ import { brighten } from "@web/common/styles/color.utils";
 import { theme } from "@web/common/styles/theme";
 import { useEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
-import { getTimesLabel } from "@web/common/utils/datetime/web.date.util";
+import { getGridCardTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { getLineClamp } from "@web/common/utils/grid/grid.util";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
@@ -221,7 +221,7 @@ const TimedEventCardBase = (
   const eventTitle = event.title || "Untitled event";
   const timeRange =
     !event.isAllDay && event.startDate && event.endDate
-      ? getTimesLabel(event.startDate, event.endDate, event.timeZone)
+      ? getGridCardTimesLabel(event.startDate, event.endDate, event.timeZone)
       : null;
   const recurringPrefix = isRecurring ? "Recurring " : "";
   const baseAccessibleLabel = event.isAllDay

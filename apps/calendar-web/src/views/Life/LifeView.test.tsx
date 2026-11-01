@@ -7,9 +7,10 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type ReactNode } from "react";
+import { type PropsWithChildren, type ReactNode } from "react";
 import { renderWithStore } from "@web/__tests__/render-with-store";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { viewActions } from "@web/events/stores/view.store";
 import { LifeView } from "./LifeView";
@@ -62,6 +63,26 @@ async function renderLifeViewWithSidebar() {
   });
   return result;
 }
+
+const appVersionCheckStub = {
+  useSharedAppVersionCheck: () => ({
+    isUpdateAvailable: false,
+    availableVersion: null,
+    currentVersion: "test",
+  }),
+  AppVersionCheckProvider: ({ children }: PropsWithChildren) => children,
+};
+mockModuleForFile(
+  "@web/components/Sidebar/SidebarActions/AppVersionCheckProvider",
+  appVersionCheckStub,
+  {
+    useSharedAppVersionCheck: () => ({
+      isUpdateAvailable: false,
+      availableVersion: null,
+      currentVersion: "test",
+    }),
+  },
+);
 
 const mockNavigate = mock();
 // Bun's mock.module is process-wide and file order is non-deterministic.

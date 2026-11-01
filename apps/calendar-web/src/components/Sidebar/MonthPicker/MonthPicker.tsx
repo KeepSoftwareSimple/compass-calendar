@@ -39,7 +39,7 @@ interface Props {
 }
 
 const monthPickerClassName =
-  "[&_.calendar]:!block [&_.calendar]:!w-full [&_.calendar]:!max-w-80 [&_.calendar]:!mx-auto [&_.calendar]:!bg-transparent [&_.calendar]:!shadow-none [&_.react-datepicker]:!border-0 [&_.react-datepicker]:!bg-transparent [&_.react-datepicker]:!shadow-none [&_.react-datepicker\\_\\_day-names]:!mb-0 [&_.react-datepicker\\_\\_header.react-datepicker\\_\\_header]:!px-0 [&_.react-datepicker\\_\\_month-container.react-datepicker\\_\\_month-container]:!bg-transparent [&_.react-datepicker\\_\\_month-container.react-datepicker\\_\\_month-container]:!px-0";
+  "[container-type:inline-size] [container-name:month-picker] [&_.calendar]:!block [&_.calendar]:!w-full [&_.calendar]:!max-w-full [&_.calendar]:!mx-auto [&_.calendar]:!bg-transparent [&_.calendar]:!shadow-none [&_.react-datepicker]:!border-0 [&_.react-datepicker]:!bg-transparent [&_.react-datepicker]:!shadow-none [&_.react-datepicker\\_\\_day-names]:!mb-0 [&_.react-datepicker\\_\\_header.react-datepicker\\_\\_header]:!px-0 [&_.react-datepicker\\_\\_month-container.react-datepicker\\_\\_month-container]:!bg-transparent [&_.react-datepicker\\_\\_month-container.react-datepicker\\_\\_month-container]:!px-0";
 
 const headerActionsClassName = "!ml-2.5";
 
@@ -57,8 +57,12 @@ const swallowDayPointer = (event: MouseEvent<HTMLElement>) => {
 /** react-datepicker moves its own cursor on Arrow keys; there is no app
  * handler to hang a shortcutId off, so the legend row records here instead. */
 const handlePickerKeyDownCapture = (event: KeyboardEvent<HTMLElement>) => {
-  if (event.key === "Escape") {
+  if (event.key === "Escape" || event.key === "u" || event.key === "U") {
+    if (event.key === "u" || event.key === "U") {
+      recordHandledShortcutInvocation("focus-event");
+    }
     restoreSidebarPickerReturnFocus();
+    event.preventDefault();
     return;
   }
   if (event.key.startsWith("Arrow")) {

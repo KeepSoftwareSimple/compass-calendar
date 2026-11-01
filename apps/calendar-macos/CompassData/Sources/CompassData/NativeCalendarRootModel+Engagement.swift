@@ -106,7 +106,7 @@ extension NativeCalendarRootModel {
             runConnectionBannerAction()
         case "o" where showsDemoEventsBanner && viewStore.view != .life:
             dismissDemoEventsBanner()
-        case "m" where showsMeetingPageNudge:
+        case "/" where showsMeetingPageNudge:
             openBookingSettings()
         case "s" where showsLocalModeConnectPrompt:
             startTrialFromLocalModePrompt()

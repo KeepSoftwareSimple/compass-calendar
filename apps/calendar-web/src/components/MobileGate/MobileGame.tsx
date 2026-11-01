@@ -20,7 +20,7 @@ import { streakMultiplier } from "@web/components/ShortcutShowcase/game.tasks";
 const TAP_MOVE_THRESHOLD_PX = 8;
 
 const formatTime = (minutes: number) =>
-  dayjs().startOf("day").add(minutes, "minute").format(HOURS_AM_FORMAT);
+  dayjs().startOf("day").minute(minutes).format(HOURS_AM_FORMAT);
 
 const formatDuration = (minutes: number) =>
   minutes === 60 ? "1 hour" : `${minutes} min`;

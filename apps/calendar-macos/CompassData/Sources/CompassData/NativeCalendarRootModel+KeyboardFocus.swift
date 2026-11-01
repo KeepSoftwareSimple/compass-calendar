@@ -22,6 +22,10 @@ extension NativeCalendarRootModel {
     public func focusSidebar() {
         focusedNotice = nil
         isSidebarOpen = true
+        if viewStore.view == .life {
+            pendingLifeSidebarFieldFocus = true
+            return
+        }
         monthPickerFocusDate = pickerCursor(in: monthPickerMonth, from: viewStore.anchorDate)
     }
 
@@ -140,6 +144,12 @@ extension NativeCalendarRootModel {
         recordShortcut(id)
         switch id {
         case .createTimed, .createAllday:
+            if id == .createTimed,
+               activeOnboardingSurface == .firstEventPrompt,
+               !onboardingStore.isFirstEventDone
+            {
+                return
+            }
             if viewStore.view == .life {
                 viewStore.view = .week
                 scheduleRefreshVisibleRange()
@@ -437,13 +447,21 @@ extension NativeCalendarRootModel {
         applyFocusPresentation()
     }
 
-    /// Web `onFocusCalendar` / `u`: seed grid focus on the nearest event when nothing is focused.
+    /// Web `u`: leave sidebar/event-form focus and land on the grid. Seeds the
+    /// nearest event when nothing on the grid is focused yet.
     public func focusFirstCalendarEvent() {
-        guard viewStore.view != .life else { return }
-        guard focusStore.focusedEventId == nil else { return }
-        if let seeded = seedFocusEventId() {
-            focusEvent(eventId: seeded)
+        clearMonthPickerFocus()
+        clearNoticeFocus()
+        focusedCalendarListKey = nil
+        if viewStore.view == .life {
+            lifeStore.focusCurrentWeek()
+            return
         }
+        if focusStore.focusedEventId == nil, let seeded = seedFocusEventId() {
+            focusEvent(eventId: seeded)
+            return
+        }
+        applyFocusPresentation()
     }
 
     private func seedFocusEventId() -> String? {

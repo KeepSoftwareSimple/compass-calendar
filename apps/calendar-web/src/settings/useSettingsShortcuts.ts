@@ -6,6 +6,10 @@ import {
   keyboardKey,
   normalizedKeyboardKey,
 } from "@web/shortcuts/is-bare-letter-key";
+import {
+  hasCommandModifier,
+  isModKeyHeld,
+} from "@web/shortcuts/keyboard-modifiers.util";
 import { useModHoldHintShortcut } from "@web/shortcuts/mod-hold/useModHoldHintShortcut";
 
 export const SETTINGS_SHORTCUT_ATTR = "data-settings-shortcut";
@@ -28,7 +32,7 @@ const clickSettingsShortcut = (id: string): boolean => {
 
 const isModEnter = (event: KeyboardEvent) =>
   keyboardKey(event) === "Enter" &&
-  (event.metaKey || event.ctrlKey) &&
+  isModKeyHeld(event) &&
   !event.altKey &&
   !event.shiftKey;
 
@@ -104,7 +108,7 @@ export function useSettingsShortcuts({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat) return;
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (hasCommandModifier(event)) return;
       if (isEditableKeyboardTarget(event)) return;
 
       const id = shortcutIdForEvent(event, page, hasBilling, hasBooking);

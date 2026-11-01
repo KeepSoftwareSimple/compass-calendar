@@ -25,6 +25,7 @@ import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { PixelPirateScouting } from "@web/components/WelcomeModal/PixelPirateScouting";
+import { isPlainEnterKey } from "@web/shortcuts/keyboard-modifiers.util";
 import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
@@ -129,13 +130,7 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
           className="c-button c-button-primary c-button-elevated inline-flex items-center justify-center rounded-full px-6 py-2"
           onClick={openCheckout}
           onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              !event.metaKey &&
-              !event.ctrlKey &&
-              !event.altKey &&
-              !event.shiftKey
-            ) {
+            if (isPlainEnterKey(event)) {
               event.preventDefault();
             }
           }}

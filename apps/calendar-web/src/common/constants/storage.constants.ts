@@ -106,4 +106,7 @@ export const STORAGE_KEYS = {
   /** Session-only dismiss for the awaiting_checkout explore banner. */
   AWAITING_CHECKOUT_BANNER_DISMISSED:
     "compass.billing.awaiting-checkout-banner-dismissed-session",
+  /** JSON array of app semver strings whose update toast was shown or dismissed. */
+  APP_UPDATE_NOTICE_HANDLED_VERSIONS:
+    "compass.app-update.notice-handled-versions",
 } as const satisfies Record<string, `compass.${string}`>;

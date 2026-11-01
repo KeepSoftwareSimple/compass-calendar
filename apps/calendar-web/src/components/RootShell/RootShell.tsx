@@ -27,6 +27,8 @@ import {
   useAuthModalState,
   VIEW_TO_PARAM,
 } from "@web/components/AuthModal/hooks/useAuthModal";
+import { BottomNoticeStack } from "@web/components/BottomNoticeStack/BottomNoticeStack";
+import { isBottomNoticeStackSuppressed } from "@web/components/BottomNoticeStack/bottom-notice-stack-suppressed";
 import { ConnectCalendarPromptGate } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPromptGate";
 import { useConnectCalendarPromptSurfaceEligible } from "@web/components/ConnectCalendarPrompt/useConnectCalendarPromptSurfaceEligible";
 import { FirstEventPrompt } from "@web/components/FirstEventPrompt/FirstEventPrompt";
@@ -48,6 +50,7 @@ import {
   shortcutShowcaseActions,
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
+import { UpNextBanner } from "@web/components/Sidebar/UpNextCard/UpNextBanner";
 import { WelcomeGuideModal } from "@web/components/WelcomeModal/WelcomeGuideModal";
 import { WelcomeModal } from "@web/components/WelcomeModal/WelcomeModal";
 import {
@@ -208,6 +211,13 @@ export function RootShell() {
   ]);
 
   const activeOnboardingSurface = selectActiveSurface(onboardingFlags);
+  const noticeSuppression = {
+    isAuthModalOpen,
+    welcomeModalOpen: onboardingFlags.welcomeModal,
+    shortcutShowcaseOpen: onboardingFlags.shortcutShowcase,
+  };
+  const suppressBottomNoticeStack =
+    isBottomNoticeStackSuppressed(noticeSuppression);
 
   // The gate and the celebration own the screen: the onboarding cards sit at
   // Z_INDEX_TOOLTIP (above Z_INDEX_MODAL), so leaving them mounted would let
@@ -238,9 +248,14 @@ export function RootShell() {
       {activeOnboardingSurface === "connectCalendarPrompt" && (
         <ConnectCalendarPromptGate />
       )}
-      {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
       {activeOnboardingSurface === "pointerHint" && <PointerHint />}
-      <LocalModeConnectPrompt />
+      {!isMobile && !suppressBottomNoticeStack && <UpNextBanner />}
+      <BottomNoticeStack suppressed={suppressBottomNoticeStack}>
+        {/* Phone visitors only see MobileGate; a bottom notice card steals
+            tray touches and breaks Time Block Party drag/tap. */}
+        {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
+        {!isMobile && <LocalModeConnectPrompt />}
+      </BottomNoticeStack>
     </AuthModalProvider>
   );
 }

@@ -51,10 +51,11 @@ public enum TimedDeckLayoutEngine {
             .filter { !items[$0.0].isHidden }
             .compactMap { index, event -> DeckCandidate? in
                 guard let start = CompassDateParsing.parseInEffectiveTimeZone(event.startDate),
-                      let end = CompassDateParsing.parseInEffectiveTimeZone(event.endDate)
+                      let parsedEnd = CompassDateParsing.parseInEffectiveTimeZone(event.endDate)
                 else {
                     return nil
                 }
+                let end = gridOverlapIntervalEnd(start: start, end: parsedEnd)
                 return DeckCandidate(
                     dayKey: CompassDateParsing.formatCalendarDay(start),
                     start: start,
@@ -107,16 +108,8 @@ public enum TimedDeckLayoutEngine {
             return next
         }
 
-        let deckWidth = getTimedEventDeckWidth(
-            availableWidth: position.width,
-            cardWidth: cardWidth,
-            groupSize: deckLayout.groupSize
-        )
-
-        var base = position
-        base.width = deckWidth
         return applyTimedDeckPositionWithIndent(
-            base,
+            position,
             deckLayout: deckLayout,
             indentMax: GridLayoutConstants.timedEventFanIndent
         )
@@ -127,21 +120,13 @@ public enum TimedDeckLayoutEngine {
         deckLayout: TimedDeckLayout,
         indentMax: Double
     ) -> EventPosition {
-        let indent = getDeckIndent(
-            width: position.width,
-            groupSize: deckLayout.groupSize,
-            indentMax: indentMax
-        )
-        let maxIndent = Double(deckLayout.groupSize - 1) * indent
-        let fanned = position.width - GridLayoutConstants.deckRightReserve - maxIndent
-        let maxWidthWithinColumn = max(0, position.width - maxIndent)
-        let width = min(max(GridLayoutConstants.deckMinWidth, fanned), maxWidthWithinColumn)
+        let slotWidth = position.width / Double(deckLayout.groupSize)
 
         return EventPosition(
             height: position.height,
-            left: position.left + Double(deckLayout.order) * indent,
+            left: position.left + Double(deckLayout.order) * slotWidth,
             top: position.top,
-            width: width,
+            width: slotWidth,
             zIndex: deckLayout.order + 1
         )
     }
@@ -229,6 +214,13 @@ private func groupByOverlap(_ events: [DeckCandidate]) -> [[DeckCandidate]] {
 
 private func overlaps(_ a: DeckCandidate, _ b: DeckCandidate) -> Bool {
     a.start < b.end && a.end > b.start
+}
+
+/// Match web `gridOverlapIntervalEnd` and timed card minimum height.
+private func gridOverlapIntervalEnd(start: Date, end: Date) -> Date {
+    let minutes = Int(end.timeIntervalSince(start) / 60)
+    guard minutes < 1 else { return end }
+    return start.addingTimeInterval(Double(GridLayoutConstants.timedEventMinDurationMinutes * 60))
 }
 
 private func orderBackgroundFirst(_ group: [DeckCandidate]) -> [DeckCandidate] {

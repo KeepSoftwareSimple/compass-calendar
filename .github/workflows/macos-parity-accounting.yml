@@ -1,0 +1,22 @@
+name: macOS parity accounting
+
+on:
+  pull_request:
+    paths:
+      - docs/acceptance/macos-parity/**
+      - .github/workflows/macos-parity-accounting.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accounting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python3 -B -m unittest discover -s docs/acceptance/macos-parity -p '*_test.py'
+      - run: python3 -B docs/acceptance/macos-parity/audit.py check

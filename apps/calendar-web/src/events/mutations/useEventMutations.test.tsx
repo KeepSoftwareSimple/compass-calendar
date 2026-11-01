@@ -58,6 +58,7 @@ import {
   runHistoryRestore,
   useUndoHistoryStore,
 } from "@web/events/stores/undo.store";
+import { EVENT_WRITE_UNAVAILABLE_RETRIES } from "./event-write-retry";
 import { useEventMutations } from "./useEventMutations";
 import { useHasPendingEventMutations } from "./useEventPending";
 
@@ -211,6 +212,9 @@ const setup = (
         source,
         repository,
         markWrite: async () => markedWrites.push("marked"),
+        // Re-send a backend-unavailable write immediately so the retry tests
+        // don't sit through the real deploy-sized backoff.
+        writeRetryDelay: () => 0,
         reportError: (error, onRetry) => {
           errors.push(error);
           retries.push(onRetry);
@@ -1563,6 +1567,107 @@ describe("useEventMutations", () => {
           ?.entities[original.id].content,
       ).toMatchObject({ title: "Changed" });
     });
+  });
+
+  test("keeps a save pending through a backend restart and lands it", async () => {
+    // Regression: a series edit saved while a production deploy was swapping
+    // the backend container never got an answer, rolled back, and told the
+    // user to check their connection. It must instead be re-sent until the
+    // backend is back, with the edit staying on screen the whole time.
+    const context = setup();
+    const original = event();
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+    const restarting = () => new TypeError("Failed to fetch");
+
+    act(() =>
+      context.hook.result.current.mutations.replace(
+        replacePayload(original.id, {
+          content: {
+            kind: "details",
+            title: "Changed",
+            description: "",
+            location: "",
+          },
+        }),
+      ),
+    );
+
+    await waitFor(() => expect(context.calls).toHaveLength(1));
+    act(() => context.pending.rejectNext(restarting()));
+    await waitFor(() => expect(context.calls).toHaveLength(2));
+    act(() => context.pending.rejectNext(restarting()));
+    await waitFor(() => expect(context.calls).toHaveLength(3));
+
+    expect(context.errors).toHaveLength(0);
+    expect(context.hook.result.current.hasPending).toBe(true);
+    expect(
+      context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+        ?.entities[original.id].content,
+    ).toMatchObject({ title: "Changed" });
+    // Same payload each time, so Sync's idempotency key dedupes a resend
+    // whose first copy did land.
+    expect(context.calls[2]).toEqual(context.calls[0]!);
+
+    act(() => context.pending.resolveNext());
+    await waitFor(() => {
+      expect(context.hook.result.current.hasPending).toBe(false);
+    });
+    expect(context.errors).toHaveLength(0);
+    expect(
+      context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+        ?.entities[original.id].content,
+    ).toMatchObject({ title: "Changed" });
+  });
+
+  test("reports a backend outage once the automatic retries are used up", async () => {
+    const context = setup();
+    const original = event();
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.mutations.replace(
+        replacePayload(original.id, {
+          content: {
+            kind: "details",
+            title: "Changed",
+            description: "",
+            location: "",
+          },
+        }),
+      ),
+    );
+    act(() => context.pending.reject(new TypeError("Failed to fetch")));
+
+    await waitFor(() => {
+      expect(context.errors.map((error) => error.message)).toEqual([
+        "Failed to fetch",
+      ]);
+    });
+    expect(context.calls).toHaveLength(EVENT_WRITE_UNAVAILABLE_RETRIES + 1);
+    expect(context.retries[0]).toBeDefined();
+    expect(
+      context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+        ?.entities[original.id].content,
+    ).toMatchObject({ title: "Original" });
+  });
+
+  test("does not re-send a write the backend answered", async () => {
+    // A response the backend authored is its decision; only a write that
+    // never got an answer is re-sent.
+    const context = setup();
+    const original = event();
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.mutations.replace(
+        replacePayload(original.id),
+      ),
+    );
+    await waitFor(() => expect(context.calls).toHaveLength(1));
+    act(() => context.pending.rejectNext(new Error("write failed")));
+
+    await waitFor(() => expect(context.errors).toHaveLength(1));
+    expect(context.calls).toHaveLength(1);
   });
 
   test("withdraws the scope offer when a default occurrence change fails", async () => {

@@ -2,14 +2,26 @@ import { type Editor } from "@tiptap/react";
 import { openExternalUrl } from "@web/common/utils/browser/open-external-url.util";
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
-import { physicalDigitIndex } from "@web/shortcuts/digit-pick.util";
+import { getDescriptionLinkInteraction } from "@web/components/DescriptionEditor/description-link-interaction.ref";
 
 const DESCRIPTION_LINK_COPIED_TOAST_ID = "description-link-copied";
-export const DESCRIPTION_LINK_SHORTCUT_COUNT = 9;
-/** Inline space reserved after each link for digit keycaps (matches c-description-link-hints). */
-export const DESCRIPTION_LINK_HINT_SLOT_PX = 28;
 
 const LINK_SELECTOR = "a[href]";
+
+/** Screen-reader label without a native `title` tooltip (custom chrome shows the href). */
+export const applyDescriptionLinkAccessibleLabel = (
+  link: HTMLAnchorElement,
+): void => {
+  const href = link.href;
+  const visible = link.textContent?.trim() ?? "";
+  const label = visible && visible !== href ? `${visible}, ${href}` : href;
+  if (link.getAttribute("aria-label") !== label) {
+    link.setAttribute("aria-label", label);
+  }
+  if (link.hasAttribute("title")) {
+    link.removeAttribute("title");
+  }
+};
 
 /** Host-only label for display; stored href and link text stay unchanged. */
 export const displayHostForDescriptionLink = (url: string): string => {
@@ -57,24 +69,6 @@ export const openDescriptionLink = (url: string): void => {
   openExternalUrl(url);
 };
 
-export const tryOpenDescriptionLinkFromDigit = (
-  event: Pick<KeyboardEvent, "code" | "key" | "metaKey" | "ctrlKey" | "altKey">,
-  editorRoot: HTMLElement,
-): boolean => {
-  if (event.metaKey || event.ctrlKey || event.altKey) return false;
-
-  const digitIndex = physicalDigitIndex(event);
-  if (digitIndex === null || digitIndex >= DESCRIPTION_LINK_SHORTCUT_COUNT) {
-    return false;
-  }
-
-  const link = listDescriptionLinks(editorRoot)[digitIndex];
-  if (!link?.href) return false;
-
-  openDescriptionLink(link.href);
-  return true;
-};
-
 /** The nearest enclosing link, `node` itself included. */
 const closestLink = (node: Node | null): HTMLAnchorElement | null => {
   if (!(node instanceof Element)) return null;
@@ -98,6 +92,29 @@ export const copyDescriptionLinkUrl = async (url: string): Promise<boolean> => {
   return didCopy;
 };
 
+/**
+ * Runs `mutate` with ProseMirror's DOM observer paused. Link chrome decorates
+ * ProseMirror-owned <a> nodes (tabindex, title, focus ring, short labels);
+ * if ProseMirror sees those writes it redraws the links, and a redraw that
+ * re-triggers the decorator loops forever and freezes the tab.
+ */
+export const withEditorDomObserverPaused = (
+  editor: Editor,
+  mutate: () => void,
+): void => {
+  const domObserver = (
+    editor.view as unknown as {
+      domObserver: { stop: () => void; start: () => void };
+    }
+  ).domObserver;
+  domObserver.stop();
+  try {
+    mutate();
+  } finally {
+    domObserver.start();
+  }
+};
+
 export const listDescriptionLinks = (root: HTMLElement): HTMLAnchorElement[] =>
   [...root.querySelectorAll<HTMLAnchorElement>(LINK_SELECTOR)].filter(
     (link) => link.href.length > 0,
@@ -112,17 +129,32 @@ export const linkAtCaret = (editor: Editor): HTMLAnchorElement | null => {
   );
 };
 
+export const resolveDescriptionLinkTarget = (
+  editor: Editor,
+  root: HTMLElement,
+  eventTarget: EventTarget | null,
+): HTMLAnchorElement | null => {
+  const fromEvent =
+    findLinkElement(root, eventTarget) ??
+    findLinkElement(root, document.activeElement);
+  if (fromEvent?.href) return fromEvent;
+
+  const interaction = getDescriptionLinkInteraction();
+  if (interaction?.href && root.contains(interaction)) return interaction;
+
+  const caretLink = linkAtCaret(editor);
+  if (caretLink?.href) return caretLink;
+
+  const links = listDescriptionLinks(root);
+  return links[0] ?? null;
+};
+
 export const resolveDescriptionLinkToCopy = (
   editor: Editor,
   root: HTMLElement,
-  activeLink: HTMLAnchorElement | null,
-): string | null => {
-  if (activeLink?.href) return activeLink.href;
-  const caretLink = linkAtCaret(editor);
-  if (caretLink?.href) return caretLink.href;
-  const links = listDescriptionLinks(root);
-  return links[0]?.href ?? null;
-};
+  eventTarget: EventTarget | null,
+): string | null =>
+  resolveDescriptionLinkTarget(editor, root, eventTarget)?.href ?? null;
 
 export const focusAdjacentDescriptionLink = (
   root: HTMLElement,

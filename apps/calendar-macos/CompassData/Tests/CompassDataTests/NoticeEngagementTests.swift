@@ -64,7 +64,7 @@ final class NoticeEngagementTests: XCTestCase {
         let model = try await makeModel()
         model.onboardingStore.dismissFirstEventPrompt()
         XCTAssertFalse(model.showsMeetingPageNudge)
-        XCTAssertFalse(model.handleNoticeActionKey(KeyEvent(character: "m"), editSequenceArmed: false))
+        XCTAssertFalse(model.handleNoticeActionKey(KeyEvent(character: "/"), editSequenceArmed: false))
     }
 
     func testTimezoneMismatchOffersSwitchAndKeep() async throws {

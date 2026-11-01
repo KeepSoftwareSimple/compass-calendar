@@ -5,25 +5,45 @@ import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 
 const denver = "America/Denver";
 
-/**
- * Synthetic Oct 31 2026 (America/Denver) overlap matching Tyler's prod case:
- * imported "Monthly Ritual" (longer) and Outlook "Unwind" (shorter) at 7 PM,
- * plus a recurring neighbor ending at 7 PM. Grid `startDate` strings mirror
- * mixed encodings after sync: Z instant on one card, offset wall clock on the
- * other (see #4905).
- */
-export const tylerOct31OverlapGridEvents = (): GridEvent[] => [
+const tylerSaturdayBase = (): GridEvent[] => [
   {
-    _id: "tyler-ritual",
-    calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439012"),
+    _id: "tyler-fall-festival",
+    calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439013"),
     description: "",
-    endDate: "2026-10-31T20:30:00-06:00",
+    endDate: "2026-10-31T17:30:00-06:00",
     isAllDay: false,
     origin: Origin.COMPASS,
     position: gridEventDefaultPosition,
     recurrence: undefined,
-    startDate: "2026-11-01T01:00:00.000Z",
-    title: "Monthly Ritual",
+    startDate: "2026-10-31T15:00:00-06:00",
+    timeZone: denver,
+    title: "H: Fall Festival | Venture Church",
+    user: "",
+  },
+  {
+    _id: "tyler-compass-demo",
+    calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439014"),
+    description: "",
+    endDate: "2026-10-31T23:00:00.000Z",
+    isAllDay: false,
+    origin: Origin.COMPASS,
+    position: gridEventDefaultPosition,
+    recurrence: undefined,
+    startDate: "2026-10-31T15:30:00-06:00",
+    title: "Record Compass demo",
+    user: "",
+  },
+  {
+    _id: "tyler-update",
+    description: "",
+    endDate: "2026-10-31T19:00:00-06:00",
+    isAllDay: false,
+    origin: Origin.COMPASS,
+    position: gridEventDefaultPosition,
+    recurrence: { eventId: "series-update", rule: ["RRULE:FREQ=WEEKLY"] },
+    startDate: "2026-10-31T18:30:00-06:00",
+    timeZone: denver,
+    title: "Update 4e2d",
     user: "",
   },
   {
@@ -40,17 +60,52 @@ export const tylerOct31OverlapGridEvents = (): GridEvent[] => [
     title: "Unwind",
     user: "",
   },
+];
+
+/**
+ * Sat Oct 31 2026 (America/Denver) grid payloads from Tyler's prod column shape
+ * (read-only prod export unavailable here). Mixed encodings: Z instants, offset
+ * wall times, naive wall-clock ends, missing `timeZone` on imported cards.
+ */
+export const tylerOct31OverlapGridEventsLegacy = (): GridEvent[] => [
+  ...tylerSaturdayBase(),
   {
-    _id: "tyler-update",
+    _id: "tyler-ritual",
+    calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439012"),
     description: "",
-    endDate: "2026-10-31T19:00:00-06:00",
+    endDate: "2026-10-31T20:30:00.000",
     isAllDay: false,
     origin: Origin.COMPASS,
     position: gridEventDefaultPosition,
     recurrence: undefined,
-    startDate: "2026-10-31T18:00:00-06:00",
-    timeZone: denver,
-    title: "Update 4e2d",
+    startDate: "2026-11-01T01:00:00.000Z",
+    title: "Monthly Ritual",
     user: "",
   },
 ];
+
+/** Prod-broken shape: mid-block Z start + naive end wall clock before start. */
+export const tylerOct31OverlapGridEventsInvertedEnd = (): GridEvent[] => [
+  ...tylerSaturdayBase(),
+  {
+    _id: "tyler-ritual",
+    calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439012"),
+    description: "",
+    endDate: "2026-10-31T19:00:00.000",
+    isAllDay: false,
+    origin: Origin.COMPASS,
+    position: gridEventDefaultPosition,
+    recurrence: undefined,
+    startDate: "2026-11-01T01:30:00.000Z",
+    title: "Monthly Ritual",
+    user: "",
+  },
+];
+
+/** Offset-normalized ritual end (post-sync repair). */
+export const tylerOct31OverlapGridEvents = (): GridEvent[] =>
+  tylerOct31OverlapGridEventsLegacy().map((event) =>
+    event._id === "tyler-ritual"
+      ? { ...event, endDate: "2026-10-31T20:30:00-06:00" }
+      : event,
+  );

@@ -10,7 +10,7 @@ import {
   type EventSchedule,
   EventScheduleSchema,
 } from "@core/types/event.contracts";
-import { civilHourLineInstants } from "@core/util/date/civil-day";
+import { atCivilTime, civilHourLineInstants } from "@core/util/date/civil-day";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { ACCEPTED_TIMES } from "@web/common/constants/web.constants";
 import { type SelectOption } from "@web/common/types/component.types";
@@ -21,6 +21,7 @@ import {
   inEffectiveTimeZone,
   nowInEffectiveTimeZone,
 } from "@web/timezone/in-time-zone";
+import { parseGridScheduleDate } from "@web/timezone/parse-grid-schedule-date";
 
 interface SelectedDates {
   startDate: Date;
@@ -221,8 +222,11 @@ export const parseUserTime = (
     ));
   }
 
+  // atCivilTime, not .startOf("day").hour(): the timezone plugin keeps
+  // midnight's UTC offset when setting fields, so on a DST change day a typed
+  // time resolved an hour off ("1400" became 1 PM in Denver on 2026-11-01).
   return getTimeOptionByValue(
-    nowInEffectiveTimeZone().startOf("day").hour(hour).minute(minute),
+    atCivilTime(nowInEffectiveTimeZone(), getEffectiveTimeZone(), hour, minute),
   );
 };
 
@@ -444,11 +448,24 @@ export const getTimesLabel = (
 ) => {
   const start = _getTimeLabel(startDate, timeZone);
   const end = _getTimeLabel(endDate, timeZone);
-  const startMinimal = _cleanStartMeridiem(start, end);
+  return formatMeridiemRangeLabel(start, end);
+};
 
-  const label = `${startMinimal} - ${end}`;
-
-  return label;
+/** Grid card labels follow pinned calendar zone placement, not the event zone wall clock. */
+export const getGridCardTimesLabel = (
+  startDate: string,
+  endDate: string,
+  eventTimeZone?: string | null,
+): string => {
+  const calendarTimeZone = getEffectiveTimeZone();
+  const eventZone = eventTimeZone ?? calendarTimeZone;
+  const start = parseGridScheduleDate(startDate, eventZone).tz(
+    calendarTimeZone,
+  );
+  const end = parseGridScheduleDate(endDate, eventZone).tz(calendarTimeZone);
+  const startLabel = getTimeLabel(start.format(HOURS_AM_FORMAT));
+  const endLabel = getTimeLabel(end.format(HOURS_AM_FORMAT));
+  return formatMeridiemRangeLabel(startLabel, endLabel);
 };
 
 export const getWeekRangeLabel = (weekStart: Dayjs, weekEnd: Dayjs) => {
@@ -553,13 +570,12 @@ const _addTimesToDates = (dt: SelectedDates, timeZone: string) => {
   const startYmd = inEffectiveTimeZone(dt.startDate, timeZone).format(
     YEAR_MONTH_DAY_FORMAT,
   );
-  const startDate = dayjs
-    .tz(startYmd, timeZone)
-    .hour(start.hour())
-    .minute(start.minute())
-    .second(0)
-    .millisecond(0)
-    .format();
+  const startDate = atCivilTime(
+    startYmd,
+    timeZone,
+    start.hour(),
+    start.minute(),
+  ).format();
 
   const end = getDayjsByTimeValue(dt.endTime.value);
   // Use endDate (not startDate) so overnight / multi-day timed drafts keep
@@ -568,13 +584,12 @@ const _addTimesToDates = (dt: SelectedDates, timeZone: string) => {
   const endYmd = inEffectiveTimeZone(dt.endDate, timeZone).format(
     YEAR_MONTH_DAY_FORMAT,
   );
-  const endDate = dayjs
-    .tz(endYmd, timeZone)
-    .hour(end.hour())
-    .minute(end.minute())
-    .second(0)
-    .millisecond(0)
-    .format();
+  const endDate = atCivilTime(
+    endYmd,
+    timeZone,
+    end.hour(),
+    end.minute(),
+  ).format();
 
   return { startDate, endDate };
 };
@@ -582,6 +597,9 @@ const _addTimesToDates = (dt: SelectedDates, timeZone: string) => {
 // "6 AM" - "7 AM" reads as "6 - 7 AM": the start's meridiem is redundant when
 // the end repeats it. trimEnd because dropping it also leaves the space that
 // separated it, which the caller's " - " would double up on.
+const formatMeridiemRangeLabel = (startLabel: string, endLabel: string) =>
+  `${_cleanStartMeridiem(startLabel, endLabel)} - ${endLabel}`;
+
 const _cleanStartMeridiem = (start: string, end: string) => {
   const meridiems = [start.slice(-2), end.slice(-2)];
   const verboseMeridiems = meridiems[0] === meridiems[1];

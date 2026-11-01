@@ -45,13 +45,8 @@ struct EventFormToolbarView: View {
             self.focusedAction = actionLabels[next]
             return .handled
         }
-        .onChange(of: model.eventFormActionsFocusRequest) { _, _ in
-            // The parent first releases title focus for this same field jump.
-            // Move focus after that update so it cannot clear the new target.
-            DispatchQueue.main.async {
-                guard model.isEventFormVisible, model.eventFormFocusedField == .actions else { return }
-                focusedAction = actionLabels.first
-            }
+        .onEventFormFocusRequest(model, field: .actions) {
+            focusedAction = actionLabels.first
         }
         .onChange(of: focusedAction) { _, action in
             model.isEventFormActionFocused = action != nil

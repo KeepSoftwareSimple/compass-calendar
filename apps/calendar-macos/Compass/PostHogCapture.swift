@@ -16,7 +16,19 @@ actor PostHogCapture {
         environmentLabel = PosthogEnvironment.resolve(hostname: hostname)
     }
 
+    func disableCapture() {
+        client = PostHogBatchClient(configuration: nil)
+    }
+
+    private var isCaptureEnabled: Bool {
+        UITestLaunchPolicy.capturesProductAnalytics
+    }
+
     func configure(posthog: AppConfigPosthog?) {
+        guard isCaptureEnabled else {
+            disableCapture()
+            return
+        }
         guard let posthog else {
             client = PostHogBatchClient(configuration: nil)
             return
@@ -29,6 +41,10 @@ actor PostHogCapture {
     }
 
     func configureFromBundle() async {
+        guard isCaptureEnabled else {
+            disableCapture()
+            return
+        }
         let key = Bundle.main.object(forInfoDictionaryKey: "COMPASS_POSTHOG_KEY") as? String
         let host = Bundle.main.object(forInfoDictionaryKey: "COMPASS_POSTHOG_HOST") as? String
         guard let key, let host, !key.isEmpty, !host.isEmpty else {
@@ -50,6 +66,7 @@ actor PostHogCapture {
     }
 
     func capture(_ event: ProductEvent, properties: ProductEventProperties = [:]) {
+        guard isCaptureEnabled else { return }
         let distinctId = identityController.distinctIdForCapture()
         let sessionId = sessionController.touchSessionId()
         var merged = properties

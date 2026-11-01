@@ -10,6 +10,10 @@ actor PostHogAnalyticsIdentityCoordinator: AnalyticsIdentityCoordinator {
     }
 
     func applyPostHogConfig(_ config: AppConfigPosthog?) async {
+        guard UITestLaunchPolicy.capturesProductAnalytics else {
+            await PostHogCapture.shared.disableCapture()
+            return
+        }
         if let config {
             await PostHogCapture.shared.configure(posthog: config)
         } else {

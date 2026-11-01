@@ -122,6 +122,21 @@ class BookingReservationRepository {
     };
   }
 
+  async listUpcomingConfirmedByPageId(
+    pageId: ObjectId,
+    now: Date,
+  ): Promise<BookingReservationRecord[]> {
+    const rows = await mongoService.bookingReservation
+      .find({
+        pageId,
+        status: "confirmed",
+        slotEnd: { $gt: now },
+      })
+      .sort({ slotStart: 1 })
+      .toArray();
+    return rows.map((row) => BookingReservationRecordSchema.parse(row));
+  }
+
   async listConfirmedOverlapping(
     pageId: ObjectId,
     slotStart: Date,

@@ -42,6 +42,9 @@ test("exploring without an account returns focus to the week view without trappi
   await welcomeDialog
     .getByRole("button", { name: "On this device only" })
     .click();
+  await welcomeDialog
+    .getByRole("button", { name: "Continue to calendar" })
+    .click();
   await expect(welcomeDialog).toBeHidden();
 
   await page.keyboard.press("Tab");

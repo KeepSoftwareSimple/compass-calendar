@@ -1,3 +1,5 @@
+import { hasAnyModifier } from "@web/shortcuts/keyboard-modifiers.util";
+
 /**
  * Some browsers, extensions, and IME/autofill paths fire KeyboardEvents with
  * `key` unset. Calling `.length` / `.toLowerCase()` on that value is a
@@ -19,11 +21,6 @@ export const normalizedKeyboardKey = (
 export const isBareLetterKey = (event: KeyboardEvent, letter: string) => {
   const key = keyboardKey(event);
   return (
-    key.length === 1 &&
-    key.toLowerCase() === letter &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    !event.altKey &&
-    !event.shiftKey
+    key.length === 1 && key.toLowerCase() === letter && !hasAnyModifier(event)
   );
 };

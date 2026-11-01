@@ -128,22 +128,27 @@ export class GoogleEventReaderAdapter implements ProviderEventReader {
         // dropped so one bad row never fails the whole page or the import.
         if (error instanceof ProviderEventError) {
           skipped++;
-          const zodPath =
+          const firstIssue =
             error.cause &&
             typeof error.cause === "object" &&
             "issues" in error.cause &&
             Array.isArray((error.cause as { issues: unknown[] }).issues)
               ? (
-                  (error.cause as { issues: Array<{ path?: unknown[] }> })
-                    .issues[0]?.path ?? []
-                )
-                  .map(String)
-                  .join(".")
-              : "";
+                  error.cause as {
+                    issues: Array<{ path?: unknown[]; message?: unknown }>;
+                  }
+                ).issues[0]
+              : undefined;
+          const zodPath = (firstIssue?.path ?? []).map(String).join(".");
+          // The issue message is our own schema text (never event content),
+          // so it is safe to log and says which rule the event broke.
+          const zodIssue =
+            typeof firstIssue?.message === "string" ? firstIssue.message : "";
           this.#log.warn(
             `Skipped unusable Google event ${item.id ?? "(no id)"} (${error.reason})` +
               ` message=${error.message}` +
               (zodPath ? ` schemaPath=${zodPath}` : "") +
+              (zodIssue ? ` schemaIssue=${zodIssue}` : "") +
               ` fields={${summarizeGoogleEventFieldsForLog(item)}}`,
           );
           continue;

@@ -5,6 +5,7 @@ import { parseUserDate } from "@web/common/utils/datetime/web.date.util";
 import { resolveFormControlJumpIds } from "@web/common/utils/form/form.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import {
   EVENT_FORM_DATE_INPUT_FORMAT,
   formatEventFormDateLabel,
@@ -75,26 +76,21 @@ export const EventFormDateField = ({
   };
   const [pickerCursor, setPickerCursor] = useState<Dayjs | null>(null);
   const pickerCursorRef = useRef<Dayjs | null>(null);
-  const [, setIsGridFocused] = useState(false);
   const isGridFocusedRef = useRef(false);
-  const setGridFocusedSync = (next: boolean) => {
-    isGridFocusedRef.current = next;
-    setIsGridFocused(next);
-  };
   const setPickerCursorSync = (next: Dayjs | null) => {
     pickerCursorRef.current = next;
     setPickerCursor(next);
   };
+  const keyboardSelectedDaySelector =
+    ".react-datepicker__day--keyboard-selected:not(.react-datepicker__day--disabled)";
   const findKeyboardSelectedDay = () =>
     document.querySelector<HTMLElement>(
-      ".react-datepicker-popper .react-datepicker__day--keyboard-selected:not(.react-datepicker__day--disabled)",
+      `.react-datepicker-popper ${keyboardSelectedDaySelector}`,
     ) ??
     (calendarClassName
-      ? document
-          .querySelector<HTMLElement>(`.calendar.${calendarClassName}`)
-          ?.querySelector<HTMLElement>(
-            ".react-datepicker__day--keyboard-selected:not(.react-datepicker__day--disabled)",
-          )
+      ? document.querySelector<HTMLElement>(
+          `.calendar.${calendarClassName} ${keyboardSelectedDaySelector}`,
+        )
       : null);
 
   const focusKeyboardSelectedDay = () => {
@@ -123,7 +119,6 @@ export const EventFormDateField = ({
       pickerCursorRef.current = null;
       setPickerCursor(null);
       isGridFocusedRef.current = false;
-      setIsGridFocused(false);
       return;
     }
     calendarCloseRequestedRef.current = false;
@@ -214,7 +209,7 @@ export const EventFormDateField = ({
 
     if (event.key === "Tab") {
       if (input instanceof HTMLInputElement) commitOrRevert(input);
-      setGridFocusedSync(false);
+      isGridFocusedRef.current = false;
       skipBlurCloseRef.current = true;
       requestCalendarClose();
       event.stopPropagation();
@@ -242,7 +237,7 @@ export const EventFormDateField = ({
     ) {
       const anchor = dayjs(selectedRef.current).startOf("day");
       setPickerCursorSync(anchor);
-      setGridFocusedSync(true);
+      isGridFocusedRef.current = true;
       focusKeyboardSelectedDay();
       return;
     }
@@ -260,7 +255,7 @@ export const EventFormDateField = ({
         if (!next.isSame(pickerMonth, "month")) {
           setPickerMonth(next.startOf("month"));
         }
-        setGridFocusedSync(true);
+        isGridFocusedRef.current = true;
         focusKeyboardSelectedDay();
         break;
       }
@@ -269,7 +264,7 @@ export const EventFormDateField = ({
         break;
       case "close":
         requestCalendarClose();
-        setGridFocusedSync(false);
+        isGridFocusedRef.current = false;
         input?.focus();
         break;
     }
@@ -303,7 +298,7 @@ export const EventFormDateField = ({
       return;
     }
 
-    const modKey = event.metaKey || event.ctrlKey || event.altKey;
+    const modKey = hasCommandModifier(event);
     const closedAction = closedFieldAction(event.key, {
       shiftKey: event.shiftKey,
       modKey,
@@ -343,7 +338,7 @@ export const EventFormDateField = ({
         if (next instanceof Element && next.closest(".react-datepicker"))
           return;
         if (isOpen) {
-          setGridFocusedSync(false);
+          isGridFocusedRef.current = false;
           if (skipBlurCloseRef.current) {
             skipBlurCloseRef.current = false;
           } else {
@@ -380,7 +375,7 @@ export const EventFormDateField = ({
         onInputClick={onCalendarOpen}
         onFocus={(event) => {
           if (event.target instanceof HTMLInputElement) {
-            setGridFocusedSync(false);
+            isGridFocusedRef.current = false;
             event.target.select();
           }
         }}

@@ -81,6 +81,16 @@ describe("welcome sequence preview loop", () => {
       const rowId = previewLoopRowId(previewEmail, 1, step.key);
       await emailSendRepository.markSent(rowId, `msg-${step.key}`);
     }
+    // markSent stamps the real clock. Pin sentAt inside October so the
+    // assertions below don't depend on what day CI runs.
+    await mongoService.emailSend.updateMany(
+      {
+        previewLoop: true,
+        recipientEmail: previewEmail,
+        previewLoopGeneration: 1,
+      },
+      { $set: { sentAt: new Date("2026-10-15T14:00:00.000Z") } },
+    );
 
     const afterCompletion = new Date("2026-10-20T12:00:00.000Z");
     await ensurePreviewLoopForRecipient(previewEmail, afterCompletion);
@@ -93,7 +103,7 @@ describe("welcome sequence preview loop", () => {
     });
     expect(generationTwo).toBe(0);
 
-    const novemberStart = new Date("2026-11-01T14:05:00.000Z");
+    const novemberStart = new Date("2026-11-01T15:05:00.000Z");
     await ensurePreviewLoopForRecipient(previewEmail, novemberStart);
 
     const generationTwoRows = await mongoService.emailSend
@@ -105,7 +115,7 @@ describe("welcome sequence preview loop", () => {
       .toArray();
     expect(generationTwoRows).toHaveLength(WELCOME_SEQUENCE.length);
     expect(generationTwoRows[0]?.sendAt?.toISOString()).toBe(
-      "2026-11-01T14:00:00.000Z",
+      "2026-11-01T15:00:00.000Z",
     );
   });
 
