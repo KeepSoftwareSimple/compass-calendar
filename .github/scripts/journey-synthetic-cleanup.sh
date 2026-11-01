@@ -15,23 +15,28 @@ if [ -z "$ENVIRONMENT" ]; then
   exit 1
 fi
 
-CLI_ARGS=(--environment "$ENVIRONMENT")
-if [ -n "$EMAILS" ]; then
-  CLI_ARGS+=(--emails "$EMAILS")
+pending_file_for_environment() {
+  local results_dir="e2e/test-results"
+  if [ "$ENVIRONMENT" = "production" ]; then
+    echo "$results_dir/prod-journey/journey-pending-account.json"
+  else
+    echo "$results_dir/staging-journey/journey-pending-account.json"
+  fi
+}
+
+if [ "$DISCOVER" = "true" ] && [ -z "$EMAILS" ]; then
+  PENDING_FILE=$(pending_file_for_environment)
+  if [ -f "$PENDING_FILE" ]; then
+    EMAILS=$(bun -e "const j=JSON.parse(require('fs').readFileSync('$PENDING_FILE','utf8')); process.stdout.write(j.email??'');")
+  fi
 fi
+
+CLI_ARGS=(--environment "$ENVIRONMENT")
 if [ "$DISCOVER" = "true" ]; then
   CLI_ARGS+=(--discover-pending-file)
-  if [ -z "$EMAILS" ]; then
-    RESULTS_DIR="e2e/test-results"
-    if [ "$ENVIRONMENT" = "production" ]; then
-      PENDING_FILE="$RESULTS_DIR/prod-journey/journey-pending-account.json"
-    else
-      PENDING_FILE="$RESULTS_DIR/staging-journey/journey-pending-account.json"
-    fi
-    if [ -f "$PENDING_FILE" ]; then
-      EMAILS=$(bun -e "const j=JSON.parse(require('fs').readFileSync('$PENDING_FILE','utf8')); process.stdout.write(j.email??'');")
-    fi
-  fi
+fi
+if [ -n "$EMAILS" ]; then
+  CLI_ARGS+=(--emails "$EMAILS")
 fi
 
 if [ "$DRY_RUN" = "true" ]; then
@@ -53,4 +58,11 @@ fi
 bunx playwright install chromium
 bunx playwright test --config e2e/playwright.journey-manual-cleanup.config.ts
 
-bun run cli journey-synthetic-cleanup "${CLI_ARGS[@]}" --apply --stripe-only
+# Playwright removes the pending file; pass the resolved email explicitly.
+STRIPE_ARGS=(--environment "$ENVIRONMENT" --apply --stripe-only)
+if [ -n "$EMAILS" ]; then
+  STRIPE_ARGS+=(--emails "$EMAILS")
+elif [ "$DISCOVER" = "true" ]; then
+  STRIPE_ARGS+=(--discover-pending-file)
+fi
+bun run cli journey-synthetic-cleanup "${STRIPE_ARGS[@]}"

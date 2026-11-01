@@ -62,6 +62,12 @@ async function discoverPendingEmail(
   }
 }
 
+export async function resolveJourneySyntheticCleanupEmails(
+  argv: string[],
+): Promise<string[]> {
+  return resolveEmails(parseArgs(argv));
+}
+
 async function resolveEmails(
   args: ReturnType<typeof parseArgs>,
 ): Promise<string[]> {
@@ -98,9 +104,12 @@ export async function runJourneySyntheticCleanup(): Promise<void> {
     }
     const secretKey = process.env["STRIPE_SECRET_KEY"]?.trim();
     if (!secretKey) {
-      throw new Error(
-        "STRIPE_SECRET_KEY is required for Stripe cleanup (--apply --stripe-only)",
-      );
+      for (const email of emails) {
+        console.log(
+          `journey-cleanup email=${redactJourneyEmailForLog(email)} stripe_leg=skipped (app delete handles customer)`,
+        );
+      }
+      process.exit(0);
     }
     const { runStripeSyntheticJourneyCleanup } = await import(
       "@scripts/commands/journey-synthetic-cleanup/stripe"
@@ -124,7 +133,7 @@ export async function runJourneySyntheticCleanup(): Promise<void> {
   if (!secretKey) {
     for (const email of emails) {
       console.log(
-        `journey-cleanup email=${redactJourneyEmailForLog(email)} action=stripe_skipped_no_secret_key`,
+        `journey-cleanup email=${redactJourneyEmailForLog(email)} stripe_leg=skipped (app delete handles customer)`,
       );
     }
     process.exit(0);
