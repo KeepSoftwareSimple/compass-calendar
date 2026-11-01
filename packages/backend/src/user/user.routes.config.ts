@@ -5,11 +5,22 @@ import { verifySession } from "@backend/auth/session/session.middleware";
 import { CommonRoutesConfig } from "@backend/common/common.routes.config";
 import userController from "./controllers/user.controller";
 
+/**
+ * Keyed by the session's user id, not the client IP. DELETE /api/user runs
+ * behind verifySession, so the user is always known here. An IP key let
+ * unrelated users behind one proxy/egress IP exhaust each other's budget:
+ * on staging, three journey legs deleting their own accounts made a fourth
+ * user's delete return 429.
+ */
+export const accountDeletionKey = (req: express.Request): string =>
+  `account-delete:${(req as SessionRequest).session?.getUserId?.() ?? "unknown"}`;
+
 const accountDeletionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: accountDeletionKey,
 });
 
 const hiddenEventsKey = (req: express.Request): string =>
