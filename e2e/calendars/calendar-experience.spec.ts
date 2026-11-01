@@ -895,7 +895,7 @@ test("x hides a recurring all-day event after the context menu closes", async ({
 }) => {
   const card = await setupBirthdayExperiencePage(page);
   await card.focus();
-  await page.keyboard.press("m");
+  await page.keyboard.press(".");
   await expect(page.getByRole("menu")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
