@@ -6,6 +6,7 @@ import {
   isStripeSubscriptionStatus,
   STRIPE_TO_COMPASS_STATUS,
 } from "@backend/billing/billing.constants";
+import { checkoutSessionPosthogSyntheticFlags } from "@backend/billing/checkout-session-synthetic.util";
 import {
   type StripeBillingGateway,
   stripeBillingGateway,
@@ -339,7 +340,10 @@ async function handleEvent(
     await billingAnalytics.capture({
       event: "checkout_expired",
       userId,
-      properties: { checkout_session_id: session.id },
+      properties: {
+        checkout_session_id: session.id,
+        ...checkoutSessionPosthogSyntheticFlags(session),
+      },
     });
     return;
   }
