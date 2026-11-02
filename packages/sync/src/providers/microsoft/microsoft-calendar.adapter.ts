@@ -158,30 +158,20 @@ export class MicrosoftCalendarAdapter implements ProviderCalendarAdapter {
     api: MicrosoftCalendarListApi,
     nextLink?: string,
   ): Promise<MicrosoftCalendarListPage> {
-    try {
-      return await api.listPage({ nextLink });
-    } catch (error) {
-      throw new ProviderCalendarError(
-        classifyDiscoveryError(error),
-        "Microsoft rejected the calendar list read",
-        { cause: microsoftFailureCause(error) },
-      );
-    }
+    return microsoftDiscoveryRead(
+      "Microsoft rejected the calendar list read",
+      () => api.listPage({ nextLink }),
+    );
   }
 
   async #listCalendarGroupsPage(
     api: MicrosoftCalendarListApi,
     nextLink?: string,
   ): Promise<MicrosoftCalendarGroupListPage> {
-    try {
-      return await api.listCalendarGroupsPage({ nextLink });
-    } catch (error) {
-      throw new ProviderCalendarError(
-        classifyDiscoveryError(error),
-        "Microsoft rejected the calendar group list read",
-        { cause: microsoftFailureCause(error) },
-      );
-    }
+    return microsoftDiscoveryRead(
+      "Microsoft rejected the calendar group list read",
+      () => api.listCalendarGroupsPage({ nextLink }),
+    );
   }
 
   async #listGroupCalendarsPage(
@@ -189,15 +179,10 @@ export class MicrosoftCalendarAdapter implements ProviderCalendarAdapter {
     groupId: string,
     nextLink?: string,
   ): Promise<MicrosoftCalendarListPage> {
-    try {
-      return await api.listGroupCalendarsPage(groupId, { nextLink });
-    } catch (error) {
-      throw new ProviderCalendarError(
-        classifyDiscoveryError(error),
-        "Microsoft rejected a calendar group list read",
-        { cause: microsoftFailureCause(error) },
-      );
-    }
+    return microsoftDiscoveryRead(
+      "Microsoft rejected a calendar group list read",
+      () => api.listGroupCalendarsPage(groupId, { nextLink }),
+    );
   }
 }
 
@@ -228,6 +213,19 @@ function mapAccessRole(
   if (isDefaultCalendar) return "owner";
   if (canEdit) return "editor";
   return "viewer";
+}
+
+async function microsoftDiscoveryRead<T>(
+  message: string,
+  read: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    throw new ProviderCalendarError(classifyDiscoveryError(error), message, {
+      cause: microsoftFailureCause(error),
+    });
+  }
 }
 
 function classifyDiscoveryError(

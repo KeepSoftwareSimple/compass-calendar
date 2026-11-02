@@ -229,6 +229,8 @@ export const toReplaceSubmitRequests = (
   input: ReplaceEventInput,
 ): { requests: CommandSubmitRequest[]; responseEvent: Event } => {
   const target = resolveCommandTarget(id, input.scope);
+  const scheduleInCommand =
+    input.schedule !== undefined ? { schedule: input.schedule } : {};
 
   const updateRequest = CommandSubmitRequestSchema.parse({
     // Hashes the browser payload AS RECEIVED: a legacy payload (no attendees,
@@ -243,7 +245,7 @@ export const toReplaceSubmitRequests = (
       scope: target.scope,
       recurrenceId: target.recurrenceId,
       content: input.content,
-      ...(input.schedule !== undefined ? { schedule: input.schedule } : {}),
+      ...scheduleInCommand,
       recurrence: input.recurrence,
     }),
     eventId: target.eventId,
@@ -253,7 +255,7 @@ export const toReplaceSubmitRequests = (
       invitation: input.invitation ?? "none",
       attendeesEdit: toAttendeesEdit(input.content),
       content: toSyncContent(input.content),
-      ...(input.schedule !== undefined ? { schedule: input.schedule } : {}),
+      ...scheduleInCommand,
       recurrence: input.recurrence,
       scope: target.scope,
       recurrenceId: target.recurrenceId,

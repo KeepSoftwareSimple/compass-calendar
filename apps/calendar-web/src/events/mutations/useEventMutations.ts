@@ -14,6 +14,7 @@ import {
   type ReplaceEventInput,
   type RsvpEventInput,
 } from "@core/types/event-command.contracts";
+import { eventSchedulesEqual } from "@core/util/event/event-schedule-equal";
 import { shiftSeriesScheduleByOccurrenceEdit } from "@core/util/event/shift-series-schedule-by-occurrence-edit";
 import { decodeOccurrenceId } from "@core/util/occurrence-id";
 import {
@@ -59,7 +60,6 @@ import {
   seriesIdOf,
   seriesWriteKey,
 } from "@web/events/mutations/event-mutation-optimistic.util";
-import { eventSchedulesEqual } from "@web/events/mutations/event-schedule-equal";
 import {
   calendarIdFromMutationInput,
   resolveMutationProvider,
