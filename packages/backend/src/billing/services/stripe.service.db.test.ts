@@ -164,6 +164,9 @@ describe("StripeService", () => {
     expect(syntheticArgs.discounts).toEqual([
       { coupon: "coupon_synthetic_100" },
     ]);
+    expect((syntheticArgs as { metadata?: unknown }).metadata).toEqual({
+      compassSynthetic: "true",
+    });
     expect(
       (syntheticArgs as { payment_method_collection?: string })
         .payment_method_collection,
@@ -183,6 +186,7 @@ describe("StripeService", () => {
       discounts?: Array<{ coupon?: string; promotion_code?: string }>;
     };
     expect(realArgs.discounts).toBeUndefined();
+    expect((realArgs as { metadata?: unknown }).metadata).toBeUndefined();
     expect(
       (realArgs as { payment_method_collection?: string })
         .payment_method_collection,

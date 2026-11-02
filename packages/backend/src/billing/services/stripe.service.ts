@@ -17,6 +17,7 @@ import {
   BillingHttpError,
   wrapStripeFailure,
 } from "@backend/billing/billing.errors";
+import { syntheticCheckoutSessionMetadata } from "@backend/billing/checkout-session-synthetic.util";
 import billingService from "@backend/billing/services/billing.service";
 import { applySubscription } from "@backend/billing/services/billing.webhook.service";
 import {
@@ -27,6 +28,7 @@ import { stripeExpandableId } from "@backend/billing/stripe-expandable-id.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { isStripeConfigured } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
+import { isPosthogSyntheticAccount } from "@backend/user/posthog-synthetic-account.util";
 
 /** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
 const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v10-";
@@ -236,6 +238,12 @@ export class StripeService {
 
     const discounts = syntheticJourneyCheckoutDiscounts(user);
     const syntheticJourneyCheckout = discounts !== undefined;
+    // Only synthetic sessions get metadata, so real users' create params (and
+    // their per-user idempotency keys) are unchanged.
+    const syntheticAnalyticsAccount = isPosthogSyntheticAccount(
+      user.email,
+      user.isSynthetic,
+    );
 
     const session = await this.stripe
       .createCheckoutSession(
@@ -245,6 +253,9 @@ export class StripeService {
           client_reference_id: userId,
           line_items: [{ price: getStripePriceId(), quantity: 1 }],
           ...(discounts ? { discounts } : {}),
+          ...(syntheticAnalyticsAccount
+            ? { metadata: syntheticCheckoutSessionMetadata() }
+            : {}),
           // Real checkout always collects a card. Synthetic prod journey uses a
           // 100% discount and `if_required` so live Stripe never sees test cards.
           payment_method_collection: syntheticJourneyCheckout
