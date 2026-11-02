@@ -113,7 +113,7 @@ describe("completeProviderAuthCallback (google)", () => {
     ).toBeNull();
   });
 
-  it("opens the connect missing-permissions modal when scopes are short on login", async () => {
+  it("opens the short Google scopes retry screen when scopes are short on log in", async () => {
     writeIntent("missing-scopes-state", "/week");
 
     await completeProviderAuthCallback({
@@ -131,7 +131,12 @@ describe("completeProviderAuthCallback (google)", () => {
     expect(mocks.error).not.toHaveBeenCalled();
     const missingState = useMissingPermissionsStore.getState();
     expect(selectMissingPermissionsProvider(missingState)).toBe("google");
-    expect(selectMissingPermissionsSurface(missingState)).toBe("connect_modal");
+    // A log in that came back short gets the same one-click retry as signup,
+    // but stays off the signup trial path.
+    expect(selectMissingPermissionsSurface(missingState)).toBe(
+      "google_signup_recovery",
+    );
+    expect(missingState.signupFlow).toBe(false);
     expect(navigate).toHaveBeenCalledWith("/week", { replace: true });
   });
 
@@ -162,6 +167,7 @@ describe("completeProviderAuthCallback (google)", () => {
         (scope) => scope !== GOOGLE_SCOPES_REQUIRED[0],
       ),
     );
+    expect(missingState.signupFlow).toBe(true);
   });
 
   it("rejects a Google callback without a saved intent", async () => {

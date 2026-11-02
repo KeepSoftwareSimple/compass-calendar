@@ -9,12 +9,15 @@ export type MissingPermissionsState = {
   provider: ProviderKind | null;
   surface: MissingPermissionsSurface | null;
   missingScopes: readonly string[];
+  /** Whether the failed OAuth attempt started from signup (so the retry lands on the trial step). */
+  signupFlow: boolean;
 };
 
 const initialMissingPermissionsState: MissingPermissionsState = {
   provider: null,
   surface: null,
   missingScopes: [],
+  signupFlow: false,
 };
 
 export const useMissingPermissionsStore = create<MissingPermissionsState>(
@@ -27,13 +30,23 @@ export const missingPermissionsActions = {
       provider,
       surface: "connect_modal",
       missingScopes: [],
+      signupFlow: false,
     });
   },
-  openGoogleSignupRecovery: (missingScopes: readonly string[]): void => {
+  /**
+   * Short "needs calendar access" screen with a one-click incremental retry.
+   * Used for every Google sign-in that came back short on scopes, from signup
+   * or log in; `signupFlow` keeps the retry on the same path it started on.
+   */
+  openGoogleSignupRecovery: (
+    missingScopes: readonly string[],
+    options: { signupFlow?: boolean } = {},
+  ): void => {
     useMissingPermissionsStore.setState({
       provider: "google",
       surface: "google_signup_recovery",
       missingScopes,
+      signupFlow: options.signupFlow ?? true,
     });
   },
   close: (): void => {
@@ -69,6 +82,10 @@ export const selectMissingPermissionsSurface = (
 export const selectMissingPermissionsMissingScopes = (
   state: MissingPermissionsState,
 ): readonly string[] => state.missingScopes;
+
+export const selectMissingPermissionsSignupFlow = (
+  state: MissingPermissionsState,
+): boolean => state.signupFlow;
 
 export const selectIsMissingPermissionsOpen = (
   state: MissingPermissionsState,
