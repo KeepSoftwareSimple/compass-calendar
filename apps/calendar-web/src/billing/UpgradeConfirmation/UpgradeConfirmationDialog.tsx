@@ -5,6 +5,7 @@ import {
   OverlayPanelActionButton,
   OverlayPanelActions,
 } from "@web/components/OverlayPanel/OverlayPanel";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 interface UpgradeConfirmationDialogProps {
@@ -72,7 +73,9 @@ export function UpgradeConfirmationDialog({
             disabled={isSubmitting}
             onClick={onConfirm}
           >
-            {isSubmitting ? "Starting Premium…" : "Start Premium"}
+            <StableLabel labels={["Start Premium", "Starting Premium…"]}>
+              {isSubmitting ? "Starting Premium…" : "Start Premium"}
+            </StableLabel>
           </OverlayPanelActionButton>
           <OverlayPanelActionButton
             shortcut="Esc"

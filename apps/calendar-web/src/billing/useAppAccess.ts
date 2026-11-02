@@ -71,3 +71,22 @@ export function useAppAccess(): AppAccess {
     cancelAtPeriodEnd: billingQuery.data.cancelAtPeriodEnd,
   };
 }
+
+/**
+ * True while a signed-in user's plan is still loading on an install that
+ * enforces billing, i.e. the one window where useAppAccess reads `open` but
+ * will likely flip to `server`. Lets plan-dependent chrome (the Settings
+ * Billing tab) hold its space instead of popping in and shoving its
+ * neighbours down.
+ */
+export function useIsAppAccessPending(): boolean {
+  const { authenticated } = useContext(SessionContext);
+  const configQuery = useAppConfigQuery();
+  const billingEnabled =
+    isBillingEnforced(configQuery.data) &&
+    authenticated &&
+    !configQuery.isError &&
+    configQuery.data?.billing.isConfigured === true;
+  const billingQuery = useBillingStatusQuery(billingEnabled);
+  return billingEnabled && billingQuery.isPending;
+}

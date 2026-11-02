@@ -7,7 +7,7 @@ import {
 import { PlanSection } from "@web/billing/PlanSection";
 import { getPlanBadge } from "@web/billing/planBadge";
 import { useUpgradeConfirmation } from "@web/billing/UpgradeConfirmation/hooks/useUpgradeConfirmation";
-import { useAppAccess } from "@web/billing/useAppAccess";
+import { useAppAccess, useIsAppAccessPending } from "@web/billing/useAppAccess";
 import { LazyBookingSettingsSection as BookingSettingsSection } from "@web/booking/BookingSettingsSection.lazy";
 import {
   useBookingPageQuery,
@@ -62,6 +62,13 @@ export const SETTINGS_HOLD_MOD_HINT_PARTS: readonly ShortcutTipPart[] = [
   " to see shortcuts.",
 ];
 
+/** Floor for every Settings page, so the modal keeps its size across tabs. */
+export const SETTINGS_CONTENT_MIN_HEIGHT_CLASS_NAME = "min-h-[28rem]";
+
+/** Same box as a SettingsNavButton row, with nothing visible or focusable. */
+const SETTINGS_NAV_PLACEHOLDER_CLASS_NAME =
+  "invisible select-none px-2 py-1 text-sm";
+
 /**
  * The app's Settings menu (Mod+,): Accounts (timezone, calendars, Google
  * connections, export / delete / log out) and Billing (plan) as sibling
@@ -92,6 +99,7 @@ export const SettingsModal: FC = () => {
   const { isOpen: isUpgradeOpen } = useUpgradeConfirmation();
   const access = useAppAccess();
   const hasBilling = getPlanBadge(access) !== null;
+  const isAccessPending = useIsAppAccessPending();
   const { areHintsVisible } = useSettingsShortcuts({
     enabled: isOpen && !isUpgradeOpen,
     hasBilling,
@@ -226,6 +234,12 @@ export const SettingsModal: FC = () => {
                 shortcutDigit="2"
                 showShortcut={areHintsVisible}
               />
+            ) : isAccessPending ? (
+              // Holds Billing's row while the plan loads so Meeting does not
+              // jump down a row under the pointer when Billing pops in.
+              <div aria-hidden className={SETTINGS_NAV_PLACEHOLDER_CLASS_NAME}>
+                Billing
+              </div>
             ) : null}
             {showBookingNav ? (
               <SettingsNavButton
@@ -247,7 +261,11 @@ export const SettingsModal: FC = () => {
             ) : null}
           </nav>
         )}
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
+        {/* A shared floor height so switching tabs, or a tab swapping its
+            loading line for content, does not make the modal jump. */}
+        <div
+          className={`flex min-w-0 flex-1 flex-col gap-4 ${SETTINGS_CONTENT_MIN_HEIGHT_CLASS_NAME}`}
+        >
           {guestMeetingPreview ? (
             <p className="text-sm text-text-muted">
               Set up your meeting page, then sign up to save and go live.
@@ -256,9 +274,7 @@ export const SettingsModal: FC = () => {
           {page === "billing" ? (
             <PlanSection showShortcuts={areHintsVisible} />
           ) : page === "booking" && showBookingNav ? (
-            <Suspense
-              fallback={<div aria-hidden className="min-h-[28rem] w-full" />}
-            >
+            <Suspense fallback={<div aria-hidden className="w-full" />}>
               <BookingSettingsSection
                 dismissGuardRef={bookingDismissGuardRef}
                 onDiscardUnsaved={dismissToPalette}

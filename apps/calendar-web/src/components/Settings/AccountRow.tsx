@@ -13,6 +13,7 @@ import { useGoogleSyncRefreshSnapshot } from "@web/auth/providers/sync.refresh";
 import { SyncStatusLine } from "@web/calendars/SyncStatusLine";
 import { useMinuteTick } from "@web/common/hooks/useMinuteTick";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 import { useSseDegraded } from "@web/sse/hooks/useSseDegraded";
 
 const OUTLINE_BUTTON_CLASSNAME =
@@ -137,7 +138,9 @@ export const AccountRow: FC<AccountRowProps> = ({
             ref={confirmButtonRef}
             type="button"
           >
-            {isDisconnecting ? "Disconnecting…" : "Confirm"}
+            <StableLabel labels={["Confirm", "Disconnecting…"]}>
+              {isDisconnecting ? "Disconnecting…" : "Confirm"}
+            </StableLabel>
           </button>
           <button
             className={OUTLINE_BUTTON_CLASSNAME}
