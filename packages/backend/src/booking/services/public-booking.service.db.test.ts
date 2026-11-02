@@ -69,22 +69,13 @@ const utcDatePlusDays = (isoDate: string, days: number): string => {
     .slice(0, 10);
 };
 
-/** Upcoming Monday in UTC, skipping today so 09:00-17:00 slots stay bookable. */
-const nextUtcMonday = (): string => {
-  const now = new Date();
-  const todayUtc = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  );
-  const weekday = new Date(todayUtc).getUTCDay();
-  const daysUntilMonday = weekday === 1 ? 7 : (8 - weekday) % 7;
-  return new Date(todayUtc + daysUntilMonday * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-};
-
-const BOOKING_MONDAY = nextUtcMonday();
+/**
+ * The Monday after the frozen clock (2026-09-07, see beforeAll), inside the
+ * fixture's 60 day horizon. Pinned on purpose: a "next Monday" computed from
+ * the real clock drifted past that horizon on 2026-11-02 and every slot
+ * disappeared, failing 62 tests for every PR in the merge queue.
+ */
+const BOOKING_MONDAY = "2026-09-14";
 const BOOKING_TUESDAY = utcDatePlusDays(BOOKING_MONDAY, 1);
 
 const guestReadToken = (cancelUrl: string): string => {
@@ -229,14 +220,12 @@ describe("PublicBookingService", () => {
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
     await ensureBookingIndexes();
-    // Every slot below is pinned to Monday 2026-09-07, inside the fixture's
+    // Every slot below is pinned to BOOKING_MONDAY, inside the fixture's
     // weekday-1 09:00-17:00 window. assertSlotAvailable rejects a slot that
-    // starts before now + minNoticeHours, so with the real clock these tests
-    // passed only until 2026-09-07T10:00:00Z and then failed forever. Freeze
-    // "now" to that morning instead of re-pinning the dates: shifting them a
-    // day would move them off weekday 1 and out of the window. Set after the
-    // Mongo connection is established so the driver's own timeouts are
-    // measured against the real clock.
+    // starts before now + minNoticeHours and after now + maxHorizonDays, so
+    // "now" is frozen to the Monday before it. Set after the Mongo
+    // connection is established so the driver's own timeouts are measured
+    // against the real clock.
     setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
   });
 
