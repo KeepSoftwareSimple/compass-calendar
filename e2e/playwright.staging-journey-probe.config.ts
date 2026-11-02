@@ -1,22 +1,10 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineRemoteConfig, FAILURE_ARTIFACTS } from "./remote-config.util";
 
-export default defineConfig({
+export default defineRemoteConfig({
   testDir: "./journey",
   testMatch: "staging-journey-artifact-probe.spec.ts",
   timeout: 300_000,
-  expect: {
-    timeout: 20_000,
-  },
-  workers: 1,
-  retries: 0,
-  use: {
-    baseURL:
-      process.env.STAGING_BASE_URL ?? "https://staging.compasscalendar.com",
-    colorScheme: "light",
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
-    ...devices["Desktop Chrome"],
-  },
+  expectTimeout: 20_000,
+  use: FAILURE_ARTIFACTS,
   outputDir: "test-results/staging-journey",
 });
