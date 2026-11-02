@@ -1,5 +1,6 @@
 import {
   describeGoogleRequestBodyForLog,
+  describeGoogleWriteTargetForLog,
   googleErrorReasons,
   hasGoogleRateLimitReason,
 } from "@sync/providers/google/google-error";
@@ -28,6 +29,26 @@ describe("hasGoogleRateLimitReason", () => {
         response: { data: { error: { errors: [{ reason: "forbidden" }] } } },
       }),
     ).toBe(false);
+  });
+});
+
+describe("describeGoogleWriteTargetForLog", () => {
+  it("names an occurrence target and an unconditional write, never the id", () => {
+    expect(
+      describeGoogleWriteTargetForLog({
+        eventId: "abc123series_20261102T140000Z",
+        ifMatch: null,
+      }),
+    ).toBe("target=instance, ifMatch=n");
+  });
+
+  it("names a whole-event target and a conditional write", () => {
+    expect(
+      describeGoogleWriteTargetForLog({
+        eventId: "abc123series",
+        ifMatch: '"etag-1"',
+      }),
+    ).toBe("target=event, ifMatch=y");
   });
 });
 

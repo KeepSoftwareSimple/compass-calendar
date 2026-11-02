@@ -13,6 +13,7 @@ import dayjs from "@core/util/date/dayjs";
 import { googleColorIdFields } from "@sync/providers/google/google-color.map";
 import {
   describeGoogleRequestBodyForLog,
+  describeGoogleWriteTargetForLog,
   formatGoogleErrorEntriesForLog,
   googleErrorReasons,
   googleFailureCause,
@@ -270,6 +271,7 @@ export class GoogleEventWriter implements ProviderEventWriter {
             {
               operation: "events.patch(clearEventLabel)",
               requestBody: clearBody,
+              target: { eventId: input.providerEventId, ifMatch },
             },
           );
         }
@@ -303,6 +305,7 @@ export class GoogleEventWriter implements ProviderEventWriter {
           {
             operation: "events.patch",
             requestBody: mainBody,
+            target: { eventId: input.providerEventId, ifMatch },
           },
         );
       }
@@ -338,6 +341,10 @@ export class GoogleEventWriter implements ProviderEventWriter {
         "Google declined to delete this event",
         {
           operation: "events.delete",
+          target: {
+            eventId: input.providerEventId,
+            ifMatch: input.expectedVersion,
+          },
         },
       );
     }
@@ -659,15 +666,22 @@ function googleUnsupportedCapability(
   });
 }
 
-type GoogleWriteContext = { operation: string; requestBody?: gSchema$Event };
+type GoogleWriteContext = {
+  operation: string;
+  requestBody?: gSchema$Event;
+  target?: { eventId: string; ifMatch: string | null };
+};
 
 function classifyGoogle400(
   error: unknown,
   message: string,
   context: GoogleWriteContext,
 ): ProviderWriteError {
+  const target = context.target
+    ? `; ${describeGoogleWriteTargetForLog(context.target)}`
+    : "";
   googleWriteLog.warn(
-    `Google ${context.operation} HTTP 400: ${formatGoogleErrorEntriesForLog(error)}; ${describeGoogleRequestBodyForLog(context.requestBody)}`,
+    `Google ${context.operation} HTTP 400: ${formatGoogleErrorEntriesForLog(error)}${target}; ${describeGoogleRequestBodyForLog(context.requestBody)}`,
   );
   if (
     googleErrorReasons(error).some((reason) =>

@@ -397,6 +397,92 @@ describe("executeProviderSeriesUpdate", () => {
     expect(starts).toContain("2026-07-21T15:00:00.000Z");
   });
 
+  // The "Apply to series?" promotion: a scope-"this" move of one occurrence
+  // leaves an override, then the same move is sent again as an edit-all.
+  // Google applies the master move, then rejects the old override with a
+  // generic 400.
+  it("confirms an edit-all that moves the series when Google rejects the old override", async () => {
+    const { tenantId, principalId, calendar, master } = await seedMaster();
+    const override = await putException(master, {
+      providerEventId: "g-inst-override" as ProviderEventId,
+      recurrenceId: "2026-07-21T09:00:00-06:00",
+      cancelled: false,
+      title: "Moved",
+    });
+    const command = await editAllCommand(master, {
+      title: "New",
+      recurrence: { kind: "preserve" },
+      schedule: {
+        kind: "timed",
+        start: "2026-07-14T10:00:00-06:00" as DateTime,
+        end: "2026-07-14T11:00:00-06:00" as DateTime,
+        timeZone: "America/Denver" as TimeZone,
+      },
+    });
+    const writer = new FakeProviderEventWriter();
+    writer.fetched = providerSeries("Old", "etag-1", weekly4);
+    writer.instancePatchError = new ProviderWriteError(
+      "providerRejectedChange",
+      "Google declined to change this event",
+    );
+
+    const result = await executeProviderSeriesUpdate(
+      deps(writer),
+      command,
+      master,
+      calendar,
+      now,
+    );
+
+    expect(result.outcome.state).toBe("confirmed");
+    expect(
+      writer.patchCalls.map((call) => call.providerEventId).sort(),
+    ).toEqual(["g-evt-1", "g-inst-override"]);
+    expect(
+      await events.findById(tenantId, principalId, override._id),
+    ).toBeNull();
+    const starts = (await masterOccurrences(master._id)).map((o) =>
+      (o["startAt"] as Date).toISOString(),
+    );
+    expect(starts).toContain("2026-07-21T16:00:00.000Z");
+  });
+
+  it("still fails an edit-all that keeps the series start when Google rejects an override", async () => {
+    const { tenantId, principalId, calendar, master } = await seedMaster();
+    const override = await putException(master, {
+      providerEventId: "g-inst-override" as ProviderEventId,
+      recurrenceId: "2026-07-21T09:00:00-06:00",
+      cancelled: false,
+      title: "Moved",
+    });
+    const command = await editAllCommand(master, {
+      title: "New",
+      recurrence: { kind: "preserve" },
+    });
+    const writer = new FakeProviderEventWriter();
+    writer.fetched = providerSeries("Old", "etag-1", weekly4);
+    writer.instancePatchError = new ProviderWriteError(
+      "providerRejectedChange",
+      "Google declined to change this event",
+    );
+
+    const result = await executeProviderSeriesUpdate(
+      deps(writer),
+      command,
+      master,
+      calendar,
+      now,
+    );
+
+    expect(result.outcome).toEqual({
+      state: "failed",
+      failureReason: "providerRejectedChange",
+    });
+    expect(
+      await events.findById(tenantId, principalId, override._id),
+    ).not.toBeNull();
+  });
+
   it("converts a series to a single event, dropping every exception", async () => {
     const { tenantId, principalId, calendar, master } = await seedMaster();
     await putException(master, {
