@@ -69,13 +69,20 @@ const utcDatePlusDays = (isoDate: string, days: number): string => {
     .slice(0, 10);
 };
 
-/** Upcoming Monday in UTC, skipping today so 09:00-17:00 slots stay bookable. */
-const nextUtcMonday = (): string => {
-  const now = new Date();
+/**
+ * The frozen "now" for this suite. Slots, notice and horizon are all measured
+ * against it, so the booking dates below must derive from it too: deriving
+ * them from the real clock made the suite fail once the real next Monday
+ * drifted past FROZEN_NOW + maxHorizonDays (60).
+ */
+const FROZEN_NOW = "2026-09-07T08:00:00.000Z";
+
+/** Monday after `from` in UTC, skipping that day so 09:00-17:00 slots stay bookable. */
+const nextUtcMonday = (from: Date): string => {
   const todayUtc = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
+    from.getUTCFullYear(),
+    from.getUTCMonth(),
+    from.getUTCDate(),
   );
   const weekday = new Date(todayUtc).getUTCDay();
   const daysUntilMonday = weekday === 1 ? 7 : (8 - weekday) % 7;
@@ -84,7 +91,7 @@ const nextUtcMonday = (): string => {
     .slice(0, 10);
 };
 
-const BOOKING_MONDAY = nextUtcMonday();
+const BOOKING_MONDAY = nextUtcMonday(new Date(FROZEN_NOW));
 const BOOKING_TUESDAY = utcDatePlusDays(BOOKING_MONDAY, 1);
 
 const guestReadToken = (cancelUrl: string): string => {
@@ -229,15 +236,12 @@ describe("PublicBookingService", () => {
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
     await ensureBookingIndexes();
-    // Every slot below is pinned to Monday 2026-09-07, inside the fixture's
-    // weekday-1 09:00-17:00 window. assertSlotAvailable rejects a slot that
-    // starts before now + minNoticeHours, so with the real clock these tests
-    // passed only until 2026-09-07T10:00:00Z and then failed forever. Freeze
-    // "now" to that morning instead of re-pinning the dates: shifting them a
-    // day would move them off weekday 1 and out of the window. Set after the
-    // Mongo connection is established so the driver's own timeouts are
-    // measured against the real clock.
-    setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
+    // Freeze "now" so slot notice and horizon checks are deterministic.
+    // BOOKING_MONDAY derives from the same FROZEN_NOW, so the slots always sit
+    // inside the fixture's weekday-1 09:00-17:00 window and 60-day horizon.
+    // Set after the Mongo connection is established so the driver's own
+    // timeouts are measured against the real clock.
+    setSystemTime(new Date(FROZEN_NOW));
   });
 
   beforeEach(async () => {
@@ -1709,7 +1713,7 @@ describe("PublicBookingService", () => {
       ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
       expect(createBookingEvent).not.toHaveBeenCalled();
     } finally {
-      setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
+      setSystemTime(new Date(FROZEN_NOW));
     }
   });
 
@@ -1745,7 +1749,7 @@ describe("PublicBookingService", () => {
       expect(created.slotStart).toBe("2026-03-08T06:00:00.000Z" as DateTime);
       expect(createBookingEvent).toHaveBeenCalledTimes(1);
     } finally {
-      setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
+      setSystemTime(new Date(FROZEN_NOW));
     }
   });
 
@@ -3177,7 +3181,7 @@ describe("PublicBookingService", () => {
     expect(stored?.status).toBe("cancelled");
     expect(stored?.calendarEventId).toBeNull();
     expect(deleteBookingEvent.mock.calls.length).toBeGreaterThanOrEqual(2);
-    setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
+    setSystemTime(new Date(FROZEN_NOW));
   });
 
   it("cancels a confirmed reservation when the host deletes its calendar event", async () => {
