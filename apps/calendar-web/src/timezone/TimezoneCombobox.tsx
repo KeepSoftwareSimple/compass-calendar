@@ -198,7 +198,7 @@ export function TimezoneCombobox({
       />
       <div
         aria-label="Timezones"
-        className="max-h-80 overflow-y-auto"
+        className="h-80 overflow-y-auto"
         id={listId}
         onScroll={handleListScroll}
         role="listbox"

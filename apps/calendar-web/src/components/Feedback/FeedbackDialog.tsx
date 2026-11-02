@@ -4,6 +4,7 @@ import {
   OverlayPanelActionButton,
   OverlayPanelActions,
 } from "@web/components/OverlayPanel/OverlayPanel";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 
 interface FeedbackDialogProps {
   isSubmitting?: boolean;
@@ -78,7 +79,9 @@ export function FeedbackDialog({
             variant="primary"
             disabled={!details.trim() || isSubmitting}
           >
-            {isSubmitting ? "Sending…" : "Send feedback"}
+            <StableLabel labels={["Send feedback", "Sending…"]}>
+              {isSubmitting ? "Sending…" : "Send feedback"}
+            </StableLabel>
           </OverlayPanelActionButton>
         </OverlayPanelActions>
       </form>

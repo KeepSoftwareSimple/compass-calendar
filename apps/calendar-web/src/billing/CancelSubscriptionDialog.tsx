@@ -10,6 +10,7 @@ import {
   OverlayPanelActionButton,
   OverlayPanelActions,
 } from "@web/components/OverlayPanel/OverlayPanel";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 
 interface CancelSubscriptionDialogProps {
   isOpen: boolean;
@@ -143,7 +144,9 @@ export function CancelSubscriptionDialog({
             shortcut={["Mod", "Enter"]}
             variant="destructive"
           >
-            {isSubmitting ? "Canceling…" : "Cancel subscription"}
+            <StableLabel labels={["Cancel subscription", "Canceling…"]}>
+              {isSubmitting ? "Canceling…" : "Cancel subscription"}
+            </StableLabel>
           </OverlayPanelActionButton>
           <OverlayPanelActionButton
             disabled={isSubmitting}

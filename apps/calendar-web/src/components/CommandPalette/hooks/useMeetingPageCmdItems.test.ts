@@ -25,7 +25,9 @@ mockModuleForFile("@web/booking/booking.query", realBookingQuery, {
   useBookingPageQuery: mockUseBookingPageQuery,
 });
 
-const { useMeetingPageCmdItems } = await import("./useMeetingPageCmdItems");
+const { MEETING_PAGE_PENDING_CMD_ID, useMeetingPageCmdItems } = await import(
+  "./useMeetingPageCmdItems"
+);
 
 const savedPage = {
   id: "000000000000000000000001",
@@ -92,9 +94,28 @@ describe("useMeetingPageCmdItems", () => {
     expect(result.current).toEqual([]);
   });
 
-  it("returns no items while the booking page is loading", () => {
+  it("holds a disabled Meeting page row while the booking page is loading", () => {
     mockUseBookingPageQuery.mockReturnValue({
       data: undefined,
+      isPending: true,
+      isSuccess: false,
+    });
+
+    const { result } = renderHook(() => useMeetingPageCmdItems(true));
+
+    expect(result.current).toHaveLength(1);
+    expect(result.current[0]).toMatchObject({
+      id: MEETING_PAGE_PENDING_CMD_ID,
+      label: "Meeting page",
+      disabled: true,
+    });
+    expect(result.current[0]?.onClick).toBeUndefined();
+  });
+
+  it("returns no items when the booking page fails to load", () => {
+    mockUseBookingPageQuery.mockReturnValue({
+      data: undefined,
+      isPending: false,
       isSuccess: false,
     });
 

@@ -5,6 +5,7 @@ import { EXPORT_MY_DATA_TOAST_ID } from "@web/common/constants/toast.constants";
 import { runExportMyData } from "@web/common/storage/offline-data/export-user-data.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 import { useTasksRemovalNotice } from "./useTasksRemovalNotice";
 
 type TasksRemovalNoticeDependencies = {
@@ -82,7 +83,9 @@ export function createTasksRemovalNotice({
           onClick={handleExport}
           type="button"
         >
-          {exportStatus === "exporting" ? "Exporting…" : "Export my data"}
+          <StableLabel labels={["Export my data", "Exporting…"]}>
+            {exportStatus === "exporting" ? "Exporting…" : "Export my data"}
+          </StableLabel>
         </button>
 
         {exportStatus === "error" ? (

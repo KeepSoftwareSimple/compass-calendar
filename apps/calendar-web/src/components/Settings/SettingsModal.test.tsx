@@ -129,12 +129,16 @@ mockModuleForFile("@web/sse/hooks/useSseDegraded", realUsessedegraded, {
 });
 
 let access: AppAccess = { kind: "open" };
+let isAccessPending = false;
 let isAppAccessMocked = true;
-const actualUseAppAccess = (await import("@web/billing/useAppAccess"))
-  .useAppAccess;
+const actualAppAccessModule = await import("@web/billing/useAppAccess");
+const actualUseAppAccess = actualAppAccessModule.useAppAccess;
+const actualUseIsAppAccessPending = actualAppAccessModule.useIsAppAccessPending;
 mock.module("@web/billing/useAppAccess", () => ({
   useAppAccess: (...args: Parameters<typeof actualUseAppAccess>) =>
     isAppAccessMocked ? access : actualUseAppAccess(...args),
+  useIsAppAccessPending: () =>
+    isAppAccessMocked ? isAccessPending : actualUseIsAppAccessPending(),
 }));
 
 afterAll(() => {
@@ -149,6 +153,7 @@ afterEach(() => {
   resetGoogleReconnectRequiredForTests();
   isSseDegraded = false;
   access = { kind: "open" };
+  isAccessPending = false;
 });
 
 const settingsModalUrl = new URL(
@@ -920,6 +925,18 @@ describe("SettingsModal", () => {
     expect(
       screen.queryByRole("button", { name: "Manage billing" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("holds Billing's nav row while the plan loads so Meeting does not drop", () => {
+    isAccessPending = true;
+    renderSettings({ authenticated: true });
+
+    const nav = screen.getByRole("navigation");
+    expect(within(nav).getByText("Billing")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(screen.queryByRole("button", { name: "Billing" })).toBeNull();
   });
 
   it("stays on Billing while plan data is still fail-open", async () => {

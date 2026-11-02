@@ -12,7 +12,10 @@ import {
 } from "@web/__tests__/utils/factories/calendar.factory";
 import { RECONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
-import { BookingStatusHeader } from "@web/booking/BookingStatusHeader";
+import {
+  BOOKING_LIVE_STATUS_COPY,
+  BookingStatusHeader,
+} from "@web/booking/BookingStatusHeader";
 import {
   BOOKING_BILLING_STATUS_COPY,
   BOOKING_DELAYED_STATUS_COPY,
@@ -66,6 +69,44 @@ const unbookable = (
 });
 
 describe("BookingStatusHeader", () => {
+  it("says the page is on when guests can book", () => {
+    renderHeader(
+      { bookable: true, reasons: [] },
+      { connections: [healthyConnection] },
+    );
+
+    expect(screen.getByText(BOOKING_LIVE_STATUS_COPY)).toBeInTheDocument();
+  });
+
+  it("shows no status line while the live status is still loading", () => {
+    renderHeader(undefined, { connections: [healthyConnection] });
+
+    expect(
+      screen.queryByText(BOOKING_LIVE_STATUS_COPY),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(new RegExp(BOOKING_NOT_BOOKABLE_PREFIX)),
+    ).not.toBeInTheDocument();
+  });
+
+  it("swaps the live line for the blocker notice in the same slot", () => {
+    const { container } = renderHeader(
+      unbookable([
+        {
+          kind: "connection",
+          reason: "importing",
+          connectionState: "importing",
+        },
+      ]),
+      { connections: [] },
+    );
+
+    expect(
+      screen.queryByText(BOOKING_LIVE_STATUS_COPY),
+    ).not.toBeInTheDocument();
+    expect(container).toHaveTextContent(BOOKING_IMPORTING_STATUS_COPY);
+  });
+
   it("renders no bookability line when status is bookable", () => {
     renderHeader(
       { bookable: true, reasons: [] },

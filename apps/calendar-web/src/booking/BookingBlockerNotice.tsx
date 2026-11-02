@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import { type BookingPageStatusResponse } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import {
@@ -17,6 +18,8 @@ interface BookingBlockerNoticeProps {
   connections: readonly SyncConnectionSummary[];
   hasHealthyConnection: boolean;
   status: BookingPageStatusResponse | undefined;
+  /** Rendered in place of the notice when guests can book. */
+  fallback?: ReactNode;
 }
 
 /** The one place a host is told why guests can't book, and what to do about it. */
@@ -26,6 +29,7 @@ export function BookingBlockerNotice({
   connections,
   hasHealthyConnection,
   status,
+  fallback = null,
 }: BookingBlockerNoticeProps) {
   const blocker = selectBookingBlocker({
     aggregateState,
@@ -34,7 +38,7 @@ export function BookingBlockerNotice({
     hasHealthyConnection,
     status,
   });
-  if (!blocker) return null;
+  if (!blocker) return fallback;
 
   return (
     <div className="flex flex-col items-start gap-2" role="status">

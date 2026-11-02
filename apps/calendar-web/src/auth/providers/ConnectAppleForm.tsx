@@ -17,6 +17,7 @@ import {
   OverlayPanelActionButton,
   OverlayPanelActions,
 } from "@web/components/OverlayPanel/OverlayPanel";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { isFloatingLayerOpen } from "@web/shortcuts/floating-layer";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
@@ -175,7 +176,9 @@ export const ConnectAppleForm: FC = () => {
             showShortcut
             variant="primary"
           >
-            {isSubmitting ? "Connecting…" : "Connect"}
+            <StableLabel labels={["Connect", "Connecting…"]}>
+              {isSubmitting ? "Connecting…" : "Connect"}
+            </StableLabel>
           </OverlayPanelActionButton>
         </OverlayPanelActions>
       </OverlayPanel>
