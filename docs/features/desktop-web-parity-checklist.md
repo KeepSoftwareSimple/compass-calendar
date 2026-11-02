@@ -337,7 +337,7 @@ Legend: **Mod** = ⌘ on macOS. Web bindings from `APP_SHORTCUT_BINDINGS` / `KEY
 5. **Keyboard gaps** — `focus-event` (U), Shift+M week-day focus, palette undo/redo.
 6. **Event form logistics card** — match web #4599: one FormCard for Location, Add Google Meet, Add guests; Description in the following FormCard (not nested mini-panels).
 
-Each PR should link a child issue, include before/after screenshots (web Chromium + macOS snapshot or manual), label `agent-automerge`, and pass macOS workflow on GitHub runners.
+Each PR should link a child issue, include before/after screenshots (web Chromium + macOS snapshot or manual), enable auto-merge, and pass the macOS workflow on GitHub runners.
 
 ---
 

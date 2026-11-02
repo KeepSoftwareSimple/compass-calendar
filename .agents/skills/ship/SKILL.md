@@ -1,9 +1,9 @@
 ---
 name: ship
-version: 4
+version: 5
 owner: compass-maintainers
-last_verified: 2026-09-08
-description: Take the current branch from working tree to a ready, labeled PR that GitHub merges. Use when the user says "ship" or a loop prompt reaches the PR step.
+last_verified: 2026-11-02
+description: Take the current branch from working tree to a ready PR that the merge queue merges. Use when the user says "ship" or a loop prompt reaches the PR step.
 ---
 
 # Ship
@@ -37,17 +37,17 @@ the repo records it.
    pasted `VERDICT:` line and checks run. No unchecked manual-testing boxes.
    Mark it ready once step 2 is satisfied; reviews run on ready PRs only,
    so a draft that never becomes ready is a stop, not a handoff.
-5. **Label and merge.** Mark the PR ready, add `agent-automerge`, and enable
-   auto-merge yourself (`gh pr merge --auto --squash`). `main` takes changes
-   only through the merge queue, so a direct merge is refused by rule; GitHub
-   squash-merges through the queue once required checks pass, and the merge
-   launches the next work package.
+5. **Merge.** Mark the PR ready and run `gh pr merge --auto`. `main` takes
+   changes only through the merge queue, so a direct merge is refused by
+   rule; GitHub squash-merges through the queue once required checks pass.
+   No label is involved. The required checks are the whole gate: no
+   line-count rail, no path denylist, nothing to look for or wait on.
 
-   Do not wait for a human on a PR that is green and mergeable. The gate is
-   the line-count rail and the main-is-not-red check in
-   `.github/scripts/agent-loop-merge-guard.sh`, and those stay. Path prefixes
-   are not a gate: no denylist exists in this repo, so do not look for one or
-   hold a PR because you cannot find it.
+   Do not wait for a human on a PR that is green and mergeable. If the queue
+   drops the PR on a check the diff cannot reach (a runner timeout, a UI
+   test in a surface you did not touch) and the same check passed on the PR
+   head, say so once on the PR and run `gh pr merge --auto` again. A second
+   drop for the same reason is a human call: comment the evidence and stop.
 
    Never close/reopen the PR, push empty commits, or merge `main` in just to
    re-run CI (merge `main` only for a real conflict).

@@ -22,7 +22,9 @@ Playwright. Docs index: `docs/README.md`.
 
 - `bun run verify` picks required checks from the diff and ends with
   `VERDICT: PASS | INCOMPLETE | FAIL`. Use `--strict` before labeling a PR.
-  `INCOMPLETE`: install Chromium with `bunx playwright install chromium` and rerun.
+  `INCOMPLETE`: install Chromium with `bunx playwright install chromium` and
+  rerun, or point `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` at a preinstalled one
+  (Claude Code web: `/opt/pw-browsers/chromium`).
 - macOS: `docs/development/local-development.md`. Swift edits: run
   `bun cli contracts:swift --check` and `bun cli desktop:export --check`
   (drop `--check` to regenerate when schemas or shortcuts change).
@@ -63,11 +65,10 @@ Playwright. Docs index: `docs/README.md`.
   present tense: `fix(web): handle disconnected google state`.
 - Stage explicit paths. Never force-push, rewrite published history, weaken
   tests, or widen timeouts to go green.
-- Ship: implement, `bun run verify --strict`, open a draft PR with
-  `Fixes #N` and the `VERDICT:` line, mark ready, label `agent-automerge`,
-  enable auto-merge. `main` merges only via the merge queue (squash after
-  checks). `.github/scripts/agent-loop-merge-guard.sh` guards line count and
-  main health; no path denylist. Sandbox Playwright timeouts in untouched
+- Ship: implement, `bun run verify --strict`, open a PR with `Fixes #N`
+  and the `VERDICT:` line, mark it ready, run `gh pr merge --auto`. `main`
+  merges only via the merge queue, which squash-merges once required checks
+  pass. No labels, no path denylist. Sandbox Playwright timeouts in untouched
   specs are PR evidence, not local blockers; CI decides. Do not wait for CI
   or "merge" on a green PR. Product choices go in the PR body. Procedure:
   `.agents/skills/ship/SKILL.md`.
