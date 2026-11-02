@@ -397,10 +397,6 @@ describe("executeProviderSeriesUpdate", () => {
     expect(starts).toContain("2026-07-21T15:00:00.000Z");
   });
 
-  // The "Apply to series?" promotion: a scope-"this" move of one occurrence
-  // leaves an override, then the same move is sent again as an edit-all.
-  // Google applies the master move, then rejects the old override with a
-  // generic 400.
   it("confirms an edit-all that moves the series when Google rejects the old override", async () => {
     const { tenantId, principalId, calendar, master } = await seedMaster();
     const override = await putException(master, {
