@@ -159,6 +159,41 @@ describe("useConnectProvider account scoping", () => {
     beginSpy.mockRestore();
   });
 
+  it("pins a healthy scoped account when it adds a feature, so consent targets it", async () => {
+    const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
+      kind: "redirect",
+      authorizationUrl: "#consent",
+    });
+    const healthy = connection({
+      id: "connection-healthy",
+      state: "healthy",
+      stateReason: null,
+      accountEmail: "second@example.com",
+      connectionState: "HEALTHY",
+    });
+
+    const { wrapper } = createStoreWrapper();
+    const { result } = renderHook(
+      () =>
+        useConnectProvider("google", {
+          connection: healthy,
+          features: ["contacts"],
+        }),
+      { wrapper },
+    );
+    act(() => result.current.connect());
+
+    await waitFor(() => {
+      expect(beginSpy).toHaveBeenCalledWith({
+        connectionId: "connection-healthy",
+        features: ["contacts"],
+        provider: "google",
+      });
+    });
+
+    beginSpy.mockRestore();
+  });
+
   it("keeps the begin body free of features when none are requested", async () => {
     const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
       kind: "redirect",

@@ -131,11 +131,19 @@ export const useConnectProvider = (
 
     const start = async () => {
       try {
+        // Pin consent to one account for a reconnect, or when a scoped
+        // account is adding a feature (e.g. contacts for that account):
+        // sync then sends Google a login hint and rejects a different one.
+        const pinnedConnectionId =
+          state === "RECONNECT_REQUIRED"
+            ? syncConnection?.id
+            : options?.features !== undefined
+              ? scopedConnection?.id
+              : undefined;
         const beginRequest = {
-          ...(options?.newAccount ||
-          !(state === "RECONNECT_REQUIRED" && syncConnection?.id)
+          ...(options?.newAccount || !pinnedConnectionId
             ? {}
-            : { connectionId: syncConnection.id as ConnectionId }),
+            : { connectionId: pinnedConnectionId as ConnectionId }),
           ...(options?.features !== undefined
             ? { features: options.features }
             : {}),
@@ -178,6 +186,7 @@ export const useConnectProvider = (
     options?.intent,
     options?.newAccount,
     queryClient,
+    scopedConnection?.id,
     state,
     stopConnecting,
     syncConnection?.accountEmail,

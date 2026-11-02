@@ -15,3 +15,15 @@ export function connectFlowKind(kind: ProviderKind): ConnectFlowKind {
 export function usesCredentialFormConnect(kind: ProviderKind): boolean {
   return connectFlowKind(kind) === "credentialForm";
 }
+
+// Providers whose consent screen can add the optional "contacts" feature
+// (attendee suggestions from the account's address book).
+const OFFERS_CONTACTS_BY_KIND: Record<ProviderKind, boolean> = {
+  google: true,
+  microsoft: true,
+  apple: false,
+};
+
+export function offersContactsFeature(kind: ProviderKind): boolean {
+  return OFFERS_CONTACTS_BY_KIND[kind];
+}

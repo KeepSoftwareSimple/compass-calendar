@@ -193,7 +193,9 @@ test("an invalid email never becomes a chip", async ({ page }) => {
   await page.keyboard.press("Enter");
 
   // Inline rejection in the listbox; no chip, nothing on the wire.
-  await expect(page.getByText("Enter a valid email address")).toBeVisible();
+  await expect(
+    page.getByText("No matches. Type their full email."),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Remove not-an-email" }),
   ).toHaveCount(0);
