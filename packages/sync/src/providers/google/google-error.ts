@@ -1,4 +1,5 @@
 import { type gSchema$Event } from "@core/types/gcal";
+import { parseGoogleInstanceEventId } from "@sync/providers/google/google-instance-id";
 import { redactedCause } from "@sync/safety/redact-error";
 
 // Shared triage primitives for googleapis/gaxios failures. Quota/rate-limit
@@ -92,6 +93,21 @@ export function summarizeGoogleEventFieldsForLog(item: gSchema$Event): string {
 }
 
 const SCHEDULE_BODY_KEYS = new Set(["start", "end", "recurrence"]);
+
+/**
+ * Which event a Google write addressed, for 400 logs only: one occurrence of a
+ * series (a `{seriesId}_{originalStart}` id) or a whole event, and whether an
+ * If-Match precondition was sent. Never the id or the etag.
+ */
+export function describeGoogleWriteTargetForLog(target: {
+  eventId: string;
+  ifMatch: string | null;
+}): string {
+  const kind = parseGoogleInstanceEventId(target.eventId)
+    ? "instance"
+    : "event";
+  return `target=${kind}, ifMatch=${target.ifMatch ? "y" : "n"}`;
+}
 
 /**
  * Top-level keys of a Google write body, plus the shape of its schedule and
