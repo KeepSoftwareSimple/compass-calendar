@@ -44,8 +44,7 @@ Fixture/model tests can prove those assertions, not real signed-in behavior.
    runs only on isolated GitHub Macs because of the Brave interruption-query crash.
 4. Use the ship skill. Inspect downloaded strict native AND web verdict logs at the
    exact PR head, including required checks and skips; inspect failures and artifacts
-   before retrying. Full diff review precedes ready/agent-automerge/auto-merge via
-   the merge queue. No long CI waits after pushing. Keep pending run IDs in checkpoint.
+   before retrying. Full diff review precedes ready/auto-merge via the merge queue. No long CI waits after pushing. Keep pending run IDs in checkpoint.
 5. Update evidence and checkpoint after each work package, before stopping and before
    usage reaches 80% in either window. Checkpoint sooner for a long task. Record
    dirty paths, branch/head, pending CI, exact next command, unresolved gates, usage

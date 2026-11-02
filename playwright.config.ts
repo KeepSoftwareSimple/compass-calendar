@@ -30,6 +30,11 @@ const onboardingStorageState = (origin: string) => ({
   ],
 });
 
+// A preinstalled Chromium whose build differs from the pinned Playwright
+// version (Claude Code web ships /opt/pw-browsers/chromium). Unset, Playwright
+// uses its own download.
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+
 const ciReporters: [string, { outputFile: string }][] = [
   ["json", { outputFile: "test-results/playwright-report.json" }],
 ];
@@ -54,6 +59,9 @@ export default defineConfig({
     colorScheme: "light",
     timezoneId: "UTC",
     trace: "on-first-retry",
+    ...(chromiumExecutablePath
+      ? { launchOptions: { executablePath: chromiumExecutablePath } }
+      : {}),
   },
   projects: [
     {

@@ -177,7 +177,16 @@ export function chromiumInstallLocationFromDryRun(
   return match?.[1] ?? null;
 }
 
+/** A preinstalled Chromium named by env, honored by playwright.config.ts. */
+export function chromiumExecutableFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  const path = env["PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"];
+  return path && existsSync(path) ? path : null;
+}
+
 async function detectChromiumAvailable(spawn: SpawnFn): Promise<boolean> {
+  if (chromiumExecutableFromEnv()) return true;
   const result = await Promise.resolve(
     spawn(["bunx", "playwright", "install", "--dry-run", "chromium"], {
       stdio: "pipe",
