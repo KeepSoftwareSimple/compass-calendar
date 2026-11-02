@@ -1,15 +1,6 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineRemoteConfig } from "./remote-config.util";
 
-export default defineConfig({
-  testDir: ".",
+export default defineRemoteConfig({
   testMatch: "onboarding/staging-onboarding-signup-capture.spec.ts",
   timeout: 120_000,
-  workers: 1,
-  retries: 0,
-  use: {
-    baseURL:
-      process.env.STAGING_BASE_URL ?? "https://staging.compasscalendar.com",
-    colorScheme: "light",
-    ...devices["Desktop Chrome"],
-  },
 });

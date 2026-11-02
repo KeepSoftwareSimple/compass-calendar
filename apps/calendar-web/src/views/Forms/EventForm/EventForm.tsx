@@ -16,7 +16,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { flushSync } from "react-dom";
 import { isEventFormFocusFieldVisible } from "@core/event/event-form-field-visibility";
 import { EVENT_FORM_TOGGLE_ALL_DAY_HOTKEY } from "@core/shortcuts/binding-keycaps.constants";
 import { type EventFormFocusField } from "@core/shortcuts/event-form-focus-field";
@@ -508,7 +507,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     };
 
     const onChangeLocation = (nextLocation: string) => {
-      flushSync(() => setLocationInputValue(nextLocation));
+      setLocationInputValue(nextLocation);
       patchDraftFields({ location: nextLocation });
     };
 

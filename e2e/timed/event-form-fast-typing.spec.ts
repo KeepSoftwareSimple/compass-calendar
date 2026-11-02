@@ -58,3 +58,21 @@ test("start time keeps typed digits when entered quickly", async ({ page }) => {
   const value = await startTime.inputValue();
   expect(value.replace(/\s/g, "").toLowerCase()).toContain("1030");
 });
+
+// Location stays a controlled input fed by local state, unlike the title,
+// which #5038 made uncontrolled. #5035 wrapped both setters in flushSync on
+// the theory that the lag was the local state; #5038 disproved that for the
+// title and dropped it there. Nothing covered location either way, so pin it:
+// the draft store push is deferred to a frame, and React flushes a discrete
+// change handler before paint, so every character must survive without a
+// forced synchronous render per keystroke.
+test("location keeps every character when typed quickly", async ({ page }) => {
+  await openTimedEventFormWithKeyboard(page);
+  const location = page.getByRole("textbox", { name: "Location" });
+  await location.focus();
+
+  await page.keyboard.type(FAST_STRING, { delay: 0 });
+  await page.waitForTimeout(100);
+
+  await expect(location).toHaveValue(FAST_STRING);
+});
