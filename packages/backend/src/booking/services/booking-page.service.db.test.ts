@@ -22,6 +22,7 @@ import { bookingPageRepository } from "@backend/booking/booking-page.repository"
 import { bookingReservationRepository } from "@backend/booking/booking-reservation.repository";
 import bookingPageService from "@backend/booking/services/booking-page.service";
 import calendarService from "@backend/calendar/services/calendar.service";
+import mongoService from "@backend/common/services/mongo.service";
 import * as syncServiceFactory from "@backend/common/services/sync-service/sync-service.factory";
 import { eventMutationError } from "@backend/event/event.error";
 import userService from "@backend/user/services/user.service";
@@ -973,6 +974,103 @@ describe("BookingPageService", () => {
       expect.arrayContaining([google.id]),
     );
     expect(page.blockingCalendarIds).not.toContain(microsoft.id);
+  });
+
+  const meetingTypes = [
+    { id: "intro", label: "Intro call", durationMinutes: 15 },
+    { id: "deep", label: "Deep dive", durationMinutes: 60 },
+  ];
+
+  it("returns one derived meeting type for a page saved before meeting types", async () => {
+    const userId = await createNamedUser("Legacy Types Host");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        enabled: false,
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+        durationMinutes: 45,
+      }),
+    );
+    await mongoService.bookingPage.updateOne(
+      { userId },
+      { $unset: { meetingTypes: "" } },
+    );
+
+    const page = await bookingPageService.getAdminPage(userId);
+
+    expect(page.meetingTypes).toEqual([
+      { id: "default", label: "45 min meeting", durationMinutes: 45 },
+    ]);
+  });
+
+  it("stores meeting types and mirrors type #1 into durationMinutes", async () => {
+    const userId = await createNamedUser("Types Host");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+
+    const saved = await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        enabled: false,
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+        durationMinutes: 30,
+        meetingTypes,
+      }),
+    );
+
+    expect(saved.durationMinutes).toBe(15);
+    expect(saved.meetingTypes).toEqual(meetingTypes);
+    const record = await bookingPageRepository.findByUserId(userId);
+    expect(record?.durationMinutes).toBe(15);
+  });
+
+  it("keeps types 2 and 3 when an older client saves only a duration", async () => {
+    const userId = await createNamedUser("Old Client Host");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    const base = samplePutInput({
+      enabled: false,
+      destinationCalendarId: calendar.id,
+      blockingCalendarIds: [calendar.id],
+    });
+    await bookingPageService.putAdminPage(userId, { ...base, meetingTypes });
+    const { meetingTypes: _omit, ...withoutTypes } = base;
+
+    const saved = await bookingPageService.putAdminPage(userId, {
+      ...withoutTypes,
+      durationMinutes: 30,
+    });
+
+    expect(saved.meetingTypes).toEqual([
+      { id: "intro", label: "Intro call", durationMinutes: 30 },
+      { id: "deep", label: "Deep dive", durationMinutes: 60 },
+    ]);
+  });
+
+  it("renames a default type #1 when an older client changes the duration", async () => {
+    const userId = await createNamedUser("Default Label Host");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    const base = samplePutInput({
+      enabled: false,
+      destinationCalendarId: calendar.id,
+      blockingCalendarIds: [calendar.id],
+      durationMinutes: 30,
+    });
+    await bookingPageService.putAdminPage(userId, base);
+
+    const saved = await bookingPageService.putAdminPage(userId, {
+      ...base,
+      durationMinutes: 45,
+    });
+
+    expect(saved.meetingTypes).toEqual([
+      { id: "default", label: "45 min meeting", durationMinutes: 45 },
+    ]);
   });
 });
 

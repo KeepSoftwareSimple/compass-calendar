@@ -1546,6 +1546,7 @@ describe("PublicBookingService", () => {
       notes: "secret notes",
       createsGoogleMeet: true,
       conference: "meet",
+      meetingTypeLabel: "30 min meeting",
     });
     expect(publicReservation).not.toHaveProperty("guestEmail");
     expect(publicReservation).not.toHaveProperty("cancelUrl");
@@ -1747,7 +1748,7 @@ describe("PublicBookingService", () => {
     );
     const listSpy = spyOn(
       bookingReservationRepository,
-      "listConfirmedStartsByPageId",
+      "listConfirmedIntervalsByPageId",
     );
 
     try {
@@ -1757,10 +1758,12 @@ describe("PublicBookingService", () => {
         timeZone: "UTC",
       });
 
-      const fetched = (await listSpy.mock.results[0]?.value) as Date[];
-      expect(fetched.map((start) => start.toISOString())).not.toContain(
-        "2025-09-08T10:00:00.000Z",
-      );
+      const fetched = (await listSpy.mock.results[0]?.value) as {
+        slotStart: Date;
+      }[];
+      expect(
+        fetched.map((interval) => interval.slotStart.toISOString()),
+      ).not.toContain("2025-09-08T10:00:00.000Z");
       expect(response.bookable).toBe(true);
       expect(response.slots.map((slot) => slot.slotStart)).toContain(
         `${BOOKING_MONDAY}T10:00:00Z` as DateTime,
@@ -1787,6 +1790,123 @@ describe("PublicBookingService", () => {
     expect(response.slots.map((slot) => slot.slotStart)).toContain(
       `${BOOKING_MONDAY}T09:30:00Z` as DateTime,
     );
+  });
+
+  const threeMeetingTypes = [
+    { id: "intro", label: "Intro call", durationMinutes: 30 },
+    { id: "deep", label: "Deep dive", durationMinutes: 60 },
+    { id: "check", label: "Check-in", durationMinutes: 15 },
+  ];
+
+  const slotLengthsMinutes = (
+    slots: { slotStart: string; slotEnd: string }[],
+  ) =>
+    new Set(
+      slots.map(
+        (slot) =>
+          (Date.parse(slot.slotEnd) - Date.parse(slot.slotStart)) / 60_000,
+      ),
+    );
+
+  it("offers slots at the requested meeting type length", async () => {
+    const { slug } = await enableBookingPage("Types Host", {
+      meetingTypes: threeMeetingTypes,
+    });
+
+    const response = await service.getSlots(slug, {
+      start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+      end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+      timeZone: "UTC",
+      meetingTypeId: "deep",
+    });
+
+    expect(response.slots.length).toBeGreaterThan(0);
+    expect(slotLengthsMinutes(response.slots)).toEqual(new Set([60]));
+    expect(response.slots.at(-1)?.slotEnd).toBe(
+      `${BOOKING_MONDAY}T17:00:00.000Z` as DateTime,
+    );
+  });
+
+  it("falls back to type #1 for an unknown meeting type id", async () => {
+    const { slug } = await enableBookingPage("Fallback Host", {
+      meetingTypes: threeMeetingTypes,
+    });
+
+    const response = await service.getSlots(slug, {
+      start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+      end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+      timeZone: "UTC",
+      meetingTypeId: "gone",
+    });
+
+    expect(slotLengthsMinutes(response.slots)).toEqual(new Set([30]));
+  });
+
+  it("books a meeting type and keeps its label on the reservation", async () => {
+    const { slug } = await enableBookingPage("Book Type Host", {
+      meetingTypes: threeMeetingTypes,
+    });
+
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "UTC",
+      durationMinutes: 60,
+      meetingTypeId: "deep",
+    });
+
+    expect(created.slotEnd).toBe(`${BOOKING_MONDAY}T11:00:00.000Z` as DateTime);
+    const stored = await bookingReservationRepository.findById(
+      new ObjectId(created.reservationId),
+    );
+    expect(stored?.meetingTypeId).toBe("deep");
+    expect(stored?.meetingTypeLabel).toBe("Deep dive");
+    const publicReservation = await service.getPublicReservation(
+      new ObjectId(created.reservationId),
+      guestReadToken(created.cancelUrl),
+    );
+    expect(publicReservation.durationMinutes).toBe(60);
+    expect(publicReservation.meetingTypeLabel).toBe("Deep dive");
+  });
+
+  it("rejects a booking whose duration does not match its meeting type", async () => {
+    const { slug } = await enableBookingPage("Mismatch Host", {
+      meetingTypes: threeMeetingTypes,
+    });
+
+    await expect(
+      service.createReservation(slug, {
+        slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+        guestName: "Ada Lovelace",
+        guestEmail: "ada@example.com",
+        guestTimeZone: "UTC",
+        durationMinutes: 30,
+        meetingTypeId: "deep",
+      }),
+    ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
+  });
+
+  it("blocks the full length of a longer confirmed meeting", async () => {
+    const { slug, pageId } = await enableBookingPage("Long Block Host", {
+      meetingTypes: threeMeetingTypes,
+    });
+    await seedConfirmedReservation(
+      pageId,
+      `${BOOKING_MONDAY}T10:00:00.000Z`,
+      `${BOOKING_MONDAY}T11:00:00.000Z`,
+    );
+
+    const response = await service.getSlots(slug, {
+      start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+      end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+      timeZone: "UTC",
+    });
+    const starts = response.slots.map((slot) => slot.slotStart);
+
+    expect(starts).not.toContain(`${BOOKING_MONDAY}T10:00:00Z` as DateTime);
+    expect(starts).not.toContain(`${BOOKING_MONDAY}T10:30:00Z` as DateTime);
+    expect(starts).toContain(`${BOOKING_MONDAY}T11:00:00Z` as DateTime);
   });
 
   it("accepts a reservation directly adjacent to an existing one", async () => {
@@ -2243,7 +2363,7 @@ describe("PublicBookingService", () => {
     expect(stored?.calendarEventId).toBeTruthy();
   });
 
-  it("rejects reschedule when pinned duration does not match the page", async () => {
+  it("keeps the booked length on reschedule after the host changes page duration", async () => {
     const { slug, userId, calendarId } = await enableBookingPage();
     const created = await service.createReservation(slug, {
       slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
@@ -2268,12 +2388,75 @@ describe("PublicBookingService", () => {
     createBookingEvent.mockClear();
     updateBookingEvent.mockClear();
 
-    await expect(
-      service.rescheduleReservation(reservationId, {
+    const response = await service.rescheduleReservation(reservationId, {
+      token,
+      slotStart: `${BOOKING_MONDAY}T11:00:00.000Z`,
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+
+    expect(response.slotEnd).toBe(
+      `${BOOKING_MONDAY}T11:30:00.000Z` as DateTime,
+    );
+    expect(createBookingEvent).not.toHaveBeenCalled();
+  });
+
+  it("accepts the page duration from older reschedule clients and keeps the booked length", async () => {
+    const { slug, userId, calendarId } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    spyOn(billingGuard, "assertBillingAllowsWrites").mockResolvedValue(
+      undefined,
+    );
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: calendarId,
+        blockingCalendarIds: [calendarId],
+        durationMinutes: 45,
+      }),
+    );
+
+    const response = await service.rescheduleReservation(
+      new ObjectId(created.reservationId),
+      {
         token,
         slotStart: `${BOOKING_MONDAY}T11:00:00.000Z`,
         guestTimeZone: "Europe/London",
-        durationMinutes: 30,
+        durationMinutes: 45,
+      },
+    );
+
+    expect(response.slotEnd).toBe(
+      `${BOOKING_MONDAY}T11:30:00.000Z` as DateTime,
+    );
+  });
+
+  it("rejects reschedule with a duration that is neither the booking nor the page", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    createBookingEvent.mockClear();
+    updateBookingEvent.mockClear();
+
+    await expect(
+      service.rescheduleReservation(new ObjectId(created.reservationId), {
+        token,
+        slotStart: `${BOOKING_MONDAY}T11:00:00.000Z`,
+        guestTimeZone: "Europe/London",
+        durationMinutes: 15,
       }),
     ).rejects.toMatchObject({
       bookingCode: "SLOT_UNAVAILABLE",

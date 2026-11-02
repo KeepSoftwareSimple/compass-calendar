@@ -205,6 +205,7 @@ describe("PublicBookingPageSchema", () => {
     expect(keys).toEqual([
       "hostDisplayName",
       "durationMinutes",
+      "meetingTypes",
       "timeZone",
       "enabled",
       "maxHorizonDays",
@@ -221,6 +222,9 @@ describe("PublicBookingPageSchema", () => {
     expect(pub).toEqual({
       hostDisplayName: "Tyler Dane",
       durationMinutes: 30,
+      meetingTypes: [
+        { id: "default", label: "30 min meeting", durationMinutes: 30 },
+      ],
       timeZone: "America/Denver" as TimeZone,
       enabled: true,
       maxHorizonDays: 60,
