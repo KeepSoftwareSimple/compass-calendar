@@ -87,7 +87,9 @@ describe("AttendeeField", () => {
     const combobox = screen.getByRole("combobox", { name: "Guests" });
     await user.click(combobox);
     await user.paste("not-an-email");
-    expect(screen.getByText("Enter a valid email address")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No matches. Type their full email."),
+    ).toBeInTheDocument();
 
     await user.keyboard("{Enter}");
     expect(onValueChange).not.toHaveBeenCalled();
@@ -247,34 +249,107 @@ describe("AttendeeField", () => {
     expect(suggestionSource).toHaveBeenCalledWith("carol");
   });
 
-  it("renders the menuFooter inside the open listbox menu, and not before", async () => {
+  it("says Searching while a lookup runs, then shows the no-match footer", async () => {
+    const user = userEvent.setup();
+    let finish: (
+      results: readonly { email: string; displayName: null }[],
+    ) => void = () => {};
+    const suggestionSource = mock(
+      () =>
+        new Promise<readonly { email: string; displayName: null }[]>(
+          (resolve) => {
+            finish = resolve;
+          },
+        ),
+    );
+    render(
+      <AttendeeField
+        value={[]}
+        onChange={() => {}}
+        suggestionSource={suggestionSource}
+        noMatchFooter={<div>Turn on contacts</div>}
+      />,
+    );
+
+    // Closed menu: no footer anywhere, never floating free, never a modal.
+    expect(screen.queryByText("Turn on contacts")).not.toBeInTheDocument();
+
+    const combobox = screen.getByRole("combobox", { name: "Guests" });
+    await user.type(combobox, "ca");
+
+    // Still searching: nobody is missing yet, so no prompt.
+    expect(screen.getByText("Searching...")).toBeInTheDocument();
+    expect(screen.queryByText("Turn on contacts")).not.toBeInTheDocument();
+    finish([]);
+    expect(
+      await screen.findByText("No matches. Type their full email."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Turn on contacts")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Menu closes -> footer goes with it.
+    await user.keyboard("{Escape}");
+    expect(screen.queryByText("Turn on contacts")).not.toBeInTheDocument();
+  });
+
+  it("adds a typed email on Enter even while a lookup is still running", async () => {
+    const user = userEvent.setup();
+    const onValueChange = mock();
+    render(
+      <AttendeeField
+        value={[]}
+        onChange={onValueChange}
+        suggestionSource={() => new Promise(() => {})}
+      />,
+    );
+
+    await user.type(
+      screen.getByRole("combobox", { name: "Guests" }),
+      "ada@example.com",
+    );
+    await user.keyboard("{Enter}");
+
+    expect(onValueChange).toHaveBeenCalledWith([
+      { email: "ada@example.com", displayName: null },
+    ]);
+  });
+
+  it("does not show the no-match footer for a query too short to search", async () => {
     const user = userEvent.setup();
     render(
       <AttendeeField
         value={[]}
         onChange={() => {}}
-        menuFooter={<div>Enable contact suggestions</div>}
+        suggestionSource={async () => []}
+        noMatchFooter={<div>Turn on contacts</div>}
       />,
     );
 
-    // Closed menu: no footer anywhere (the affordance lives in the combobox
-    // footer only — never floating free, never a modal).
+    await user.type(screen.getByRole("combobox", { name: "Guests" }), "c");
+
     expect(
-      screen.queryByText("Enable contact suggestions"),
-    ).not.toBeInTheDocument();
+      await screen.findByText("No matches. Type their full email."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Turn on contacts")).not.toBeInTheDocument();
+  });
 
-    const combobox = screen.getByRole("combobox", { name: "Guests" });
-    await user.type(combobox, "ca");
+  it("hides the no-match footer while a suggestion matches", async () => {
+    const user = userEvent.setup();
+    render(
+      <AttendeeField
+        value={[]}
+        onChange={() => {}}
+        suggestionSource={async () => [
+          { email: "carol@example.com", displayName: "Carol" },
+        ]}
+        noMatchFooter={<div>Turn on contacts</div>}
+      />,
+    );
 
-    expect(screen.getByRole("listbox")).toBeInTheDocument();
-    expect(screen.getByText("Enable contact suggestions")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.type(screen.getByRole("combobox", { name: "Guests" }), "ca");
 
-    // Menu closes -> footer goes with it.
-    await user.keyboard("{Escape}");
-    expect(
-      screen.queryByText("Enable contact suggestions"),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByText("Carol")).toBeInTheDocument();
+    expect(screen.queryByText("Turn on contacts")).not.toBeInTheDocument();
   });
 
   it("puts the jump-target id on the visible wrapper, not the dummy input", () => {

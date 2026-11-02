@@ -6,6 +6,10 @@ import {
 } from "mongodb";
 import { z } from "zod/v4";
 import {
+  type ContactSuggestion,
+  ContactSuggestionSchema,
+} from "@core/types/contact.contracts";
+import {
   type DateTime,
   type EventId,
   EventIdSchema,
@@ -439,6 +443,59 @@ export class EventRepository {
         },
       };
     });
+  }
+
+  // Guests from the principal's own synced events whose email or name
+  // contains `query`, most-invited first. Needs no contacts grant: these are
+  // addresses the user's calendars already hold. `excludeEmails` (lower-case)
+  // drops the user's own accounts. Only email and display name leave Mongo.
+  async searchPastGuests(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    query: string,
+    options: { excludeEmails: readonly string[]; limit: number },
+  ): Promise<ContactSuggestion[]> {
+    const pattern = new RegExp(escapeRegex(query), "i");
+    const matches = {
+      $or: [{ email: pattern }, { displayName: pattern }],
+    };
+    const rows = await this.collection
+      .aggregate([
+        {
+          $match: {
+            tenantId,
+            principalId,
+            "content.attendees": { $elemMatch: matches },
+          },
+        },
+        { $project: { _id: 0, attendee: "$content.attendees" } },
+        { $unwind: "$attendee" },
+        {
+          $match: {
+            $or: [
+              { "attendee.email": pattern },
+              { "attendee.displayName": pattern },
+            ],
+          },
+        },
+        {
+          $group: {
+            _id: { $toLower: "$attendee.email" },
+            displayName: { $max: "$attendee.displayName" },
+            count: { $sum: 1 },
+          },
+        },
+        { $match: { _id: { $nin: [...options.excludeEmails] } } },
+        { $sort: { count: -1, _id: 1 } },
+        { $limit: options.limit },
+      ])
+      .toArray();
+    return rows.map((row) =>
+      ContactSuggestionSchema.parse({
+        email: row["_id"],
+        displayName: row["displayName"] ?? null,
+      }),
+    );
   }
 
   // Look up one provider-linked event by its provider identity, owner-scoped.
@@ -974,4 +1031,9 @@ function mergeProviderMetadata(
   if (incoming["iCalUID"]) return incoming;
   if (existingUid) return { ...incoming, iCalUID: existingUid };
   return incoming;
+}
+
+// Typed text is a literal substring, never a pattern.
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

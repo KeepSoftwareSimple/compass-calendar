@@ -53,11 +53,43 @@ afterEach(() => {
 });
 
 describe("useContactSuggestions", () => {
-  it("offers no suggestion source without the contacts capability", () => {
+  it("offers no suggestion source without any connected account", () => {
+    const { result } = renderSuggestions();
+    expect(result.current.suggestionSource).toBeUndefined();
+    expect(result.current.contactsOfferConnection).toBeNull();
+  });
+
+  it("suggests past guests without the contacts capability, and offers that account", () => {
     seedCapability(false);
     const { result } = renderSuggestions();
-    expect(result.current.canSuggestContacts).toBe(false);
-    expect(result.current.suggestionSource).toBeUndefined();
+    expect(result.current.suggestionSource).toBeDefined();
+    expect(result.current.contactsOfferConnection?.accountEmail).toBe(
+      "a@example.com",
+    );
+  });
+
+  it("offers the account missing contacts, not the one that has them", () => {
+    userMetadataActions.set({
+      connections: [
+        createMockConnection("has@example.com", {
+          provider: "google",
+          canSuggestContacts: true,
+        }),
+        createMockConnection("icloud@example.com", {
+          provider: "apple",
+          canSuggestContacts: false,
+        }),
+        createMockConnection("missing@example.com", {
+          provider: "google",
+          canSuggestContacts: false,
+        }),
+      ],
+    });
+    const { result } = renderSuggestions();
+    // Apple accounts cannot add contacts, so they are never offered.
+    expect(result.current.contactsOfferConnection?.accountEmail).toBe(
+      "missing@example.com",
+    );
   });
 
   it("debounces ≥250ms: no request during the pause, one after it", async () => {

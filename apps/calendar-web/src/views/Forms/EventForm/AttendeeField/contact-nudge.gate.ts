@@ -1,4 +1,4 @@
-// Frequency gate for the "Enable contact suggestions" nudge (WP-06).
+// Frequency gate for the no-match "Turn on contacts" prompt (WP-06).
 //
 // Product decision 1 (2026-08-25): the nudge is OCCASIONAL and non-nagging.
 // Encoded here as two independent rules:

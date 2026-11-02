@@ -163,27 +163,32 @@ describe("EventForm contact suggestions (WP-06)", () => {
     expect(latestDraftAttendees()).toEqual([
       { email: "ada@example.com", displayName: "Ada Lovelace" },
     ]);
-    // No nudge while the capability is granted.
+    // No contacts prompt: the only account already has them.
     expect(
-      screen.queryByRole("button", { name: "Enable contact suggestions" }),
+      screen.queryByRole("button", { name: /Turn on contacts/ }),
     ).not.toBeInTheDocument();
   });
 
-  it("without the capability: no request, raw email entry works, and the footer nudge appears once", async () => {
+  it("without contacts: past guests are still searched, and a miss offers contacts for that account", async () => {
     seedContactsCapability(false);
-    const queries = serveSuggestions([
-      { email: "ada@example.com", displayName: "Ada Lovelace" },
-    ]);
+    const queries = serveSuggestions([]);
     const user = userEvent.setup();
 
     const { combobox, latestDraftAttendees } = renderGuestEditor();
     await user.type(combobox, "ada");
 
-    // The nudge sits in the combobox footer of the open menu; no modal.
+    // The prompt sits in the listbox footer once the search finds nobody,
+    // names the account, and is never a modal.
     expect(
-      await screen.findByRole("button", { name: "Enable contact suggestions" }),
+      await screen.findByRole("button", {
+        name: `Turn on contacts for ${ACCOUNT_EMAIL}`,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("No matches. Type their full email."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(queries[0]).toBe("ada");
 
     // Raw email entry still lands a guest edit.
     await user.clear(combobox);
@@ -192,7 +197,6 @@ describe("EventForm contact suggestions (WP-06)", () => {
     expect(latestDraftAttendees()).toEqual([
       { email: "ada@example.com", displayName: null },
     ]);
-    expect(queries).toHaveLength(0);
   });
 
   it("degrades silently when the proxy fails: no suggestions, raw entry unaffected", async () => {

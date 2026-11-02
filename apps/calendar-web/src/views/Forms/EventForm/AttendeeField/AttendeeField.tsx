@@ -17,6 +17,7 @@ import {
   components as selectComponents,
 } from "react-select";
 import CreatableSelect from "react-select/creatable";
+import { CONTACT_SUGGESTION_QUERY_MIN_LENGTH } from "@core/types/contact.contracts";
 import {
   type AttendeeInput,
   type AttendeeResponseStatus,
@@ -75,9 +76,9 @@ const ATTENDEE_FIELD = "attendee-field";
 // each AttendeeField instance provides its own footer node.
 const AttendeeMenuFooterContext = createContext<ReactNode>(null);
 
-// Menu with an optional non-scrolling footer under the option list — the
-// combobox-footer slot the enable-contacts nudge renders into (WP-06). With
-// no footer in context this is exactly react-select's own Menu.
+// Menu with an optional non-scrolling footer under the option list: the slot
+// the enable-contacts prompt renders into when a search finds nobody. With no
+// footer in context this is exactly react-select's own Menu.
 const AttendeeMenu = (
   props: MenuProps<AttendeeOption, true, GroupBase<AttendeeOption>>,
 ) => {
@@ -115,7 +116,12 @@ const AttendeeMultiValue = (props: MultiValueProps<AttendeeOption, true>) => (
   />
 );
 
+// The listbox already says "Searching..." while a lookup runs; a spinner in
+// the input row would only jitter the chips.
+const NoLoadingIndicator = () => null;
+
 const attendeeFieldComponents = {
+  LoadingIndicator: NoLoadingIndicator,
   Menu: AttendeeMenu,
   MultiValue: AttendeeMultiValue,
   MultiValueLabel: AttendeeMultiValueLabel,
@@ -134,6 +140,7 @@ const attendeeFieldStyles = {
   input: themeColor("var(--text)"),
   placeholder: themeColor("var(--text-muted)"),
   noOptionsMessage: themeColor("var(--text-muted)"),
+  loadingMessage: themeColor("var(--text-muted)"),
   option: (
     base: CSSObjectWithLabel,
     { isFocused }: { isFocused: boolean },
@@ -175,18 +182,19 @@ export interface AttendeeFieldProps {
    */
   statusByEmail?: ReadonlyMap<string, AttendeeResponseStatus>;
   /**
-   * Rendered at the bottom of the open listbox (non-scrolling) — the slot
-   * the "Enable contact suggestions" nudge lives in when the contacts
-   * capability is absent. Never a modal.
+   * Rendered at the bottom of the open listbox (non-scrolling) once a search
+   * for the typed text found nobody: where the enable-contacts prompt lives,
+   * so it appears exactly when someone is missing. Never a modal.
    */
-  menuFooter?: ReactNode;
+  noMatchFooter?: ReactNode;
 }
 
 /**
  * Email-chip combobox for the event form's guest list. Typing a valid email
  * and pressing Enter (or picking a suggestion) adds a chip; Backspace or the
- * chip's remove button drops one; invalid strings never become chips and get
- * an inline "Enter a valid email address" rejection in the listbox instead.
+ * chip's remove button drops one; invalid strings never become chips. While
+ * a lookup runs the listbox says "Searching..."; text that matches nobody and
+ * is not a full email says so, with `noMatchFooter` underneath.
  * Enter/Backspace stop at the combobox (isComboboxInteraction also gates the
  * form's own shortcuts) and Escape closes the listbox before the form
  * (registered as a floating layer while open).
@@ -197,10 +205,15 @@ export const AttendeeField = ({
   onChange,
   suggestionSource = emptySuggestionSource,
   statusByEmail,
-  menuFooter = null,
+  noMatchFooter = null,
 }: AttendeeFieldProps) => {
   const [inputValue, setInputValue] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  // True once a real search (long enough to query) came back empty. Kept
+  // while the next lookup runs, so the footer does not blink between
+  // keystrokes.
+  const [hasMissed, setHasMissed] = useState(false);
   const [suggestions, setSuggestions] = useState<readonly AttendeeInput[]>([]);
   // Monotonic guard so a slow suggestion query can never clobber the results
   // of a newer one (or of a cleared input).
@@ -229,12 +242,21 @@ export const AttendeeField = ({
 
   const loadSuggestions = (query: string) => {
     const version = ++queryVersionRef.current;
+    setIsLoading(true);
+    const isSearchable = query.length >= CONTACT_SUGGESTION_QUERY_MIN_LENGTH;
     suggestionSource(query)
       .then((results) => {
-        if (queryVersionRef.current === version) setSuggestions(results);
+        if (queryVersionRef.current !== version) return;
+        setSuggestions(results);
+        setHasMissed(isSearchable && results.length === 0);
       })
       .catch(() => {
-        if (queryVersionRef.current === version) setSuggestions([]);
+        if (queryVersionRef.current !== version) return;
+        setSuggestions([]);
+        setHasMissed(isSearchable);
+      })
+      .finally(() => {
+        if (queryVersionRef.current === version) setIsLoading(false);
       });
   };
 
@@ -242,15 +264,19 @@ export const AttendeeField = ({
     queryVersionRef.current += 1;
     setInputValue("");
     setSuggestions([]);
+    setIsLoading(false);
+    setHasMissed(false);
     setIsMenuOpen(false);
   };
+
+  const footer = hasMissed ? noMatchFooter : null;
 
   return (
     // `id` belongs on this visible wrapper, not react-select's dummy input.
     // The dummy input is often 2px wide, which fails the hold-Mod hint-chip
     // visibility check; the wrapper is the jump-target anchor.
     <div id={id} className="c-attendee-field">
-      <AttendeeMenuFooterContext.Provider value={menuFooter}>
+      <AttendeeMenuFooterContext.Provider value={footer}>
         <CreatableSelect<AttendeeOption, true>
           inputId={id ? `${id}-input` : undefined}
           aria-label="Guests"
@@ -268,6 +294,11 @@ export const AttendeeField = ({
           options={options}
           inputValue={inputValue}
           menuIsOpen={isMenuOpen}
+          isLoading={isLoading}
+          loadingMessage={() => "Searching..."}
+          // A typed full email must stay addable with Enter while a lookup
+          // is still running; react-select hides it during loading otherwise.
+          allowCreateWhileLoading
           placeholder="Add guests"
           onChange={(next: MultiValue<AttendeeOption>) => {
             onChange(next.map((option) => option.attendee));
@@ -278,7 +309,12 @@ export const AttendeeField = ({
               const query = nextInput.trim();
               setIsMenuOpen(query.length > 0);
               if (query.length > 0) loadSuggestions(query);
-              else setSuggestions([]);
+              else {
+                queryVersionRef.current += 1;
+                setSuggestions([]);
+                setIsLoading(false);
+                setHasMissed(false);
+              }
               return;
             }
             // set-value (chip added), input-blur, menu-close: reset the query.
@@ -328,7 +364,7 @@ export const AttendeeField = ({
             if (selectedEmails.has(email.toLowerCase())) {
               return `${email} is already a guest`;
             }
-            return "Enter a valid email address";
+            return "No matches. Type their full email.";
           }}
           createOptionPosition="first"
           tabSelectsValue={false}

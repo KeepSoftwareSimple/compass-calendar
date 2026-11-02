@@ -311,11 +311,13 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       draft.kind === "edit" && draft.source.recurrence.kind !== "single";
     const rsvpAccountEmail = fieldVisibilityInput.calendarAccountEmail;
     const showRsvpControl = isFieldJumpVisible("rsvp");
-    // Contact suggestions (WP-06): live when a connected account granted the
-    // optional contacts scopes; otherwise the field is a raw email input and
-    // the combobox footer may carry the occasional enable-contacts nudge.
-    const { canSuggestContacts, suggestionSource: contactSuggestionSource } =
-      useContactSuggestions();
+    // Guest suggestions: past guests from every account, plus contacts from
+    // accounts that granted them. When a search finds nobody and an account
+    // could still add contacts, the listbox footer offers that account.
+    const {
+      suggestionSource: contactSuggestionSource,
+      contactsOfferConnection,
+    } = useContactSuggestions();
     // Untouched drafts show the source event's guests as chips; a touched
     // draft owns its membership in values.attendees (present = replace).
     const attendeeChips: readonly AttendeeInput[] =
@@ -1151,10 +1153,12 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                         }
                         statusByEmail={attendeeRsvpByEmail}
                         suggestionSource={contactSuggestionSource}
-                        menuFooter={
-                          canSuggestContacts ? null : (
-                            <EnableContactSuggestionsNudge />
-                          )
+                        noMatchFooter={
+                          contactsOfferConnection ? (
+                            <EnableContactSuggestionsNudge
+                              connection={contactsOfferConnection}
+                            />
+                          ) : null
                         }
                       />
                     </div>

@@ -5,9 +5,11 @@ import {
   type ContactSuggestion,
 } from "@core/types/contact.contracts";
 import { type AttendeeInput } from "@core/types/event-attendance.contracts";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { ContactsApi } from "@web/api/contacts.api";
 import {
-  selectCanSuggestContacts,
+  selectContactsOfferConnection,
+  selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import { scoreCommandItem } from "@web/components/CommandPalette/command-palette.search";
@@ -57,23 +59,30 @@ const toAttendeeInput = (suggestion: ContactSuggestion): AttendeeInput => ({
 });
 
 export interface UseContactSuggestionsResult {
-  /** True when any connected Google account granted a contacts scope. */
-  canSuggestContacts: boolean;
   /**
-   * Suggestion source for AttendeeField — present only while the capability
-   * is granted. Debounced ≥250ms, ≥2-char minimum, ranked; every failure
-   * resolves to [] (raw email entry keeps working, no error toast).
+   * Suggestion source for AttendeeField: present whenever an account is
+   * connected, since past guests need no contacts grant. Debounced 250ms,
+   * 2-char minimum, ranked; every failure resolves to [] (raw email entry
+   * keeps working, no error toast).
    */
   suggestionSource: AttendeeSuggestionSource | undefined;
+  /** An account that could add contacts but has not, or null. */
+  contactsOfferConnection: SyncConnectionSummary | null;
 }
 
 /**
- * Live Google-contact suggestions for the attendee field, behind TanStack
- * Query (per-query cache + request dedupe). Unmounting the owning form
- * cancels the pending debounce and aborts any in-flight request.
+ * Guest suggestions for the attendee field: the user's past guests from
+ * every account, then contacts from accounts that granted them. Behind
+ * TanStack Query (per-query cache + request dedupe). Unmounting the owning
+ * form cancels the pending debounce and aborts any in-flight request.
  */
 export function useContactSuggestions(): UseContactSuggestionsResult {
-  const canSuggestContacts = useUserMetadataStore(selectCanSuggestContacts);
+  const hasConnections = useUserMetadataStore(
+    (state) => selectSyncConnections(state).length > 0,
+  );
+  const contactsOfferConnection = useUserMetadataStore(
+    selectContactsOfferConnection,
+  );
   const queryClient = useQueryClient();
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -153,7 +162,7 @@ export function useContactSuggestions(): UseContactSuggestionsResult {
   );
 
   return {
-    canSuggestContacts,
-    suggestionSource: canSuggestContacts ? suggestionSource : undefined,
+    suggestionSource: hasConnections ? suggestionSource : undefined,
+    contactsOfferConnection,
   };
 }

@@ -15,25 +15,27 @@ import {
   mock,
 } from "bun:test";
 
-// WP-06: the "occasional, non-nagging" affordance (product decision 1).
-// Frequency is pinned here at the component level too: one mount per session
-// shows it, the next stays empty, and dismissal survives a new session.
+// The no-match prompt: names the account that lacks contacts and pins consent
+// to it. Frequency is pinned here at the component level too: one mount per
+// session shows it, the next stays empty, and dismissal survives a new
+// session.
 //
-// The web suite runs in ONE process and earlier files (Sidebar/CalendarList)
-// register process-wide mock.module stubs for useConnectGoogle — some without
-// a `connect` at all — so this file cannot reach the real hook -> AuthApi
-// path reliably. It follows the repo's delegating-mock pattern instead and
-// asserts the nudge's contract AT THE HOOK BOUNDARY: it asks for the
-// contacts feature and starts the flow on click. The features -> begin-body
-// wire threading is covered by useConnectGoogle.scope.test.tsx, which runs
-// before any module mock exists.
-const actualUseConnectGoogle = (
-  await import("@web/auth/providers/useConnectProvider")
-).useConnectGoogle;
-let isConnectGoogleMocked = true;
+// The web suite runs in ONE process and other files register process-wide
+// mock.module stubs for this module, so this file cannot reach the real hook
+// -> AuthApi path reliably. It follows the repo's delegating-mock pattern and
+// asserts the contract AT THE HOOK BOUNDARY: which provider and account, the
+// contacts feature, and starting the flow on click. Pinning the account into
+// the begin body is covered by useConnectProvider.scope.test.tsx.
+const actual = await import("@web/auth/providers/useConnectProvider");
+// Not named use*: the delegate below is a plain pass-through, not a hook site.
+const actualConnectProvider = actual.useConnectProvider;
+let isConnectMocked = true;
 const connectMock = mock();
-const mockUseConnectGoogle = mock(
-  (_options?: Parameters<typeof actualUseConnectGoogle>[0]) => ({
+const mockUseConnectProvider = mock(
+  (
+    _kind: Parameters<typeof actual.useConnectProvider>[0],
+    _options?: Parameters<typeof actual.useConnectProvider>[1],
+  ) => ({
     commandAction: null,
     connect: connectMock,
     connection: null,
@@ -45,38 +47,34 @@ const mockUseConnectGoogle = mock(
   }),
 );
 mock.module("@web/auth/providers/useConnectProvider", () => ({
-  useConnectGoogle: (
-    ...args: Parameters<typeof actualUseConnectGoogle>
-  ): ReturnType<typeof actualUseConnectGoogle> =>
-    isConnectGoogleMocked
-      ? (mockUseConnectGoogle(...args) as unknown as ReturnType<
-          typeof actualUseConnectGoogle
+  useConnectGoogle: actual.useConnectGoogle,
+  useConnectProvider: (
+    ...args: Parameters<typeof actual.useConnectProvider>
+  ): ReturnType<typeof actual.useConnectProvider> =>
+    isConnectMocked
+      ? (mockUseConnectProvider(...args) as unknown as ReturnType<
+          typeof actual.useConnectProvider
         >)
-      : actualUseConnectGoogle(...args),
+      : actualConnectProvider(...args),
 }));
 
 afterAll(() => {
-  // Hand later files the real hook — mock.module itself is process-wide.
-  isConnectGoogleMocked = false;
+  // Hand later files the real hook; mock.module itself is process-wide.
+  isConnectMocked = false;
 });
 
-const seedHealthyConnection = () => {
-  userMetadataActions.set({
-    connections: [
-      createMockConnection("a@example.com", {
-        provider: "google",
-        canSuggestContacts: false,
-      }),
-    ],
-  });
-};
+const connection = createMockConnection("b@example.com", {
+  provider: "microsoft",
+  canSuggestContacts: false,
+});
+const PROMPT = "Turn on contacts for b@example.com";
 
 describe("EnableContactSuggestionsNudge", () => {
   beforeEach(() => {
     localStorage.clear();
     resetContactsNudgeSessionForTests();
-    seedHealthyConnection();
-    mockUseConnectGoogle.mockClear();
+    userMetadataActions.set({ connections: [connection] });
+    mockUseConnectProvider.mockClear();
     connectMock.mockClear();
   });
 
@@ -86,31 +84,30 @@ describe("EnableContactSuggestionsNudge", () => {
   });
 
   it("shows once per session: the first mount renders, the second stays empty", () => {
-    renderWithStore(<EnableContactSuggestionsNudge />);
-    expect(
-      screen.getByRole("button", { name: "Enable contact suggestions" }),
-    ).toBeInTheDocument();
-    // Inline affordance only — never a modal.
+    renderWithStore(<EnableContactSuggestionsNudge connection={connection} />);
+    expect(screen.getByText(/Missing someone\?/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: PROMPT })).toBeInTheDocument();
+    // Inline affordance only, never a modal.
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     cleanup();
 
-    // Next menu open in the SAME session: nudge-free.
-    renderWithStore(<EnableContactSuggestionsNudge />);
+    // Next showing in the SAME session: prompt-free.
+    renderWithStore(<EnableContactSuggestionsNudge connection={connection} />);
     expect(
-      screen.queryByRole("button", { name: "Enable contact suggestions" }),
+      screen.queryByRole("button", { name: PROMPT }),
     ).not.toBeInTheDocument();
   });
 
   it("dismissal hides it now and persists to localStorage for future sessions", async () => {
     const user = userEvent.setup();
-    renderWithStore(<EnableContactSuggestionsNudge />);
+    renderWithStore(<EnableContactSuggestionsNudge connection={connection} />);
 
     await user.click(
       screen.getByRole("button", { name: "Dismiss contact suggestions tip" }),
     );
 
     expect(
-      screen.queryByRole("button", { name: "Enable contact suggestions" }),
+      screen.queryByRole("button", { name: PROMPT }),
     ).not.toBeInTheDocument();
     expect(localStorage.getItem("compass.contactsNudge.dismissed")).toBe(
       "true",
@@ -119,25 +116,22 @@ describe("EnableContactSuggestionsNudge", () => {
     // A NEW session (fresh session flag) still honors the dismissal.
     cleanup();
     resetContactsNudgeSessionForTests();
-    renderWithStore(<EnableContactSuggestionsNudge />);
+    renderWithStore(<EnableContactSuggestionsNudge connection={connection} />);
     expect(
-      screen.queryByRole("button", { name: "Enable contact suggestions" }),
+      screen.queryByRole("button", { name: PROMPT }),
     ).not.toBeInTheDocument();
   });
 
-  it("asks the connect flow for the contacts feature and starts it on click", async () => {
+  it("asks for contacts on that exact account and starts it on click", async () => {
     const user = userEvent.setup();
-    renderWithStore(<EnableContactSuggestionsNudge />);
+    renderWithStore(<EnableContactSuggestionsNudge connection={connection} />);
 
-    // The nudge's whole purpose: incremental re-consent WITH contacts.
-    expect(mockUseConnectGoogle).toHaveBeenCalled();
-    expect(mockUseConnectGoogle.mock.calls[0]?.[0]).toEqual({
-      features: ["contacts"],
-    });
+    expect(mockUseConnectProvider.mock.calls[0]).toEqual([
+      "microsoft",
+      { connection, features: ["contacts"] },
+    ]);
 
-    await user.click(
-      screen.getByRole("button", { name: "Enable contact suggestions" }),
-    );
+    await user.click(screen.getByRole("button", { name: PROMPT }));
     expect(connectMock).toHaveBeenCalledTimes(1);
   });
 });
