@@ -9,6 +9,12 @@ import { settingsActions } from "@web/settings/settings.store";
 
 export const MEETING_PAGE_PENDING_CMD_ID = "meeting-page-pending";
 
+/** Ids the loaded row can take; Recent shows the pending row in their place. */
+export const MEETING_PAGE_LOADED_CMD_IDS: readonly string[] = [
+  "open-meeting-page",
+  "setup-meeting-page",
+];
+
 const MEETING_PAGE_KEYWORDS = ["booking", "meeting link", "share", "meet"];
 
 /** Opens the public meeting page or starts setup, depending on host state. */

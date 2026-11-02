@@ -28,7 +28,11 @@ import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmd
 import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useDemoEventsCmdItems";
 import { useEventFormCmdItems } from "@web/components/CommandPalette/hooks/useEventFormCmdItems";
 import { useLogoutCmdItems } from "@web/components/CommandPalette/hooks/useLogoutCmdItems";
-import { useMeetingPageCmdItems } from "@web/components/CommandPalette/hooks/useMeetingPageCmdItems";
+import {
+  MEETING_PAGE_LOADED_CMD_IDS,
+  MEETING_PAGE_PENDING_CMD_ID,
+  useMeetingPageCmdItems,
+} from "@web/components/CommandPalette/hooks/useMeetingPageCmdItems";
 import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
 import { useShortcutTipsCmdItems } from "@web/components/CommandPalette/hooks/useShortcutTipsCmdItems";
 import { useShowAccountsCmdItems } from "@web/components/CommandPalette/hooks/useShowAccountsCmdItems";
@@ -518,8 +522,15 @@ export const CommandPalette = ({
   const itemsById = new Map<string, CommandItem>(
     sections.flatMap((section) => section.items.map((item) => [item.id, item])),
   );
+  // A recent meeting-page command resolves to the pending row while the page
+  // loads, so Recent keeps its height instead of growing a row a beat later.
+  const resolveRecent = (id: string) =>
+    itemsById.get(id) ??
+    (MEETING_PAGE_LOADED_CMD_IDS.includes(id)
+      ? itemsById.get(MEETING_PAGE_PENDING_CMD_ID)
+      : undefined);
   const recentItems = recentCommandIds
-    .map((id) => itemsById.get(id))
+    .map(resolveRecent)
     .filter((item): item is CommandItem => item !== undefined)
     .slice(0, MAX_RECENT_ITEMS);
   const sectionsWithRecent: CommandSection[] =
