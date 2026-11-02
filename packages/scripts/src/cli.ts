@@ -48,6 +48,13 @@ export default class CompassCLI {
         await runBackfillExpiredLocalTrials();
         break;
       }
+      case cmd === "backfill-meeting-types": {
+        const { runBackfillMeetingTypes } = await import(
+          "@scripts/commands/backfill-meeting-types"
+        );
+        await runBackfillMeetingTypes();
+        break;
+      }
       case cmd === "backfill-identities": {
         const { runBackfillIdentities } = await import(
           "@scripts/commands/backfill-identities"
@@ -158,6 +165,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "expire stale card-less local trials still stored as trialing (--apply to write)",
+      );
+
+    program
+      .command("backfill-meeting-types")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "store the default meeting type on booking pages that have none (--apply to write)",
       );
 
     program
