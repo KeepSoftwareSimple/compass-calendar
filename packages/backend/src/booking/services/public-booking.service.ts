@@ -27,6 +27,8 @@ import {
   PublicGetBookingReservationResponseSchema,
   RescheduleBookingReservationInputSchema,
   RescheduleBookingReservationResponseSchema,
+  resolveBookingMeetingType,
+  resolveBookingMeetingTypes,
   toPublicBookingPage,
 } from "@core/types/booking.contracts";
 import { createsGoogleMeetFromConference } from "@core/types/calendar.contracts";
@@ -347,6 +349,25 @@ const bookingEventDescription = (
   return `${escapeHtml(trimmed).replace(/\n/g, "<br>")}<br><br>${links}`;
 };
 
+/**
+ * The meeting type fields to copy forward, omitted rather than undefined so
+ * Mongo never stores a null the strict record schema would reject.
+ */
+const meetingTypeSnapshot = (source: {
+  meetingTypeId?: string;
+  meetingTypeLabel?: string;
+}): { meetingTypeId?: string; meetingTypeLabel?: string } => ({
+  ...(source.meetingTypeId ? { meetingTypeId: source.meetingTypeId } : {}),
+  ...(source.meetingTypeLabel
+    ? { meetingTypeLabel: source.meetingTypeLabel }
+    : {}),
+});
+
+const meetingTypeLabelFor = (reservation: BookingReservationRecord) =>
+  reservation.meetingTypeLabel
+    ? { meetingTypeLabel: reservation.meetingTypeLabel }
+    : {};
+
 const durationMinutesForReservation = (
   reservation: BookingReservationRecord,
   pageDurationMinutes: number,
@@ -449,6 +470,7 @@ const presentReservation = async (
       reservation,
       page.durationMinutes,
     ),
+    ...meetingTypeLabelFor(reservation),
     hostDisplayName,
     status: reservation.status,
     bookingSlug: page.bookingSlug,
@@ -493,26 +515,31 @@ const nextGuestNotes = (
 };
 
 /**
- * The confirmed starts the slot engine must treat as taken, minus the guest's
- * own reservation when it is the one being moved.
+ * The confirmed reservations the slot engine must treat as taken, minus the
+ * guest's own reservation when it is the one being moved. Each keeps its own
+ * length, so a 60 minute booking blocks a full hour on a page whose first
+ * meeting type is 30 minutes.
  *
  * `computeSlotsForPage` and `assertSlotAvailable` must agree exactly on this
  * set for the same reason they share {@link slotEngineInputForPage}: a slot
  * the guest was offered must not be rejected (or accepted) differently by the
  * re-check.
  */
-const confirmedStartsForWindow = async (
+const confirmedIntervalsForWindow = async (
   page: BookingPageRecord,
   windowStart: Date,
   windowEnd: Date,
   omitReservationStart: Date | undefined,
-): Promise<Date[]> => {
+): Promise<{ start: Date; end: Date }[]> => {
   const omitStartMs = omitReservationStart?.getTime();
-  const starts = await bookingReservationRepository.listConfirmedStartsByPageId(
-    page._id,
-    confirmedReservationScanRange(page, windowStart, windowEnd),
-  );
-  return starts.filter((start) => start.getTime() !== omitStartMs);
+  const intervals =
+    await bookingReservationRepository.listConfirmedIntervalsByPageId(
+      page._id,
+      confirmedReservationScanRange(windowStart, windowEnd),
+    );
+  return intervals
+    .filter((interval) => interval.slotStart.getTime() !== omitStartMs)
+    .map((interval) => ({ start: interval.slotStart, end: interval.slotEnd }));
 };
 
 /**
@@ -547,12 +574,13 @@ const inFlightForGuestMutation = async (
  */
 const slotEngineInputForPage = (
   page: BookingPageRecord,
+  durationMinutes: number,
   availability: BusyAvailabilityResponse,
-  confirmedReservationStarts: readonly Date[],
+  confirmedReservations: readonly { start: Date; end: Date }[],
   window: { now: Date; windowStart: Date; windowEnd: Date },
 ): ComputeBookingSlotsInput => ({
   timeZone: page.timeZone,
-  durationMinutes: page.durationMinutes,
+  durationMinutes: BookingDurationMinutesSchema.parse(durationMinutes),
   weeklyAvailability: page.weeklyAvailability,
   minNoticeHours: page.minNoticeHours,
   maxHorizonDays: page.maxHorizonDays,
@@ -561,8 +589,11 @@ const slotEngineInputForPage = (
     .map((interval) => ({
       start: new Date(interval.start),
       end: new Date(interval.end),
-    })),
-  confirmedReservationStarts,
+    }))
+    .concat(confirmedReservations),
+  // Reservations arrive above as real intervals: meeting types can differ in
+  // length, and the engine would stretch each start to `durationMinutes`.
+  confirmedReservationStarts: [],
   now: window.now,
   windowStart: window.windowStart,
   windowEnd: window.windowEnd,
@@ -660,6 +691,7 @@ export class PublicBookingService {
         slotStart: DateTimeSchema.parse(reservation.slotStart.toISOString()),
         slotEnd: DateTimeSchema.parse(reservation.slotEnd.toISOString()),
         durationMinutes: reservationDurationMinutes(reservation),
+        ...meetingTypeLabelFor(reservation),
         meetLink: reservation.calendarEventId
           ? (meetLinksByEventId.get(reservation.calendarEventId) ?? null)
           : null,
@@ -690,7 +722,11 @@ export class PublicBookingService {
   ): Promise<BookingSlotsResponse> {
     const page = await resolveEnabledPage(slug);
     const query = parseSlotsQuery(rawQuery);
-    return this.computeSlotsForPage(page, query);
+    const meetingType = resolveBookingMeetingType(
+      resolveBookingMeetingTypes(page),
+      query.meetingTypeId,
+    );
+    return this.computeSlotsForPage(page, query, meetingType.durationMinutes);
   }
 
   async getReservationSlots(
@@ -712,12 +748,17 @@ export class PublicBookingService {
       end: query.end,
       timeZone: query.timeZone,
     });
-    const response = await this.computeSlotsForPage(page, slotsQuery, {
-      excludeEventIds: reservation.calendarEventId
-        ? [reservation.calendarEventId as EventId]
-        : undefined,
-      omitReservationStart: reservation.slotStart,
-    });
+    const response = await this.computeSlotsForPage(
+      page,
+      slotsQuery,
+      durationMinutesForReservation(reservation, page.durationMinutes),
+      {
+        excludeEventIds: reservation.calendarEventId
+          ? [reservation.calendarEventId as EventId]
+          : undefined,
+        omitReservationStart: reservation.slotStart,
+      },
+    );
     const currentStartMs = reservation.slotStart.getTime();
     return BookingSlotsResponseSchema.parse({
       ...response,
@@ -730,6 +771,7 @@ export class PublicBookingService {
   private async computeSlotsForPage(
     page: BookingPageRecord,
     query: { start: string; end: string },
+    durationMinutes: number,
     options: {
       excludeEventIds?: readonly EventId[];
       omitReservationStart?: Date;
@@ -779,14 +821,14 @@ export class PublicBookingService {
       });
     }
 
-    const confirmedStarts = await confirmedStartsForWindow(
+    const confirmed = await confirmedIntervalsForWindow(
       page,
       windowStart,
       windowEnd,
       options.omitReservationStart,
     );
     const slotStarts = computeBookingSlots(
-      slotEngineInputForPage(page, availability, confirmedStarts, {
+      slotEngineInputForPage(page, durationMinutes, availability, confirmed, {
         now,
         windowStart,
         windowEnd,
@@ -799,7 +841,7 @@ export class PublicBookingService {
         slotStart,
         slotEnd: slotEndForStart(
           new Date(slotStart),
-          page.durationMinutes,
+          durationMinutes,
         ).toISOString(),
       })),
     });
@@ -846,15 +888,18 @@ export class PublicBookingService {
       );
     }
 
-    const confirmedStarts = await confirmedStartsForWindow(
+    const confirmed = await confirmedIntervalsForWindow(
       page,
       slotStart,
       slotEnd,
       options.omitReservationStart,
     );
+    const durationMinutes = Math.round(
+      (slotEnd.getTime() - slotStart.getTime()) / 60_000,
+    );
     const allowedStarts = new Set(
       computeBookingSlots(
-        slotEngineInputForPage(page, availability, confirmedStarts, {
+        slotEngineInputForPage(page, durationMinutes, availability, confirmed, {
           now,
           windowStart: slotStart,
           windowEnd: slotEnd,
@@ -871,7 +916,11 @@ export class PublicBookingService {
     await assertHostAllowsGuestWrites(page.userId);
     const input = CreateBookingReservationInputSchema.parse(rawInput);
     assertGuestEmail(input.guestEmail);
-    assertPinnedDuration(input.durationMinutes, page.durationMinutes);
+    const meetingType = resolveBookingMeetingType(
+      resolveBookingMeetingTypes(page),
+      input.meetingTypeId,
+    );
+    assertPinnedDuration(input.durationMinutes, meetingType.durationMinutes);
 
     const slotStart = new Date(input.slotStart);
     const slotEnd = slotEndForStart(slotStart, input.durationMinutes);
@@ -931,6 +980,8 @@ export class PublicBookingService {
       notes: input.notes?.trim() ?? null,
       guestTimeZone: input.guestTimeZone,
       cancelToken,
+      meetingTypeId: meetingType.id,
+      meetingTypeLabel: meetingType.label,
     });
     return this.resumeCreateOperation(page, operation);
   }
@@ -1026,10 +1077,18 @@ export class PublicBookingService {
     }
     const page = await resolveReservationPublicPage(reservation);
     await assertHostAllowsGuestWrites(page.userId);
-    assertPinnedDuration(input.durationMinutes, page.durationMinutes);
+    // A moved meeting keeps its own length. Clients that predate meeting
+    // types send the page duration, which is accepted and then ignored.
+    const ownMinutes = durationMinutesForReservation(
+      reservation,
+      page.durationMinutes,
+    );
+    if (input.durationMinutes !== page.durationMinutes) {
+      assertPinnedDuration(input.durationMinutes, ownMinutes);
+    }
 
     const slotStart = new Date(input.slotStart);
-    const slotEnd = slotEndForStart(slotStart, input.durationMinutes);
+    const slotEnd = slotEndForStart(slotStart, ownMinutes);
     const hostDisplayName = await getHostDisplayName(page.userId);
 
     if (slotStart.getTime() === reservation.slotStart.getTime()) {
@@ -1639,6 +1698,7 @@ export class PublicBookingService {
           guestEmail: current.guestEmail,
           notes: current.notes,
           guestTimeZone: current.guestTimeZone,
+          ...meetingTypeSnapshot(current),
           status: "confirmed",
           calendarEventId: current.eventId,
           cancelTokenHash: hashCancelToken(current.cancelToken),

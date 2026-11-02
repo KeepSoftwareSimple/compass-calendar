@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { BookingMeetingTypeIdSchema } from "@core/types/booking.contracts";
 import { TimeZoneSchema } from "@core/types/domain-primitives";
 import { zObjectId } from "@core/types/object-id.schema";
 
@@ -50,6 +51,8 @@ export const CreateBookingOperationRecordSchema =
     notes: z.string().trim().max(4000).nullable(),
     guestTimeZone: TimeZoneSchema,
     cancelToken: z.string().trim().min(1).max(256),
+    meetingTypeId: BookingMeetingTypeIdSchema.optional(),
+    meetingTypeLabel: z.string().trim().min(1).max(256).optional(),
   });
 export type CreateBookingOperationRecord = z.infer<
   typeof CreateBookingOperationRecordSchema

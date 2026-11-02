@@ -202,7 +202,7 @@ class BookingPageService {
           eligible,
         )
       : [];
-    const fields = mapPutInputToRecordFields(input);
+    const fields = mapPutInputToRecordFields(input, existing);
     let bookingSlug = existing?.bookingSlug;
     let slugSource: SlugSource = "allocated";
 
