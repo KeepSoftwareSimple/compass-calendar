@@ -83,12 +83,13 @@ export async function completeProviderAuthCallback({
       queuePendingShellToast({ variant: "info", message: result.message });
     } else if (result.reason === "oauth_missing_scopes") {
       const missingScopes = result.missingScopes ?? [];
-      if (
-        provider === "google" &&
-        result.signupFlow === true &&
-        missingScopes.length > 0
-      ) {
-        missingPermissionsActions.openGoogleSignupRecovery(missingScopes);
+      // Every Google sign-in that comes back short on calendar scopes, from
+      // signup or log in, gets the short one-click retry. Other providers
+      // keep the per-permission explainer.
+      if (provider === "google" && missingScopes.length > 0) {
+        missingPermissionsActions.openGoogleSignupRecovery(missingScopes, {
+          signupFlow: result.signupFlow === true,
+        });
       } else {
         // Unchecking a permission on the consent screen deserves an
         // explanation and a one-click retry, not a toast.

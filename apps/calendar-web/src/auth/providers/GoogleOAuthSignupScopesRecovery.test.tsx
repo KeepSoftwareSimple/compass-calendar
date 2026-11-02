@@ -15,6 +15,7 @@ import {
 import {
   GOOGLE_SIGNUP_SCOPES_RECOVERY_RETRY_LABEL,
   GOOGLE_SIGNUP_SCOPES_RECOVERY_TITLE,
+  MISSING_PERMISSIONS_NOT_NOW_LABEL,
 } from "@web/auth/providers/provider-copy.util";
 import {
   afterAll,
@@ -112,6 +113,43 @@ describe("GoogleOAuthSignupScopesRecovery", () => {
     await user.keyboard("{Enter}");
 
     expect(startGoogleAuthorization).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a log in retry off the signup trial path", async () => {
+    const user = userEvent.setup();
+    missingPermissionsActions.openGoogleSignupRecovery(
+      [GOOGLE_SCOPE_CALENDAR_EVENTS],
+      { signupFlow: false },
+    );
+    render(<GoogleOAuthSignupScopesRecovery />);
+
+    await user.keyboard("{Enter}");
+
+    expect(startGoogleAuthorization).toHaveBeenCalledTimes(1);
+    expect(lastOptions).toMatchObject({
+      signupFlow: false,
+      prompt: "consent",
+      scopes: [GOOGLE_SCOPE_CALENDAR_EVENTS],
+    });
+  });
+
+  it("closes on Escape with a visible Esc keycap and does not retry", async () => {
+    const user = userEvent.setup();
+    missingPermissionsActions.openGoogleSignupRecovery([
+      GOOGLE_SCOPE_CALENDAR_EVENTS,
+    ]);
+    render(<GoogleOAuthSignupScopesRecovery />);
+
+    expect(
+      withinButton(MISSING_PERMISSIONS_NOT_NOW_LABEL).getByText("Esc"),
+    ).toBeTruthy();
+
+    await user.keyboard("{Escape}");
+
+    expect(startGoogleAuthorization).not.toHaveBeenCalled();
+    expect(
+      selectMissingPermissionsSurface(useMissingPermissionsStore.getState()),
+    ).toBeNull();
   });
 });
 

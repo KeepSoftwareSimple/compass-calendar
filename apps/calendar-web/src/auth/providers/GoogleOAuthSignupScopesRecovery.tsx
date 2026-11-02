@@ -8,6 +8,7 @@ import { useStartProviderAuthorization } from "@web/auth/providers/authorization
 import {
   missingPermissionsActions,
   selectMissingPermissionsMissingScopes,
+  selectMissingPermissionsSignupFlow,
   selectMissingPermissionsSurface,
   useMissingPermissionsStore,
 } from "@web/auth/providers/missing-permissions.store";
@@ -15,6 +16,7 @@ import {
   GOOGLE_SIGNUP_SCOPES_RECOVERY_MESSAGE,
   GOOGLE_SIGNUP_SCOPES_RECOVERY_RETRY_LABEL,
   GOOGLE_SIGNUP_SCOPES_RECOVERY_TITLE,
+  MISSING_PERMISSIONS_NOT_NOW_LABEL,
 } from "@web/auth/providers/provider-copy.util";
 import {
   OverlayPanel,
@@ -29,13 +31,17 @@ export const GoogleOAuthSignupScopesRecovery: FC = () => {
   const missingScopes = useMissingPermissionsStore(
     selectMissingPermissionsMissingScopes,
   );
+  const signupFlow = useMissingPermissionsStore(
+    selectMissingPermissionsSignupFlow,
+  );
   const isOpen = surface === "google_signup_recovery";
   const retryButtonRef = useRef<HTMLButtonElement>(null);
+  const dismissButtonRef = useRef<HTMLButtonElement>(null);
   useAppLockReason("googleOAuthSignupScopesRecovery", isOpen);
 
   const { startAuthorization } = useStartProviderAuthorization("google", {
     intent: "signIn",
-    signupFlow: true,
+    signupFlow,
     prompt: "consent",
     scopes: missingScopes,
     includeGrantedScopes: true,
@@ -60,8 +66,12 @@ export const GoogleOAuthSignupScopesRecovery: FC = () => {
       align="start"
       initialFocusRef={retryButtonRef}
       message={GOOGLE_SIGNUP_SCOPES_RECOVERY_MESSAGE}
+      onDismiss={missingPermissionsActions.close}
       onKeyDown={(event) => {
-        if (isPlainEnterKey(event)) {
+        if (
+          isPlainEnterKey(event) &&
+          event.target !== dismissButtonRef.current
+        ) {
           event.preventDefault();
           event.stopPropagation();
           handleRetry();
@@ -72,6 +82,13 @@ export const GoogleOAuthSignupScopesRecovery: FC = () => {
       widthClassName="w-120"
     >
       <OverlayPanelActions align="start">
+        <OverlayPanelActionButton
+          ref={dismissButtonRef}
+          onClick={missingPermissionsActions.close}
+          shortcut="Esc"
+        >
+          {MISSING_PERMISSIONS_NOT_NOW_LABEL}
+        </OverlayPanelActionButton>
         <OverlayPanelActionButton
           ref={retryButtonRef}
           onClick={handleRetry}

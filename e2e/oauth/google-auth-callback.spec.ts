@@ -233,7 +233,7 @@ test("finishes a saved Google sign-in callback", async ({ page }) => {
 
 // Unchecking a required permission on Google's consent screen used to dump
 // the user back on the calendar with a toast and no way to retry.
-test("shows the permissions modal and retries with prompt=consent", async ({
+test("shows the calendar access screen and retries with prompt=consent", async ({
   page,
 }) => {
   const state = "google-missing-scopes";
@@ -265,8 +265,9 @@ test("shows the permissions modal and retries with prompt=consent", async ({
     return route.abort();
   });
 
+  await expect(page.getByRole("button", { name: "Not now" })).toBeVisible();
   await page
-    .getByRole("button", { name: "Try again with Google" })
+    .getByRole("button", { name: "Try again" })
     .click({ noWaitAfter: true });
 
   await expect
@@ -274,7 +275,9 @@ test("shows the permissions modal and retries with prompt=consent", async ({
     .toBe(true)
     .catch(() => undefined);
   if (capturedUrl) {
-    expect((capturedUrl as URL).searchParams.get("prompt")).toBe("consent");
+    const url = capturedUrl as URL;
+    expect(url.searchParams.get("prompt")).toBe("consent");
+    expect(url.searchParams.get("include_granted_scopes")).toBe("true");
   }
 });
 
