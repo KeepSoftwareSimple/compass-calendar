@@ -1,5 +1,8 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { ensureSidebarOpen } from "../utils/event-test-utils";
+import {
+  DETERMINISTIC_E2E_CLOCK_NO_SAMPLE_EVENT,
+  ensureSidebarOpen,
+} from "../utils/event-test-utils";
 
 type LayoutBox = { x: number; y: number; width: number; height: number };
 
@@ -30,6 +33,12 @@ function verticalGapPx(upper: LayoutBox, lower: LayoutBox): number {
 }
 
 async function prepareSession(page: Page) {
+  // This spec measures the stack's resting bottom inset. A sample event in
+  // progress raises the Up Next banner, which legitimately lifts the stack
+  // (see resolveUpNextBannerClearancePx), so without a pinned clock these
+  // assertions fail for the hours the demo seed puts an event under the
+  // stack. Pin an hour with no sample event running.
+  await page.clock.install({ time: DETERMINISTIC_E2E_CLOCK_NO_SAMPLE_EVENT });
   await page.route(/version\.json(\?.*)?$/, async (route) => {
     await route.fulfill({
       status: 200,
