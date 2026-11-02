@@ -101,6 +101,28 @@ describe("BookingMeetingTypesField", () => {
     expect(name).toHaveValue("eep div");
   });
 
+  it("Enter on a focused row edits its name; Enter in the name returns", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<Harness initial={twoTypes} />);
+    rows()[1]?.focus();
+    await user.keyboard("{Enter}");
+    const name = screen.getByLabelText("Meeting type 2 name");
+    expect(name).toHaveFocus();
+    await user.keyboard("{Delete}");
+    expect(rows()).toHaveLength(2);
+    await user.keyboard("{Enter}");
+    expect(rows()[1]).toHaveFocus();
+    await user.keyboard("{Delete}");
+    expect(rows()).toHaveLength(1);
+  });
+
+  it("shows Enter and Delete keycaps for the focused row", () => {
+    render(<Harness initial={twoTypes} />);
+    const hint = screen.getByTestId("meeting-types-keys-hint");
+    expect(hint).toHaveTextContent("edits");
+    expect(hint).toHaveTextContent("removes a focused type");
+  });
+
   it("the remove button removes its row", async () => {
     const user = userEvent.setup({ delay: null });
     render(<Harness initial={twoTypes} />);

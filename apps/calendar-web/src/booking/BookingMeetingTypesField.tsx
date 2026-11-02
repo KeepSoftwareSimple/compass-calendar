@@ -31,12 +31,16 @@ const labelInputId = (id: string) => `booking-meeting-type-label-${id}`;
 
 type Focus = { kind: "label" | "row"; id: string } | { kind: "add" };
 
+const hasModifier = (event: KeyboardEvent<HTMLElement>) =>
+  event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
+
 const isRowDeleteKey = (event: KeyboardEvent<HTMLElement>) =>
-  (event.key === "Delete" || event.key === "Backspace") &&
-  !event.metaKey &&
-  !event.ctrlKey &&
-  !event.altKey &&
-  !event.shiftKey;
+  (event.key === "Delete" || event.key === "Backspace") && !hasModifier(event);
+
+const isEnterKey = (event: KeyboardEvent<HTMLElement>) =>
+  event.key === "Enter" &&
+  !hasModifier(event) &&
+  !event.nativeEvent.isComposing;
 
 interface BookingMeetingTypesFieldProps {
   form: Pick<AdminPutBookingPageInput, "durationMinutes" | "meetingTypes">;
@@ -45,9 +49,10 @@ interface BookingMeetingTypesFieldProps {
 }
 
 /**
- * One to three meeting types. T adds one (Settings shortcut), Delete removes
- * the focused row. Delete only acts on the row itself, never while typing in
- * its name, so editing text keeps Backspace and Delete.
+ * One to three meeting types. T adds one (Settings shortcut). On a focused
+ * row, Enter edits its name and Delete removes it; Enter in the name returns
+ * to the row. Delete only acts on the row itself, never while typing in its
+ * name, so editing text keeps Backspace and Delete.
  */
 export function BookingMeetingTypesField({
   form,
@@ -122,6 +127,12 @@ export function BookingMeetingTypesField({
               key={type.id}
               onKeyDown={(event) => {
                 if (event.target !== event.currentTarget) return;
+                if (isEnterKey(event)) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setPendingFocus({ kind: "label", id: type.id });
+                  return;
+                }
                 if (!isRowDeleteKey(event) || !canRemove) return;
                 event.preventDefault();
                 event.stopPropagation();
@@ -143,6 +154,12 @@ export function BookingMeetingTypesField({
                 onChange={(event) =>
                   onChange(setMeetingTypeLabel(form, index, event.target.value))
                 }
+                onKeyDown={(event) => {
+                  if (!isEnterKey(event)) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setPendingFocus({ kind: "row", id: type.id });
+                }}
                 type="text"
                 value={type.label}
                 {...(index === errorAnchorIndex
@@ -195,7 +212,7 @@ export function BookingMeetingTypesField({
           );
         })}
       </ul>
-      <div className="flex">
+      <div className="flex items-center justify-between gap-2">
         <OverlayPanelActionButton
           aria-hidden={canAdd ? undefined : true}
           aria-keyshortcuts="T"
@@ -209,6 +226,15 @@ export function BookingMeetingTypesField({
         >
           Add type
         </OverlayPanelActionButton>
+        <p
+          className="flex pointer-coarse:hidden items-center gap-1 text-text-muted text-xs"
+          data-testid="meeting-types-keys-hint"
+        >
+          <ShortcutKeys keys="Enter" />
+          <span>edits</span>
+          <ShortcutKeys className="ml-1" keys="Delete" />
+          <span>removes a focused type</span>
+        </p>
       </div>
     </div>
   );
