@@ -2,6 +2,7 @@ import {
   isBookingDateKey,
   isBookingMonthKey,
 } from "@booking-web/booking/public-booking.keys";
+import { BookingMeetingTypeIdSchema } from "@core/types/booking.contracts";
 import { isValidTimeZone } from "@web/timezone/browser-timezone";
 
 export interface PublicBookingSearch {
@@ -9,6 +10,8 @@ export interface PublicBookingSearch {
   date?: string;
   slot?: string;
   tz?: string;
+  /** Meeting type id. Unknown ids fall back to type #1 on the page. */
+  type?: string;
 }
 
 /**
@@ -36,7 +39,12 @@ export function validatePublicBookingSearch(
     typeof search["tz"] === "string" && isValidTimeZone(search["tz"])
       ? search["tz"]
       : undefined;
-  return { month, date, slot, tz };
+  const type =
+    typeof search["type"] === "string" &&
+    BookingMeetingTypeIdSchema.safeParse(search["type"]).success
+      ? search["type"]
+      : undefined;
+  return { month, date, slot, tz, ...(type ? { type } : {}) };
 }
 
 /**

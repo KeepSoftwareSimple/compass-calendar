@@ -68,6 +68,9 @@ const PublicBookingApi = {
       end: parsed.end,
       timeZone: parsed.timeZone,
     });
+    if (parsed.meetingTypeId) {
+      params.set("meetingTypeId", parsed.meetingTypeId);
+    }
     const data = await publicBookingHttp.get<unknown>(
       `/booking/pages/${encodeURIComponent(slug)}/slots?${params.toString()}`,
       signal,
