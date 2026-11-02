@@ -60,7 +60,12 @@ const shortcutIdForEvent = (
     return hasBooking || page === "booking" ? "nav-booking" : null;
 
   const key = normalizedKeyboardKey(event);
-  if (page === "booking" && isModEnter(event)) return "save-booking";
+  if (page === "booking") {
+    if (isModEnter(event)) return "save-booking";
+    // Bare T is skipped while typing (editable-target guard below).
+    if (key === "t" && !hasCommandModifier(event)) return "add-meeting-type";
+    return null;
+  }
   if (page === "billing") {
     if (key === "s") return "start-trial";
     if (key === "c") return "cancel-subscription";

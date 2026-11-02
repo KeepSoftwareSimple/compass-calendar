@@ -15,7 +15,6 @@ import {
   type AdminPutBookingPageInput,
   BOOKING_MAX_HORIZON_DAYS,
   BOOKING_MAX_MIN_NOTICE_HOURS,
-  type BookingDurationMinutes,
   isSavedBookingPage,
 } from "@core/types/booking.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
@@ -40,6 +39,7 @@ import { BookingConnectPrompt } from "@web/booking/BookingConnectPrompt";
 import { BookingDestinationCalendarField } from "@web/booking/BookingDestinationCalendarField";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
 import { BookingMeetingLinkField } from "@web/booking/BookingMeetingLinkField";
+import { BookingMeetingTypesField } from "@web/booking/BookingMeetingTypesField";
 import { BookingMoreOptions } from "@web/booking/BookingMoreOptions";
 import { BookingNumberField } from "@web/booking/BookingNumberField";
 import { BookingSaveBar } from "@web/booking/BookingSaveBar";
@@ -53,7 +53,6 @@ import {
   useSaveBookingPageMutation,
 } from "@web/booking/booking.query";
 import {
-  BOOKING_DURATION_OPTIONS,
   bookingSlugParseMessage,
   defaultBlockingCalendarIdsForDestination,
   getAvailabilityReadableCalendars,
@@ -65,8 +64,8 @@ import {
   validateBookingForm,
 } from "@web/booking/booking.util";
 import { bookingAddressPrefix } from "@web/booking/booking-address.util";
-import { BOOKING_SELECT_CLASS_NAME } from "@web/booking/booking-form.styles";
 import { copyMeetingLinkThenToast } from "@web/booking/booking-link-copy";
+import { setMeetingTypeDuration } from "@web/booking/booking-meeting-types.util";
 import {
   type BookingField,
   bookingFieldAttrs,
@@ -765,7 +764,9 @@ export function BookingSettingsSection({
         onBack={handleSetupBack}
         onContinue={handleSetupContinue}
         onDestinationChange={handleDestinationChange}
-        onDurationChange={(durationMinutes) => updateForm({ durationMinutes })}
+        onDurationChange={(durationMinutes) =>
+          updateForm(setMeetingTypeDuration(form, 0, durationMinutes))
+        }
         onHoursChange={(weeklyAvailability) =>
           updateForm({ weeklyAvailability })
         }
@@ -809,30 +810,11 @@ export function BookingSettingsSection({
           />
         ) : null}
 
-        <div className="max-w-[50%]">
-          <BookingFieldLabel htmlFor="booking-duration">
-            Duration
-          </BookingFieldLabel>
-          <select
-            {...bookingFieldAttrs("duration")}
-            className={BOOKING_SELECT_CLASS_NAME}
-            id="booking-duration"
-            onChange={(event) =>
-              updateForm({
-                durationMinutes: Number(
-                  event.target.value,
-                ) as BookingDurationMinutes,
-              })
-            }
-            value={form.durationMinutes}
-          >
-            {BOOKING_DURATION_OPTIONS.map((minutes) => (
-              <option key={minutes} value={minutes}>
-                {minutes} minutes
-              </option>
-            ))}
-          </select>
-        </div>
+        <BookingMeetingTypesField
+          form={form}
+          invalid={saveError?.field === "duration"}
+          onChange={updateForm}
+        />
 
         <div className="flex flex-col gap-1" {...bookingFieldAttrs("hours")}>
           <BookingWeeklyHoursEditor
