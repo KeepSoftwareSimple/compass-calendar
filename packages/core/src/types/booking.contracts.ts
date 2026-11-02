@@ -80,6 +80,84 @@ export type BookingDurationMinutes = z.infer<
   typeof BookingDurationMinutesSchema
 >;
 
+/** Longest meeting a page can offer; bounds reservation overlap scans. */
+export const BOOKING_MAX_DURATION_MINUTES = 60;
+
+/** A page offers one to three meeting types. */
+export const BOOKING_MAX_MEETING_TYPES = 3;
+export const BOOKING_MEETING_TYPE_LABEL_MAX_LENGTH = 40;
+/** Type #1 of a page saved before meeting types existed. */
+export const BOOKING_DEFAULT_MEETING_TYPE_ID = "default";
+
+export const BookingMeetingTypeIdSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-z0-9-]{1,32}$/, { message: "Invalid meeting type id" });
+export type BookingMeetingTypeId = z.infer<typeof BookingMeetingTypeIdSchema>;
+
+export const BookingMeetingTypeSchema = z.strictObject({
+  id: BookingMeetingTypeIdSchema,
+  label: z
+    .string()
+    .trim()
+    .min(1, { message: "Add a name" })
+    .max(BOOKING_MEETING_TYPE_LABEL_MAX_LENGTH, {
+      message: `Use ${BOOKING_MEETING_TYPE_LABEL_MAX_LENGTH} characters or fewer`,
+    }),
+  durationMinutes: BookingDurationMinutesSchema,
+});
+export type BookingMeetingType = z.infer<typeof BookingMeetingTypeSchema>;
+
+export const BookingMeetingTypesSchema = z
+  .array(BookingMeetingTypeSchema)
+  .min(1)
+  .max(BOOKING_MAX_MEETING_TYPES)
+  .readonly()
+  .refine(
+    (types) => new Set(types.map((type) => type.id)).size === types.length,
+    { message: "Meeting type ids must be unique" },
+  );
+export type BookingMeetingTypes = z.infer<typeof BookingMeetingTypesSchema>;
+
+export const defaultMeetingTypeLabel = (
+  durationMinutes: BookingDurationMinutes,
+): string => `${durationMinutes} min meeting`;
+
+export const defaultMeetingTypes = (
+  durationMinutes: BookingDurationMinutes,
+): BookingMeetingTypes => [
+  {
+    id: BOOKING_DEFAULT_MEETING_TYPE_ID,
+    label: defaultMeetingTypeLabel(durationMinutes),
+    durationMinutes,
+  },
+];
+
+/**
+ * Read-time migration: a page saved with only `durationMinutes` offers that
+ * duration as type #1. Every reader goes through here, never through
+ * `meetingTypes` directly.
+ */
+export const resolveBookingMeetingTypes = (page: {
+  durationMinutes: BookingDurationMinutes;
+  meetingTypes?: BookingMeetingTypes | undefined;
+}): BookingMeetingTypes =>
+  page.meetingTypes && page.meetingTypes.length > 0
+    ? page.meetingTypes
+    : defaultMeetingTypes(page.durationMinutes);
+
+/** The requested type, or type #1 when the id is missing or unknown. */
+export const resolveBookingMeetingType = (
+  types: BookingMeetingTypes,
+  id: string | undefined,
+): BookingMeetingType => {
+  const first = types[0];
+  if (!first) {
+    throw new Error("A meeting page needs at least one meeting type");
+  }
+  return types.find((type) => type.id === id) ?? first;
+};
+
 const HH_MM_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const LocalTimeOfDaySchema = z
@@ -177,6 +255,7 @@ export const BookingPageSchema = z.strictObject({
   hostUserId: BookingUserIdSchema,
   enabled: z.boolean(),
   durationMinutes: BookingDurationMinutesSchema,
+  meetingTypes: BookingMeetingTypesSchema.optional(),
   destinationCalendarId: CalendarIdSchema,
   blockingCalendarIds: z.array(CalendarIdSchema).min(1).readonly(),
   timeZone: TimeZoneSchema,
@@ -201,6 +280,7 @@ export type BookingPage = z.infer<typeof BookingPageSchema>;
 export const PublicBookingPageSchema = z.strictObject({
   hostDisplayName: z.string().trim().min(1).max(256),
   durationMinutes: BookingDurationMinutesSchema,
+  meetingTypes: BookingMeetingTypesSchema.optional(),
   timeZone: TimeZoneSchema,
   enabled: z.boolean(),
   maxHorizonDays: z.number().int().positive().max(BOOKING_MAX_HORIZON_DAYS),
@@ -213,13 +293,15 @@ export const toPublicBookingPage = (
   page: Pick<
     BookingPage,
     "durationMinutes" | "timeZone" | "enabled" | "maxHorizonDays"
-  >,
+  > &
+    Partial<Pick<BookingPage, "meetingTypes">>,
   hostDisplayName: string,
   conference: CalendarConference,
 ): PublicBookingPage =>
   PublicBookingPageSchema.parse({
     hostDisplayName,
     durationMinutes: page.durationMinutes,
+    meetingTypes: resolveBookingMeetingTypes(page),
     timeZone: page.timeZone,
     enabled: page.enabled,
     maxHorizonDays: page.maxHorizonDays,
@@ -246,6 +328,8 @@ export const BookingSlotsQuerySchema = z.strictObject({
   start: DateTimeSchema,
   end: DateTimeSchema,
   timeZone: TimeZoneSchema,
+  /** Missing or unknown ids fall back to type #1. */
+  meetingTypeId: BookingMeetingTypeIdSchema.optional(),
 });
 export type BookingSlotsQuery = z.infer<typeof BookingSlotsQuerySchema>;
 
@@ -308,6 +392,8 @@ export const CreateBookingReservationInputSchema = z.strictObject({
   notes: z.string().trim().max(4000).optional(),
   guestTimeZone: TimeZoneSchema,
   durationMinutes: BookingDurationMinutesSchema,
+  /** Missing or unknown ids book type #1. */
+  meetingTypeId: BookingMeetingTypeIdSchema.optional(),
 });
 export type CreateBookingReservationInput = z.infer<
   typeof CreateBookingReservationInputSchema
@@ -329,6 +415,7 @@ export const PublicGetBookingReservationResponseSchema = z.strictObject({
   slotStart: DateTimeSchema,
   guestTimeZone: TimeZoneSchema,
   durationMinutes: BookingDurationMinutesSchema,
+  meetingTypeLabel: z.string().trim().min(1).max(256).optional(),
   hostDisplayName: z.string().trim().min(1).max(256),
   status: BookingReservationStatusSchema,
   bookingSlug: BookingSlugSchema.optional(),
@@ -369,6 +456,7 @@ export const HostUpcomingBookingReservationSchema = z.strictObject({
   slotStart: DateTimeSchema,
   slotEnd: DateTimeSchema,
   durationMinutes: BookingDurationMinutesSchema,
+  meetingTypeLabel: z.string().trim().min(1).max(256).optional(),
   meetLink: z.url().nullable(),
 });
 export type HostUpcomingBookingReservation = z.infer<
@@ -441,6 +529,11 @@ const AdminPutBookingPageInputObjectSchema = z.strictObject({
   slug: BookingSlugSchema.optional(),
   enabled: z.boolean(),
   durationMinutes: BookingDurationMinutesSchema,
+  /**
+   * Omitted by clients that predate meeting types; the server then keeps the
+   * stored types and moves type #1 to `durationMinutes`.
+   */
+  meetingTypes: BookingMeetingTypesSchema.optional(),
   destinationCalendarId: CalendarIdSchema,
   blockingCalendarIds: z.array(CalendarIdSchema).min(1).readonly(),
   timeZone: TimeZoneSchema,
@@ -477,6 +570,7 @@ export function pickAdminPutBookingPageInput(source: {
   slug?: AdminPutBookingPageInput["slug"];
   enabled: AdminPutBookingPageInput["enabled"];
   durationMinutes: AdminPutBookingPageInput["durationMinutes"];
+  meetingTypes?: AdminPutBookingPageInput["meetingTypes"] | undefined;
   destinationCalendarId: AdminPutBookingPageInput["destinationCalendarId"];
   blockingCalendarIds: AdminPutBookingPageInput["blockingCalendarIds"];
   timeZone: AdminPutBookingPageInput["timeZone"];
@@ -488,6 +582,9 @@ export function pickAdminPutBookingPageInput(source: {
     ...(source.slug !== undefined ? { slug: source.slug } : {}),
     enabled: source.enabled,
     durationMinutes: source.durationMinutes,
+    ...(source.meetingTypes !== undefined
+      ? { meetingTypes: source.meetingTypes }
+      : {}),
     destinationCalendarId: source.destinationCalendarId,
     blockingCalendarIds: source.blockingCalendarIds,
     timeZone: source.timeZone,
