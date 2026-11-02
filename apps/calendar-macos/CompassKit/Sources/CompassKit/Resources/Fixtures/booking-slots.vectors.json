@@ -285,6 +285,146 @@
       "output": {
         "slots": []
       }
+    },
+    {
+      "id": "meeting-type-15-around-60-min-reservation",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 15,
+        "weeklyAvailability": [
+          {
+            "weekday": 1,
+            "start": "09:00",
+            "end": "12:00"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [
+          {
+            "start": "2026-09-07T16:00:00.000Z",
+            "end": "2026-09-07T17:00:00.000Z"
+          }
+        ],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-01T12:00:00.000Z",
+        "windowStart": "2026-09-07T06:00:00.000Z",
+        "windowEnd": "2026-09-08T06:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-09-07T15:00:00Z",
+          "2026-09-07T15:15:00Z",
+          "2026-09-07T15:30:00Z",
+          "2026-09-07T15:45:00Z",
+          "2026-09-07T17:00:00Z",
+          "2026-09-07T17:15:00Z",
+          "2026-09-07T17:30:00Z",
+          "2026-09-07T17:45:00Z"
+        ]
+      }
+    },
+    {
+      "id": "meeting-type-30-around-60-min-reservation",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 1,
+            "start": "09:00",
+            "end": "12:00"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [
+          {
+            "start": "2026-09-07T16:00:00.000Z",
+            "end": "2026-09-07T17:00:00.000Z"
+          }
+        ],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-01T12:00:00.000Z",
+        "windowStart": "2026-09-07T06:00:00.000Z",
+        "windowEnd": "2026-09-08T06:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-09-07T15:00:00Z",
+          "2026-09-07T15:15:00Z",
+          "2026-09-07T15:30:00Z",
+          "2026-09-07T17:00:00Z",
+          "2026-09-07T17:15:00Z",
+          "2026-09-07T17:30:00Z"
+        ]
+      }
+    },
+    {
+      "id": "meeting-type-45-around-60-min-reservation",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 45,
+        "weeklyAvailability": [
+          {
+            "weekday": 1,
+            "start": "09:00",
+            "end": "12:00"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [
+          {
+            "start": "2026-09-07T16:00:00.000Z",
+            "end": "2026-09-07T17:00:00.000Z"
+          }
+        ],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-01T12:00:00.000Z",
+        "windowStart": "2026-09-07T06:00:00.000Z",
+        "windowEnd": "2026-09-08T06:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-09-07T15:00:00Z",
+          "2026-09-07T15:15:00Z",
+          "2026-09-07T17:00:00Z",
+          "2026-09-07T17:15:00Z"
+        ]
+      }
+    },
+    {
+      "id": "meeting-type-60-around-60-min-reservation",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 60,
+        "weeklyAvailability": [
+          {
+            "weekday": 1,
+            "start": "09:00",
+            "end": "12:00"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [
+          {
+            "start": "2026-09-07T16:00:00.000Z",
+            "end": "2026-09-07T17:00:00.000Z"
+          }
+        ],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-01T12:00:00.000Z",
+        "windowStart": "2026-09-07T06:00:00.000Z",
+        "windowEnd": "2026-09-08T06:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-09-07T15:00:00Z",
+          "2026-09-07T17:00:00Z"
+        ]
+      }
     }
   ]
 }
