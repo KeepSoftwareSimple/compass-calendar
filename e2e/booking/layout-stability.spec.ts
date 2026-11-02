@@ -130,41 +130,55 @@ test("Meeting nav row does not drop when switching Settings tabs", async ({
   expect(Math.round(accountsDialogBox!.y)).toBe(Math.round(dialogBox!.y));
 });
 
-test("command palette rows stay put when the meeting page command loads", async ({
-  page,
-}) => {
-  await prepareSignedInBookingSettingsPage(page, { openSettings: false });
-  const pageGate = await holdGet(page, "/api/booking/page", {
-    enabled: true,
-    durationMinutes: 45,
-    destinationCalendarId: "64b7f0a1c2d3e4f5a6b7c8d9",
-    blockingCalendarIds: ["64b7f0a1c2d3e4f5a6b7c8d9"],
-    timeZone: "America/New_York",
-    weeklyAvailability: [],
-    minNoticeHours: 4,
-    maxHorizonDays: 60,
-    id: "000000000000000000000001",
-    slug: "hostuser",
-    hostUserId: "000000000000000000000002",
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
-    bookingUrl: "https://compasscalendar.com/meet/hostuser",
+for (const recent of [[], ["open-meeting-page"]] as const) {
+  test(`command palette rows stay put when the meeting page command loads${recent.length > 0 ? " from Recent" : ""}`, async ({
+    page,
+  }) => {
+    if (recent.length > 0) {
+      await page.addInitScript((ids) => {
+        localStorage.setItem("compass.commands.recent", JSON.stringify(ids));
+      }, recent);
+    }
+    await prepareSignedInBookingSettingsPage(page, { openSettings: false });
+    const pageGate = await holdGet(page, "/api/booking/page", {
+      enabled: true,
+      durationMinutes: 45,
+      destinationCalendarId: "64b7f0a1c2d3e4f5a6b7c8d9",
+      blockingCalendarIds: ["64b7f0a1c2d3e4f5a6b7c8d9"],
+      timeZone: "America/New_York",
+      weeklyAvailability: [],
+      minNoticeHours: 4,
+      maxHorizonDays: 60,
+      id: "000000000000000000000001",
+      slug: "hostuser",
+      hostUserId: "000000000000000000000002",
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+      bookingUrl: "https://compasscalendar.com/meet/hostuser",
+    });
+
+    await openCommandPaletteWithKeyboard(page);
+    await expect(getPaletteSearch(page)).toBeVisible();
+    // With nothing recent, the Log Out row sits below the meeting command.
+    // With a recent meeting command, the Recent section sits above Go to
+    // Today; keep that row at scroll top so scroll anchoring can't hide a
+    // shift.
+    const anchor =
+      recent.length > 0
+        ? page.getByRole("option", { name: /^Go to Today/ })
+        : page.getByRole("option", { name: /^Log Out/ });
+    if (recent.length === 0) await anchor.scrollIntoViewIfNeeded();
+    await expect(anchor).toBeVisible();
+    const loading = page.getByRole("option", { name: /^Meeting page/ }).first();
+    const loadingShown = (await pageGate.heldCount()) > 0;
+    if (loadingShown) await expect(loading).toBeVisible();
+    const before = await box(anchor);
+
+    pageGate.release();
+    await expect(
+      page.getByRole("option", { name: /^Open meeting page/ }).first(),
+    ).toBeVisible();
+
+    expect(await box(anchor)).toEqual(before);
   });
-
-  await openCommandPaletteWithKeyboard(page);
-  await expect(getPaletteSearch(page)).toBeVisible();
-  const logOut = page.getByRole("option", { name: /^Log Out/ });
-  await logOut.scrollIntoViewIfNeeded();
-  await expect(logOut).toBeVisible();
-  const loading = page.getByRole("option", { name: /^Meeting page/ });
-  const loadingShown = (await pageGate.heldCount()) > 0;
-  if (loadingShown) await expect(loading).toBeVisible();
-  const before = await box(logOut);
-
-  pageGate.release();
-  await expect(
-    page.getByRole("option", { name: /^Open meeting page/ }),
-  ).toBeVisible();
-
-  expect(await box(logOut)).toEqual(before);
-});
+}
