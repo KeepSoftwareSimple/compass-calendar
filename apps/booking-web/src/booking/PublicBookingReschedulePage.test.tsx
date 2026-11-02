@@ -357,3 +357,61 @@ describe("PublicBookingReschedulePage", () => {
     expect(router.state.location.search.slot).toBeUndefined();
   });
 });
+
+describe("PublicBookingReschedulePage meeting types", () => {
+  it("keeps the meeting's own length when it differs from the page", async () => {
+    const user = userEvent.setup({ delay: null });
+    const posts: unknown[] = [];
+
+    server.use(
+      reservationGetHandler({
+        durationMinutes: 60,
+        meetingTypeLabel: "Deep dive",
+      }),
+      pageHandler({
+        meetingTypes: [
+          { id: "default", label: "Quick chat", durationMinutes: 30 },
+          { id: "type-deep", label: "Deep dive", durationMinutes: 60 },
+        ],
+      }),
+      reservationSlotsHandler(),
+      http.post(
+        `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/reschedule`,
+        async ({ request }) => {
+          posts.push(await request.json());
+          return HttpResponse.json(
+            {
+              reservationId,
+              slotStart,
+              slotEnd,
+              guestTimeZone: "UTC",
+              durationMinutes: 60,
+              hostDisplayName: "Tyler Dane",
+              status: "confirmed",
+              bookingSlug: "tylerdane",
+            },
+            { status: Status.OK },
+          );
+        },
+      ),
+    );
+
+    renderRescheduleRoute(reschedulePath);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: formatBookingSlotTime(alternateSlotStart, "UTC"),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(posts).toEqual([
+        expect.objectContaining({
+          slotStart: alternateSlotStart,
+          durationMinutes: 60,
+        }),
+      ]);
+    });
+  });
+});

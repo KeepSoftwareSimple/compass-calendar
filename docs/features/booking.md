@@ -463,6 +463,13 @@ removed. Keycaps under the list show T, Enter and Delete. Saving
 still goes through the save bar (Mod+Enter). An empty name blocks the save
 with "Name each meeting type." The setup wizard only sets type #1.
 
+The public page shows "Pick a meeting" above the calendar only when it has
+two or more types; one-type pages look unchanged. Keys 1, 2 and 3 pick a
+type (not while typing). `?type=<id>` opens that type and an unknown id
+falls back to type #1; picking type #1 drops the param. Picking a type
+clears the chosen slot. Type #1 sends no `meetingTypeId`, so requests match
+what older servers expect. Reschedule keeps the meeting's own length.
+
 ## Busy occupancy
 
 v1.1 occupancy is RSVP-strict. Sync still returns facts only; Booking
