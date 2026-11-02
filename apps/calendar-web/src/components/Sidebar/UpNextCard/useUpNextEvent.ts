@@ -19,10 +19,12 @@ export function useTodayTimedEvents() {
   const now = useMinuteTick();
   const hiddenEventIds = useHiddenEventIds();
   const { startDate, endDate } = notifiableEventQueryRange(now);
-  const { events, timedEvents, allDayEvents } = useDayEventViewModel({
-    startDate,
-    endDate,
-  });
+  const { events, timedEvents, allDayEvents, isLoading } = useDayEventViewModel(
+    {
+      startDate,
+      endDate,
+    },
+  );
   // Restore the real timed bounds: the all-day-row projection rewrites both
   // dates to whole calendar days, and a date-only endDate would keep a
   // finished event looking like it is still running until midnight.
@@ -49,11 +51,13 @@ export function useTodayTimedEvents() {
     [hiddenEventIds, multiDayTimed, timedEvents],
   );
 
-  return { now, events, allTimedEvents };
+  // A disabled query (signed out, nothing to fetch) is pending forever, so
+  // "still loading" means a first fetch is actually in flight.
+  return { now, events, allTimedEvents, isLoading };
 }
 
 export function useUpNextEvent() {
-  const { now, events, allTimedEvents } = useTodayTimedEvents();
+  const { now, events, allTimedEvents, isLoading } = useTodayTimedEvents();
 
   const nowEvents = allTimedEvents
     .filter(
@@ -103,5 +107,12 @@ export function useUpNextEvent() {
     });
   }, [upNext, conferenceUrl, openEventDetails]);
 
-  return { now, openEventDetails, upNext, conferenceUrl, isCurrentEvent };
+  return {
+    now,
+    openEventDetails,
+    upNext,
+    conferenceUrl,
+    isCurrentEvent,
+    isLoading,
+  };
 }

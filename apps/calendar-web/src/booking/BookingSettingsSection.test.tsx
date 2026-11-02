@@ -65,12 +65,15 @@ import {
   setSystemTime,
 } from "bun:test";
 
-const actualUseAppAccess = (await import("@web/billing/useAppAccess"))
-  .useAppAccess;
+const actualAppAccessModule = await import("@web/billing/useAppAccess");
+const actualUseAppAccess = actualAppAccessModule.useAppAccess;
+const actualUseIsAppAccessPending = actualAppAccessModule.useIsAppAccessPending;
 let isAppAccessMocked = true;
 mock.module("@web/billing/useAppAccess", () => ({
   useAppAccess: (...args: Parameters<typeof actualUseAppAccess>) =>
     isAppAccessMocked ? { kind: "open" as const } : actualUseAppAccess(...args),
+  useIsAppAccessPending: () =>
+    isAppAccessMocked ? false : actualUseIsAppAccessPending(),
 }));
 
 const mockTrack = mock();

@@ -46,11 +46,12 @@ mockModuleForFile("@web/routers", actualRouters, {
   },
 });
 
-const actualUseAppAccess = (await import("@web/billing/useAppAccess"))
-  .useAppAccess;
+const actualAppAccessModule = await import("@web/billing/useAppAccess");
+const actualUseAppAccess = actualAppAccessModule.useAppAccess;
 mock.module("@web/billing/useAppAccess", () => ({
   useAppAccess: (...args: Parameters<typeof actualUseAppAccess>) =>
     actualUseAppAccess(...args),
+  useIsAppAccessPending: actualAppAccessModule.useIsAppAccessPending,
 }));
 
 function GuestWizardShell() {
