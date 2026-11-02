@@ -148,7 +148,7 @@ export async function executeProviderOccurrenceUpdate(
   let activeInstance = instance;
   let activeProviderEventId = providerEventId;
   let activeLocation = location;
-  const { writeSchedule, colorOnly } = providerColorOnlyPatchFlags(
+  const patchFlags = providerColorOnlyPatchFlags(
     command,
     master.content,
     content,
@@ -164,8 +164,7 @@ export async function executeProviderOccurrenceUpdate(
         schedule,
         recurrence: { kind: "instance" },
         invitation: input.invitation,
-        writeSchedule,
-        ...(colorOnly ? { colorOnly } : {}),
+        ...patchFlags,
       }),
     );
     if (patchResult.ok) {

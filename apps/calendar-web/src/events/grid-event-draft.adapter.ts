@@ -18,6 +18,7 @@ import {
 } from "@core/types/event-command.contracts";
 import { formatInstantInTimeZone } from "@core/util/date/civil-day";
 import dayjs from "@core/util/date/dayjs";
+import { detailsLocationForUndo } from "@core/util/event/event-details-equal-for-undo";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
@@ -480,7 +481,7 @@ type DetailsContentSource =
 // so every read of a stored event's location defaults it the same way -
 // also used by useUndoRedo.ts's replay/comparison paths.
 export const detailsLocation = (content: DetailsContentSource): string =>
-  content.location ?? "";
+  detailsLocationForUndo(content);
 
 // Wire-boundary attendee pick: only a genuine guest edit may cross. Replay
 // flows (undo/redo, snapshot restore in useUndoRedo) deliberately funnel a

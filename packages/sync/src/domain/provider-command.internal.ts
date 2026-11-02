@@ -393,12 +393,6 @@ export async function applyLinkedProviderUpdate(
     return commit(current.providerVersion);
   }
 
-  const { writeSchedule, colorOnly } = providerColorOnlyPatchFlags(
-    command,
-    event.content,
-    content,
-    intendedAttendees,
-  );
   const patchResult = await runProviderWrite(() =>
     deps.writer.patchEvent({
       ...location,
@@ -413,8 +407,12 @@ export async function applyLinkedProviderUpdate(
       schedule,
       recurrence: intendedRecurrence,
       invitation: input.invitation,
-      writeSchedule,
-      ...(colorOnly ? { colorOnly } : {}),
+      ...providerColorOnlyPatchFlags(
+        command,
+        event.content,
+        content,
+        intendedAttendees,
+      ),
       ...(intendedAttendees ? { attendees: intendedAttendees } : {}),
     }),
   );

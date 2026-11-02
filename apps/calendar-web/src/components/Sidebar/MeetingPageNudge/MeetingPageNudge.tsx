@@ -1,6 +1,5 @@
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
-import IconButton from "@web/components/IconButton/IconButton";
+import { NoticeDismissButton } from "@web/components/BottomNoticeStack/NoticeDismissButton";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { settingsActions } from "@web/settings/settings.store";
 import {
@@ -50,14 +49,7 @@ export function MeetingPageNudge({
             Share a link and guests pick a time that is free on your calendar.
           </p>
         </div>
-        <IconButton
-          aria-label="Dismiss"
-          className="shrink-0 text-text-muted hover:text-text"
-          onClick={dismiss}
-          size="small"
-        >
-          <XIcon aria-hidden="true" size={14} />
-        </IconButton>
+        <NoticeDismissButton onClick={dismiss} />
       </div>
       <button
         className="c-button-compact c-button-primary inline-flex items-center gap-2 self-start rounded-xs px-2 py-1 text-s"

@@ -3,6 +3,7 @@ import fastDeepEqual from "fast-deep-equal/es6";
 import { useCallback } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import dayjs from "@core/util/date/dayjs";
+import { eventSchedulesEqual } from "@core/util/event/event-schedule-equal";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import {
   buildCalendarLookup,
@@ -18,7 +19,6 @@ import {
   parseGridEventDraft,
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
-import { eventSchedulesEqual } from "@web/events/mutations/event-schedule-equal";
 import {
   type EventMutationCallbacks,
   type EventMutationDependencies,

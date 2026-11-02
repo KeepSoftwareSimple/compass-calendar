@@ -6,7 +6,10 @@ import {
   FOOTER_ICON_BUTTON_CLASS,
   SIDEBAR_REFRESH_SLOT_CLASS,
 } from "@web/components/Sidebar/SidebarActions/sidebar-footer.constants";
-import { useReloadAppShortcut } from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
+import {
+  APP_UPDATE_RELOAD_SHORTCUT,
+  useReloadAppShortcut,
+} from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { useSseDegradedSince } from "@web/sse/hooks/useSseDegraded";
 
@@ -60,7 +63,7 @@ export const SidebarRefreshButton: FC = () => {
         <TooltipWrapper
           description={description}
           onClick={reloadLocation}
-          shortcut={["Mod", "R"]}
+          shortcut={[...APP_UPDATE_RELOAD_SHORTCUT]}
         >
           <button
             aria-label={description}

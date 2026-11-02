@@ -1,18 +1,18 @@
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { createElement } from "react";
 import { type Id } from "react-toastify";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { reloadLocation } from "@web/common/utils/browser/browser-navigation.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { deliverOrQueueBottomNoticeToast } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.toast";
+import { NoticeDismissButton } from "@web/components/BottomNoticeStack/NoticeDismissButton";
 import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
-import IconButton from "@web/components/IconButton/IconButton";
-import { useReloadAppShortcut } from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
+import {
+  APP_UPDATE_RELOAD_SHORTCUT,
+  useReloadAppShortcut,
+} from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
 
 export const APP_UPDATE_TOAST_MESSAGE =
   "Compass just got better. Refresh to update.";
-
-export const APP_UPDATE_RELOAD_SHORTCUT = ["Mod", "R"] as const;
 
 export const APP_UPDATE_REFRESH_LABEL = "Refresh";
 
@@ -32,14 +32,10 @@ export function AppUpdateAvailableToast({ toastId }: { toastId: Id }) {
         <p className="min-w-0 flex-1 text-sm leading-relaxed">
           {APP_UPDATE_TOAST_MESSAGE}
         </p>
-        <IconButton
-          aria-label="Dismiss update notice"
-          className="shrink-0 text-text-muted hover:text-text"
+        <NoticeDismissButton
+          ariaLabel="Dismiss update notice"
           onClick={dismiss}
-          size="small"
-        >
-          <XIcon aria-hidden="true" size={14} />
-        </IconButton>
+        />
       </div>
       <NoticePrimaryButton
         onClick={() => {
