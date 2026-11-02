@@ -454,6 +454,13 @@ type #1. `bun run cli backfill-meeting-types` (dry-run, `--apply` to write)
 stores the derived type in Mongo; it is optional because reads already
 derive it.
 
+Settings > Meeting lists the types as rows (name, duration, remove). T adds
+a type and focuses its name; the "Add type" button stays in place but hides
+at three. Delete removes the focused row only when the row itself has focus,
+never while typing in its name, and the last type cannot be removed. Saving
+still goes through the save bar (Mod+Enter). An empty name blocks the save
+with "Name each meeting type." The setup wizard only sets type #1.
+
 ## Busy occupancy
 
 v1.1 occupancy is RSVP-strict. Sync still returns facts only; Booking

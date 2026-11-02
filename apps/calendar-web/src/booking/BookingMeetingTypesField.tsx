@@ -127,6 +127,8 @@ export function BookingMeetingTypesField({
                 event.stopPropagation();
                 remove(index);
               }}
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: the row takes focus so Delete can remove it without stealing Delete from the name input.
+              tabIndex={0}
               {...{ [MEETING_TYPE_ROW_ATTR]: type.id }}
             >
               <input
