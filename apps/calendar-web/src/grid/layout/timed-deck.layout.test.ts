@@ -3,9 +3,8 @@ import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
-  EVENT_WIDTH_MINIMUM,
+  DECK_CASCADE_INDENT_RATIO,
   HIDDEN_EVENT_STRIP_WIDTH,
-  TIMED_EVENT_COLUMN_INSET,
   TIMED_EVENT_WIDTH_RATIO,
 } from "@web/grid/grid.constants";
 import {
@@ -15,7 +14,6 @@ import {
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import {
-  applyTimedDeckPosition,
   applyTimedEventDisplayPosition,
   createTimedEventLayout,
   elevateTimedDeckZIndex,
@@ -50,19 +48,24 @@ const deckOf = (items: ReturnType<typeof createTimedEventLayout>, id: string) =>
   items.find((item) => item.event._id === id)?.deckLayout ?? null;
 
 describe("createTimedEventLayout", () => {
-  it("decks overlapping events in a one-date calendar", () => {
+  it("cascades a later start over an earlier card, indented", () => {
     const items = createTimedEventLayout([
       event("first", "2026-05-20T09:00:00", "2026-05-20T10:00:00"),
       event("second", "2026-05-20T09:30:00", "2026-05-20T10:30:00"),
     ]);
 
     expect(items.map((item) => item.deckLayout)).toEqual([
-      { groupSize: 2, order: 0 },
-      { groupSize: 2, order: 1 },
+      { groupSize: 2, left: 0, width: 1, zIndex: 1 },
+      {
+        groupSize: 2,
+        left: DECK_CASCADE_INDENT_RATIO,
+        width: 1 - DECK_CASCADE_INDENT_RATIO,
+        zIndex: 2,
+      },
     ]);
   });
 
-  it("returns render-only deck layout for same-day overlapping events", () => {
+  it("returns render-only deck layout and keeps event identity", () => {
     const events = [
       createTimedEvent({
         _id: "early-long",
@@ -78,13 +81,13 @@ describe("createTimedEventLayout", () => {
 
     const laid = createTimedEventLayout(events);
 
-    expect(deckOf(laid, "early-long")).toEqual({ order: 0, groupSize: 2 });
-    expect(deckOf(laid, "later-short")).toEqual({ order: 1, groupSize: 2 });
+    expect(deckOf(laid, "early-long")?.zIndex).toBe(1);
+    expect(deckOf(laid, "later-short")?.zIndex).toBe(2);
     expect(laid[0].event).toBe(events[0]);
     expect(laid[1].event).toBe(events[1]);
   });
 
-  it("orders same-start events longest-first", () => {
+  it("places same-start events side by side, longest first", () => {
     const events = [
       createTimedEvent({
         _id: "short",
@@ -100,34 +103,67 @@ describe("createTimedEventLayout", () => {
 
     const laid = createTimedEventLayout(events);
 
-    expect(deckOf(laid, "long")).toEqual({ order: 0, groupSize: 2 });
-    expect(deckOf(laid, "short")).toEqual({ order: 1, groupSize: 2 });
+    expect(deckOf(laid, "long")).toEqual({
+      groupSize: 2,
+      left: 0,
+      width: 0.5,
+      zIndex: 1,
+    });
+    expect(deckOf(laid, "short")).toEqual({
+      groupSize: 2,
+      left: 0.5,
+      width: 0.5,
+      zIndex: 2,
+    });
   });
 
-  it("treats a transitive overlap chain as one group", () => {
+  it("places near starts side by side without narrowing a far-start chain", () => {
     const events = [
-      createTimedEvent({
-        _id: "a",
-        startDate: "2024-01-15T10:00:00.000Z",
-        endDate: "2024-01-15T11:00:00.000Z",
-      }),
-      createTimedEvent({
-        _id: "b",
-        startDate: "2024-01-15T10:30:00.000Z",
-        endDate: "2024-01-15T11:30:00.000Z",
-      }),
-      createTimedEvent({
-        _id: "c",
-        startDate: "2024-01-15T11:00:00.000Z",
-        endDate: "2024-01-15T12:00:00.000Z",
-      }),
+      event("a", "2024-01-15T10:00:00.000Z", "2024-01-15T11:00:00.000Z"),
+      event("b", "2024-01-15T10:20:00.000Z", "2024-01-15T11:00:00.000Z"),
+      event("c", "2024-01-15T11:00:00.000Z", "2024-01-15T12:00:00.000Z"),
+      event("d", "2024-01-15T11:40:00.000Z", "2024-01-15T12:30:00.000Z"),
     ];
 
     const laid = createTimedEventLayout(events);
 
-    expect(deckOf(laid, "a")).toEqual({ order: 0, groupSize: 3 });
-    expect(deckOf(laid, "b")).toEqual({ order: 1, groupSize: 3 });
-    expect(deckOf(laid, "c")).toEqual({ order: 2, groupSize: 3 });
+    expect(deckOf(laid, "a")).toMatchObject({ left: 0, width: 0.5 });
+    expect(deckOf(laid, "b")).toMatchObject({ left: 0.5, width: 0.5 });
+    expect(deckOf(laid, "c")).toMatchObject({ left: 0, width: 1 });
+    expect(deckOf(laid, "d")).toMatchObject({
+      left: DECK_CASCADE_INDENT_RATIO,
+      width: 1 - DECK_CASCADE_INDENT_RATIO,
+    });
+    // c starts as a and b end, so it opens a second group with d.
+    expect(laid.map((item) => item.deckLayout?.groupSize)).toEqual([
+      2, 2, 2, 2,
+    ]);
+  });
+
+  it("fits a far start beside a near-start partner instead of covering it", () => {
+    const events = [
+      event("standup", "2024-01-15T09:00:00.000Z", "2024-01-15T10:00:00.000Z"),
+      event("retro", "2024-01-15T09:20:00.000Z", "2024-01-15T10:20:00.000Z"),
+      event("planning", "2024-01-15T09:40:00.000Z", "2024-01-15T10:40:00.000Z"),
+    ];
+
+    const laid = createTimedEventLayout(events);
+
+    expect(deckOf(laid, "planning")).toMatchObject({
+      left: DECK_CASCADE_INDENT_RATIO,
+      width: 0.5 - DECK_CASCADE_INDENT_RATIO,
+      zIndex: 3,
+    });
+  });
+
+  it("groups a short task with the event painted right after it", () => {
+    const laid = createTimedEventLayout([
+      event("invoice", "2024-01-15T12:30:00.000Z", "2024-01-15T12:35:00.000Z"),
+      event("bank", "2024-01-15T12:35:00.000Z", "2024-01-15T13:00:00.000Z"),
+    ]);
+
+    expect(deckOf(laid, "invoice")).toMatchObject({ left: 0, width: 0.5 });
+    expect(deckOf(laid, "bank")).toMatchObject({ left: 0.5, width: 0.5 });
   });
 
   it("leaves non-overlapping events without deck layout", () => {
@@ -183,8 +219,8 @@ describe("createTimedEventLayout", () => {
 
     const laid = createTimedEventLayout(events);
 
-    expect(deckOf(laid, "ritual")).toEqual({ order: 0, groupSize: 2 });
-    expect(deckOf(laid, "unwind")).toEqual({ order: 1, groupSize: 2 });
+    expect(deckOf(laid, "ritual")).toMatchObject({ left: 0, width: 0.5 });
+    expect(deckOf(laid, "unwind")).toMatchObject({ left: 0.5, width: 0.5 });
     expect(deckOf(laid, "update")).toBeNull();
   });
 
@@ -197,8 +233,11 @@ describe("createTimedEventLayout", () => {
 
     const laid = createTimedEventLayout(events, new Set(["hidden"]));
 
-    expect(deckOf(laid, "visible-a")).toEqual({ order: 0, groupSize: 2 });
-    expect(deckOf(laid, "visible-b")).toEqual({ order: 1, groupSize: 2 });
+    expect(deckOf(laid, "visible-a")).toMatchObject({ groupSize: 2, left: 0 });
+    expect(deckOf(laid, "visible-b")).toMatchObject({
+      groupSize: 2,
+      left: DECK_CASCADE_INDENT_RATIO,
+    });
     expect(deckOf(laid, "hidden")).toBeNull();
     expect(laid.find((item) => item.event._id === "hidden")?.isHidden).toBe(
       true,
@@ -207,94 +246,10 @@ describe("createTimedEventLayout", () => {
   });
 });
 
-describe("applyTimedDeckPosition", () => {
-  const basePosition = { height: 60, left: 20, top: 30, width: 180 };
-
-  it("splits the column width evenly across the overlap group", () => {
-    const deck = applyTimedDeckPosition(basePosition, {
-      order: 0,
-      groupSize: 3,
-    });
-
-    expect(deck.width).toBe(basePosition.width / 3);
-  });
-
-  it("elevates a focused card above overlap partners in the same group", () => {
-    const deck = { order: 0, groupSize: 2 };
-    const base = applyTimedDeckPosition(basePosition, deck);
-    expect(elevateTimedDeckZIndex(deck, base.zIndex ?? 1)).toBeGreaterThan(2);
-  });
-
-  it("offsets left by order and sets zIndex", () => {
-    const back = applyTimedDeckPosition(basePosition, {
-      order: 0,
-      groupSize: 3,
-    });
-    const front = applyTimedDeckPosition(basePosition, {
-      order: 2,
-      groupSize: 3,
-    });
-
-    expect(front.left - back.left).toBe(2 * (basePosition.width / 3));
-    expect(back.zIndex).toBe(1);
-    expect(front.zIndex).toBe(3);
-    expect(front.width).toBe(back.width);
-  });
-
-  it("places side-by-side cards without covering each other", () => {
-    const back = applyTimedDeckPosition(basePosition, {
-      order: 0,
-      groupSize: 2,
-    });
-    const front = applyTimedDeckPosition(basePosition, {
-      order: 1,
-      groupSize: 2,
-    });
-
-    expect(front.left).toBe(back.left + back.width);
-    expect(front.width).toBe(back.width);
-  });
-
-  it("shrinks slot width for dense groups", () => {
-    const deck = applyTimedDeckPosition(
-      { ...basePosition, width: 150 - TIMED_EVENT_COLUMN_INSET * 2 },
-      { order: 0, groupSize: 8 },
-    );
-
-    expect(deck.width).toBe((150 - TIMED_EVENT_COLUMN_INSET * 2) / 8);
-  });
-
-  it("keeps narrow-column decks inside the usable column", () => {
-    const narrowBase = {
-      ...basePosition,
-      width: EVENT_WIDTH_MINIMUM - TIMED_EVENT_COLUMN_INSET * 2,
-    };
-    const back = applyTimedDeckPosition(narrowBase, {
-      order: 0,
-      groupSize: 2,
-    });
-    const front = applyTimedDeckPosition(narrowBase, {
-      order: 1,
-      groupSize: 2,
-    });
-
-    expect(back.width).toBe(narrowBase.width / 2);
-    expect(front.width).toBe(back.width);
-    expect(front.left + front.width).toBe(narrowBase.left + narrowBase.width);
-  });
-
-  it("keeps dense narrow-column decks inside the usable column", () => {
-    const narrowBase = {
-      ...basePosition,
-      width: EVENT_WIDTH_MINIMUM - TIMED_EVENT_COLUMN_INSET * 2,
-    };
-    const front = applyTimedDeckPosition(narrowBase, {
-      order: 7,
-      groupSize: 8,
-    });
-
-    expect(front.width).toBeGreaterThan(0);
-    expect(front.left + front.width).toBe(narrowBase.left + narrowBase.width);
+describe("elevateTimedDeckZIndex", () => {
+  it("raises a card above every partner in its group", () => {
+    const back = { groupSize: 3, left: 0, width: 1, zIndex: 1 };
+    expect(elevateTimedDeckZIndex(back, back.zIndex)).toBeGreaterThan(3);
   });
 });
 
@@ -315,37 +270,29 @@ describe("applyTimedEventDisplayPosition", () => {
     expect(position.width).toBe(extraWide.width * TIMED_EVENT_WIDTH_RATIO);
   });
 
-  it("splits overlapping cards into equal side-by-side columns", () => {
-    const back = applyTimedEventDisplayPosition(widePosition, {
-      order: 0,
+  it("maps deck fractions onto the column and sets zIndex", () => {
+    const position = applyTimedEventDisplayPosition(widePosition, {
       groupSize: 2,
-    });
-    const front = applyTimedEventDisplayPosition(widePosition, {
-      order: 1,
-      groupSize: 2,
+      left: 0.25,
+      width: 0.5,
+      zIndex: 2,
     });
 
-    expect(back.width).toBe(widePosition.width / 2);
-    expect(front.width).toBe(back.width);
-    expect(front.left).toBe(back.left + back.width);
+    expect(position).toEqual({
+      ...widePosition,
+      left: widePosition.left + 250,
+      width: 500,
+      zIndex: 2,
+    });
   });
 
-  it("keeps dense overlap groups inside the column", () => {
-    const front = applyTimedEventDisplayPosition(widePosition, {
-      order: 19,
-      groupSize: 20,
-    });
-
-    expect(front.left + front.width).toBeLessThanOrEqual(
-      widePosition.left + widePosition.width,
-    );
-  });
-
-  it("falls back to the available column width when the column is narrow", () => {
+  it("keeps a narrow column deck inside the usable column", () => {
     const narrowPosition = { ...widePosition, width: 90 };
     const front = applyTimedEventDisplayPosition(narrowPosition, {
-      order: 1,
       groupSize: 2,
+      left: 0.5,
+      width: 0.5,
+      zIndex: 2,
     });
 
     expect(front.left + front.width).toBe(
@@ -354,7 +301,7 @@ describe("applyTimedEventDisplayPosition", () => {
   });
 
   it("returns the strip width and original left when hidden", () => {
-    const someDeck = { order: 1, groupSize: 2 };
+    const someDeck = { groupSize: 2, left: 0.5, width: 0.5, zIndex: 2 };
     const position = applyTimedEventDisplayPosition(
       widePosition,
       someDeck,

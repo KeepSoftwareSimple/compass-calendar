@@ -52,13 +52,13 @@ final class LayoutParityTests: XCTestCase {
 
         var broken = TimedDeckLayoutEngine.createTimedEventLayout(events: events)
         if broken.indices.contains(1) {
-            broken[1].deckLayout = TimedDeckLayout(groupSize: 2, order: 99)
+            broken[1].deckLayout = TimedDeckLayout(groupSize: 2, left: 0.99, width: 0.01, zIndex: 99)
         }
 
         let actual: [[String: Any]] = broken.map { item in
             var deck: [String: Any]?
             if let layout = item.deckLayout {
-                deck = ["order": layout.order, "groupSize": layout.groupSize]
+                deck = encodeDeckLayout(layout)
             }
             return [
                 "eventId": item.eventId,
@@ -78,7 +78,8 @@ final class LayoutParityTests: XCTestCase {
         let input = try XCTUnwrap(vectorCase["input"] as? [String: Any])
 
         switch id {
-        case "createTimedEventLayout-overlap", "createTimedEventLayout-inverted-end-overlap":
+        case "createTimedEventLayout-overlap", "createTimedEventLayout-inverted-end-overlap",
+             "createTimedEventLayout-near-and-far-starts":
             let eventsJSON = try XCTUnwrap(input["events"] as? [[String: Any]])
             let hidden = Set((input["hiddenEventIds"] as? [String]) ?? [])
             let events = eventsJSON.map { row in
@@ -94,7 +95,7 @@ final class LayoutParityTests: XCTestCase {
             ).map { item in
                 var deck: [String: Any]?
                 if let layout = item.deckLayout {
-                    deck = ["order": layout.order, "groupSize": layout.groupSize]
+                    deck = encodeDeckLayout(layout)
                 }
                 return [
                     "eventId": item.eventId,
@@ -102,16 +103,6 @@ final class LayoutParityTests: XCTestCase {
                     "isHidden": item.isHidden,
                 ] as [String: Any]
             }
-
-        case "applyTimedDeckPosition":
-            let positionJSON = try XCTUnwrap(input["position"] as? [String: Any])
-            let deckJSON = try XCTUnwrap(input["deckLayout"] as? [String: Any])
-            let position = decodeEventPosition(positionJSON)
-            let deck = TimedDeckLayout(
-                groupSize: deckJSON["groupSize"] as? Int ?? 0,
-                order: deckJSON["order"] as? Int ?? 0
-            )
-            return encodeEventPosition(TimedDeckLayoutEngine.applyTimedDeckPosition(position, deckLayout: deck))
 
         case "getTimedEventPosition":
             let measurements = try decodeGridMetrics(input["measurements"])
@@ -158,12 +149,7 @@ final class LayoutParityTests: XCTestCase {
             let positionJSON = try XCTUnwrap(input["position"] as? [String: Any])
             let position = decodeEventPosition(positionJSON)
             let deckJSON = input["deckLayout"] as? [String: Any]
-            let deck = deckJSON.map {
-                TimedDeckLayout(
-                    groupSize: $0["groupSize"] as? Int ?? 0,
-                    order: $0["order"] as? Int ?? 0
-                )
-            }
+            let deck = deckJSON.map(decodeDeckLayout)
             let isHidden = input["isHidden"] as? Bool ?? false
             return encodeEventPosition(
                 TimedDeckLayoutEngine.applyTimedEventDisplayPosition(
@@ -274,6 +260,24 @@ final class LayoutParityTests: XCTestCase {
             width: numberValue(json["width"]),
             zIndex: json["zIndex"] as? Int
         )
+    }
+
+    private func decodeDeckLayout(_ json: [String: Any]) -> TimedDeckLayout {
+        TimedDeckLayout(
+            groupSize: json["groupSize"] as? Int ?? 0,
+            left: numberValue(json["left"]),
+            width: numberValue(json["width"]),
+            zIndex: json["zIndex"] as? Int ?? 0
+        )
+    }
+
+    private func encodeDeckLayout(_ layout: TimedDeckLayout) -> [String: Any] {
+        [
+            "groupSize": layout.groupSize,
+            "left": layout.left,
+            "width": layout.width,
+            "zIndex": layout.zIndex,
+        ]
     }
 
     private func encodeEventPosition(_ position: EventPosition) -> [String: Any] {

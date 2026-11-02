@@ -8,8 +8,8 @@ import {
 } from "@web/events/hidden/hidden-event-id";
 import {
   applyHiddenEventStripWidth,
-  DECK_INDENT,
-  TIMED_EVENT_FAN_INDENT,
+  DECK_CASCADE_INDENT_RATIO,
+  DECK_NEAR_START_MINUTES,
   TIMED_EVENT_MIN_WIDTH,
   TIMED_EVENT_WIDTH_RATIO,
 } from "@web/grid/grid.constants";
@@ -17,9 +17,17 @@ import { type EventPosition } from "@web/grid/types/grid.types";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { parseGridScheduleDate } from "@web/timezone/parse-grid-schedule-date";
 
+/**
+ * Where an overlapping card sits inside its column. `left` and `width` are
+ * fractions of the usable column width so the same layout serves any column
+ * size; `zIndex` is paint order within the group (later starts on top) and
+ * `groupSize` lets a selected card be raised above every partner.
+ */
 export interface TimedDeckLayout {
   groupSize: number;
-  order: number;
+  left: number;
+  width: number;
+  zIndex: number;
 }
 
 export interface TimedEventLayoutItem {
@@ -35,6 +43,18 @@ interface DeckCandidate {
   start: Dayjs;
 }
 
+interface PlacedCard {
+  candidate: DeckCandidate;
+  left: number;
+  width: number;
+}
+
+/**
+ * Lays out overlapping timed cards the way Google Calendar does: events that
+ * start within {@link DECK_NEAR_START_MINUTES} of each other share the row
+ * side by side; an event that starts later than that on top of an earlier
+ * one is drawn over it, indented, so the earlier title stays readable above.
+ */
 export const createTimedEventLayout = (
   events: GridEvent[],
   hiddenEventIds: ReadonlySet<string> = EMPTY_HIDDEN_EVENT_IDS,
@@ -51,10 +71,7 @@ export const createTimedEventLayout = (
   for (const dayBucket of bucketByStartDay(candidates)) {
     for (const group of groupByOverlap(dayBucket)) {
       if (group.length < 2) continue;
-
-      orderBackgroundFirst(group).forEach(({ item }, index) => {
-        item.deckLayout = { order: index, groupSize: group.length };
-      });
+      placeGroup(orderBackgroundFirst(group));
     }
   }
 
@@ -70,24 +87,23 @@ export const applyTimedEventDisplayPosition = (
     return applyHiddenEventStripWidth(position, true);
   }
 
-  const cardWidth = getTimedEventCardWidth(position.width);
-
   if (!deckLayout) {
-    return { ...position, width: cardWidth };
+    return { ...position, width: getTimedEventCardWidth(position.width) };
   }
 
-  return applyTimedDeckPositionWithIndent(
-    position,
-    deckLayout,
-    TIMED_EVENT_FAN_INDENT,
-  );
+  return {
+    ...position,
+    left: position.left + deckLayout.left * position.width,
+    width: deckLayout.width * position.width,
+    zIndex: deckLayout.zIndex,
+  };
 };
 
-/** Raise a deck card above overlap partners without changing its column slot. */
+/** Raise a deck card above overlap partners without changing its slot. */
 export const elevateTimedDeckZIndex = (
   deckLayout: TimedDeckLayout,
   zIndex: number,
-): number => Math.max(zIndex, deckLayout.groupSize + 1 + deckLayout.order);
+): number => Math.max(zIndex, deckLayout.groupSize + deckLayout.zIndex);
 
 export const timedDeckBoxShadow = (isFocused: boolean): string => {
   const ring = "0 0 0 0.75px var(--background)";
@@ -98,26 +114,77 @@ export const timedDeckBoxShadow = (isFocused: boolean): string => {
   return `${ring}, ${drop}, ${highlight}`;
 };
 
-export const applyTimedDeckPosition = (
-  position: EventPosition,
-  deckLayout: TimedDeckLayout,
-): EventPosition =>
-  applyTimedDeckPositionWithIndent(position, deckLayout, DECK_INDENT);
+const placeGroup = (sorted: DeckCandidate[]) => {
+  const placed: PlacedCard[] = [];
 
-const applyTimedDeckPositionWithIndent = (
-  position: EventPosition,
-  deckLayout: TimedDeckLayout,
-  _indentMax: number,
-): EventPosition => {
-  const slotWidth = position.width / deckLayout.groupSize;
+  for (let index = 0; index < sorted.length; ) {
+    const batch = takeBatch(sorted, index);
+    const [left, right] = batchSpan(batch, placed);
+    const width = (right - left) / batch.length;
 
-  return {
-    ...position,
-    left: position.left + deckLayout.order * slotWidth,
-    width: slotWidth,
-    zIndex: deckLayout.order + 1,
-  };
+    batch.forEach((candidate, slot) => {
+      const card = { candidate, left: left + slot * width, width };
+      placed.push(card);
+      candidate.item.deckLayout = {
+        groupSize: sorted.length,
+        left: card.left,
+        width,
+        zIndex: placed.length,
+      };
+    });
+
+    index += batch.length;
+  }
 };
+
+/** Consecutive sorted events that start close to the first and overlap it. */
+const takeBatch = (sorted: DeckCandidate[], from: number): DeckCandidate[] => {
+  const batch = [sorted[from]];
+  for (let next = from + 1; next < sorted.length; next++) {
+    const candidate = sorted[next];
+    const startsNear = isNearStart(sorted[from], candidate);
+    if (!startsNear || !batch.some((member) => overlaps(member, candidate))) {
+      break;
+    }
+    batch.push(candidate);
+  }
+  return batch;
+};
+
+/**
+ * Horizontal span for a batch as [left, right) fractions. Cards that started
+ * well before the batch are cascaded over (left moves in by the indent);
+ * cards that started near the batch must not be covered, so the batch takes
+ * the free space beside them.
+ */
+const batchSpan = (
+  batch: DeckCandidate[],
+  placed: PlacedCard[],
+): [number, number] => {
+  const first = batch[0];
+  const touching = placed.filter((card) =>
+    batch.some((member) => overlaps(member, card.candidate)),
+  );
+  const far = touching.filter((card) => !isNearStart(card.candidate, first));
+  const near = touching.filter((card) => isNearStart(card.candidate, first));
+
+  const left = far.reduce(
+    (edge, card) => Math.max(edge, card.left + DECK_CASCADE_INDENT_RATIO),
+    0,
+  );
+  if (near.length === 0) return [left, 1];
+
+  const nearLeft = Math.min(...near.map((card) => card.left));
+  if (nearLeft > left) return [left, nearLeft];
+
+  const nearRight = Math.max(...near.map((card) => card.left + card.width));
+  if (nearRight < 1) return [nearRight, 1];
+
+  return [left, 1];
+};
+
+const isNearStart = (earlier: DeckCandidate, later: DeckCandidate): boolean =>
+  later.start.diff(earlier.start, "minute") < DECK_NEAR_START_MINUTES;
 
 const getTimedEventCardWidth = (availableWidth: number) => {
   const fluidWidth = availableWidth * TIMED_EVENT_WIDTH_RATIO;

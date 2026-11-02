@@ -30,10 +30,12 @@ export const EVENT_WIDTH_MINIMUM = 80;
 // Narrowest a day column can get before the week view drops a day instead;
 // wider than EVENT_WIDTH_MINIMUM so titles/time labels stay legible.
 export const DAY_COLUMN_MIN_USABLE_WIDTH = 140;
-export const DECK_INDENT = 16;
+// Overlap deck: events starting within this window share the row side by
+// side; a later start is drawn over the earlier card, indented by the ratio.
+export const DECK_NEAR_START_MINUTES = 30;
+export const DECK_CASCADE_INDENT_RATIO = 0.15;
 export const TIMED_EVENT_WIDTH_RATIO = 0.6;
 export const TIMED_EVENT_MIN_WIDTH = 280;
-export const TIMED_EVENT_FAN_INDENT = 44;
 export const HIDDEN_EVENT_STRIP_WIDTH = 8;
 
 export function applyHiddenEventStripWidth<T extends { width: number }>(

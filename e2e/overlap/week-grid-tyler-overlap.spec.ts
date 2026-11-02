@@ -5,6 +5,8 @@ import { seedLocalEvents } from "../utils/local-event-seed.util";
 const DENVER = "America/Denver";
 const WEEK_START = "2026-10-26";
 const FROZEN_CLOCK = "2026-10-20T12:00:00-06:00";
+/** Mirrors DECK_CASCADE_INDENT_RATIO in apps/calendar-web grid.constants. */
+const CASCADE_INDENT_RATIO = 0.15;
 
 const tylerSaturdayEvents = () => [
   {
@@ -76,13 +78,13 @@ const tylerSaturdayEvents = () => [
   },
 ];
 
-test.describe("Tyler Oct 31 overlap column layout", () => {
+test.describe("Tyler Oct 31 overlap deck layout", () => {
   test.use({
     timezoneId: DENVER,
     viewport: { width: 1280, height: 800 },
   });
 
-  test("fans overlapping Saturday events into side-by-side columns", async ({
+  test("cascades later Saturday starts over the cards they overlap", async ({
     page,
   }, testInfo) => {
     testInfo.setTimeout(90_000);
@@ -101,34 +103,37 @@ test.describe("Tyler Oct 31 overlap column layout", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.locator("#mainGrid").waitFor({ state: "visible" });
 
-    const unwind = page.getByRole("button", { name: /unwind/i });
-    const ritual = page.getByRole("button", { name: /monthly ritual/i });
-    await expect(unwind).toBeVisible();
-    await expect(ritual).toBeVisible();
+    const box = async (name: RegExp) => {
+      const card = page.getByRole("button", { name });
+      await expect(card).toBeVisible();
+      return card.evaluate((node) => {
+        const el = node as HTMLElement;
+        return {
+          left: parseFloat(el.style.left),
+          width: parseFloat(el.style.width),
+        };
+      });
+    };
 
-    const unwindBox = await unwind.evaluate((node) => {
-      const el = node as HTMLElement;
-      return {
-        left: parseFloat(el.style.left),
-        width: parseFloat(el.style.width),
-      };
-    });
-    const ritualBox = await ritual.evaluate((node) => {
-      const el = node as HTMLElement;
-      return {
-        left: parseFloat(el.style.left),
-        width: parseFloat(el.style.width),
-      };
-    });
+    // Each later start sits over the earlier card, indented by the cascade
+    // ratio, so the earlier title stays readable above it.
+    const expectCascade = (
+      earlier: { left: number; width: number },
+      later: { left: number; width: number },
+    ) => {
+      const indent = earlier.width * CASCADE_INDENT_RATIO;
+      expect(later.left).toBeCloseTo(earlier.left + indent, 0);
+      expect(later.width).toBeCloseTo(earlier.width - indent, 0);
+    };
 
-    expect(unwindBox.width).toBeCloseTo(ritualBox.width, 0);
-    expect(Math.abs(unwindBox.left - ritualBox.left)).toBeCloseTo(
-      unwindBox.width,
-      0,
+    expectCascade(await box(/unwind/i), await box(/monthly ritual/i));
+    expectCascade(
+      await box(/fall festival/i),
+      await box(/record compass demo/i),
     );
 
     await page.locator("#mainGrid").screenshot({
-      path: testInfo.outputPath("after-sat-oct31-column.png"),
+      path: testInfo.outputPath("after-sat-oct31-deck.png"),
     });
   });
 });

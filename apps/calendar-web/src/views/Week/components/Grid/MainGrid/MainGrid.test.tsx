@@ -36,7 +36,10 @@ import {
   initialDraftState,
   useDraftStore,
 } from "@web/events/stores/draft.store";
-import { HIDDEN_EVENT_STRIP_WIDTH } from "@web/grid/grid.constants";
+import {
+  DECK_CASCADE_INDENT_RATIO,
+  HIDDEN_EVENT_STRIP_WIDTH,
+} from "@web/grid/grid.constants";
 import {
   WEEK_INTERACTION_EVENT_ID_ATTRIBUTE,
   WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE,
@@ -484,7 +487,7 @@ describe("saved Week event ownership", () => {
     );
   });
 
-  it("lays overlapping saved timed events out as side-by-side columns", () => {
+  it("cascades a later overlapping saved timed event over the earlier one", () => {
     seedGrid([
       createSavedEvent({
         _id: "early-overlap",
@@ -519,16 +522,15 @@ describe("saved Week event ownership", () => {
     const late = screen.getByRole("button", { name: /late overlap/i });
     const solo = screen.getByRole("button", { name: /timed event: solo/i });
 
-    expect(parseFloat(early.style.width)).toBe(parseFloat(late.style.width));
-    expect(parseFloat(late.style.left)).toBe(
-      parseFloat(early.style.left) + parseFloat(early.style.width),
+    const earlyWidth = parseFloat(early.style.width);
+    const indent = earlyWidth * DECK_CASCADE_INDENT_RATIO;
+    expect(parseFloat(late.style.left)).toBeCloseTo(
+      parseFloat(early.style.left) + indent,
     );
+    expect(parseFloat(late.style.width)).toBeCloseTo(earlyWidth - indent);
 
     expect(Number(early.style.zIndex)).toBeLessThan(Number(late.style.zIndex));
 
-    expect(parseFloat(solo.style.width)).toBeGreaterThan(
-      parseFloat(early.style.width),
-    );
     expect(Number(solo.style.zIndex)).toBe(ZIndex.LAYER_1);
   });
 

@@ -125,7 +125,7 @@ describe("prod overlap export → grid deck layout", () => {
 
     expect(unwind?.deckLayout?.groupSize).toBe(2);
     expect(update730?.deckLayout?.groupSize).toBe(2);
-    expect(unwind?.deckLayout?.order).not.toBe(update730?.deckLayout?.order);
+    expect(unwind?.deckLayout?.left).not.toBe(update730?.deckLayout?.left);
 
     expect(update630?.deckLayout).toBeNull();
     expect(ritualA?.deckLayout?.groupSize).toBe(2);
