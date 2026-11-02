@@ -36,10 +36,16 @@ import {
 import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
 import { useShortcutTipsCmdItems } from "@web/components/CommandPalette/hooks/useShortcutTipsCmdItems";
 import { useShowAccountsCmdItems } from "@web/components/CommandPalette/hooks/useShowAccountsCmdItems";
-import { useShowBillingCmdItems } from "@web/components/CommandPalette/hooks/useShowBillingCmdItems";
+import {
+  BILLING_PENDING_CMD_IDS,
+  useShowBillingCmdItems,
+} from "@web/components/CommandPalette/hooks/useShowBillingCmdItems";
 import { useShowBookingCmdItems } from "@web/components/CommandPalette/hooks/useShowBookingCmdItems";
 import { useThemeCmdItems } from "@web/components/CommandPalette/hooks/useThemeCmdItems";
-import { useUpgradeCmdItems } from "@web/components/CommandPalette/hooks/useUpgradeCmdItems";
+import {
+  SUBSCRIBE_PENDING_CMD_ID,
+  useUpgradeCmdItems,
+} from "@web/components/CommandPalette/hooks/useUpgradeCmdItems";
 import {
   DESKTOP_QUICK_ADD_PALETTE_PLACEHOLDER,
   getMoreCommandPaletteSections,
@@ -83,6 +89,18 @@ import {
   paletteEventRoute,
   startFocusEventCard,
 } from "./event-search.util";
+
+const SECTION_HEADING_CLASS_NAME =
+  "px-3 pt-2 pb-1 font-semibold text-text text-xs uppercase tracking-wide";
+
+/** Loaded command id to the placeholder shown in its slot while it loads. */
+const PENDING_CMD_ID_BY_LOADED_ID: Readonly<Record<string, string>> = {
+  ...Object.fromEntries(
+    MEETING_PAGE_LOADED_CMD_IDS.map((id) => [id, MEETING_PAGE_PENDING_CMD_ID]),
+  ),
+  ...BILLING_PENDING_CMD_IDS,
+  "subscribe-now": SUBSCRIBE_PENDING_CMD_ID,
+};
 
 const RECENT_SECTION_ID = "recent";
 const MAX_RECENT_ITEMS = 3;
@@ -196,6 +214,7 @@ const CommandPaletteContent = ({
   const noResultsText = `No results for “${search}”`;
   const searchingText = `Searching for “${search}”`;
   const isSearching = eventSearch.isSearching;
+  const showSearchStatus = isSearching && eventItems.length === 0;
   const liveRegionText = !trimmedSearch
     ? ""
     : resultCount === 0
@@ -277,92 +296,101 @@ const CommandPaletteContent = ({
           </span>
 
           <div className="max-h-[50vh] overflow-y-auto p-2">
-            {filteredSections.length === 0 ? (
-              isSearching ? (
-                <div className="px-3 py-2 text-text-muted">{searchingText}</div>
-              ) : (
-                <div className="px-3 py-2 text-text">{noResultsText}</div>
-              )
+            {filteredSections.length === 0 && !showSearchStatus ? (
+              <div className="px-3 py-2 text-text">{noResultsText}</div>
             ) : (
-              filteredSections.map((section) => (
-                <div key={section.id} className="mb-1">
-                  {section.heading ? (
-                    <div className="px-3 pt-2 pb-1 font-semibold text-text text-xs uppercase tracking-wide">
-                      {section.heading}
-                    </div>
-                  ) : null}
-                  {section.items.map((item) => {
-                    itemIndex += 1;
-                    const index = itemIndex;
-                    const isActive = activeIndex === index;
-                    const rowClassName = `flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-text-muted ${
-                      isActive
-                        ? "bg-surface-overlay ring-1 ring-accent ring-inset"
-                        : ""
-                    } ${item.disabled ? "cursor-default opacity-50" : ""}`;
+              <>
+                {filteredSections.map((section) => (
+                  <div key={section.id} className="mb-1">
+                    {section.heading ? (
+                      <div className={SECTION_HEADING_CLASS_NAME}>
+                        {section.heading}
+                      </div>
+                    ) : null}
+                    {section.items.map((item) => {
+                      itemIndex += 1;
+                      const index = itemIndex;
+                      const isActive = activeIndex === index;
+                      const rowClassName = `flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-text-muted ${
+                        isActive
+                          ? "bg-surface-overlay ring-1 ring-accent ring-inset"
+                          : ""
+                      } ${item.disabled ? "cursor-default opacity-50" : ""}`;
 
-                    const content = (
-                      <>
-                        <item.icon size={18} />
-                        <span className="min-w-0 flex-1 truncate">
-                          {trimmedSearch &&
-                          !item.detail &&
-                          item.id !== GO_TO_DATE_ITEM_ID ? (
-                            <HighlightedLabel
-                              label={item.label}
-                              ranges={getLabelMatchRanges(item.label, search)}
-                            />
-                          ) : (
-                            item.label
+                      const content = (
+                        <>
+                          <item.icon size={18} />
+                          <span className="min-w-0 flex-1 truncate">
+                            {trimmedSearch &&
+                            !item.detail &&
+                            item.id !== GO_TO_DATE_ITEM_ID ? (
+                              <HighlightedLabel
+                                label={item.label}
+                                ranges={getLabelMatchRanges(item.label, search)}
+                              />
+                            ) : (
+                              item.label
+                            )}
+                          </span>
+                          {item.detail && (
+                            <span className="shrink-0 text-text-muted text-xs">
+                              {item.detail}
+                            </span>
                           )}
-                        </span>
-                        {item.detail && (
-                          <span className="shrink-0 text-text-muted text-xs">
-                            {item.detail}
-                          </span>
-                        )}
-                        {item.badge && (
-                          <span className="ml-auto shrink-0 rounded border border-border px-1.5 text-text-muted text-xs">
-                            {item.badge}
-                          </span>
-                        )}
-                        {item.shortcut && (
-                          <ShortcutKeys
-                            className={`shrink-0 ${item.badge ? "" : "ml-auto"}`}
-                            keys={item.shortcut}
-                          />
-                        )}
-                      </>
-                    );
+                          {item.badge && (
+                            <span className="ml-auto shrink-0 rounded border border-border px-1.5 text-text-muted text-xs">
+                              {item.badge}
+                            </span>
+                          )}
+                          {item.shortcut && (
+                            <ShortcutKeys
+                              className={`shrink-0 ${item.badge ? "" : "ml-auto"}`}
+                              keys={item.shortcut}
+                            />
+                          )}
+                        </>
+                      );
 
-                    return (
-                      <button
-                        key={item.id}
-                        {...getItemProps({
-                          ref(node: HTMLElement | null) {
-                            listRef.current[index] = node;
-                          },
-                          onPointerMove() {
-                            if (item.disabled || isActive) return;
-                            setActiveIndex(index);
-                          },
-                          onClick() {
-                            activateItem(item);
-                          },
-                        })}
-                        type="button"
-                        role="option"
-                        tabIndex={-1}
-                        aria-selected={isActive}
-                        disabled={item.disabled}
-                        className={rowClassName}
-                      >
-                        {content}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))
+                      return (
+                        <button
+                          key={item.id}
+                          {...getItemProps({
+                            ref(node: HTMLElement | null) {
+                              listRef.current[index] = node;
+                            },
+                            onPointerMove() {
+                              if (item.disabled || isActive) return;
+                              setActiveIndex(index);
+                            },
+                            onClick() {
+                              activateItem(item);
+                            },
+                          })}
+                          type="button"
+                          role="option"
+                          tabIndex={-1}
+                          aria-selected={isActive}
+                          disabled={item.disabled}
+                          className={rowClassName}
+                        >
+                          {content}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+                {/* Holds the first event row's slot while titles search, so
+                  results land where the status was and the command rows
+                  above never move. */}
+                {showSearchStatus ? (
+                  <div className="mb-1">
+                    <div className={SECTION_HEADING_CLASS_NAME}>Events</div>
+                    <div className="px-3 py-2 text-text-muted">
+                      {searchingText}
+                    </div>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
 
@@ -522,13 +550,15 @@ export const CommandPalette = ({
   const itemsById = new Map<string, CommandItem>(
     sections.flatMap((section) => section.items.map((item) => [item.id, item])),
   );
-  // A recent meeting-page command resolves to the pending row while the page
-  // loads, so Recent keeps its height instead of growing a row a beat later.
-  const resolveRecent = (id: string) =>
-    itemsById.get(id) ??
-    (MEETING_PAGE_LOADED_CMD_IDS.includes(id)
-      ? itemsById.get(MEETING_PAGE_PENDING_CMD_ID)
-      : undefined);
+  // A recent command that is still loading (meeting page, billing) resolves
+  // to its pending row, so Recent keeps its height instead of growing a row a
+  // beat later.
+  const resolveRecent = (id: string) => {
+    const pendingId = PENDING_CMD_ID_BY_LOADED_ID[id];
+    return (
+      itemsById.get(id) ?? (pendingId ? itemsById.get(pendingId) : undefined)
+    );
+  };
   const recentItems = recentCommandIds
     .map(resolveRecent)
     .filter((item): item is CommandItem => item !== undefined)

@@ -509,7 +509,14 @@ export function BookingSettingsSection({
     return <BookingConnectPrompt />;
   }
 
-  if (isSeedingForm) {
+  // A live page's status decides which notice sits above the fields, and a
+  // blocker can run several lines or carry Reconnect buttons. Hold the form
+  // until that answer lands so the fields appear once, already in place,
+  // instead of sliding down under the host's pointer.
+  const isAwaitingLiveStatus =
+    hasHealthyConnection && isLive && statusQuery.isPending;
+
+  if (isSeedingForm || isAwaitingLiveStatus) {
     return <p className="text-sm text-text-muted">Loading meeting settings…</p>;
   }
 

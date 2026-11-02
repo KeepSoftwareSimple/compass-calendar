@@ -34,14 +34,17 @@ import {
   mock,
 } from "bun:test";
 
-const actualUseAppAccess = (await import("@web/billing/useAppAccess"))
-  .useAppAccess;
+const actualAppAccessModule = await import("@web/billing/useAppAccess");
+const actualUseAppAccess = actualAppAccessModule.useAppAccess;
+const actualUseIsAppAccessPending = actualAppAccessModule.useIsAppAccessPending;
 let isAppAccessMocked = true;
 let access: AppAccess = { kind: "open" };
 
 mock.module("@web/billing/useAppAccess", () => ({
   useAppAccess: (...args: Parameters<typeof actualUseAppAccess>) =>
     isAppAccessMocked ? access : actualUseAppAccess(...args),
+  useIsAppAccessPending: () =>
+    isAppAccessMocked ? false : actualUseIsAppAccessPending(),
 }));
 
 const anonymousSession = {

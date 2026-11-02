@@ -106,6 +106,12 @@ export const STORAGE_KEYS = {
   /** Session-only dismiss for the awaiting_checkout explore banner. */
   AWAITING_CHECKOUT_BANNER_DISMISSED:
     "compass.billing.awaiting-checkout-banner-dismissed-session",
+  // "true" once this browser last saw a running trial. Only sizes the palette's
+  // placeholder rows while the plan loads; never gates access.
+  LAST_SEEN_TRIALING: "compass.billing.last-seen-trialing",
+  // Pixel height of the sidebar calendar list body, so its loading skeleton
+  // matches and the notices below it stay put.
+  CALENDAR_LIST_HEIGHT: "compass.calendars.list-height",
   /** JSON array of app semver strings whose update toast was shown or dismissed. */
   APP_UPDATE_NOTICE_HANDLED_VERSIONS:
     "compass.app-update.notice-handled-versions",
