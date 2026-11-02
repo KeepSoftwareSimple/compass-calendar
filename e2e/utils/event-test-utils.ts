@@ -5,6 +5,20 @@ const LOCAL_DB_NAME = "compass-local";
 /** Mid-morning UTC anchor for timed specs that type ambiguous clock times. */
 export const DETERMINISTIC_E2E_CLOCK = new Date("2026-04-24T10:00:00.000Z");
 
+/**
+ * Evening UTC anchor for specs whose layout must not see a sample event in
+ * progress. The demo seed builds its events from the real clock
+ * (`generateDemoData`'s `referenceNow` defaults to `dayjs()`) at 09:00, 10:00,
+ * 12:00, 14:00, 15:00 and 17:00 browser-local, and the browser is pinned to
+ * UTC here, so an unpinned spec renders the Up Next banner for roughly five
+ * hours a day and silently measures a different layout. 20:00 clears the last
+ * sample event. {@link DETERMINISTIC_E2E_CLOCK} does not: 10:00 is itself the
+ * start of one of those windows.
+ */
+export const DETERMINISTIC_E2E_CLOCK_NO_SAMPLE_EVENT = new Date(
+  "2026-04-24T20:00:00.000Z",
+);
+
 /** Pin the browser clock before navigation so draft defaults and AM/PM inference stay stable. */
 export const installDeterministicBrowserClock = async (page: Page) => {
   await page.clock.install({ time: DETERMINISTIC_E2E_CLOCK });
