@@ -18,6 +18,10 @@ export const isBookingEnabled = (_nodeEnv: NodeEnv | string) => true;
 export const isAppleOffered = (nodeEnv: NodeEnv | string) =>
   isNonProduction(nodeEnv);
 
-/** SuperTokens operator dashboard UI: never on in production. */
+/**
+ * SuperTokens operator dashboard UI: local dev and unit tests only. Staging is
+ * internet-facing, so it must not expose the dashboard even though it is
+ * non-production.
+ */
 export const isSupertokensDashboardEnabled = (nodeEnv: NodeEnv | string) =>
-  isNonProduction(nodeEnv);
+  isDev(nodeEnv) || nodeEnv === NodeEnv.Test;

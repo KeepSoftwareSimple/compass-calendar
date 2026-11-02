@@ -22,14 +22,15 @@ describe("toEventMutationError", () => {
     expect(mapped.body.retryable).toBe(true);
   });
 
-  it("maps unknown errors to non-retryable 500", () => {
+  it("maps unknown errors to non-retryable 500 without leaking internals", () => {
     const mapped = toEventMutationError(new Error("boom"));
     expect(mapped.status).toBe(Status.INTERNAL_SERVER);
     expect(mapped.body).toEqual({
       code: "PROVIDER_FAILURE",
-      message: "boom",
+      message: "Something went wrong. Please try again.",
       retryable: false,
     });
+    expect(mapped.body.message).not.toContain("boom");
   });
 });
 

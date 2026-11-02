@@ -37,9 +37,9 @@ describe("isNonProduction", () => {
 });
 
 describe("isSupertokensDashboardEnabled", () => {
-  it("is on in development, staging, and tests", () => {
+  it("is on in development and tests only", () => {
     expect(isSupertokensDashboardEnabled(NodeEnv.Development)).toBe(true);
-    expect(isSupertokensDashboardEnabled(NodeEnv.Staging)).toBe(true);
+    expect(isSupertokensDashboardEnabled(NodeEnv.Staging)).toBe(false);
     expect(isSupertokensDashboardEnabled(NodeEnv.Test)).toBe(true);
   });
 

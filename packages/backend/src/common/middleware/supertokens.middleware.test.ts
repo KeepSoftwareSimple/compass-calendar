@@ -138,27 +138,30 @@ describe("supertokens.middleware", () => {
   });
 
   describe("initSupertokens", () => {
-    it("omits the SuperTokens dashboard recipe in production", () => {
+    it("omits the SuperTokens dashboard recipe in production and staging", () => {
       const originalNodeEnv = CONFIG.NODE_ENV;
-      CONFIG.NODE_ENV = NodeEnv.Production;
-
-      try {
-        initSupertokens();
-      } finally {
-        CONFIG.NODE_ENV = originalNodeEnv;
-      }
-
-      expect(Dashboard.init).not.toHaveBeenCalled();
-      const initArg = getFirstCallArg<{
-        recipeList: unknown[];
-      }>(superTokensNode.init);
-
-      expect(initArg.recipeList).toEqual([
+      const recipeListWithoutDashboard = [
         { recipe: "thirdparty" },
         { recipe: "emailpassword" },
         { recipe: "session" },
         { recipe: "usermetadata" },
-      ]);
+      ];
+
+      try {
+        for (const nodeEnv of [NodeEnv.Production, NodeEnv.Staging] as const) {
+          CONFIG.NODE_ENV = nodeEnv;
+          (Dashboard.init as Mock).mockClear();
+          (superTokensNode.init as Mock).mockClear();
+          initSupertokens();
+          expect(Dashboard.init).not.toHaveBeenCalled();
+          const initArg = getFirstCallArg<{
+            recipeList: unknown[];
+          }>(superTokensNode.init);
+          expect(initArg.recipeList).toEqual(recipeListWithoutDashboard);
+        }
+      } finally {
+        CONFIG.NODE_ENV = originalNodeEnv;
+      }
     });
 
     it("calls SuperTokens.init with appInfo, credentials, and recipeList", () => {
