@@ -467,8 +467,10 @@ The public page shows "Pick a meeting" above the calendar only when it has
 two or more types; one-type pages look unchanged. Keys 1, 2 and 3 pick a
 type (not while typing). `?type=<id>` opens that type and an unknown id
 falls back to type #1; picking type #1 drops the param. Picking a type
-clears the chosen slot. Type #1 sends no `meetingTypeId`, so requests match
-what older servers expect. Reschedule keeps the meeting's own length.
+clears the chosen slot, and times reload in place without moving the
+layout. Slot requests for type #1 send no `meetingTypeId` (same cache key
+as before); a reservation always sends the chosen `meetingTypeId`, type #1
+included. Reschedule keeps the meeting's own length.
 
 ## Busy occupancy
 
