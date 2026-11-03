@@ -23,6 +23,8 @@ import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { signInternalRequest } from "@sync/auth/internal-auth";
 import { type SyncConfig } from "@sync/config/sync.config";
+import { GooglePeopleAdapter } from "@sync/providers/google/google-people.adapter";
+import { MicrosoftPeopleAdapter } from "@sync/providers/microsoft/microsoft-people.adapter";
 import {
   type ProviderAuthAdapter,
   type ProviderAuthorization,
@@ -32,6 +34,7 @@ import {
   type ContactsPort,
   ContactsSearchError,
   type ContactsSearchInput,
+  type ContactsSearchSources,
 } from "@sync/providers/provider-contacts.port";
 import {
   buildProviderRegistry,
@@ -84,10 +87,23 @@ class FakeAuthAdapter implements ProviderAuthAdapter {
   async revoke(): Promise<void> {}
 }
 
+// Records the search the route issues, but defers the scope -> surface
+// mapping to the real adapter under test, so the `sources` assertions below
+// still prove the route hands each provider's own scopes to its own adapter.
 class FakeContactsPort implements ContactsPort {
   calls: ContactsSearchInput[] = [];
   result: ContactSuggestion[] = [];
   error?: unknown;
+  #real: ContactsPort;
+
+  constructor(real: ContactsPort) {
+    this.#real = real;
+  }
+
+  sourcesForGrantedScopes(granted: ReadonlySet<string>): ContactsSearchSources {
+    return this.#real.sourcesForGrantedScopes(granted);
+  }
+
   async searchContacts(
     input: ContactsSearchInput,
   ): Promise<ContactSuggestion[]> {
@@ -122,6 +138,7 @@ describe("GET /internal/contacts/suggestions", () => {
   let base: string;
   let authAdapter: FakeAuthAdapter;
   let contacts: FakeContactsPort;
+  let microsoftContacts: FakeContactsPort;
 
   const startService = async (
     config: SyncConfig = testConfig(),
@@ -205,7 +222,11 @@ describe("GET /internal/contacts/suggestions", () => {
             ...google,
             callbackPath: "/sync/microsoft",
             notificationsCallbackPath: "/sync/notifications/microsoft",
-            adapters: { ...google.adapters, auth: authAdapter, contacts },
+            adapters: {
+              ...google.adapters,
+              auth: authAdapter,
+              contacts: microsoftContacts,
+            },
           },
         ],
       ]),
@@ -243,7 +264,8 @@ describe("GET /internal/contacts/suggestions", () => {
     connections = new ProviderConnectionRepository(mongo.db);
     credentials = new CredentialRepository(mongo.db);
     authAdapter = new FakeAuthAdapter();
-    contacts = new FakeContactsPort();
+    contacts = new FakeContactsPort(new GooglePeopleAdapter());
+    microsoftContacts = new FakeContactsPort(new MicrosoftPeopleAdapter());
   });
 
   afterEach(async () => {
@@ -431,7 +453,9 @@ describe("GET /internal/contacts/suggestions", () => {
       MICROSOFT_SCOPE_CALENDARS_READWRITE,
       MICROSOFT_SCOPE_PEOPLE_READ,
     ]);
-    contacts.result = [{ email: "bob@example.com", displayName: "Bob Smith" }];
+    microsoftContacts.result = [
+      { email: "bob@example.com", displayName: "Bob Smith" },
+    ];
     await startService(testConfig(), registryWithMicrosoft());
 
     const res = await suggest(tenantId, principalId, "bo");
@@ -440,7 +464,7 @@ describe("GET /internal/contacts/suggestions", () => {
     expect(await res.json()).toEqual({
       suggestions: [{ email: "bob@example.com", displayName: "Bob Smith" }],
     });
-    expect(contacts.calls).toEqual([
+    expect(microsoftContacts.calls).toEqual([
       {
         accessToken: "minted-access-token",
         query: "bo",

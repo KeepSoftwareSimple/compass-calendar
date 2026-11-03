@@ -30,8 +30,17 @@ export interface ContactsSearchInput {
 // so this port is how the suggestions route reaches the People API without
 // knowing it exists.
 export interface ContactsPort {
+  // Which of this provider's contact surfaces the granted scopes unlock. The
+  // adapter owns this mapping because only it knows which scope guards which
+  // API; the route passes the credential's scopes and never names a provider.
+  sourcesForGrantedScopes(granted: ReadonlySet<string>): ContactsSearchSources;
   searchContacts(input: ContactsSearchInput): Promise<ContactSuggestion[]>;
 }
+
+// True when at least one surface is open, i.e. a search can return something.
+export const hasGrantedContactsSource = (
+  sources: ContactsSearchSources,
+): boolean => sources.contacts || sources.otherContacts;
 
 // Why a contact search failed. Callers map these to transport responses; none
 // of them ever carries contact content in its message or cause.
