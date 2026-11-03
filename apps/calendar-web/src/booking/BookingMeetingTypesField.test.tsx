@@ -24,7 +24,7 @@ function Harness({ initial }: { initial: Form }) {
         invalid={false}
         onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
       />
-      <output data-testid="types">
+      <output aria-label="Saved meeting types">
         {JSON.stringify(form.meetingTypes ?? null)}
       </output>
     </>
@@ -118,9 +118,8 @@ describe("BookingMeetingTypesField", () => {
 
   it("shows Enter and Delete keycaps for the focused row", () => {
     render(<Harness initial={twoTypes} />);
-    const hint = screen.getByTestId("meeting-types-keys-hint");
-    expect(hint).toHaveTextContent("edits");
-    expect(hint).toHaveTextContent("removes a focused type");
+    expect(screen.getByText("edits")).toBeVisible();
+    expect(screen.getByText("removes a focused type")).toBeVisible();
   });
 
   it("the remove button removes its row", async () => {
@@ -128,7 +127,9 @@ describe("BookingMeetingTypesField", () => {
     render(<Harness initial={twoTypes} />);
     await user.click(screen.getByRole("button", { name: "Remove Deep dive" }));
     expect(rows()).toHaveLength(1);
-    expect(screen.getByTestId("types")).toHaveTextContent(
+    expect(
+      screen.getByRole("status", { name: "Saved meeting types" }),
+    ).toHaveTextContent(
       JSON.stringify([{ id: "default", label: "Intro", durationMinutes: 30 }]),
     );
   });

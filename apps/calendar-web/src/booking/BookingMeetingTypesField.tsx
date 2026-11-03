@@ -226,10 +226,7 @@ export function BookingMeetingTypesField({
         >
           Add type
         </OverlayPanelActionButton>
-        <p
-          className="flex pointer-coarse:hidden items-center gap-1 text-text-muted text-xs"
-          data-testid="meeting-types-keys-hint"
-        >
+        <p className="flex pointer-coarse:hidden items-center gap-1 text-text-muted text-xs">
           <ShortcutKeys keys="Enter" />
           <span>edits</span>
           <ShortcutKeys className="ml-1" keys="Delete" />
