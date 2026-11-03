@@ -4,6 +4,7 @@ import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { useIsTrialing } from "@web/billing/useIsTrialing";
 import { ROOT_ROUTES, ROUTE_IDS } from "@web/common/constants/routes";
 import { ID_MAIN } from "@web/common/constants/web.constants";
+import { useCanonicalPath } from "@web/common/hooks/useCanonicalPath";
 import { useResponsiveLayout } from "@web/components/AuthenticatedLayout/useResponsiveLayout";
 import { CalendarHeader } from "@web/components/CalendarHeader/CalendarHeader";
 import { LifeCommandPalette } from "@web/components/CommandPalette/CommandPalette";
@@ -55,6 +56,7 @@ function formatWeeks(value: number) {
 }
 
 export function LifeView({ today }: LifeViewProps) {
+  useCanonicalPath(ROOT_ROUTES.LIFE);
   const lifeViewIntro = useLifeViewIntro();
   const currentDate = useMemo(() => today ?? new Date(), [today]);
   const navigate = useNavigate();
