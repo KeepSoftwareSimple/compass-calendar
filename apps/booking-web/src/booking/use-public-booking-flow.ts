@@ -253,9 +253,9 @@ export function usePublicBookingFlow() {
           notes: values.notes || undefined,
           guestTimeZone: values.guestTimeZone,
           durationMinutes,
-          ...(selection.requestTypeId
-            ? { meetingTypeId: selection.requestTypeId }
-            : {}),
+          // Always name the type, #1 included, so the reservation records
+          // which meeting the guest picked.
+          meetingTypeId: selection.selected.id,
         }),
       );
       track("booking_reservation_created", {

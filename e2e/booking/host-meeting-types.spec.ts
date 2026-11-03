@@ -78,4 +78,42 @@ test.describe("host meeting types", () => {
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toBeFocused();
   });
+
+  test("Mod+Enter still saves from a type name and a focused row", async ({
+    page,
+  }) => {
+    const captured = await prepareSignedInBookingSettingsPage(page);
+    const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+    const rows = settingsDialog
+      .getByRole("list", { name: "Meeting types" })
+      .getByRole("listitem");
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: /Add type/ }),
+    );
+    const name = settingsDialog.getByRole("textbox", {
+      name: "Meeting type 2 name",
+    });
+    await expect(name).toBeFocused();
+    await name.fill("Deep dive");
+    await page.keyboard.press("ControlOrMeta+Enter");
+
+    await expect.poll(() => captured.putBodies.length).toBe(1);
+    expect(captured.putBodies[0]?.meetingTypes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "Deep dive" })]),
+    );
+
+    await rows.nth(1).focus();
+    await page.keyboard.press("Enter");
+    await expect(name).toBeFocused();
+    await name.fill("Deep dive 2");
+    await page.keyboard.press("Enter");
+    await expect(rows.nth(1)).toBeFocused();
+    await page.keyboard.press("ControlOrMeta+Enter");
+    await expect.poll(() => captured.putBodies.length).toBe(2);
+    expect(captured.putBodies[1]?.meetingTypes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Deep dive 2" }),
+      ]),
+    );
+  });
 });

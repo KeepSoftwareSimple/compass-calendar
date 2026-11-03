@@ -201,4 +201,53 @@ describe("PublicBookingPage meeting types", () => {
       }),
     );
   });
+  it("books type #1 with its id on a one-type page", async () => {
+    const user = userEvent.setup({ delay: null });
+    let postedBody: unknown;
+    server.use(
+      pageHandler(),
+      slotsHandler([]),
+      reservationGetHandler(slot.slotStart),
+      http.post(
+        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/reservations`,
+        async ({ request }) => {
+          postedBody = await request.json();
+          return HttpResponse.json(
+            {
+              reservationId: "000000000000000000000099",
+              slotStart: slot.slotStart,
+              slotEnd: slot.slotEnd,
+              guestTimeZone: "UTC",
+              cancelUrl:
+                "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
+              rescheduleUrl:
+                "https://compasscalendar.com/meet/reschedule/000000000000000000000099?token=abc",
+            },
+            { status: Status.OK },
+          );
+        },
+      ),
+    );
+    renderBookingRoute("/meet/tylerdane?tz=UTC");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: formatBookingSlotTime(slot.slotStart, "UTC"),
+      }),
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Pick a meeting" }),
+    ).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Name"), "Guest User");
+    await user.type(screen.getByLabelText("Email"), "guest@example.com");
+    await user.click(screen.getByRole("button", { name: "Confirm meeting" }));
+
+    await waitFor(() =>
+      expect(postedBody).toMatchObject({
+        slotStart: slot.slotStart,
+        durationMinutes: 30,
+        meetingTypeId: "default",
+      }),
+    );
+  });
 });
