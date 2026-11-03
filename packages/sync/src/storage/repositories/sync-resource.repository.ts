@@ -50,6 +50,30 @@ export interface ListStaleEventsOptions {
   excludeProviders?: readonly ProviderKind[];
 }
 
+// A resource still inside its cursor-expiry hold-off is skipped at selection:
+// dispatch drops every incrementalPull for it until the hold-off ends, so
+// enqueueing one only buys a job, a drop log, and an attempt stamp
+// (2026-11-03: three prod calendars produced ~4.9k such drops a day). Once the
+// hold-off lapses the resource is eligible again; it was not attempted in the
+// meantime, so it sorts to the front of the next sweep.
+function notHeldOffFilter(now: Date): Record<string, unknown> {
+  return {
+    $or: [
+      { cursorExpiredBackoffUntil: null },
+      { cursorExpiredBackoffUntil: { $lte: now } },
+    ],
+  };
+}
+
+// A calendarList whose discovery the provider durably refused (e.g. Google
+// notACalendarUser) is re-tried by the background/foreground re-list paths at
+// most this often. Reconnect and a manual Refresh still enqueue discovery
+// immediately, and a successful pass clears the marker. Before this, the
+// rediscovery sweep re-picked such a connection every ~2 minutes because a
+// failed pass never advances lastFullListAt (2026-11-03: ~700 drops/day from
+// one connection).
+export const DURABLE_DISCOVERY_FAILURE_RETRY_MS = 6 * 60 * 60 * 1000;
+
 // Inactive calendars are skipped at selection so a foreground tick or
 // reconcile sweep never enqueues a pull that dispatch would drop. `$ne:
 // false` still matches rows written before the field (treated as active)
@@ -654,6 +678,7 @@ export class SyncResourceRepository {
     principalId: PrincipalId,
     before: Date,
     limit = 200,
+    now: Date = new Date(),
   ): Promise<SyncResourceRecord[]> {
     const records = await this.collection
       .find({
@@ -662,7 +687,12 @@ export class SyncResourceRepository {
         resourceKind: "events",
         bootstrapState: "ready",
         ...ACTIVE_CALENDAR_FILTER,
-        $or: [{ lastAttemptAt: { $lt: before } }, { lastAttemptAt: null }],
+        $and: [
+          {
+            $or: [{ lastAttemptAt: { $lt: before } }, { lastAttemptAt: null }],
+          },
+          notHeldOffFilter(now),
+        ],
       })
       .sort({ lastAttemptAt: 1 })
       .limit(limit)
@@ -684,6 +714,7 @@ export class SyncResourceRepository {
     before: Date,
     limit: number,
     options: ListStaleEventsOptions = {},
+    now: Date = new Date(),
   ): Promise<SyncResourceRecord[]> {
     // Round-robin by ATTEMPT, not success: never-attempted first (null sorts
     // lowest), then least-recently-attempted, so a resource that fails without
@@ -694,7 +725,12 @@ export class SyncResourceRepository {
       {
         resourceKind: "events",
         ...ACTIVE_CALENDAR_FILTER,
-        $or: [{ lastSuccessAt: { $lt: before } }, { lastSuccessAt: null }],
+        $and: [
+          {
+            $or: [{ lastSuccessAt: { $lt: before } }, { lastSuccessAt: null }],
+          },
+          notHeldOffFilter(now),
+        ],
       },
       { lastAttemptAt: 1, lastSuccessAt: 1 },
       limit,
@@ -807,11 +843,33 @@ export class SyncResourceRepository {
   async listStaleCalendarLists(
     before: Date,
     limit: number,
+    now: Date = new Date(),
   ): Promise<SyncResourceRecord[]> {
     return this.#listForSweep(
       {
         resourceKind: "calendarList",
-        $or: [{ lastFullListAt: { $lt: before } }, { lastFullListAt: null }],
+        $and: [
+          {
+            $or: [
+              { lastFullListAt: { $lt: before } },
+              { lastFullListAt: null },
+            ],
+          },
+          // See DURABLE_DISCOVERY_FAILURE_RETRY_MS.
+          {
+            $or: [
+              { lastReadFailureAt: null },
+              { lastAttemptAt: null },
+              {
+                lastAttemptAt: {
+                  $lt: new Date(
+                    now.getTime() - DURABLE_DISCOVERY_FAILURE_RETRY_MS,
+                  ),
+                },
+              },
+            ],
+          },
+        ],
       },
       { lastAttemptAt: 1, lastFullListAt: 1 },
       limit,

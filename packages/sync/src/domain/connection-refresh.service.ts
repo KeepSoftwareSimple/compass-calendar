@@ -11,7 +11,10 @@ import {
 } from "@sync/storage/contracts/job.contracts";
 import { type JobRepository } from "@sync/storage/repositories/job.repository";
 import { type ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
-import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
+import {
+  DURABLE_DISCOVERY_FAILURE_RETRY_MS,
+  type SyncResourceRepository,
+} from "@sync/storage/repositories/sync-resource.repository";
 import { mapWithConcurrency } from "@sync/util/map-with-concurrency";
 
 // A resource pulled this recently does not need a fallback nudge; see
@@ -181,6 +184,8 @@ export async function refreshStalePrincipalCalendars(
       tenantId,
       principalId,
       staleBefore,
+      undefined,
+      at,
     ),
     deps.connections.listByPrincipal(tenantId, principalId),
   ]);
@@ -212,6 +217,17 @@ export async function refreshStalePrincipalCalendars(
         !calendarList?.lastFullListAt ||
         calendarList.lastFullListAt < listStaleBefore;
       if (!needsList) return;
+      // A durably refused discovery (e.g. notACalendarUser) is not re-listed on
+      // every foreground tick; see DURABLE_DISCOVERY_FAILURE_RETRY_MS. Manual
+      // Refresh and reconnect still retry it immediately.
+      if (
+        calendarList?.lastReadFailureAt != null &&
+        calendarList.lastAttemptAt != null &&
+        at.getTime() - calendarList.lastAttemptAt.getTime() <
+          DURABLE_DISCOVERY_FAILURE_RETRY_MS
+      ) {
+        return;
+      }
       if (calendarList) {
         await deps.resources.clearSyncCursor(
           tenantId,
