@@ -2,7 +2,7 @@ import { defineRemoteConfig, FAILURE_ARTIFACTS } from "./remote-config.util";
 
 export default defineRemoteConfig({
   testDir: "./journey",
-  testMatch: "staging-full-journey.spec.ts",
+  testMatch: /staging-(full-journey|booking-meeting-types)\.spec\.ts$/,
   timeout: 300_000,
   expectTimeout: 20_000,
   use: FAILURE_ARTIFACTS,
