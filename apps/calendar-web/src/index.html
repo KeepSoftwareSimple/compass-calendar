@@ -292,9 +292,8 @@
       .boot-allday {
         position: relative;
         flex: none;
-        min-height: 29px;
-        /* AllDayGridRow: 3 * ((100% - (GRID_Y_START 123 + GRID_PADDING_BOTTOM 20)) / 11) / 4 */
-        height: calc((100% - 143px) * 3 / 44);
+        /* AllDayGridRow empty height: one 23px lane + 6px padding. */
+        height: 29px;
       }
       .boot-timed {
         position: relative;

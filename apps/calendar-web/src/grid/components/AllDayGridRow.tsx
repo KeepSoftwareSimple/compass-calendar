@@ -44,7 +44,7 @@ import {
 } from "@web/shortcuts/shift-hint/event-jump.store";
 
 /** Marks row chrome (toggle, "+N more") that is not an empty all-day slot. */
-export const ALL_DAY_ROW_CONTROL_ATTRIBUTE = "data-allday-row-control";
+const ALL_DAY_ROW_CONTROL_ATTRIBUTE = "data-allday-row-control";
 export const ALL_DAY_ROW_TOGGLE_ID = "allday-row-toggle";
 const ALL_DAY_ROW_EVENTS_CLIP_ID = "allday-row-events-clip";
 
