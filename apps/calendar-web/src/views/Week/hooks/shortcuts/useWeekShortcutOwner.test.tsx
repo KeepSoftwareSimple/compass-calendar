@@ -20,7 +20,6 @@ import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { ID_EVENT_FORM, ID_SIDEBAR } from "@web/common/constants/web.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
-import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
 import { emitViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
@@ -58,6 +57,7 @@ import {
   eventJumpActions,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 import {
   afterEach,
   beforeEach,

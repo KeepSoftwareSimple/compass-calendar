@@ -17,10 +17,10 @@ import {
 import { type EventColorSlot } from "@core/types/event-color.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentinel";
-import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
 import { VIEW_SHORTCUTS } from "@web/shortcuts/shortcuts.constants";
+import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 import { type OfflineDataStore } from "../../offline-data/offline-data.store";
 import { type ExternalMigration } from "../migration.types";
 

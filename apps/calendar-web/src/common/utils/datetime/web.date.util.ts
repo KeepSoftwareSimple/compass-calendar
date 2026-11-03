@@ -500,8 +500,6 @@ export const getCalendarHeadingLabel = (
   }
 };
 
-export { getBrowserTimeZone } from "@web/timezone/browser-timezone";
-
 export const mapToBackend = (
   s: SelectedDates,
   timedOutputTimeZone?: string,

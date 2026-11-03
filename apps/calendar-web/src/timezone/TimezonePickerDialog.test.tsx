@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { act } from "react";
-import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
+import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 import {
   getEffectiveTimeZone,
   getPinnedTimeZone,
