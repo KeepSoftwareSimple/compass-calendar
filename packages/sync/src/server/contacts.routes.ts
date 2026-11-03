@@ -11,6 +11,7 @@ import {
 import { type SyncExecutionMode } from "@sync/config/sync.config";
 import { CredentialCustody } from "@sync/credentials/credential-custody.service";
 import { ProviderAuthError } from "@sync/providers/provider-auth.port";
+import { dedupeContactSuggestionsByEmail } from "@sync/providers/provider-contact-suggestions";
 import {
   type ContactsPort,
   ContactsSearchError,
@@ -156,7 +157,7 @@ export function registerContactsRoutes(
 
         res.status(Status.OK).json(
           ContactSuggestionsResponseSchema.parse({
-            suggestions: dedupeByEmail(collected)
+            suggestions: dedupeContactSuggestionsByEmail(collected)
               .filter(
                 (suggestion) =>
                   !ownEmails.includes(suggestion.email.toLowerCase()),
@@ -196,20 +197,4 @@ async function searchConnection(
 
   const accessToken = await custody.getValidAccessToken(connection._id);
   return contacts.searchContacts({ accessToken, query, sources });
-}
-
-// Across connections the same address can appear twice; keep the first
-// occurrence (connection listing order, each list already ranked).
-function dedupeByEmail(
-  suggestions: readonly ContactSuggestion[],
-): ContactSuggestion[] {
-  const seen = new Set<string>();
-  const unique: ContactSuggestion[] = [];
-  for (const suggestion of suggestions) {
-    const key = suggestion.email.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(suggestion);
-  }
-  return unique;
 }
