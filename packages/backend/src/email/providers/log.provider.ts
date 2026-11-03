@@ -7,6 +7,12 @@ const logger = Logger("app:email.log");
 export function createLogEmailProvider(): EmailProvider {
   return {
     async send(input) {
+      if (input.personal) {
+        logger.info("Personal email rendered (log provider)", {
+          attachmentCount: input.attachments?.length ?? 0,
+        });
+        return { messageId: `log-${randomUUID()}` };
+      }
       const headerLines = Object.entries(input.headers)
         .map(([key, value]) => `  ${key}: ${value}`)
         .join("\n");

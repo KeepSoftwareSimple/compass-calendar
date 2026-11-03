@@ -94,6 +94,18 @@ interface SubscriptionInput {
 // cursor holds mid-batch progress so an interrupted pull resumes rather than
 // restarts.
 export class SyncResourceRepository {
+  async recordHistoryCoverage(
+    resource: SyncResourceRecord,
+    skipped: number,
+    complete: boolean,
+    now: Date,
+  ) {
+    await this.#patch(resource.tenantId, resource.principalId, resource._id, {
+      historyCoverageVersion: complete && skipped === 0 ? 1 : 0,
+      historySkipped: skipped,
+      historyCheckedAt: now,
+    });
+  }
   private readonly collection: Collection<SyncResourceRecord>;
 
   constructor(db: Db) {
@@ -212,6 +224,17 @@ export class SyncResourceRepository {
     pageCursor: string,
   ): Promise<void> {
     await this.#patch(tenantId, principalId, id, { pageCursor });
+  }
+
+  async setRepairCheckpoint(
+    resource: SyncResourceRecord,
+    repairPageCursor: string,
+    repairSkipped: number,
+  ): Promise<void> {
+    await this.#patch(resource.tenantId, resource.principalId, resource._id, {
+      repairPageCursor,
+      repairSkipped,
+    });
   }
 
   // Record a successful read pass. When `syncCursor` is a string, store it and
@@ -507,7 +530,14 @@ export class SyncResourceRepository {
   ): Promise<number> {
     const result = await this.collection.findOneAndUpdate(
       { _id: id, tenantId, principalId },
-      { $inc: { importGeneration: 1 }, $set: { updatedAt: new Date() } },
+      {
+        $inc: { importGeneration: 1 },
+        $set: {
+          updatedAt: new Date(),
+          repairPageCursor: null,
+          repairSkipped: 0,
+        },
+      },
       { returnDocument: "after" },
     );
     if (!result) throw new Error("startNewGeneration: resource not found");
@@ -525,6 +555,8 @@ export class SyncResourceRepository {
   ): Promise<void> {
     await this.#patch(tenantId, principalId, id, {
       activeGeneration: generation,
+      repairPageCursor: null,
+      repairSkipped: 0,
     });
   }
 

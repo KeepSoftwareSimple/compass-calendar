@@ -1,6 +1,10 @@
 import type SupertokensUserMetadata from "supertokens-node/recipe/usermetadata";
 import { type z } from "zod/v4";
 import {
+  type LifePreferencesResponse,
+  type ReflectionPreferences,
+} from "@core/types/life-preferences.contracts";
+import {
   type GoogleConnectionState,
   GoogleConnectionStateSchema,
   type SyncConnectionSummary,
@@ -35,6 +39,9 @@ export interface Schema_UserIdentity {
 }
 
 export interface Schema_User {
+  lifePreferences?: LifePreferencesResponse;
+  reflectionPreferences?: ReflectionPreferences & { optedInAt?: Date };
+  reflectionNextSendAt?: Date;
   email: string;
   firstName: string;
   lastName: string;
@@ -79,6 +86,7 @@ export interface Schema_User {
     suppressedAt?: Date;
     /** Host opted out of booking guest-action alert emails only. */
     bookingHostEmailDisabledAt?: Date;
+    reflectionDisabledAt?: Date;
   };
   /**
    * Automation / journey test account. Excluded from billing funnels and

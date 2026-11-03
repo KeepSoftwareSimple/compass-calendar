@@ -12,6 +12,7 @@ import { registerDiagnosticRoutes } from "@sync/server/diagnostic.routes";
 import { registerHealthRoutes } from "@sync/server/health.routes";
 import { registerNotificationRoutes } from "@sync/server/notification.routes";
 import { registerPrincipalRoutes } from "@sync/server/principal.routes";
+import { registerReflectionRoutes } from "@sync/server/reflection.routes";
 import { type StructuredServiceIdentity } from "@sync/service-identity";
 
 // Builds the Sync service's HTTP application. Health probes are always public
@@ -36,6 +37,7 @@ export function buildSyncApp(deps: {
 
   registerHealthRoutes(app, deps);
   if (deps.connectionApi) {
+    registerReflectionRoutes(app, deps.connectionApi);
     registerConnectionRoutes(app, deps.connectionApi);
     // The command ingress shares the connection API's storage and auth. A
     // cloud-only command needs no provider adapter; a provider-targeted create

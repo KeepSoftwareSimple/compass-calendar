@@ -12,7 +12,7 @@ import {
 } from "@backend/email/services/email-suppression.service";
 
 const parseScope = (value: unknown): EmailUnsubscribeScope => {
-  return value === "booking-host" ? "booking-host" : "welcome";
+  return value === "booking-host" || value === "reflection" ? value : "welcome";
 };
 
 const pageShell = (title: string, body: string): string => `<!DOCTYPE html>
@@ -37,6 +37,11 @@ const invalidPage = (): string =>
   );
 
 const confirmPage = (token: string, scope: EmailUnsubscribeScope): string => {
+  if (scope === "reflection")
+    return pageShell(
+      "Weekly reflections",
+      `<h1>Stop weekly reflections</h1><p>You will stop receiving calendar reflection emails from Compass.</p><form method="post" action="/api/email/unsubscribe"><input type="hidden" name="token" value="${token.replace(/"/g, "&quot;")}" /><input type="hidden" name="scope" value="reflection" /><button type="submit">Stop reflections</button></form>`,
+    );
   const isBookingHost = scope === "booking-host";
   const description = isBookingHost
     ? "You will stop receiving email when guests book, cancel, or reschedule meetings on your Compass meeting page."
@@ -58,6 +63,11 @@ const confirmPage = (token: string, scope: EmailUnsubscribeScope): string => {
 };
 
 const donePage = (scope: EmailUnsubscribeScope): string => {
+  if (scope === "reflection")
+    return pageShell(
+      "Reflections are off",
+      "<h1>Reflections are off</h1><p>You will not receive further calendar reflection emails.</p>",
+    );
   const description =
     scope === "booking-host"
       ? "You will not receive further booking alert emails from Compass Calendar."
@@ -103,7 +113,24 @@ export class EmailUnsubscribeController {
       return;
     }
 
-    if (scope === "booking-host") {
+    if (scope === "reflection") {
+      await mongoService.user.updateOne(
+        { _id: userId },
+        {
+          $set: {
+            "emailPreferences.reflectionDisabledAt": new Date(),
+            "reflectionPreferences.enabled": false,
+          },
+        },
+      );
+      await mongoService.emailSend.updateMany(
+        { userId, sequence: "reflection", status: "queued" },
+        {
+          $set: { status: "canceled", updatedAt: new Date() },
+          $unset: { "reflection.prepared": "" },
+        },
+      );
+    } else if (scope === "booking-host") {
       await markBookingHostEmailDisabled(userId);
     } else {
       await markUserUnsubscribed(userId);

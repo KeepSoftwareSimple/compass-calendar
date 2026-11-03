@@ -3,7 +3,7 @@ import {
   getTotalLifeDots,
   getWeekLivedCount,
   WEEKS_PER_ROW,
-} from "@web/views/Life/life.utils";
+} from "@core/life/life-math";
 
 ensureDesktopExportEnv();
 

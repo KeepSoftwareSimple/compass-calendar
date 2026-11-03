@@ -1,6 +1,5 @@
 import { Logger } from "@core/logger/winston.logger";
 import dayjs from "@core/util/date/dayjs";
-import { syncHorizon } from "@sync/domain/horizon";
 import { type AppleCalendarClientFactory } from "@sync/providers/apple/apple-calendar.adapter";
 import { normalizeAppleEventResource } from "@sync/providers/apple/apple-event.normalizer";
 import {
@@ -37,7 +36,7 @@ export interface AppleEventResource {
 export interface AppleEventReaderApi {
   calendarQuery(
     calendarUrl: string,
-    window: EventWindow,
+    window: EventWindow | null,
   ): Promise<readonly string[]>;
   calendarMultiget(
     calendarUrl: string,
@@ -68,6 +67,7 @@ interface InitialPassState {
 }
 
 export class AppleEventReaderAdapter implements ProviderEventReader {
+  readonly supportsFullHistory = true;
   #connectionTimeZone: string;
   #makeApi: AppleEventReaderApiFactory;
   #initialPassState = new Map<string, InitialPassState>();
@@ -126,7 +126,7 @@ export class AppleEventReaderAdapter implements ProviderEventReader {
       if (pass.window) {
         hrefs = await this.#queryHrefs(api, calendarUrl, pass.window);
       } else {
-        hrefs = await this.#queryHrefs(api, calendarUrl, fullHorizonWindow());
+        hrefs = await this.#queryHrefs(api, calendarUrl, null);
       }
       this.#initialPassState.set(stateKey, {
         hrefs,
@@ -192,7 +192,7 @@ export class AppleEventReaderAdapter implements ProviderEventReader {
   async #queryHrefs(
     api: AppleEventReaderApi,
     calendarUrl: string,
-    window: EventWindow,
+    window: EventWindow | null,
   ): Promise<readonly string[]> {
     try {
       return await api.calendarQuery(calendarUrl, window);
@@ -265,7 +265,7 @@ class CaldavAppleEventReaderApi implements AppleEventReaderApi {
 
   async calendarQuery(
     calendarUrl: string,
-    window: EventWindow,
+    window: EventWindow | null,
   ): Promise<readonly string[]> {
     const body = buildCalendarQueryBody(window);
     const response = await this.client.report(calendarUrl, body, 1);
@@ -304,7 +304,7 @@ class CaldavAppleEventReaderApi implements AppleEventReaderApi {
   }
 }
 
-function buildCalendarQueryBody(window: EventWindow): string {
+function buildCalendarQueryBody(window: EventWindow | null): string {
   return `<?xml version="1.0" encoding="utf-8"?>
 <C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <D:prop>
@@ -313,7 +313,7 @@ function buildCalendarQueryBody(window: EventWindow): string {
   <C:filter>
     <C:comp-filter name="VCALENDAR">
       <C:comp-filter name="VEVENT">
-        <C:time-range start="${toCalDavUtc(window.timeMin)}" end="${toCalDavUtc(window.timeMax)}"/>
+        ${window ? `<C:time-range start="${toCalDavUtc(window.timeMin)}" end="${toCalDavUtc(window.timeMax)}"/>` : ""}
       </C:comp-filter>
     </C:comp-filter>
   </C:filter>
@@ -538,14 +538,6 @@ function parseInitialOffset(pageToken: string | null | undefined): number {
     );
   }
   return offset;
-}
-
-function fullHorizonWindow(): EventWindow {
-  const horizon = syncHorizon(new Date());
-  return {
-    timeMin: horizon.start.toISOString(),
-    timeMax: horizon.end.toISOString(),
-  };
 }
 
 function toCalDavUtc(iso: string): string {

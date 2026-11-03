@@ -13,6 +13,7 @@ import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-e
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
+import { windowsZoneToIana } from "@sync/providers/microsoft/windows-zones";
 import {
   ProviderEventError,
   type ProviderEventRead,
@@ -80,6 +81,11 @@ export interface GraphEvent {
   readonly recurrence?: GraphPatternedRecurrence;
   readonly seriesMasterId?: string;
   readonly originalStart?: string;
+  readonly originalStartTimeZone?: string;
+  readonly occurrenceId?: string;
+  readonly cancelledOccurrences?: readonly string[];
+  readonly exceptionOccurrences?: readonly GraphEvent[];
+  readonly ["exceptionOccurrences@odata.nextLink"]?: string;
   readonly onlineMeeting?: GraphOnlineMeeting;
   readonly onlineMeetingProvider?: string;
   readonly categories?: readonly string[];
@@ -271,8 +277,14 @@ function mapSchedule(item: GraphEvent) {
   }
 
   if (item.isAllDay) {
-    const startDate = extractDatePart(start);
-    const endDate = extractDatePart(end);
+    const timeZone = toIanaTimeZone(
+      item.recurrence?.range.recurrenceTimeZone ??
+        item.originalStartTimeZone ??
+        start.timeZone ??
+        "UTC",
+    );
+    const startDate = extractDatePart(start, timeZone);
+    const endDate = extractDatePart(end, timeZone);
     if (!startDate || !endDate) {
       throw new ProviderEventError(
         "unmappableSchedule",
@@ -287,7 +299,13 @@ function mapSchedule(item: GraphEvent) {
   }
 
   if (start.dateTime && end.dateTime) {
-    const timeZone = toIanaTimeZone(start.timeZone ?? end.timeZone ?? "UTC");
+    const timeZone = toIanaTimeZone(
+      item.recurrence?.range.recurrenceTimeZone ??
+        item.originalStartTimeZone ??
+        start.timeZone ??
+        end.timeZone ??
+        "UTC",
+    );
     return parseSchedule({
       kind: "timed",
       start: toOffsetIso(start, timeZone),
@@ -302,15 +320,26 @@ function mapSchedule(item: GraphEvent) {
   );
 }
 
-function extractDatePart(value: GraphDateTimeTimeZone): string | null {
+function extractDatePart(
+  value: GraphDateTimeTimeZone,
+  timeZone: string,
+): string | null {
   if (!value.dateTime) return null;
-  const parsed = dayjs.utc(value.dateTime);
+  const parsed = dayjs(toOffsetIso(value, timeZone)).tz(timeZone);
   if (!parsed.isValid()) return null;
   return parsed.format(DATE_ONLY);
 }
 
 function toIanaTimeZone(timeZone: string): string {
-  return TimezoneSchema.safeParse(timeZone).success ? timeZone : "UTC";
+  if (TimezoneSchema.safeParse(timeZone).success) return timeZone;
+  try {
+    return windowsZoneToIana(timeZone);
+  } catch {
+    throw new ProviderEventError(
+      "unmappableSchedule",
+      "Event timezone could not be resolved",
+    );
+  }
 }
 
 function parseSchedule(candidate: unknown) {
@@ -368,6 +397,10 @@ function toOffsetIso(value: GraphDateTimeTimeZone, timeZone: string): string {
       "Event date-time had no dateTime",
     );
   }
-  const anchored = dayjs(value.dateTime).tz(timeZone);
+  const anchored = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value.dateTime)
+    ? dayjs(value.dateTime).tz(timeZone)
+    : dayjs
+        .tz(value.dateTime, toIanaTimeZone(value.timeZone ?? timeZone))
+        .tz(timeZone);
   return anchored.format(RFC3339_OFFSET);
 }

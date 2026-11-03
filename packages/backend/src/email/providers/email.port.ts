@@ -11,6 +11,13 @@ export type EmailTemplateSend = {
 };
 
 export type EmailSendInput = {
+  personal?: boolean;
+  attachments?: {
+    filename: string;
+    content: string;
+    contentType: string;
+    contentId?: string;
+  }[];
   idempotencyKey: string;
   to: string;
   headers: Record<string, string>;

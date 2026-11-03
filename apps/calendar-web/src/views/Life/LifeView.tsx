@@ -1,5 +1,15 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  getAgeInYears,
+  getCurrentWeekLabel,
+  getRandomLifespan,
+  getTotalLifeDots,
+  getWeekLivedCount,
+  LIFE_VARIATION_ORDER,
+  LIFE_VARIATIONS,
+  parseLifeDate,
+} from "@core/life/life-math";
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { useIsTrialing } from "@web/billing/useIsTrialing";
 import { ROOT_ROUTES, ROUTE_IDS } from "@web/common/constants/routes";
@@ -23,24 +33,13 @@ import {
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
+import { useLifePreferences } from "@web/views/Life/useLifePreferences";
 import { LifeGrid } from "./LifeGrid";
 import { LifeSidebarContent } from "./LifeSidebarContent";
 import { LifeViewIntroModal } from "./LifeViewIntroModal";
 import {
-  getAgeInYears,
-  getCurrentWeekLabel,
-  getRandomLifespan,
-  getTotalLifeDots,
-  getWeekLivedCount,
-  LIFE_VARIATION_ORDER,
-  LIFE_VARIATIONS,
-  parseLifeDate,
-} from "./life.utils";
-import {
   hasLifePreferences,
   type LifePreferences,
-  readLifePreferences,
-  writeLifePreferences,
 } from "./life-preferences.storage";
 import { applyLifeSearch } from "./life-search";
 import { useLifeViewIntro } from "./useLifeViewIntro";
@@ -61,8 +60,22 @@ export function LifeView({ today }: LifeViewProps) {
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
   const currentWeekRef = useRef<HTMLButtonElement>(null);
   const isNewLifeUser = useRef(!hasLifePreferences()).current;
-  const [preferences, setPreferences] = useState(() =>
-    applyLifeSearch(readLifePreferences(), search, currentDate),
+  const settings = useLifePreferences();
+  const preferences = useMemo(
+    () => applyLifeSearch(settings.preferences, search, currentDate),
+    [settings.preferences, search, currentDate],
+  );
+  const setPreferences = useCallback(
+    (update: (current: LifePreferences) => LifePreferences) => {
+      const next = update(preferences);
+      settings.setPreferences(() => next);
+      void navigate({
+        to: ROOT_ROUTES.LIFE,
+        replace: true,
+        search: { age: next.lifespan, variation: next.variation },
+      });
+    },
+    [settings.setPreferences, preferences, navigate],
   );
   const totalDots = useMemo(
     () => getTotalLifeDots(preferences.lifespan),
@@ -86,20 +99,7 @@ export function LifeView({ today }: LifeViewProps) {
   useResponsiveLayout();
 
   useEffect(() => {
-    writeLifePreferences(preferences);
-  }, [preferences]);
-
-  useEffect(() => {
-    setPreferences((current) => {
-      const next = applyLifeSearch(current, search, currentDate);
-      return current.variation === next.variation &&
-        current.lifespan === next.lifespan
-        ? current
-        : next;
-    });
-  }, [currentDate, search]);
-
-  useEffect(() => {
+    if (settings.isLoading) return;
     navigate({
       to: ROOT_ROUTES.LIFE,
       replace: true,
@@ -109,7 +109,12 @@ export function LifeView({ today }: LifeViewProps) {
         variation: preferences.variation,
       }),
     });
-  }, [navigate, preferences.lifespan, preferences.variation]);
+  }, [
+    navigate,
+    preferences.lifespan,
+    preferences.variation,
+    settings.isLoading,
+  ]);
 
   useSidebarShortcuts();
   const isTrialing = useIsTrialing();
@@ -126,7 +131,7 @@ export function LifeView({ today }: LifeViewProps) {
     (update: (current: LifePreferences) => LifePreferences) => {
       setPreferences(update);
     },
-    [],
+    [setPreferences],
   );
   const focusCurrentWeek = useCallback(() => {
     const currentWeek = currentWeekRef.current;
@@ -152,7 +157,7 @@ export function LifeView({ today }: LifeViewProps) {
         return { ...current, lifespan, variation };
       });
     },
-    [currentDate],
+    [currentDate, setPreferences],
   );
   const shuffleAge = useCallback(() => {
     setPreferences((current) => ({
@@ -160,7 +165,7 @@ export function LifeView({ today }: LifeViewProps) {
       lifespan: getRandomLifespan(current.birthDate, currentDate),
       variation: "random",
     }));
-  }, [currentDate]);
+  }, [currentDate, setPreferences]);
 
   const lifeNav = APP_SHORTCUT_BINDINGS;
   useAppShortcutUp(lifeNav.navLifeCurrent.hotkey, focusCurrentWeek, {
@@ -173,8 +178,21 @@ export function LifeView({ today }: LifeViewProps) {
     shortcutId: "nav-life-next",
   });
 
+  if (settings.isLoading)
+    return (
+      <main>
+        <p role="status">{settings.error || "Loading life settings..."}</p>
+        {settings.error && (
+          <button type="button" onClick={() => void settings.retry()}>
+            Retry
+          </button>
+        )}
+      </main>
+    );
+
   return (
     <div className="flex h-screen w-screen overflow-hidden">
+      {settings.error && <p role="alert">{settings.error}</p>}
       <LifeViewIntroModal {...lifeViewIntro} />
       <LifeCommandPalette placeholder={COMMAND_PALETTE_PLACEHOLDER} />
       <PageJumpHints targets={LIFE_PAGE_JUMP_TARGETS} />

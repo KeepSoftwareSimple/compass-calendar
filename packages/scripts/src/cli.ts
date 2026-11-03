@@ -15,6 +15,13 @@ export default class CompassCLI {
     const cmd = this.program.args[0];
 
     switch (true) {
+      case cmd === "reflection": {
+        const { runReflectionCommand } = await import(
+          "@scripts/commands/reflection"
+        );
+        await runReflectionCommand(process.argv.slice(3));
+        break;
+      }
       case cmd === "manage-failed-jobs": {
         const { runManageFailedJobs } = await import(
           "@scripts/commands/manage-failed-jobs"
@@ -192,6 +199,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "render every welcome-sequence step to HTML and text files (--output <dir>)",
+      );
+
+    program
+      .command("reflection")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "Inspect history or manage the private reflection trial (setup | status | history | preview | enable | disable)",
       );
 
     program

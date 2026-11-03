@@ -1,5 +1,5 @@
 export const WEEKS_PER_ROW = 52;
-export const DEFAULT_LIFESPAN = 77;
+export const DEFAULT_LIFESPAN = 79;
 export const MIN_LIFESPAN = 1;
 export const MAX_LIFESPAN = 150;
 export const RANDOM_LIFESPAN_MAX = 100;
@@ -14,7 +14,7 @@ export interface LifeVariationDetails {
 export const LIFE_VARIATIONS: Record<LifeVariation, LifeVariationDetails> = {
   average: {
     label: "Average",
-    defaultLifespan: 77,
+    defaultLifespan: 79,
   },
   long: {
     label: "Long",
@@ -55,9 +55,9 @@ export function parseLifeDate(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return null;
 
-  const year = Number.parseInt(match[1], 10);
-  const month = Number.parseInt(match[2], 10);
-  const day = Number.parseInt(match[3], 10);
+  const year = Number.parseInt(match[1]!, 10);
+  const month = Number.parseInt(match[2]!, 10);
+  const day = Number.parseInt(match[3]!, 10);
   const date = new Date(year, month - 1, day);
 
   if (
@@ -79,11 +79,28 @@ export function getWeekLivedCount(
   const birthDate = parseLifeDate(birthDateValue);
   if (!birthDate) return 0;
 
-  const diffWeeks = Math.floor(
-    (today.getTime() - birthDate.getTime()) / MS_PER_WEEK,
+  const diffWeeks = getCompletedLifeWeeks(
+    birthDateValue,
+    formatDateInputValue(today),
   );
 
   return clampWeeksLived(diffWeeks, totalDots);
+}
+
+// Date-only arithmetic keeps a completed week stable across DST and runtimes.
+export function getCompletedLifeWeeks(
+  birthDateValue: string,
+  referenceDate: string,
+) {
+  if (!parseLifeDate(birthDateValue) || !parseLifeDate(referenceDate)) return 0;
+  return Math.max(
+    0,
+    Math.floor(
+      (Date.parse(`${referenceDate}T00:00:00Z`) -
+        Date.parse(`${birthDateValue}T00:00:00Z`)) /
+        MS_PER_WEEK,
+    ),
+  );
 }
 
 export function getAgeInYears(birthDateValue: string, today = new Date()) {
@@ -101,8 +118,8 @@ export function getAgeInYears(birthDateValue: string, today = new Date()) {
 
 export function getSecureRandomNumber() {
   const values = new Uint32Array(1);
-  window.crypto.getRandomValues(values);
-  return values[0] / 2 ** 32;
+  globalThis.crypto.getRandomValues(values);
+  return values[0]! / 2 ** 32;
 }
 
 export function getRandomLifespan(

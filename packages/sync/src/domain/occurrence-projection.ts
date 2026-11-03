@@ -29,6 +29,7 @@ export function projectOccurrences(
   event: EventRecord,
   horizon: ProjectionHorizon,
   excludedInstants: readonly DateTime[] = [],
+  maxIterations = Number.POSITIVE_INFINITY,
 ): OccurrenceInput[] {
   if (event.recurrence.kind === "seriesMaster") {
     return projectSeriesMaster(
@@ -36,6 +37,7 @@ export function projectOccurrences(
       event.recurrence.rules,
       horizon,
       excludedInstants,
+      maxIterations,
     );
   }
 
@@ -54,6 +56,7 @@ function projectSeriesMaster(
   rules: readonly string[],
   horizon: ProjectionHorizon,
   excludedInstants: readonly DateTime[],
+  maxIterations: number,
 ): OccurrenceInput[] {
   const excluded = new Set(
     excludedInstants.map((instant) => new Date(instant).getTime()),
@@ -80,7 +83,12 @@ function projectSeriesMaster(
   // RDATEs, the remainder drops pre-DTSTART ones). Merge and dedupe — an
   // RDATE may restate an expanded instant. RDATEs ride above the recurrence
   // cap, which only bounds rule expansion.
-  const expanded = expandInstants(event.schedule, rules, horizon);
+  const expanded = expandInstants(
+    event.schedule,
+    rules,
+    horizon,
+    maxIterations,
+  );
   const untilMs = ruleUntilMs(rules);
   const rdates = dateListInstants(rules, "RDATE", event.schedule).filter(
     (instant) =>
@@ -117,6 +125,7 @@ function expandInstants(
   schedule: EventSchedule,
   rules: readonly string[],
   horizon: ProjectionHorizon,
+  maxIterations: number,
 ): Date[] {
   // Only the RRULE line goes to rrulestr. Feeding it a multi-line string with
   // EXDATE/RDATE lines flips it onto its RRuleSet branch, which silently
@@ -133,7 +142,12 @@ function expandInstants(
   });
 
   const wallInstants: Date[] = [];
+  let iterations = 0;
   rule.all((date) => {
+    if (++iterations > maxIterations)
+      throw new RangeError(
+        "Recurrence expansion needs a smaller preparation batch",
+      );
     const instant = localizeInstant(date, schedule);
     if (instant.getTime() >= horizon.end.getTime()) return false;
     if (instant.getTime() >= horizon.start.getTime()) wallInstants.push(date);

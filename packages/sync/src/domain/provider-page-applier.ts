@@ -95,6 +95,11 @@ export class ProviderPageApplier {
     return this.#importedIds.size;
   }
 
+  // A durable checkpoint must never move past members buffered only in memory.
+  get hasUnresolvedMembers(): boolean {
+    return this.#pending.length > 0;
+  }
+
   // Apply one page's content and series-scoped cancellations. Masters are
   // upserted first so same-page members link without a buffer round-trip;
   // members whose master has not been seen are buffered and retried. Returns the

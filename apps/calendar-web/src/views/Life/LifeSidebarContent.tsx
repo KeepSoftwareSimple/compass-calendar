@@ -1,11 +1,5 @@
 import { ShuffleIcon } from "@phosphor-icons/react/dist/csr/Shuffle";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { ArrowButton } from "@web/components/Button/ArrowButton";
-import { DatePicker } from "@web/components/DatePicker/DatePicker";
-import { NumberInput } from "@web/components/NumberInput/NumberInput";
-import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
-import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
-import { LifeQuote } from "./LifeQuote";
 import {
   clampLifespan,
   formatDateInputValue,
@@ -15,7 +9,14 @@ import {
   MAX_LIFESPAN,
   MIN_LIFESPAN,
   parseLifeDate,
-} from "./life.utils";
+} from "@core/life/life-math";
+import { ArrowButton } from "@web/components/Button/ArrowButton";
+import { DatePicker } from "@web/components/DatePicker/DatePicker";
+import { NumberInput } from "@web/components/NumberInput/NumberInput";
+import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
+import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
+import { ReflectionPreferencesControl } from "@web/views/Life/ReflectionPreferencesControl";
+import { LifeQuote } from "./LifeQuote";
 import { type LifePreferences } from "./life-preferences.storage";
 
 interface LifeSidebarContentProps {
@@ -88,6 +89,7 @@ export function LifeSidebarContent({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto px-5 pb-5 text-sm">
+      <ReflectionPreferencesControl />
       <section
         aria-label="Life variation"
         className="flex flex-col gap-2 text-text-muted"
@@ -132,7 +134,7 @@ export function LifeSidebarContent({
         {...pageJumpAttrs("life-details")}
       >
         <div className="flex w-full flex-col items-center gap-1 text-text-muted">
-          <TooltipWrapper description="We don't store this information">
+          <TooltipWrapper description="Saved to your account when signed in">
             <span className="cursor-help">Date of birth</span>
           </TooltipWrapper>
           <DatePicker

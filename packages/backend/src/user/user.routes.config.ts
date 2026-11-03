@@ -3,6 +3,15 @@ import rateLimit from "express-rate-limit";
 import { type SessionRequest } from "supertokens-node/framework/express";
 import { verifySession } from "@backend/auth/session/session.middleware";
 import { CommonRoutesConfig } from "@backend/common/common.routes.config";
+import {
+  getLifePreferences,
+  putLifePreferences,
+} from "@backend/user/controllers/life-preferences.controller";
+import {
+  getReflectionPreferences,
+  patchReflectionCalendarVisibility,
+  putReflectionPreferences,
+} from "@backend/user/controllers/reflection-preferences.controller";
 import userController from "./controllers/user.controller";
 
 const accountDeletionLimiter = rateLimit({
@@ -35,6 +44,20 @@ export class UserRoutes extends CommonRoutesConfig {
   }
 
   configureRoutes(): express.Application {
+    this.app
+      .route("/api/user/reflection-preferences")
+      .all(verifySession())
+      .get(getReflectionPreferences)
+      .put(putReflectionPreferences);
+    this.app
+      .route("/api/user/reflection-calendar-visibility")
+      .all(verifySession())
+      .patch(patchReflectionCalendarVisibility);
+    this.app
+      .route("/api/user/life-preferences")
+      .all(verifySession())
+      .get(getLifePreferences)
+      .put(putLifePreferences);
     /**
      * GET /api/user/profile
      * Retrieves the current user's profile information

@@ -1,5 +1,5 @@
 import { Logger } from "@core/logger/winston.logger";
-import { syncHorizon } from "@sync/domain/horizon";
+import dayjs from "@core/util/date/dayjs";
 import {
   isMicrosoftTransient,
   microsoftErrorCode,
@@ -56,10 +56,12 @@ const logger = Logger("sync:microsoft-event-reader");
 const defaultApiFactory: MicrosoftEventListApiFactory = (accessToken) =>
   new FetchMicrosoftEventListApi(accessToken);
 
-// Microsoft Graph implementation of the event-read port. Reads one page of a
-// calendar's events through events/delta (masters and exceptions, never
-// occurrences) or, when a bounded window needs an end date, calendarView/delta.
+// Production Graph v1.0 supports unbounded event snapshots, not unbounded
+// event delta. Full reads hydrate masters' exceptions/cancellations; refreshes
+// use staged snapshots so deletions outside the interactive window are seen.
 export class MicrosoftEventReaderAdapter implements ProviderEventReader {
+  readonly supportsFullHistory = true;
+  readonly fullSnapshotOnly = true;
   #makeApi: MicrosoftEventListApiFactory;
   #log: { warn: (message: string) => void };
 
@@ -131,7 +133,9 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
       events,
       skipped,
       nextPageToken: page.nextLink,
-      nextSyncToken: page.deltaLink,
+      nextSyncToken:
+        page.deltaLink ??
+        (!input.window && !page.nextLink ? "full-snapshot:v1" : null),
     };
   }
 
@@ -144,7 +148,7 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
     } catch (error) {
       throw new ProviderEventReadError(
         classifyReadError(error),
-        "Microsoft rejected the events delta read",
+        "Microsoft rejected the events read",
         { cause: microsoftFailureCause(error) },
       );
     }
@@ -154,7 +158,6 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
 function resolveListStrategy(
   input: ProviderEventReadInput,
 ): MicrosoftEventListStrategy {
-  if (input.cursor || input.pageToken) return "events";
   if (input.window?.timeMin && input.window.timeMax) return "calendarView";
   return "events";
 }
@@ -192,24 +195,125 @@ class FetchMicrosoftEventListApi implements MicrosoftEventListApi {
       accessToken: this.#accessToken,
       url,
       headers: {
-        Prefer: `odata.maxpagesize=${MICROSOFT_EVENT_PAGE_SIZE}, outlook.timezone="UTC"`,
+        Prefer: `odata.maxpagesize=${params.strategy === "events" ? 25 : MICROSOFT_EVENT_PAGE_SIZE}, outlook.timezone="UTC"`,
       },
-      fallbackError: "microsoft_event_delta_failed",
+      fallbackError: "microsoft_event_read_failed",
     });
+    if (!Array.isArray(data.value))
+      throw new Error("Microsoft event list has no collection");
 
+    const items: GraphEventDeltaItem[] = [];
+    for (const item of data.value ?? []) {
+      if (params.strategy !== "events" || item.type !== "seriesMaster") {
+        items.push(item);
+        continue;
+      }
+      const master = await this.#getEvent(item.id, true, params.calendarId);
+      items.push(master);
+      const normalized = normalizeMicrosoftEvent(master);
+      if (normalized.kind !== "event") continue;
+      if (
+        !Array.isArray(master.exceptionOccurrences) ||
+        !Array.isArray(master.cancelledOccurrences)
+      )
+        throw new Error("Microsoft series expansion is incomplete");
+      let exceptions = master.exceptionOccurrences ?? [];
+      let next = master["exceptionOccurrences@odata.nextLink"];
+      const seenPages = new Set<string>();
+      for (;;) {
+        for (const exception of exceptions) {
+          if (!exception.id)
+            throw new Error("Microsoft series exception has no identity");
+          const full =
+            exception["@odata.etag"] &&
+            exception.originalStart &&
+            exception.start &&
+            exception.end
+              ? exception
+              : await this.#getEvent(exception.id, false, params.calendarId);
+          items.push({ ...full, type: "exception", seriesMasterId: master.id });
+        }
+        if (!next) break;
+        if (seenPages.has(next))
+          throw new Error("Microsoft exception pagination did not advance");
+        seenPages.add(next);
+        const page = await this.#request<{
+          value?: GraphEvent[];
+          "@odata.nextLink"?: string;
+        }>(next);
+        if (!Array.isArray(page.value))
+          throw new Error("Microsoft exception page has no collection");
+        exceptions = page.value;
+        next = page["@odata.nextLink"];
+      }
+      for (const occurrenceId of master.cancelledOccurrences ?? []) {
+        const date = /\.(\d{4}-\d{2}-\d{2})$/.exec(occurrenceId)?.[1];
+        if (!date)
+          throw new Error(
+            "Microsoft cancelled occurrence has no original date",
+          );
+        const originalStart =
+          normalized.schedule.kind === "allDay"
+            ? `${date}T00:00:00.000Z`
+            : dayjs
+                .tz(
+                  `${date} ${dayjs(normalized.schedule.start).tz(normalized.schedule.timeZone).format("HH:mm:ss")}`,
+                  normalized.schedule.timeZone,
+                )
+                .toISOString();
+        items.push({
+          id: occurrenceId,
+          isCancelled: true,
+          seriesMasterId: master.id,
+          originalStart,
+        });
+      }
+    }
     return {
-      items: data.value ?? [],
+      items,
       nextLink: data["@odata.nextLink"] ?? null,
       deltaLink: data["@odata.deltaLink"] ?? null,
     };
+  }
+
+  async #getEvent(
+    id: string | undefined,
+    expand: boolean,
+    calendarId: string,
+  ): Promise<GraphEvent> {
+    if (!id) throw new Error("Microsoft event has no identity");
+    const query = new URLSearchParams({
+      $select: `${MICROSOFT_EVENT_SELECT}${expand ? ",cancelledOccurrences,exceptionOccurrences" : ""}`,
+    });
+    if (expand) query.set("$expand", "exceptionOccurrences");
+    return this.#request<GraphEvent>(
+      `${MICROSOFT_GRAPH_BASE_URL}/me/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}?${query}`,
+    );
+  }
+
+  async #request<T>(url: string): Promise<T> {
+    if (new URL(url).origin !== new URL(MICROSOFT_GRAPH_BASE_URL).origin)
+      throw new Error("Microsoft pagination left the configured API origin");
+    return microsoftGraphRequest<T>({
+      accessToken: this.#accessToken,
+      url,
+      headers: { Prefer: 'outlook.timezone="UTC"' },
+      fallbackError: "microsoft_event_snapshot_failed",
+    });
   }
 }
 
 function resolveRequestUrl(
   params: Parameters<MicrosoftEventListApi["listPage"]>[0],
 ): string {
-  if (params.pageLink) return params.pageLink;
-  if (params.deltaLink) return params.deltaLink;
+  if (params.pageLink) {
+    if (
+      new URL(params.pageLink).origin !==
+      new URL(MICROSOFT_GRAPH_BASE_URL).origin
+    )
+      throw new Error("Microsoft pagination left the configured API origin");
+    return params.pageLink;
+  }
 
   const calendarId = encodeURIComponent(params.calendarId);
   if (params.strategy === "calendarView") {
@@ -218,24 +322,16 @@ function resolveRequestUrl(
       startDateTime: window.timeMin,
       endDateTime: window.timeMax,
     });
-    return `${MICROSOFT_GRAPH_BASE_URL}/me/calendars/${calendarId}/calendarView/delta?${query}`;
+    return `${MICROSOFT_GRAPH_BASE_URL}/me/calendars/${calendarId}/calendarView?${query}`;
   }
 
-  const query = new URLSearchParams({
-    $select: MICROSOFT_EVENT_SELECT,
-    startDateTime: resolveStartDateTime(params.window),
-  });
-  return `${MICROSOFT_GRAPH_BASE_URL}/me/calendars/${calendarId}/events/delta?${query}`;
+  const query = new URLSearchParams({ $select: MICROSOFT_EVENT_SELECT });
+  return `${MICROSOFT_GRAPH_BASE_URL}/me/calendars/${calendarId}/events?${query}`;
 }
 
 function requireWindow(window: EventWindow | null | undefined): EventWindow {
   if (!window?.timeMin || !window.timeMax) {
-    throw new Error("calendarView delta requires a bounded window");
+    throw new Error("calendarView requires a bounded window");
   }
   return window;
-}
-
-function resolveStartDateTime(window: EventWindow | null | undefined): string {
-  if (window?.timeMin) return window.timeMin;
-  return syncHorizon(new Date()).start.toISOString();
 }

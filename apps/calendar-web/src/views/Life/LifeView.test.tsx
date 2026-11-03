@@ -157,7 +157,7 @@ describe("LifeView", () => {
 
     expect(screen.getByRole("heading", { name: "Life" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Date of birth" })).toHaveValue(
-      "Jan 1, 2000",
+      "",
     );
     expect(
       screen.getByRole("textbox", { name: "Date of birth" }),
@@ -169,10 +169,10 @@ describe("LifeView", () => {
     ).not.toBeInTheDocument();
     expect(
       (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    ).toBe("77");
+    ).toBe("79");
     expect(screen.getByText("Average")).toBeInTheDocument();
     expect(
-      screen.getByText("This is your life if you live to 77"),
+      screen.getByText("This is your life if you live to 79"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -184,14 +184,12 @@ describe("LifeView", () => {
     ).not.toBeInTheDocument();
     // The sidebar's saving-status live region also has role="status", so
     // target the weeks-lived readout by its full text.
-    expect(
-      screen.getByText("1,356 weeks lived - 26 years - 34%"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Birth date not set")).toBeInTheDocument();
     const region = screen.getByRole("region", {
       name: /life visualization/i,
     });
     expect(region).toBeInTheDocument();
-    expect(region.querySelector(".ring-1")).toBeInTheDocument();
+    expect(region.querySelector(".ring-1")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /zoom/i }),
     ).not.toBeInTheDocument();
@@ -255,7 +253,7 @@ describe("LifeView", () => {
     });
 
     expect(
-      screen.getByText("1,854 weeks lived - 35 years - 46%"),
+      screen.getByText("1,854 weeks lived - 35 years - 45%"),
     ).toBeInTheDocument();
     expect(
       screen
@@ -277,7 +275,7 @@ describe("LifeView", () => {
     });
 
     expect(
-      screen.getByText("1,717 weeks lived - 32 years - 43%"),
+      screen.getByText("1,717 weeks lived - 32 years - 42%"),
     ).toBeInTheDocument();
   });
 
@@ -287,7 +285,7 @@ describe("LifeView", () => {
     const region = screen.getByRole("region", {
       name: /life visualization/i,
     });
-    expect(getGrid(region).dataset.totalDots).toBe(String(77 * 52));
+    expect(getGrid(region).dataset.totalDots).toBe(String(79 * 52));
 
     fireEvent.change(screen.getByLabelText(/age of death/i), {
       target: { value: "85" },
@@ -340,10 +338,10 @@ describe("LifeView", () => {
           name: "Date of birth",
         }) as HTMLInputElement
       ).value,
-    ).toBe("Jan 1, 2000");
+    ).toBe("");
     expect(
       (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    ).toBe("77");
+    ).toBe("79");
   });
 
   it("allows the age input to be cleared before entering a new age", async () => {
@@ -405,7 +403,7 @@ describe("LifeView", () => {
     });
     expect(screen.getByText("Average")).toBeInTheDocument();
     expect(
-      screen.getByText("This is your life if you live to 77"),
+      screen.getByText("This is your life if you live to 79"),
     ).toBeInTheDocument();
   });
 
@@ -491,7 +489,7 @@ describe("LifeView", () => {
 
     await user.hover(screen.getByText("Date of birth"));
     expect(
-      await screen.findByText("We don't store this information"),
+      await screen.findByText("Saved to your account when signed in"),
     ).toBeInTheDocument();
   });
 

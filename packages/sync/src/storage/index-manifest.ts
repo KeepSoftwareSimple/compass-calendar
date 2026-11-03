@@ -71,6 +71,26 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
   ],
   [SYNC_COLLECTIONS.events]: [
     {
+      name: "reflection_principal_page",
+      key: {
+        tenantId: 1,
+        principalId: 1,
+        calendarId: 1,
+        lifecycleState: 1,
+        _id: 1,
+      },
+    },
+    {
+      name: "reflection_principal_oldest",
+      key: {
+        tenantId: 1,
+        principalId: 1,
+        calendarId: 1,
+        lifecycleState: 1,
+        "schedule.start": 1,
+      },
+    },
+    {
       name: "provider_event_identity",
       key: { connectionId: 1, calendarId: 1, providerEventId: 1 },
       // partialFilterExpression, not sparse: uniqueness must apply only to

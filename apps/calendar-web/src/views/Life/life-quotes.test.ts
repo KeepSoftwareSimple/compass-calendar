@@ -1,4 +1,4 @@
-import { getRandomLifeQuote, LIFE_QUOTES } from "./life-quotes";
+import { getRandomLifeQuote, LIFE_QUOTES } from "@core/life/life-quotes";
 import { describe, expect, it } from "bun:test";
 
 describe("life quotes", () => {

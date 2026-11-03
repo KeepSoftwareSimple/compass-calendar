@@ -31,6 +31,9 @@ export type ResourceBootstrapState = z.infer<
 // connection); an events resource is keyed to one provider calendar. Holds no
 // event content.
 export const SyncResourceRecordSchema = z.strictObject({
+  historyCoverageVersion: z.number().int().nonnegative().optional(),
+  historyCheckedAt: z.date().optional(),
+  historySkipped: z.number().int().nonnegative().optional(),
   _id: ObjectIdStringSchema,
   tenantId: TenantIdSchema,
   principalId: PrincipalIdSchema,
@@ -42,6 +45,9 @@ export const SyncResourceRecordSchema = z.strictObject({
   syncCursor: z.string().min(1).nullable(),
   // Mid-batch page checkpoint for resumable pulls; null between batches.
   pageCursor: z.string().min(1).nullable(),
+  // Repair progress is separate from the active generation's pull checkpoint.
+  repairPageCursor: z.string().min(1).nullable().optional(),
+  repairSkipped: z.number().int().nonnegative().optional(),
   // A repair's STAGING generation. Only a non-destructive repair touches this:
   // it bumps this ahead of activeGeneration to build a fresh generation
   // alongside the queryable one, then sets activeGeneration to it on success.

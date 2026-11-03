@@ -7,11 +7,85 @@ private enum LifePreferencesStorageKeys {
     static let preferences = "compass.life.preferences"
 }
 
+public protocol LifePreferencesRemoteClient: Sendable {
+    func lifePreferences() async throws -> LifePreferencesResponse
+    func saveLifePreferences(_ preferences: LifePreferences, revision: Int) async throws -> LifePreferencesResponse
+}
+
+extension UserAPI: LifePreferencesRemoteClient {}
+
 @MainActor
 @Observable
 public final class LifeStore {
     public private(set) var preferences: LifePreferences
     public private(set) var scrollToCurrentWeekToken = 0
+
+    public private(set) var error: String?
+    public private(set) var isLoading = false
+    private var userId: String?
+    private var remote: (any LifePreferencesRemoteClient)?
+    private var revision = 0
+    private var generation = 0
+    private var pending: Task<Void, Never>?
+
+    public func flushPendingChanges() async { await pending?.value }
+
+    public func load(userId: String?, remote: any LifePreferencesRemoteClient) async {
+        if self.userId == userId { await pending?.value }
+        if userId == nil, let previous = self.userId {
+            defaults.removeObject(forKey: "compass.life.account.\(previous)")
+        }
+        generation += 1
+        let token = generation
+        self.userId = userId
+        self.remote = userId == nil ? nil : remote
+        error = nil
+        guard let userId else {
+            preferences = LifePreferencesPersistence.read(from: defaults)
+            isLoading = false
+            return
+        }
+        isLoading = true
+        preferences = .defaults
+        revision = 0
+        if let data = defaults.data(forKey: "compass.life.account.\(userId)"),
+           let cached = try? JSONDecoder().decode(LifePreferencesResponse.self, from: data) {
+            apply(cached)
+        }
+        do {
+            var response = try await remote.lifePreferences()
+            guard generation == token else { return }
+            if response.preferences == nil,
+               defaults.object(forKey: LifePreferencesStorageKeys.preferences) != nil,
+               defaults.string(forKey: "compass.life.migrated-account") == nil {
+                var legacy = LifePreferencesPersistence.read(from: defaults)
+                if legacy.birthDate == "2000-01-01" { legacy.birthDate = "" }
+                do { response = try await remote.saveLifePreferences(legacy, revision: 0) }
+                catch { response = try await remote.lifePreferences() }
+            }
+            guard generation == token else { return }
+            defaults.set(userId, forKey: "compass.life.migrated-account")
+            apply(response)
+        } catch {
+            guard generation == token else { return }
+            self.error = "Life settings could not be loaded. Please try again."
+        }
+        guard generation == token else { return }
+        isLoading = false
+    }
+
+    private func apply(_ response: LifePreferencesResponse) {
+        revision = response.revision
+        preferences = response.preferences.map { LifePreferences(birthDate: $0.birthDate,
+            lifespan: $0.lifespan, variation: LifeVariation(rawValue: $0.variation.rawValue) ?? .average) } ?? .defaults
+        cache(response)
+    }
+
+    private func cache(_ response: LifePreferencesResponse) {
+        if let userId, let data = try? JSONEncoder().encode(response) {
+            defaults.set(data, forKey: "compass.life.account.\(userId)")
+        }
+    }
 
     private let defaults: UserDefaults
     private let today: () -> Date
@@ -105,7 +179,34 @@ public final class LifeStore {
     }
 
     private func persist() {
-        LifePreferencesPersistence.write(preferences, to: defaults)
+        guard let remote else {
+            LifePreferencesPersistence.write(preferences, to: defaults)
+            return
+        }
+        guard !isLoading else { return }
+        let value = preferences
+        let token = generation
+        let previous = pending
+        pending = Task { [weak self] in
+            await previous?.value
+            guard let self, self.generation == token else { return }
+            do {
+                let response = try await remote.saveLifePreferences(value, revision: self.revision)
+                guard self.generation == token else { return }
+                self.revision = response.revision
+                self.cache(response)
+                self.error = nil
+            } catch {
+                guard self.generation == token else { return }
+                self.generation += 1
+                if let response = try? await remote.lifePreferences() {
+                    guard self.generation == token + 1 else { return }
+                    self.apply(response)
+                }
+                guard self.generation == token + 1 else { return }
+                self.error = "Life settings were not saved. Check the values and try again."
+            }
+        }
     }
 }
 

@@ -46,6 +46,11 @@ export interface ProviderEventReadInput {
 // where it left off. Reads masters and exceptions as distinct entities (never
 // provider-expanded instances) so the canonical store keeps them separable.
 export interface ProviderEventReader {
+  readonly supportsFullHistory?: boolean;
+  // Some production APIs expose complete snapshots but no unbounded delta.
+  // Their completion token marks a snapshot; subsequent reads must rebuild so
+  // events absent from the next snapshot are removed as well.
+  readonly fullSnapshotOnly?: boolean;
   listEventPage(input: ProviderEventReadInput): Promise<ProviderEventPage>;
 }
 

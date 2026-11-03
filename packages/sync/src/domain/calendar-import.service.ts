@@ -55,10 +55,9 @@ export interface CalendarImportResult {
 // - A series MEMBER (a modified instance or a cancelled occurrence) can arrive
 //   before its master (providers return events in arbitrary order). Unresolved
 //   members are buffered and retried after each page and once more at the end
-//   of each pass; a member whose master never appears is counted skipped. Named
-//   wart: a buffered cross-page member is lost if the process crashes after its
-//   own page was checkpointed but before its master arrived — bounded to one
-//   exception, and repair or an incremental pull re-delivers it.
+//   of each pass; a member whose master never appears is counted skipped. Page
+//   checkpoints wait until all buffered members have linked, so a crash replays
+//   the unresolved prefix rather than losing its exceptions.
 // - A master's projection must exclude the instants its exceptions own, and an
 //   exception can land pages after its master. Masters therefore reproject
 //   from a fresh exception read every time one of their exceptions links, and
@@ -135,6 +134,14 @@ export async function importCalendarEvents(
     resource.principalId,
     resource._id,
     syncCursor,
+    now(),
+  );
+  // Older import checkpoints did not preserve cross-page members or skipped
+  // counts. Certify uninterrupted imports; a resumable repair verifies others.
+  await deps.resources.recordHistoryCoverage(
+    resource,
+    run.skipped,
+    deps.reader.supportsFullHistory === true && resource.pageCursor === null,
     now(),
   );
 
@@ -230,7 +237,11 @@ class ImportRun {
       // The checkpoint is the durability barrier: it moves only after the
       // page's upserts AND projections committed, so a crash-resume re-reads
       // at most one already-applied (idempotent) page.
-      if (options.checkpointed && pageToken) {
+      if (
+        options.checkpointed &&
+        pageToken &&
+        !this.#applier.hasUnresolvedMembers
+      ) {
         await this.deps.resources.setPageCheckpoint(
           this.resource.tenantId,
           this.resource.principalId,

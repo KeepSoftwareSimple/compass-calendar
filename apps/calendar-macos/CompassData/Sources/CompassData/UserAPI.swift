@@ -8,6 +8,17 @@ public struct UserAPI: Sendable {
         self.client = client
     }
 
+    public func lifePreferences() async throws -> LifePreferencesResponse {
+        try await client.sendDecodable(method: "GET", path: "user/life-preferences")
+    }
+
+    public func saveLifePreferences(_ preferences: LifePreferences, revision: Int) async throws -> LifePreferencesResponse {
+        let input = SaveLifePreferences(expectedRevision: revision, preferences: LifePreferencesResponsePreferences(
+            birthDate: preferences.birthDate, lifespan: preferences.lifespan,
+            variation: VariationEnum(rawValue: preferences.variation.rawValue)!))
+        return try await client.sendDecodable(method: "PUT", path: "user/life-preferences", body: input)
+    }
+
     public func profile() async throws -> UserProfile {
         try await client.sendDecodable(method: "GET", path: "user/profile")
     }

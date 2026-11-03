@@ -27,6 +27,8 @@ import {
 } from "@backend/email/email-unsubscribe";
 import { buildEmailProvider } from "@backend/email/providers/email.client";
 import { type EmailProvider } from "@backend/email/providers/email.port";
+import { dispatchReflection } from "@backend/email/reflection-dispatch";
+import { enqueueDueReflections } from "@backend/email/reflection-enrollment";
 import { findWelcomeStep } from "@backend/email/welcome-sequence";
 import { loadWelcomeSequenceUser } from "@backend/email/welcome-sequence.context";
 import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
@@ -111,6 +113,11 @@ export class EmailDispatchService {
     }
 
     const now = new Date();
+    try {
+      await enqueueDueReflections(now);
+    } catch {
+      logger.error("Reflection enrollment cycle failed");
+    }
     const claimed = await emailSendRepository.claimDue(
       now,
       EMAIL_SEND_BATCH_SIZE,
@@ -118,10 +125,20 @@ export class EmailDispatchService {
     );
 
     for (const row of claimed) {
-      if (row.sequence === "booking-host") {
-        await this.#dispatchBookingHostRow(row);
-      } else {
-        await this.#dispatchWelcomeRow(row);
+      switch (row.sequence) {
+        case "booking-host":
+          await this.#dispatchBookingHostRow(row);
+          break;
+        case "reflection":
+          await dispatchReflection(row, this.getProvider());
+          break;
+        case "welcome":
+          await this.#dispatchWelcomeRow(row);
+          break;
+        default: {
+          const sequence: never = row.sequence;
+          throw new Error(`Unknown email sequence: ${sequence}`);
+        }
       }
       await sleep(EMAIL_SEND_PROVIDER_SPACING_MS);
     }

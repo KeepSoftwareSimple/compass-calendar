@@ -13,7 +13,7 @@ public struct LifeVariationDetails: Sendable, Hashable {
 
 public enum LifeMath {
     public static let weeksPerRow = 52
-    public static let defaultLifespan = 77
+    public static let defaultLifespan = 79
     public static let minLifespan = 1
     public static let maxLifespan = 150
     public static let randomLifespanMax = 100
@@ -21,7 +21,7 @@ public enum LifeMath {
     public static let variationOrder: [LifeVariation] = [.average, .long, .random]
 
     public static let variations: [LifeVariation: LifeVariationDetails] = [
-        .average: LifeVariationDetails(label: "Average", defaultLifespan: 77),
+        .average: LifeVariationDetails(label: "Average", defaultLifespan: 79),
         .long: LifeVariationDetails(label: "Long", defaultLifespan: 100),
         .random: LifeVariationDetails(label: "Random", defaultLifespan: randomLifespanMax),
     ]
@@ -71,7 +71,8 @@ public enum LifeMath {
         today: Date = Date()
     ) -> Int {
         guard let birthDate = parseLifeDate(birthDateValue) else { return 0 }
-        let diffWeeks = Int(floor(today.timeIntervalSince(birthDate) / (msPerWeek / 1_000)))
+        let days = EffectiveTimeZone.calendar.dateComponents([.day], from: EffectiveTimeZone.calendar.startOfDay(for: birthDate), to: EffectiveTimeZone.calendar.startOfDay(for: today)).day ?? 0
+        let diffWeeks = Int(floor(Double(days) / 7))
         return clampWeeksLived(diffWeeks, totalDots: totalDots)
     }
 
@@ -158,7 +159,7 @@ public struct LifePreferences: Codable, Hashable, Sendable {
     }
 
     public static let defaults = LifePreferences(
-        birthDate: "2000-01-01",
+        birthDate: "",
         lifespan: LifeMath.variations[.average]!.defaultLifespan,
         variation: .average)
 }

@@ -30,7 +30,7 @@ export function parseUnsubscribeUserId(token: string): string | null {
   return verifyUnsubscribeToken(token, secret);
 }
 
-export type EmailUnsubscribeScope = "welcome" | "booking-host";
+export type EmailUnsubscribeScope = "welcome" | "booking-host" | "reflection";
 
 export function buildUnsubscribeUrls(
   token: string,

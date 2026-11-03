@@ -1,4 +1,4 @@
-import { getSecureRandomNumber } from "./life.utils";
+import { getSecureRandomNumber } from "@core/life/life-math";
 
 export const LIFE_QUOTES = [
   "“Teach us to number our days, that we may gain a heart of wisdom.” (Psalm 90:12)",

@@ -9,7 +9,7 @@ import {
   getTotalLifeDots,
   getWeekLivedCount,
   parseLifeDate,
-} from "./life.utils";
+} from "@core/life/life-math";
 import { describe, expect, it } from "bun:test";
 
 describe("life utils", () => {
@@ -23,7 +23,7 @@ describe("life utils", () => {
 
   it("calculates total dots from a clamped lifespan", () => {
     expect(getTotalLifeDots(85)).toBe(85 * 52);
-    expect(getTotalLifeDots(Number.NaN)).toBe(77 * 52);
+    expect(getTotalLifeDots(Number.NaN)).toBe(79 * 52);
     expect(getTotalLifeDots(-1)).toBe(1 * 52);
     expect(getTotalLifeDots(151)).toBe(150 * 52);
   });
@@ -42,7 +42,7 @@ describe("life utils", () => {
     expect(clampLifespan(80.6)).toBe(81);
     expect(clampLifespan(0)).toBe(1);
     expect(clampLifespan(151)).toBe(150);
-    expect(clampLifespan(Number.NaN)).toBe(77);
+    expect(clampLifespan(Number.NaN)).toBe(79);
   });
 
   it("formats dot tooltip labels from one-indexed week numbers", () => {

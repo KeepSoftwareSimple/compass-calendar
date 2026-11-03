@@ -89,6 +89,7 @@ const defaultApiFactory: GoogleEventListApiFactory = (accessToken) => {
 // events and normalizes each into a provider-neutral read, dropping (and
 // counting) any that are structurally unusable rather than failing the page.
 export class GoogleEventReaderAdapter implements ProviderEventReader {
+  readonly supportsFullHistory = true;
   #makeApi: GoogleEventListApiFactory;
 
   #log: { warn: (message: string) => void };
