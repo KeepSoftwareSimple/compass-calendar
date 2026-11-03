@@ -554,6 +554,32 @@ describe("LifeView", () => {
     expect(currentWeek).toHaveFocus();
   });
 
+  it("moves between a saved life's current week and birthday without typing shortcut letters", async () => {
+    localStorage.setItem(
+      STORAGE_KEYS.LIFE_PREFERENCES,
+      JSON.stringify({
+        birthDate: "2001-02-03",
+        lifespan: 79,
+        variation: "average",
+      }),
+    );
+    const user = userEvent.setup();
+    await renderLifeViewWithSidebar();
+    const currentWeek = within(
+      screen.getByRole("region", { name: /^Life visualization:/ }),
+    ).getByRole("button", { name: /\| week \d+ \/ \d+$/ });
+    const birthDate = screen.getByRole("textbox", { name: "Date of birth" });
+    act(() => currentWeek.focus());
+
+    await user.keyboard("i");
+    await waitFor(() => expect(birthDate).toHaveFocus());
+    expect(birthDate).toHaveValue("Feb 3, 2001");
+
+    await user.keyboard("u");
+    await waitFor(() => expect(currentWeek).toHaveFocus());
+    expect(birthDate).toHaveValue("Feb 3, 2001");
+  });
+
   it("jumps focus to page areas via hold-Mod digits", async () => {
     await renderLifeViewWithSidebar();
 

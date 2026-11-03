@@ -70,9 +70,11 @@ test("life view i focuses the birth date field and u returns to the grid", async
   await page.goto("/life", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Life" })).toBeVisible();
 
-  const currentWeek = page.getByRole("button", { name: /current week/i });
-  await expect(currentWeek.first()).toBeVisible();
-  await currentWeek.first().focus();
+  const currentWeek = page
+    .getByRole("region", { name: /^Life visualization:/ })
+    .getByRole("button", { name: /\| week \d+ \/ \d+$/ });
+  await expect(currentWeek).toBeVisible();
+  await currentWeek.focus();
 
   const birthDate = page.getByRole("textbox", { name: "Date of birth" });
   await page.keyboard.press("i");
@@ -80,5 +82,5 @@ test("life view i focuses the birth date field and u returns to the grid", async
   await expect(birthDate).toHaveValue("Feb 3, 2001");
 
   await page.keyboard.press("u");
-  await expect(currentWeek.first()).toBeFocused({ timeout: 5_000 });
+  await expect(currentWeek).toBeFocused({ timeout: 5_000 });
 });
