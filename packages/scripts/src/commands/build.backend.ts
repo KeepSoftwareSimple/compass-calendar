@@ -68,15 +68,14 @@ await Bun.write(
   JSON.stringify({ dependencies: { "@resvg/resvg-js": "2.6.2" } }, null, 2),
 );
 
-await Bun.write(
-  path.join(BACKEND_BUILD, "assets/Rubik-Variable.ttf"),
-  Bun.file(
-    path.join(
-      COMPASS_ROOT_DEV,
-      "packages/backend/src/email/assets/Rubik-Variable.ttf",
+for (const asset of ["Rubik-Variable.ttf", "OFL.txt"]) {
+  await Bun.write(
+    path.join(BACKEND_BUILD, "assets", asset),
+    Bun.file(
+      path.join(COMPASS_ROOT_DEV, "packages/backend/src/email/assets", asset),
     ),
-  ),
-);
+  );
+}
 
 // 5. Install the renderer binary for the target production platform.
 log.info("Installing production dependency metadata ...");
