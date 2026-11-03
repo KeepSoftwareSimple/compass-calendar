@@ -374,9 +374,7 @@ describe("executeProviderCreate", () => {
             "revoked",
           ),
         }),
-      undefined,
-      undefined,
-      TEST_CREDENTIAL_ENCRYPTION_KEY,
+      { credentialEncryptionKey: TEST_CREDENTIAL_ENCRYPTION_KEY },
     );
 
     const result = await executeProviderCreate(

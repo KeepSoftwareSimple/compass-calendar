@@ -83,13 +83,11 @@ describe("CredentialCustody", () => {
     adapter: FakeAdapter,
     refreshSkewMs?: number,
   ): CredentialCustody =>
-    new CredentialCustody(
-      repo,
-      () => adapter,
-      fixedNow,
+    new CredentialCustody(repo, () => adapter, {
+      now: fixedNow,
       refreshSkewMs,
-      TEST_CREDENTIAL_ENCRYPTION_KEY,
-    );
+      credentialEncryptionKey: TEST_CREDENTIAL_ENCRYPTION_KEY,
+    });
 
   it("refreshes and caches an access token when none is cached", async () => {
     const connectionId = objectId() as ConnectionId;
@@ -402,9 +400,10 @@ describe("CredentialCustody", () => {
       () => {
         throw new ProviderNotConfiguredError("google");
       },
-      fixedNow,
-      undefined,
-      TEST_CREDENTIAL_ENCRYPTION_KEY,
+      {
+        now: fixedNow,
+        credentialEncryptionKey: TEST_CREDENTIAL_ENCRYPTION_KEY,
+      },
     );
     await custody.store(baseCredential(connectionId));
 
@@ -418,13 +417,10 @@ describe("CredentialCustody", () => {
     const adapter = new FakeAdapter();
     const key = randomBytes(32).toString("base64");
     const secret = "apple-app-password-fixture";
-    const custody = new CredentialCustody(
-      repo,
-      () => adapter,
-      fixedNow,
-      undefined,
-      key,
-    );
+    const custody = new CredentialCustody(repo, () => adapter, {
+      now: fixedNow,
+      credentialEncryptionKey: key,
+    });
 
     await custody.storePassword(
       connectionId,

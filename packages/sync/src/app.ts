@@ -637,13 +637,9 @@ function buildSchedulers(
         resolveAdapters,
         commands: repos.commands,
         jobs,
-        custody: new CredentialCustody(
-          repos.credentials,
-          resolveAuth,
-          undefined,
-          undefined,
-          config.CREDENTIAL_ENCRYPTION_KEY,
-        ),
+        custody: new CredentialCustody(repos.credentials, resolveAuth, {
+          credentialEncryptionKey: config.CREDENTIAL_ENCRYPTION_KEY,
+        }),
         // Where the provider posts change notifications back; the callback route
         // verifies them against the stored subscription.
         callbackUrlFor: (kind) =>
@@ -916,13 +912,9 @@ function buildSchedulers(
             execution: config.EXECUTION,
             provider: {
               resolveAdapters,
-              custody: new CredentialCustody(
-                repos.credentials,
-                resolveAuth,
-                undefined,
-                undefined,
-                config.CREDENTIAL_ENCRYPTION_KEY,
-              ),
+              custody: new CredentialCustody(repos.credentials, resolveAuth, {
+                credentialEncryptionKey: config.CREDENTIAL_ENCRYPTION_KEY,
+              }),
             },
             onRetryError: (error, commandId) =>
               logger.error(

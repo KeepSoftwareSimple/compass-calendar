@@ -388,9 +388,7 @@ describe("executeProviderUpdate", () => {
     const custody = new CredentialCustody(
       credentials,
       () => new RevokedAuthAdapter(),
-      undefined,
-      undefined,
-      TEST_CREDENTIAL_ENCRYPTION_KEY,
+      { credentialEncryptionKey: TEST_CREDENTIAL_ENCRYPTION_KEY },
     );
     const writer = new FakeProviderEventWriter();
     writer.fetchError = new ProviderWriteError(

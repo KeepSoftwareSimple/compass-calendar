@@ -1042,9 +1042,7 @@ export function registerConnectionRoutes(
         const custody = new CredentialCustody(
           new CredentialRepository(deps.mongo.db),
           resolveAuthFrom(deps.registry),
-          undefined,
-          undefined,
-          deps.credentialAtRestKey,
+          { credentialEncryptionKey: deps.credentialAtRestKey },
         );
         await custody.disconnect(id.data);
         await connections.markDisconnected(
@@ -1215,9 +1213,7 @@ async function linkCredentialConnection(
     const custody = new CredentialCustody(
       repos.credentials,
       resolveAuthForConnectionApi(deps),
-      undefined,
-      undefined,
-      deps.credentialAtRestKey,
+      { credentialEncryptionKey: deps.credentialAtRestKey },
     );
     await custody.storePassword(
       connection._id,
@@ -1366,9 +1362,7 @@ async function linkConnection(
     const custody = new CredentialCustody(
       repos.credentials,
       resolveAuthForConnectionApi(deps),
-      undefined,
-      undefined,
-      deps.credentialAtRestKey,
+      { credentialEncryptionKey: deps.credentialAtRestKey },
     );
     await custody.store({
       connectionId: connection._id,
