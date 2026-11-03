@@ -44,7 +44,7 @@ export const DayViewContent = memo(() => {
   // even when the user keeps it collapsed; their persisted preference is
   // untouched and the panel collapses again when the form closes.
   const isEventDetailsOpen = useDraftStore(selectIsEventFormOpen);
-  const mainRef = useRef<HTMLDivElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
 
   const dateInView = useDateInView();
   const { today } = useToday();
@@ -125,7 +125,7 @@ export const DayViewContent = memo(() => {
       />
       <Dedication />
 
-      <div
+      <main
         id={ID_MAIN}
         ref={mainRef}
         className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-background pt-5 pl-4 transition-[width] duration-200 ease-out motion-reduce:transition-none xl:pl-8"
@@ -139,7 +139,7 @@ export const DayViewContent = memo(() => {
         <div className="flex w-full flex-1 overflow-hidden">
           <DayCalendarGrid />
         </div>
-      </div>
+      </main>
 
       <ResizableSidebarPanel isOpen={isSidebarOpen || isEventDetailsOpen}>
         <Sidebar

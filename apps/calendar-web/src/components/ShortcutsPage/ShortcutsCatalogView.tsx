@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
+import { useCanonicalPath } from "@web/common/hooks/useCanonicalPath";
 import { PUBLIC_SHORTCUT_CATALOG } from "@web/shortcuts/shortcuts-catalog.data";
 
 export const SHORTCUTS_PAGE_TITLE = "Compass keyboard shortcuts";
@@ -30,6 +31,7 @@ const DEFAULT_DOCUMENT_TITLE = "Compass Calendar";
  * drifts from the registry.
  */
 export const ShortcutsCatalogView = () => {
+  useCanonicalPath(ROOT_ROUTES.SHORTCUTS);
   useEffect(() => {
     const previousTitle = document.title;
     const meta = document.querySelector('meta[name="description"]');

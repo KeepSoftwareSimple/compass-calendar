@@ -1,3 +1,5 @@
+import { isCalendarSpaPath } from "../apps/calendar-web/spa-route-path";
+import { ROOT_ROUTES } from "../apps/calendar-web/src/common/constants/routes";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -251,8 +253,83 @@ describe("serve-web path traversal", () => {
     });
 
     // No extension on the sanitized path, so it falls through to the SPA
-    // index rather than leaking anything outside buildRoot.
-    expect(response.status).toBe(200);
-    expect(await response.text()).toContain("compass");
+    // index (as an unknown path, 404) rather than leaking anything outside
+    // buildRoot.
+    expect(response.status).toBe(404);
+    const body = await response.text();
+    expect(body).toContain("compass");
+    expect(body).not.toContain("root:");
+  });
+});
+
+describe("serve-web unknown paths", () => {
+  it("serves real calendar routes with 200", async () => {
+    for (const route of [
+      "/",
+      "/week",
+      "/week/2026-11-02",
+      "/day",
+      "/day/2026-11-03",
+      "/life",
+      "/shortcuts",
+      "/auth/google/callback",
+      "/billing/desktop-return",
+    ]) {
+      const response = await fetch(`${baseUrl}${route}`);
+      expect({ route, status: response.status }).toEqual({
+        route,
+        status: 200,
+      });
+    }
+  });
+
+  it("answers unknown paths with 404 and still sends the app shell", async () => {
+    const response = await fetch(`${baseUrl}/this-page-does-not-exist`);
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-cache");
+    expect(await response.text()).toContain("<html>");
+  });
+
+  it("never answers an unknown path with an empty 304", async () => {
+    const first = await fetch(`${baseUrl}/`);
+    const etag = first.headers.get("etag") ?? "";
+    await first.text();
+
+    const response = await fetch(`${baseUrl}/nope`, {
+      headers: { "If-None-Match": etag },
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toContain("<html>");
+  });
+
+  it("keeps the booking-web SPA fallback at 200", async () => {
+    const bookingServer = await startServeWeb({
+      WEB_SERVES_GUEST_MEET: "true",
+    });
+
+    try {
+      const response = await fetch(`${bookingServer.baseUrl}/anything`);
+      expect(response.status).toBe(200);
+    } finally {
+      bookingServer.process.kill();
+    }
+  });
+
+  it("covers every route the calendar router declares", () => {
+    for (const route of Object.values(ROOT_ROUTES)) {
+      if (route === ROOT_ROUTES.API) {
+        continue;
+      }
+      const concrete = route.replace(/\$[A-Za-z]+/g, "x");
+      expect({ route, known: isCalendarSpaPath(concrete) }).toEqual({
+        route,
+        known: true,
+      });
+    }
+    expect(isCalendarSpaPath("/week/")).toBe(true);
+    expect(isCalendarSpaPath("/privacy-old")).toBe(false);
+    expect(isCalendarSpaPath("/week/2026/extra")).toBe(false);
   });
 });

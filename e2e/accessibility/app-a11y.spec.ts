@@ -69,3 +69,19 @@ test("the invalid-date validation error is accessible", async ({ page }) => {
 
   await expectNoAxeViolations(page, { checkpoint: "invalid date error toast" });
 });
+
+test("week and day views expose one main landmark beside the sidebar", async ({
+  page,
+}) => {
+  await prepareCalendarPage(page);
+  await ensureSidebarOpen(page);
+
+  // Landmarks only: screen readers can jump to the calendar or the sidebar.
+  // They add no tab stops, so keyboard focus order is unchanged.
+  await expect(page.getByRole("main")).toHaveCount(1);
+  await expect(page.getByRole("main").locator("#mainGrid")).toHaveCount(1);
+  await expect(page.getByRole("complementary").first()).toBeVisible();
+
+  await page.goto("/day", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("main")).toHaveCount(1);
+});

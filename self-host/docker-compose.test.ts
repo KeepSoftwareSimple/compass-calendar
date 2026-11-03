@@ -143,6 +143,25 @@ describe("self-host docker compose", () => {
     expect(dockerfile).toContain("self-host/serve-web.ts");
   });
 
+  it("ships every file serve-web.ts imports in each web runtime image", () => {
+    const serveWeb = readRepoFile("self-host/serve-web.ts");
+    const imports = [...serveWeb.matchAll(/from "\.\.\/(apps\/[^"]+)"/g)].map(
+      (match) => `${match[1]}.ts`,
+    );
+    expect(imports).toContain("apps/calendar-web/spa-route-path.ts");
+
+    for (const file of [
+      "self-host/Dockerfile.web",
+      ".github/docker/Dockerfile.web",
+      "apps/booking-web/Dockerfile",
+    ]) {
+      const dockerfile = readRepoFile(file);
+      for (const imported of imports) {
+        expect(dockerfile).toContain(`/app/${imported} ./${imported}`);
+      }
+    }
+  });
+
   it("installs bun deps before copying the full source tree", () => {
     for (const file of [
       "self-host/Dockerfile.backend",

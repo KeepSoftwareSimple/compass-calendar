@@ -363,8 +363,8 @@ export function WelcomeModal() {
                 beside each action.
               </p>
               <p className="text-sm text-text-muted">
-                Compass is a faster, simpler, open-source calendar for busy
-                professionals who live at their keyboard.
+                Compass is a faster, simpler, open-source keyboard-first
+                calendar for busy professionals who live at their keyboard.
               </p>
             </div>
             <div className="flex w-full flex-col items-center gap-3">

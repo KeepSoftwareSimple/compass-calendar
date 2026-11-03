@@ -57,7 +57,7 @@ export const WeekView = () => {
   const { trackRef, visibleDayCount } = useVisibleDayCount();
 
   const weekProps = useWeek(today, visibleDayCount);
-  const mainRef = useRef<HTMLDivElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
   const weekTrackElementRef = useRef<HTMLDivElement | null>(null);
   const setTrackRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -147,7 +147,7 @@ export const WeekView = () => {
       <PageJumpHints />
 
       <Shortcuts shortcutsProps={shortcutProps}>
-        <div
+        <main
           id={ID_MAIN}
           ref={mainRef}
           className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-background pt-5 pr-0 pb-0 pl-4 transition-[width] duration-200 ease-out motion-reduce:transition-none xl:pl-8"
@@ -180,7 +180,7 @@ export const WeekView = () => {
               </ContextMenuWrapper>
             </div>
           </WeekGridScrollArea>
-        </div>
+        </main>
         <ContextMenuWrapper id="sidebar-context-menu">
           <Draft measurements={measurements} weekProps={weekProps} />
           <ResizableSidebarPanel isOpen={isSidebarOpen || isEventDetailsOpen}>
