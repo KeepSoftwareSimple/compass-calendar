@@ -1,6 +1,11 @@
+import { ArrowsDownUpIcon } from "@phosphor-icons/react/dist/csr/ArrowsDownUp";
 import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import { emitViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
+import { toggleAllDayRowExpanded } from "@web/grid/all-day-row/allDayRowCollapse.store";
+
+/** Not a write: stays usable when event creation is billing-locked. */
+export const TOGGLE_ALLDAY_ROW_ITEM_ID = "toggle-allday-row";
 
 /**
  * View-agnostic "Common Actions" for the command palette. Emitting a view
@@ -26,5 +31,13 @@ export const eventCommandPaletteItems: CommandItem[] = [
     shortcut: "shift+c",
     keywords: ["new event", "add event", "all day"],
     onClick: () => queueMicrotask(() => emitViewCommand("CREATE_ALLDAY_DRAFT")),
+  },
+  {
+    id: TOGGLE_ALLDAY_ROW_ITEM_ID,
+    label: "Expand or collapse all-day events",
+    icon: ArrowsDownUpIcon,
+    shortcut: "shift+a",
+    keywords: ["all day", "all-day row", "collapse", "expand", "more"],
+    onClick: () => queueMicrotask(() => toggleAllDayRowExpanded()),
   },
 ];

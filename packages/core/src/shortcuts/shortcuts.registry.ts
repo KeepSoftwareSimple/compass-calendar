@@ -141,6 +141,12 @@ export const SHORTCUTS_REGISTRY = [
     label: "Scroll grid down one hour",
     section: "navigate",
   },
+  {
+    id: "nav-toggle-allday",
+    keys: [...B.navToggleAllDay.keycaps],
+    label: "Expand or collapse all-day events",
+    section: "navigate",
+  },
 
   // Navigate - View switchers (all views)
   {

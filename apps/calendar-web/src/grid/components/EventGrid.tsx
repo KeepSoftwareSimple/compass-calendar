@@ -13,7 +13,10 @@ import { TimedGrid } from "./TimedGrid";
 
 export interface EventGridProps {
   allDayEventsLayer: ReactNode;
-  allDayGridOffsetTopPx?: number;
+  /** Per visible column: all-day events folded below the collapsed lanes. */
+  allDayHiddenCounts?: readonly number[];
+  /** Show every all-day lane (an all-day draft sits in a folded lane). */
+  allDayForceExpanded?: boolean;
   allDayRowsCount?: number;
   gridRefs: GridRefs;
   /** First load, or refetch after a failed load (Retry). */
@@ -41,7 +44,8 @@ export interface EventGridProps {
 
 export const EventGrid: FC<EventGridProps> = ({
   allDayEventsLayer,
-  allDayGridOffsetTopPx = 0,
+  allDayHiddenCounts,
+  allDayForceExpanded = false,
   allDayRowsCount = 0,
   gridRefs,
   isLoadingEvents = false,
@@ -60,7 +64,8 @@ export const EventGrid: FC<EventGridProps> = ({
       allDayColumnsRef={gridRefs.allDayRef}
       allDayRowRef={gridRefs.allDayRowRef}
       eventsLayer={allDayEventsLayer}
-      gridOffsetTopPx={allDayGridOffsetTopPx}
+      forceExpanded={allDayForceExpanded}
+      hiddenCountsByColumn={allDayHiddenCounts}
       highlightedColumnKey={highlightedColumnKey}
       rowsCount={allDayRowsCount}
       visibleDates={visibleDates}

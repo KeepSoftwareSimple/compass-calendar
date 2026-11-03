@@ -22,6 +22,7 @@ public enum ShortcutId: String, Codable, Hashable, Sendable, CaseIterable {
     case navScrollDown = "nav-scroll-down"
     case navScrollHourUp = "nav-scroll-hour-up"
     case navScrollHourDown = "nav-scroll-hour-down"
+    case navToggleAllday = "nav-toggle-allday"
     case navDayView = "nav-day-view"
     case navWeekView = "nav-week-view"
     case navLifeView = "nav-life-view"

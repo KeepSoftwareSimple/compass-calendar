@@ -1,6 +1,7 @@
 import { ID_GRID_MAIN } from "@web/common/constants/web.constants";
 import { requestPointerEventJump } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
+import { allDayClickIntentContext } from "@web/views/Week/pointer-intent/allday-click-context";
 import { gridPointerTargetFromEvent } from "@web/views/Week/pointer-intent/grid-pointer-target";
 import {
   identityForHoverTarget,
@@ -109,8 +110,13 @@ export function attachPointerIntentTracker(): () => void {
 
     if (target.kind === "allday-slot") {
       // Intentional product behavior: empty all-day clicks teach Shift+C (Tyler).
+      // Week view names the Shift+day keys for the clicked column, so the
+      // hint teaches the whole mouse-free path (pick the day, then Shift+C).
       eventJumpActions.setPointerDraftIntent({ date: target.date });
-      notify("allday-click");
+      notify(
+        "allday-click",
+        allDayClickIntentContext(target.date, window.location.pathname),
+      );
     }
   };
 

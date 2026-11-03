@@ -365,8 +365,8 @@ describe("CommandPalette", () => {
     expect(activeRowText(container)).toBe("Go to Today");
 
     // Walk down through Navigation (including legend rows) into Create.
-    // The ArrowDown after Create all-day event skips the disabled Undo row
-    // and lands on Appearance.
+    // Expand/collapse all-day sits after Create all-day event; the next
+    // ArrowDown skips the disabled Undo row and lands on Appearance.
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Day
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Life
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Show shortcuts
@@ -378,6 +378,8 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Up Next + Join
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Create all-day event
     expect(activeRowText(container)).toBe("Create all-day event");
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Expand or collapse all-day
+    expect(activeRowText(container)).toBe("Expand or collapse all-day events");
     fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Undo last change
     expect(activeRowText(container)).toBe("Switch to dark theme");
   });

@@ -127,7 +127,7 @@ describe("Event query view models", () => {
       events: [],
       timedEvents: [],
       allDayEvents: [],
-      rowCount: 1,
+      rowCount: 0,
       demoEventIds: undefined,
     });
   });

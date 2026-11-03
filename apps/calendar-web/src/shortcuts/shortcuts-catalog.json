@@ -100,6 +100,12 @@
         "section": "navigate"
       },
       {
+        "id": "nav-toggle-allday",
+        "keys": ["Shift", "A"],
+        "label": "Expand or collapse all-day events",
+        "section": "navigate"
+      },
+      {
         "id": "nav-day-view",
         "keys": ["d"],
         "label": "Go to Day view",

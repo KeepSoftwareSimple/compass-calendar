@@ -11,6 +11,7 @@ import {
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
 import { useDraftStore } from "@web/events/stores/draft.store";
+import { toggleAllDayRowExpanded } from "@web/grid/all-day-row/allDayRowCollapse.store";
 import { useEdgeFocusStore } from "@web/grid/shortcuts/edge-focus.store";
 import { useGridScrollShortcuts } from "@web/grid/shortcuts/useGridScrollShortcuts";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
@@ -39,7 +40,8 @@ export interface CalendarViewShortcutsConfig {
 
 /**
  * Shared Day/Week view shortcuts: j/k navigate the period, t goes to today,
- * "c" creates a timed event, Shift+C creates an all-day event, and "u"
+ * "c" creates a timed event, Shift+C creates an all-day event, Shift+A
+ * expands/collapses a busy all-day row, and "u"
  * focuses the calendar;
  * PageUp/PageDown and Alt+ArrowUp/Down scroll the timed grid via
  * `useGridScrollShortcuts`.
@@ -98,6 +100,15 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
       ...WRITE_CREATE_SHORTCUT,
       shortcutId: "create-allday",
     },
+  );
+  useAppShortcutUp(
+    nav.navToggleAllDay.hotkey,
+    () => {
+      // "Shift+S, A" is Saturday in an active day jump; the jump owns it.
+      if (isEventJumpActive()) return;
+      toggleAllDayRowExpanded();
+    },
+    { shortcutId: "nav-toggle-allday" },
   );
   useAppShortcutUp(
     KEYMAP.createEvent.hotkey,

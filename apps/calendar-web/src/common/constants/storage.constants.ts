@@ -69,6 +69,9 @@ export const STORAGE_KEYS = {
   LIFE_PREFERENCES: "compass.life.preferences",
   SIDEBAR_WIDTH: "compass.sidebar.width",
   SIDEBAR_OPEN: "compass.view.sidebar-open",
+  // Present as "true" once the user expands a busy all-day row; absent means
+  // collapsed (the Google Calendar default for many all-day events).
+  ALL_DAY_ROW_EXPANDED: "compass.view.allday-row-expanded",
   THEME: "compass.theme",
   // S39 A2: client-owned calendar visibility (default visible). Device-local,
   // matching other compass.* prefs — not synced across browsers.

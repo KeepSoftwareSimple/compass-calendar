@@ -98,7 +98,6 @@ describe("EventGrid", () => {
     render(
       <EventGrid
         allDayEventsLayer={<div />}
-        allDayGridOffsetTopPx={123}
         allDayRowsCount={3}
         gridRefs={createGridRefs()}
         timedEventsLayer={<div />}
@@ -113,7 +112,7 @@ describe("EventGrid", () => {
     );
 
     const allDayRow = screen.getByRole("region", { name: "All-day events" });
-    expect(getComputedStyle(allDayRow).height).toBe("97px");
+    expect(getComputedStyle(allDayRow).height).toBe("98px");
     expect(getComputedStyle(allDayRow).minHeight).toBe("75px");
   });
 

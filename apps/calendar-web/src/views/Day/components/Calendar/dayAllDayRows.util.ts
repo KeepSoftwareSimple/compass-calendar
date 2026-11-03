@@ -18,11 +18,11 @@ export const assignDayAllDayEventRows = (
   getColumnIndex: (event: GridEvent) => number,
 ): { allDayEvents: GridEvent[]; rowsCount: number } => {
   if (events.length === 0) {
-    return { allDayEvents: events, rowsCount: 1 };
+    return { allDayEvents: events, rowsCount: 0 };
   }
 
   const nextRowByColumn = new Map<number, number>();
-  let rowsCount = 1;
+  let rowsCount = 0;
 
   const allDayEvents = events.map((event) => {
     const columnIndex = getColumnIndex(event);
