@@ -336,6 +336,10 @@ export interface PublicBookingStubOptions {
   createsGoogleMeet?: boolean;
   /** Owner inbox GET /owner/upcoming. Defaults to unauthorized (guest view). */
   ownerUpcomingMode?: "unauthorized" | "empty" | "list";
+  /** Page `meetingTypes`. Omitted, the page looks like it did before types. */
+  meetingTypes?: Array<{ id: string; label: string; durationMinutes: number }>;
+  /** Query string for the first visit, e.g. `?type=type-deep`. */
+  search?: string;
   ownerUpcomingReservations?: Array<{
     reservationId: string;
     guestName: string;
@@ -353,7 +357,12 @@ export interface CapturedBookingRequests {
   reschedulePosts: Array<Record<string, unknown>>;
   slotGets: number;
   reservationSlotGets: number;
-  slotQueries: Array<{ start: string | null; end: string | null }>;
+  slotQueries: Array<{
+    start: string | null;
+    end: string | null;
+    /** Present only when the page asked for a meeting type other than #1. */
+    meetingTypeId?: string;
+  }>;
 }
 
 function reservationPayload(input: {
@@ -446,6 +455,9 @@ export async function preparePublicBookingPage(
           maxHorizonDays: 60,
           conference,
           createsGoogleMeet,
+          ...(options.meetingTypes
+            ? { meetingTypes: options.meetingTypes }
+            : {}),
         }),
       );
     }
@@ -513,9 +525,11 @@ export async function preparePublicBookingPage(
       captured.slotGets += 1;
       const windowStart = url.searchParams.get("start");
       const windowEnd = url.searchParams.get("end");
+      const meetingTypeId = url.searchParams.get("meetingTypeId");
       captured.slotQueries.push({
         start: windowStart,
         end: windowEnd,
+        ...(meetingTypeId ? { meetingTypeId } : {}),
       });
       if (options.holdFirstSlots && captured.slotGets === 1) {
         await options.holdFirstSlots;
@@ -688,7 +702,7 @@ export async function preparePublicBookingPage(
     return route.fulfill(jsonResponse({}));
   });
 
-  await page.goto(publicBookingAppUrl(`/meet/${slug}`), {
+  await page.goto(publicBookingAppUrl(`/meet/${slug}${options.search ?? ""}`), {
     waitUntil: "domcontentloaded",
   });
   if (options.notFound || options.enabled === false) {

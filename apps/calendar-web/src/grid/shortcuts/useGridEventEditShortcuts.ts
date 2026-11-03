@@ -778,9 +778,13 @@ export function useGridEventEditShortcuts({
     targeting.focus(adjacent);
   };
 
+  // The handler claims the key only when it deletes an event, so forward
+  // delete keeps working in text inputs (Settings, the palette, forms).
   useAppShortcut("Delete", deleteFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: false,
+    preventDefault: false,
+    stopPropagation: false,
     shortcutId: "edit-delete",
   });
   useAppShortcut("Mod+D", duplicateFocusedCalendarEvent, {
