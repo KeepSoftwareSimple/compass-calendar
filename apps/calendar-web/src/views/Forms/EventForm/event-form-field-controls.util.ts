@@ -16,6 +16,39 @@ export const EVENT_FORM_RSVP_ID = "event-form-rsvp";
 export const eventFormErrorId = (field: string) =>
   `event-form-error-${field.replaceAll(".", "-")}`;
 
+// One control can stand for several validation fields (the schedule fieldset
+// covers start/end/timeZone; the title covers both its nested and flat key).
+// Resolving them in one place keeps a control's error ring, aria-invalid and
+// aria-describedby in step, and makes adding a field a one-line change.
+export interface EventFormFieldError {
+  // The first candidate that actually failed, or null when none did.
+  readonly field: string | null;
+  // That field's message, for rendering.
+  readonly message: string | undefined;
+  // The id of its list entry, for aria-describedby.
+  readonly describedBy: string | undefined;
+}
+
+export const resolveEventFormFieldError = (
+  fieldErrors: Record<string, string> | undefined,
+  candidates: readonly string[],
+): EventFormFieldError => {
+  const field = candidates.find((candidate) => fieldErrors?.[candidate]);
+  if (!field)
+    return { field: null, message: undefined, describedBy: undefined };
+  return {
+    field,
+    message: fieldErrors?.[field],
+    describedBy: eventFormErrorId(field),
+  };
+};
+
+// Candidate field keys per control, in the order the form reports them.
+export const TITLE_ERROR_FIELDS = ["content.title", "title"] as const;
+export const SCHEDULE_ERROR_FIELDS = ["start", "end", "timeZone"] as const;
+export const CALENDAR_ERROR_FIELDS = ["calendarId"] as const;
+export const RECURRENCE_ERROR_FIELDS = ["recurrence"] as const;
+
 // DOM / reading order in the form: title → schedule → recurrence → calendar.
 export const FIELD_CONTROL_FOCUS_ORDER = [
   "content.title",
