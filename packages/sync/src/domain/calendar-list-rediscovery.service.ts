@@ -38,7 +38,7 @@ export function rediscoverStaleCalendarLists(
 ): Promise<number> {
   return enqueueForResources(
     { jobs: deps.jobs, onEnqueueError: deps.onError },
-    (b, l) => deps.resources.listStaleCalendarLists(b, l),
+    (b, l) => deps.resources.listStaleCalendarLists(b, l, now()),
     async (resource, nowFn) => {
       await deps.resources.clearSyncCursor(
         resource.tenantId,

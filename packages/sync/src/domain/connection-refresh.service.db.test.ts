@@ -460,6 +460,74 @@ describe("refreshPrincipalCalendars (db)", () => {
     expect(reloaded?.syncCursor).toBeNull();
   });
 
+  it("foreground refresh does not re-list a connection whose discovery was durably refused recently", async () => {
+    const { resources, jobs, connections } = deps();
+    const connection = await connections.upsertByProviderAccount({
+      tenantId: faker.database.mongodbObjectId() as TenantId,
+      principalId: faker.database.mongodbObjectId() as PrincipalId,
+      provider: "google",
+      account: {
+        providerAccountId:
+          "not-a-calendar-user@example.com" as ProviderAccountId,
+        email: "not-a-calendar-user@example.com",
+        displayName: "No calendar",
+      },
+      capabilities: ["readEvents"],
+      state: "delayed",
+      stateReason: "providerErrors",
+    });
+    const listResource = await resources.ensure({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceKind: "calendarList",
+      calendarId: null,
+    });
+    const failedAt = new Date("2026-08-10T11:58:00.000Z");
+    await resources.markAttempt(
+      connection.tenantId,
+      connection.principalId,
+      listResource._id,
+      failedAt,
+    );
+    await resources.markReadFailure(
+      connection.tenantId,
+      connection.principalId,
+      listResource._id,
+      failedAt,
+      "notACalendarUser",
+    );
+
+    await refreshStalePrincipalCalendars(
+      { resources, jobs, connections },
+      connection.tenantId,
+      connection.principalId,
+      new Date("2026-08-10T11:59:30.000Z"),
+      now,
+    );
+
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.jobs)
+        .findOne({ coalescingKey: `calendarListSync:${connection._id}` }),
+    ).toBeNull();
+
+    // A manual Refresh still retries discovery immediately.
+    await refreshPrincipalCalendars(
+      { resources, jobs, connections },
+      connection.tenantId,
+      connection.principalId,
+      now,
+    );
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.jobs)
+        .findOne({ coalescingKey: `calendarListSync:${connection._id}` }),
+    ).toMatchObject({ kind: "calendarListSync" });
+  });
+
   it("coalesces repeated foreground calendarListSync for one connection", async () => {
     const { resources, jobs, calendars, connections } = deps();
     const connection = await connections.upsertByProviderAccount({

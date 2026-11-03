@@ -11,7 +11,10 @@ import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type SyncResourceUpsert } from "@sync/storage/contracts/sync-resource.contracts";
 import { CredentialRepository } from "@sync/storage/repositories/credential.repository";
-import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
+import {
+  DURABLE_DISCOVERY_FAILURE_RETRY_MS,
+  SyncResourceRepository,
+} from "@sync/storage/repositories/sync-resource.repository";
 
 const objectId = () => faker.database.mongodbObjectId();
 
@@ -640,6 +643,150 @@ describe("SyncResourceRepository", () => {
       (await repo.findById(tenantId, principalId, resource._id))
         ?.calendarActive,
     ).toBe(true);
+  });
+
+  describe("cursor-expiry hold-off selection", () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    const staleBefore = new Date("2026-08-10T11:00:00.000Z");
+    let credentials: CredentialRepository;
+
+    beforeEach(() => {
+      credentials = new CredentialRepository(db);
+    });
+
+    const seedHeldOff = async (holdOffUntil: Date | null) => {
+      const tenantId = objectId() as TenantId;
+      const principalId = objectId() as PrincipalId;
+      const connectionId = objectId() as ConnectionId;
+      const resource = await repo.ensure(
+        upsert({ tenantId, principalId, connectionId }),
+      );
+      await seedOauthCredential(credentials, {
+        connectionId,
+        provider: "google",
+        refreshToken: "refresh",
+        scopes: [],
+      });
+      await repo.setBootstrapState(
+        tenantId,
+        principalId,
+        resource._id,
+        "ready",
+      );
+      if (holdOffUntil) {
+        await repo.recordCursorExpiry(
+          tenantId,
+          principalId,
+          resource._id,
+          holdOffUntil,
+        );
+      }
+      return { tenantId, principalId, resource };
+    };
+
+    it("listStaleEvents skips a resource still inside its hold-off", async () => {
+      const held = await seedHeldOff(new Date("2026-08-10T13:00:00.000Z"));
+      const lapsed = await seedHeldOff(new Date("2026-08-10T11:30:00.000Z"));
+      const normal = await seedHeldOff(null);
+
+      const ids = (await repo.listStaleEvents(staleBefore, 10, {}, now)).map(
+        (r) => r._id,
+      );
+
+      expect(ids).not.toContain(held.resource._id);
+      expect(ids).toEqual(
+        expect.arrayContaining([lapsed.resource._id, normal.resource._id]),
+      );
+      expect(ids).toHaveLength(2);
+    });
+
+    it("listStaleEventsByPrincipal skips a resource still inside its hold-off", async () => {
+      const held = await seedHeldOff(new Date("2026-08-10T13:00:00.000Z"));
+
+      expect(
+        await repo.listStaleEventsByPrincipal(
+          held.tenantId,
+          held.principalId,
+          staleBefore,
+          200,
+          now,
+        ),
+      ).toEqual([]);
+      expect(
+        (
+          await repo.listStaleEventsByPrincipal(
+            held.tenantId,
+            held.principalId,
+            staleBefore,
+            200,
+            new Date("2026-08-10T13:00:01.000Z"),
+          )
+        ).map((r) => r._id),
+      ).toEqual([held.resource._id]);
+    });
+  });
+
+  describe("listStaleCalendarLists durable discovery failure", () => {
+    const now = new Date("2026-08-10T12:00:00.000Z");
+    const staleBefore = new Date("2026-08-10T11:57:00.000Z");
+    let credentials: CredentialRepository;
+
+    beforeEach(() => {
+      credentials = new CredentialRepository(db);
+    });
+
+    const seedList = async (failedAttemptAt: Date | null) => {
+      const tenantId = objectId() as TenantId;
+      const principalId = objectId() as PrincipalId;
+      const connectionId = objectId() as ConnectionId;
+      const resource = await repo.ensure(
+        upsert({
+          tenantId,
+          principalId,
+          connectionId,
+          resourceKind: "calendarList",
+          calendarId: null,
+        }),
+      );
+      await seedOauthCredential(credentials, {
+        connectionId,
+        provider: "google",
+        refreshToken: "refresh",
+        scopes: [],
+      });
+      if (failedAttemptAt) {
+        await repo.markAttempt(
+          tenantId,
+          principalId,
+          resource._id,
+          failedAttemptAt,
+        );
+        await repo.markReadFailure(
+          tenantId,
+          principalId,
+          resource._id,
+          failedAttemptAt,
+          "notACalendarUser",
+        );
+      }
+      return resource;
+    };
+
+    it("skips a recently refused connection and retries it after the window", async () => {
+      const recent = await seedList(new Date("2026-08-10T11:55:00.000Z"));
+      const old = await seedList(
+        new Date(now.getTime() - DURABLE_DISCOVERY_FAILURE_RETRY_MS - 1),
+      );
+      const healthy = await seedList(null);
+
+      const ids = (await repo.listStaleCalendarLists(staleBefore, 10, now)).map(
+        (r) => r._id,
+      );
+
+      expect(ids).not.toContain(recent._id);
+      expect(ids).toEqual(expect.arrayContaining([old._id, healthy._id]));
+      expect(ids).toHaveLength(2);
+    });
   });
 
   it("listStaleEventsByPrincipal skips an inactive calendar", async () => {
