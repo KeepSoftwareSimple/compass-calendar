@@ -59,9 +59,7 @@ export function registerPrincipalRoutes(
                 ? new CredentialCustody(
                     repos.credentials,
                     resolveAuthFrom(deps.registry),
-                    undefined,
-                    undefined,
-                    deps.credentialAtRestKey,
+                    { credentialEncryptionKey: deps.credentialAtRestKey },
                   )
                 : undefined,
           },

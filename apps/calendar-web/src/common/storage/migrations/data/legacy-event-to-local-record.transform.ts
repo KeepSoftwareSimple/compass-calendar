@@ -1,12 +1,12 @@
 import { type ValidatedCompassEvent } from "@core/types/compass-event.contracts";
 import { type CalendarId, EventIdSchema } from "@core/types/domain-primitives";
 import { type EventRecurrence } from "@core/types/event.contracts";
-import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import {
   type LocalEventRecord,
   LocalEventRecordSchema,
 } from "@web/events/types/local-event.record";
+import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 
 /** Web-side mirror of `__compassDemoEvent` on legacy local-store rows. */
 const LEGACY_DEMO_EVENT_FIELD = "__compassDemoEvent";

@@ -2,11 +2,6 @@ import { type Express, type RequestHandler } from "express";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import {
-  GOOGLE_SCOPE_CONTACTS_OTHER_READONLY,
-  GOOGLE_SCOPE_CONTACTS_READONLY,
-} from "@core/providers/google.scopes";
-import { MICROSOFT_SCOPE_PEOPLE_READ } from "@core/providers/microsoft.scopes";
-import {
   CONTACT_SUGGESTION_MAX_RESULTS,
   CONTACT_SUGGESTION_QUERY_MAX_LENGTH,
   CONTACT_SUGGESTION_QUERY_MIN_LENGTH,
@@ -16,9 +11,11 @@ import {
 import { type SyncExecutionMode } from "@sync/config/sync.config";
 import { CredentialCustody } from "@sync/credentials/credential-custody.service";
 import { ProviderAuthError } from "@sync/providers/provider-auth.port";
+import { dedupeContactSuggestionsByEmail } from "@sync/providers/provider-contact-suggestions";
 import {
   type ContactsPort,
   ContactsSearchError,
+  hasGrantedContactsSource,
 } from "@sync/providers/provider-contacts.port";
 import {
   type ProviderRegistry,
@@ -124,9 +121,7 @@ export function registerContactsRoutes(
         const custody = new CredentialCustody(
           repos.credentials,
           resolveAuthFrom(deps.registry),
-          undefined,
-          undefined,
-          deps.credentialAtRestKey,
+          { credentialEncryptionKey: deps.credentialAtRestKey },
         );
         for (const connection of connections) {
           if (!connection.capabilities.includes("suggestContacts")) continue;
@@ -162,7 +157,7 @@ export function registerContactsRoutes(
 
         res.status(Status.OK).json(
           ContactSuggestionsResponseSchema.parse({
-            suggestions: dedupeByEmail(collected)
+            suggestions: dedupeContactSuggestionsByEmail(collected)
               .filter(
                 (suggestion) =>
                   !ownEmails.includes(suggestion.email.toLowerCase()),
@@ -184,7 +179,10 @@ export function registerContactsRoutes(
 // Query one connection's granted People surfaces. The credential record is
 // consulted ONLY for its granted scopes (which surfaces the user consented
 // to); a connection without a stored credential (e.g. just disconnected)
-// contributes nothing rather than failing the request.
+// contributes nothing rather than failing the request. Which scope unlocks
+// which surface is the adapter's business, so the route never names a
+// provider — a newly registered one maps its own scopes instead of silently
+// inheriting Google's.
 async function searchConnection(
   contacts: ContactsPort,
   custody: CredentialCustody,
@@ -194,42 +192,9 @@ async function searchConnection(
 ): Promise<ContactSuggestion[]> {
   const credential = await credentials.findByConnection(connection._id);
   if (!credential || !isOauthRefreshCredential(credential)) return [];
-  const granted = new Set(credential.scopes);
-  const sources = contactsSourcesFor(connection.provider, granted);
-  if (!sources.contacts && !sources.otherContacts) return [];
+  const sources = contacts.sourcesForGrantedScopes(new Set(credential.scopes));
+  if (!hasGrantedContactsSource(sources)) return [];
 
   const accessToken = await custody.getValidAccessToken(connection._id);
   return contacts.searchContacts({ accessToken, query, sources });
-}
-
-function contactsSourcesFor(
-  provider: ProviderConnectionRecord["provider"],
-  granted: Set<string>,
-): { contacts: boolean; otherContacts: boolean } {
-  if (provider === "microsoft") {
-    return {
-      contacts: granted.has(MICROSOFT_SCOPE_PEOPLE_READ),
-      otherContacts: false,
-    };
-  }
-  return {
-    contacts: granted.has(GOOGLE_SCOPE_CONTACTS_READONLY),
-    otherContacts: granted.has(GOOGLE_SCOPE_CONTACTS_OTHER_READONLY),
-  };
-}
-
-// Across connections the same address can appear twice; keep the first
-// occurrence (connection listing order, each list already ranked).
-function dedupeByEmail(
-  suggestions: readonly ContactSuggestion[],
-): ContactSuggestion[] {
-  const seen = new Set<string>();
-  const unique: ContactSuggestion[] = [];
-  for (const suggestion of suggestions) {
-    const key = suggestion.email.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(suggestion);
-  }
-  return unique;
 }

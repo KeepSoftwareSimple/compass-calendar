@@ -35,6 +35,19 @@ const DEFAULT_REFRESH_SKEW_MS = 60_000;
 const MISSING_AT_REST_KEY =
   "stored credentials require sync.credentialEncryptionKey";
 
+// The optional wiring, named rather than positional. The at-rest key is the
+// one every production caller passes, and it used to sit behind two test-only
+// seams, so each call site had to spell `undefined, undefined` to reach it.
+export interface CredentialCustodyOptions {
+  // Clock seam; defaults to the real clock.
+  readonly now?: () => Date;
+  // How long before stated expiry a cached access token counts as stale.
+  readonly refreshSkewMs?: number;
+  // Key for sealing refresh tokens at rest. Absent means no key is configured:
+  // stored credentials cannot be read or written.
+  readonly credentialEncryptionKey?: string | null;
+}
+
 // Owns the credential lifecycle for one provider: store the durable refresh
 // token (or sealed password), serve valid access tokens (refreshing on demand),
 // and revoke + delete on disconnect. It is the only component that touches raw
@@ -46,15 +59,17 @@ export class CredentialCustody {
   // refresh-token use, so this only de-duplicates within a process.
   readonly #inflight = new Map<ConnectionId, Promise<string>>();
   readonly #credentialEncryptionKey: string | null;
+  readonly #now: () => Date;
+  readonly #refreshSkewMs: number;
 
   constructor(
     private readonly credentials: CredentialRepository,
     private readonly resolveAuth: ResolveProviderAuth,
-    private readonly now: () => Date = () => new Date(),
-    private readonly refreshSkewMs: number = DEFAULT_REFRESH_SKEW_MS,
-    credentialEncryptionKey: string | null = null,
+    options: CredentialCustodyOptions = {},
   ) {
-    this.#credentialEncryptionKey = credentialEncryptionKey;
+    this.#now = options.now ?? (() => new Date());
+    this.#refreshSkewMs = options.refreshSkewMs ?? DEFAULT_REFRESH_SKEW_MS;
+    this.#credentialEncryptionKey = options.credentialEncryptionKey ?? null;
     if (this.#credentialEncryptionKey) {
       decodeCredentialAtRestKey(this.#credentialEncryptionKey);
     }
@@ -229,7 +244,7 @@ export class CredentialCustody {
   }
 
   #isExpiring(expiresAt: Date): boolean {
-    return expiresAt.getTime() - this.now().getTime() <= this.refreshSkewMs;
+    return expiresAt.getTime() - this.#now().getTime() <= this.#refreshSkewMs;
   }
 
   #requireAtRestKey(): string {

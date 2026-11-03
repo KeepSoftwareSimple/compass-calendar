@@ -88,9 +88,7 @@ export function registerCommandRoutes(
                 custody: new CredentialCustody(
                   repos.credentials,
                   resolveAuthFrom(deps.registry),
-                  undefined,
-                  undefined,
-                  deps.credentialAtRestKey,
+                  { credentialEncryptionKey: deps.credentialAtRestKey },
                 ),
               }
             : undefined;

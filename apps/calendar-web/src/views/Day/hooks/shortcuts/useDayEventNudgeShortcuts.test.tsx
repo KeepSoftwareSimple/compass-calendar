@@ -17,7 +17,6 @@ import { createCompassQueryClient } from "@web/api/query-client";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { ID_EVENT_FORM } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
-import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
 import { createTimedDraft } from "@web/common/utils/draft/draft.util";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
@@ -39,6 +38,7 @@ import {
   initialEdgeFocusState,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
+import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 import { useDayEventNudgeShortcuts } from "./useDayEventNudgeShortcuts";
 import {
   afterEach,

@@ -104,6 +104,7 @@ import {
 } from "@web/views/Forms/EventForm/EventDetailsSection";
 import { eventFormCmdActions } from "@web/views/Forms/EventForm/event-form-cmd.store";
 import {
+  CALENDAR_ERROR_FIELDS,
   controlIdForFieldError,
   EVENT_FORM_ATTENDEES_ID,
   EVENT_FORM_CALENDAR_ID,
@@ -118,6 +119,10 @@ import {
   eventFormErrorId,
   FIELD_CONTROL_FOCUS_ORDER,
   mapsUrlForLocation,
+  RECURRENCE_ERROR_FIELDS,
+  resolveEventFormFieldError,
+  SCHEDULE_ERROR_FIELDS,
+  TITLE_ERROR_FIELDS,
 } from "@web/views/Forms/EventForm/event-form-field-controls.util";
 import {
   FormActionsRow,
@@ -904,34 +909,22 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       queueMicrotask(() => syncEventFormFocus());
     }, [syncEventFormFocus]);
 
-    const titleErrorField = fieldErrors?.["content.title"]
-      ? "content.title"
-      : fieldErrors?.title
-        ? "title"
-        : null;
-    const titleError = titleErrorField
-      ? fieldErrors?.[titleErrorField]
-      : undefined;
-    const calendarError = fieldErrors?.calendarId;
-    const scheduleErrorField = (["start", "end", "timeZone"] as const).find(
-      (field) => fieldErrors?.[field],
+    const titleFieldError = resolveEventFormFieldError(
+      fieldErrors,
+      TITLE_ERROR_FIELDS,
     );
-    const scheduleError = scheduleErrorField
-      ? fieldErrors?.[scheduleErrorField]
-      : undefined;
-    const recurrenceError = fieldErrors?.recurrence;
-    const titleErrorDescribedBy = titleErrorField
-      ? eventFormErrorId(titleErrorField)
-      : undefined;
-    const calendarErrorDescribedBy = calendarError
-      ? eventFormErrorId("calendarId")
-      : undefined;
-    const scheduleErrorDescribedBy = scheduleErrorField
-      ? eventFormErrorId(scheduleErrorField)
-      : undefined;
-    const recurrenceErrorDescribedBy = recurrenceError
-      ? eventFormErrorId("recurrence")
-      : undefined;
+    const calendarFieldError = resolveEventFormFieldError(
+      fieldErrors,
+      CALENDAR_ERROR_FIELDS,
+    );
+    const scheduleFieldError = resolveEventFormFieldError(
+      fieldErrors,
+      SCHEDULE_ERROR_FIELDS,
+    );
+    const recurrenceFieldError = resolveEventFormFieldError(
+      fieldErrors,
+      RECURRENCE_ERROR_FIELDS,
+    );
 
     useEffect(() => {
       if (!fieldErrors || Object.keys(fieldErrors).length === 0) return;
@@ -1001,8 +994,8 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                 placeholder="Title"
                 aria-label="Title"
                 name="Event Title"
-                aria-invalid={titleError ? true : undefined}
-                aria-describedby={titleErrorDescribedBy}
+                aria-invalid={titleFieldError.message ? true : undefined}
+                aria-describedby={titleFieldError.describedBy}
                 underlineColor={eventColor}
                 {...(isBusy
                   ? { value: BUSY_EVENT_TITLE }
@@ -1024,13 +1017,13 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                   <fieldset
                     id={EVENT_FORM_SCHEDULE_ID}
                     aria-label="Event schedule"
-                    aria-invalid={scheduleError ? true : undefined}
-                    aria-describedby={scheduleErrorDescribedBy}
-                    tabIndex={scheduleError ? -1 : undefined}
+                    aria-invalid={scheduleFieldError.message ? true : undefined}
+                    aria-describedby={scheduleFieldError.describedBy}
+                    tabIndex={scheduleFieldError.message ? -1 : undefined}
                     disabled={isScheduleLocked}
                     className={classNames(
                       "min-w-0 rounded-xs border-0 p-0",
-                      scheduleError && "ring-1 ring-error",
+                      scheduleFieldError.message && "ring-1 ring-error",
                     )}
                   >
                     <DateControlsSection
@@ -1049,13 +1042,15 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                   <fieldset
                     id={EVENT_FORM_RECURRENCE_ID}
                     aria-label="Recurrence"
-                    aria-invalid={recurrenceError ? true : undefined}
-                    aria-describedby={recurrenceErrorDescribedBy}
-                    tabIndex={recurrenceError ? -1 : undefined}
+                    aria-invalid={
+                      recurrenceFieldError.message ? true : undefined
+                    }
+                    aria-describedby={recurrenceFieldError.describedBy}
+                    tabIndex={recurrenceFieldError.message ? -1 : undefined}
                     disabled={isScheduleLocked}
                     className={classNames(
                       "min-w-0 rounded-xs border-0 p-0",
-                      recurrenceError && "ring-1 ring-error",
+                      recurrenceFieldError.message && "ring-1 ring-error",
                     )}
                   >
                     <RecurrenceSection {...recurrenceSectionProps} />
@@ -1069,8 +1064,8 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                     id={EVENT_FORM_CALENDAR_ID}
                     onChange={onSelectCalendar}
                     value={draft.values.calendarId}
-                    error={calendarError ?? undefined}
-                    errorId={calendarErrorDescribedBy}
+                    error={calendarFieldError.message}
+                    errorId={calendarFieldError.describedBy}
                   />
                 ) : (
                   <p className="text-text-muted text-xs">

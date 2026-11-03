@@ -1,6 +1,10 @@
 import { people } from "@googleapis/people";
 import { OAuth2Client } from "google-auth-library";
 import {
+  GOOGLE_SCOPE_CONTACTS_OTHER_READONLY,
+  GOOGLE_SCOPE_CONTACTS_READONLY,
+} from "@core/providers/google.scopes";
+import {
   CONTACT_SUGGESTION_MAX_RESULTS,
   type ContactSuggestion,
 } from "@core/types/contact.contracts";
@@ -18,6 +22,8 @@ import {
   type ContactsPort,
   type ContactsSearchError,
   type ContactsSearchInput,
+  type ContactsSearchSources,
+  hasGrantedContactsSource,
 } from "@sync/providers/provider-contacts.port";
 import { classifyContactsSearchError } from "@sync/providers/provider-contacts-error";
 
@@ -108,11 +114,20 @@ export class GooglePeopleAdapter implements ContactsPort {
     this.#makeApi = makeApi;
   }
 
+  // Google guards each People surface with its own scope, and a partial grant
+  // (one of the two) is a normal state the search handles.
+  sourcesForGrantedScopes(granted: ReadonlySet<string>): ContactsSearchSources {
+    return {
+      contacts: granted.has(GOOGLE_SCOPE_CONTACTS_READONLY),
+      otherContacts: granted.has(GOOGLE_SCOPE_CONTACTS_OTHER_READONLY),
+    };
+  }
+
   async searchContacts(
     input: ContactsSearchInput,
   ): Promise<ContactSuggestion[]> {
     // Nothing granted, nothing to query — don't even build a client.
-    if (!input.sources.contacts && !input.sources.otherContacts) return [];
+    if (!hasGrantedContactsSource(input.sources)) return [];
 
     const api = this.#makeApi(input.accessToken);
     const params = {

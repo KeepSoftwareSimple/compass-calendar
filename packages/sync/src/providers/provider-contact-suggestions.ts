@@ -52,9 +52,21 @@ export function rankContactSuggestions(
     .map((suggestion, index) => ({ suggestion, index, rank: rank(suggestion) }))
     .sort((a, b) => a.rank - b.rank || a.index - b.index);
 
+  return dedupeContactSuggestionsByEmail(
+    ranked.map(({ suggestion }) => suggestion),
+  );
+}
+
+// The same address can reach a list twice: two People surfaces for one
+// account, or one person who is both a past guest and a saved contact. Keep
+// the first occurrence, because every list reaching here is already ordered
+// best-first.
+export function dedupeContactSuggestionsByEmail(
+  suggestions: readonly ContactSuggestion[],
+): ContactSuggestion[] {
   const seen = new Set<string>();
   const unique: ContactSuggestion[] = [];
-  for (const { suggestion } of ranked) {
+  for (const suggestion of suggestions) {
     const key = suggestion.email.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);

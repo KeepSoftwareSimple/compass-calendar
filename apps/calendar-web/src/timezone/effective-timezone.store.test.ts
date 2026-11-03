@@ -1,8 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
-import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
 import * as browserTimezone from "@web/timezone/browser-timezone";
+import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 import {
   getEffectiveTimeZone,
   getPinnedTimeZone,
