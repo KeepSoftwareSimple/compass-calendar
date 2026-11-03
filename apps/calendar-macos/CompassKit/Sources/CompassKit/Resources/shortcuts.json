@@ -175,6 +175,15 @@
       "section": "navigate"
     },
     {
+      "id": "nav-toggle-allday",
+      "keys": [
+        "Shift",
+        "A"
+      ],
+      "label": "Expand or collapse all-day events",
+      "section": "navigate"
+    },
+    {
       "id": "nav-day-view",
       "keys": [
         "d"
@@ -937,6 +946,10 @@
     ],
     "create-timed": [
       "c"
+    ],
+    "nav-toggle-allday": [
+      "Shift",
+      "A"
     ],
     "create-allday": [
       "Shift",

@@ -116,6 +116,13 @@ export const gridPointerTargetFromEvent = (
 ): GridPointerTarget | null => {
   const eventId = eventIdFromPointerTarget(event.target);
   if (eventId) return { kind: "card", eventId };
+  // All-day row chrome (collapse toggle, "+N more") is not an empty slot.
+  if (
+    event.target instanceof Element &&
+    event.target.closest("[data-allday-row-control]")
+  ) {
+    return null;
+  }
 
   const path = event.composedPath();
   let date: string | undefined;

@@ -69,6 +69,9 @@ export const pointerIntentActions = {
     if (intent === "slot-click" && ctx.timeKey) {
       keys[0] = [ctx.timeKey];
     }
+    if (intent === "allday-click" && ctx.dayKeycaps) {
+      keys[0] = ctx.dayKeycaps;
+    }
     const shortcutKey = keys[0] ?? [];
     const message = teachingMessageForIntent(intent, ctx);
 
@@ -76,6 +79,7 @@ export const pointerIntentActions = {
       source: "pointer",
       shortcutKey,
       ...(message ? { message, keys } : {}),
+      ...(intent === "allday-click" ? { tone: "soft" as const } : {}),
     });
     if (intent === "hover-hunt" && !isEventFormOpen()) {
       revealPageJumpChipsBriefly();

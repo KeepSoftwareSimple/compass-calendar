@@ -44,7 +44,6 @@ export function applyHiddenEventStripWidth<T extends { width: number }>(
 ): T {
   return isHidden ? { ...position, width: HIDDEN_EVENT_STRIP_WIDTH } : position;
 }
-export const GRID_PADDING_BOTTOM = 20;
 export const GRID_TIME_COLUMN_WIDTH = 50;
 export const GRID_MARGIN_LEFT = GRID_TIME_COLUMN_WIDTH;
 

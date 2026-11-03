@@ -22,7 +22,10 @@ import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import { useShortcutWriteLockedAtIntent } from "@web/billing/useBillingWriteLock";
 import { Z_INDEX_MODAL } from "@web/common/constants/web.constants";
 import { goToDateAnnouncement } from "@web/common/utils/datetime/web.date.util";
-import { eventCommandPaletteItems } from "@web/components/CommandPalette/event.cmd.constants";
+import {
+  eventCommandPaletteItems,
+  TOGGLE_ALLDAY_ROW_ITEM_ID,
+} from "@web/components/CommandPalette/event.cmd.constants";
 import { HighlightedLabel } from "@web/components/CommandPalette/HighlightedLabel";
 import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmdItems";
 import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useDemoEventsCmdItems";
@@ -427,22 +430,28 @@ export const CommandPalette = ({
   useAppLockReason("commandPalette", open);
   const writeLocked = useShortcutWriteLockedAtIntent();
   const eventItems = writeLocked
-    ? eventCommandPaletteItems.map((item) => ({
-        ...item,
-        badge: "Premium",
-        onClick: () => {
-          if (item.id === "create-event") {
-            recordShortcutUnavailableAttempt("create-event", "billing_locked", {
-              invocationMethod: "click",
-            });
-          }
-          promptShortcutUpgrade({
-            featureArea: "event_creation",
-            actionId: "calendar.create_timed_event",
-            source: "command_palette",
-          });
-        },
-      }))
+    ? eventCommandPaletteItems.map((item) =>
+        item.id === TOGGLE_ALLDAY_ROW_ITEM_ID
+          ? item
+          : {
+              ...item,
+              badge: "Premium",
+              onClick: () => {
+                if (item.id === "create-event") {
+                  recordShortcutUnavailableAttempt(
+                    "create-event",
+                    "billing_locked",
+                    { invocationMethod: "click" },
+                  );
+                }
+                promptShortcutUpgrade({
+                  featureArea: "event_creation",
+                  actionId: "calendar.create_timed_event",
+                  source: "command_palette",
+                });
+              },
+            },
+      )
     : eventCommandPaletteItems;
   const navigate = useNavigate();
   const demoEventsCmdItems = useDemoEventsCmdItems();

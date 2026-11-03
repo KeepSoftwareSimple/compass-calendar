@@ -20,6 +20,11 @@ import {
 } from "@web/events/grid-event-draft.adapter";
 import { draftActions } from "@web/events/stores/draft.store";
 import {
+  readAllDayRowExpanded,
+  resetAllDayRowCollapseStoreForTests,
+  setAllDayRowCollapsible,
+} from "@web/grid/all-day-row/allDayRowCollapse.store";
+import {
   edgeFocusActions,
   initialEdgeFocusState,
   useEdgeFocusStore,
@@ -74,6 +79,8 @@ afterEach(() => {
   draftActions.discard();
   useEdgeFocusStore.setState(initialEdgeFocusState, true);
   eventJumpActions.reset();
+  persistentBrowserStore.remove(STORAGE_KEYS.ALL_DAY_ROW_EXPANDED);
+  resetAllDayRowCollapseStoreForTests();
 });
 
 describe("useCalendarViewShortcuts", () => {
@@ -276,5 +283,36 @@ describe("useCalendarViewShortcuts", () => {
     pressKey("Escape");
 
     expect(getTimeTravelZone()).toBe("America/Denver");
+  });
+
+  it("toggles a busy all-day row with Shift+A and remembers the choice", () => {
+    setAllDayRowCollapsible(true);
+    renderHook(() => useCalendarViewShortcuts({}), { wrapper });
+    const shiftA = {
+      keyDownInit: { shiftKey: true },
+      keyUpInit: { shiftKey: true },
+    };
+
+    expect(readAllDayRowExpanded()).toBe(false);
+    pressKey("A", shiftA);
+    expect(readAllDayRowExpanded()).toBe(true);
+    expect(persistentBrowserStore.get(STORAGE_KEYS.ALL_DAY_ROW_EXPANDED)).toBe(
+      "true",
+    );
+    pressKey("A", shiftA);
+    expect(readAllDayRowExpanded()).toBe(false);
+  });
+
+  it("leaves Shift+A to the Saturday jump while event jump is active", () => {
+    setAllDayRowCollapsible(true);
+    eventJumpActions.setActive(true);
+    renderHook(() => useCalendarViewShortcuts({}), { wrapper });
+
+    pressKey("A", {
+      keyDownInit: { shiftKey: true },
+      keyUpInit: { shiftKey: true },
+    });
+
+    expect(readAllDayRowExpanded()).toBe(false);
   });
 });
