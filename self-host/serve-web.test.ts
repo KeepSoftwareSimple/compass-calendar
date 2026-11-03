@@ -333,3 +333,67 @@ describe("serve-web unknown paths", () => {
     expect(isCalendarSpaPath("/week/2026/extra")).toBe(false);
   });
 });
+
+describe("serve-web canonical links", () => {
+  const HOME = "https://www.compasscalendar.com/";
+  const canonicalOf = (html: string) =>
+    /<link rel="canonical" href="([^"]*)"/.exec(html)?.[1];
+
+  beforeEach(() => {
+    writeFileSync(
+      join(buildRoot, "index.html"),
+      `<!doctype html><html><head><link rel="canonical" href="${HOME}" /></head><body>compass</body></html>`,
+    );
+  });
+
+  it("points /life and /shortcuts at themselves in the initial HTML", async () => {
+    for (const [route, expected] of [
+      ["/life", `${HOME}life`],
+      ["/life/", `${HOME}life`],
+      ["/shortcuts", `${HOME}shortcuts`],
+    ]) {
+      const response = await fetch(`${baseUrl}${route}`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toContain("text/html");
+      expect({ route, canonical: canonicalOf(await response.text()) }).toEqual({
+        route,
+        canonical: expected,
+      });
+    }
+  });
+
+  it("keeps the homepage canonical on / and the calendar views", async () => {
+    for (const route of ["/", "/week", "/day", "/this-page-does-not-exist"]) {
+      const response = await fetch(`${baseUrl}${route}`);
+      expect({ route, canonical: canonicalOf(await response.text()) }).toEqual({
+        route,
+        canonical: HOME,
+      });
+    }
+  });
+
+  it("compresses the rewritten shell and gives it its own ETag", async () => {
+    const home = await fetch(`${baseUrl}/`);
+    const homeEtag = home.headers.get("etag") ?? "";
+    await home.text();
+
+    const life = await fetch(`${baseUrl}/life`, {
+      headers: { "Accept-Encoding": "gzip" },
+    });
+    const lifeEtag = life.headers.get("etag") ?? "";
+    expect(life.headers.get("content-encoding")).toBe("gzip");
+    expect(canonicalOf(await life.text())).toBe(`${HOME}life`);
+    expect(lifeEtag).not.toBe(homeEtag);
+
+    const stale = await fetch(`${baseUrl}/life`, {
+      headers: { "If-None-Match": homeEtag },
+    });
+    expect(stale.status).toBe(200);
+    expect(canonicalOf(await stale.text())).toBe(`${HOME}life`);
+
+    const fresh = await fetch(`${baseUrl}/life`, {
+      headers: { "If-None-Match": lifeEtag },
+    });
+    expect(fresh.status).toBe(304);
+  });
+});

@@ -3,10 +3,14 @@ import {
   isBareMeetLandingPath,
   isGuestMeetStaticPath,
 } from "../apps/calendar-web/guest-meet-static-path";
-import { isCalendarSpaPath } from "../apps/calendar-web/spa-route-path";
+import {
+  isCalendarSpaPath,
+  selfCanonicalPath,
+} from "../apps/calendar-web/spa-route-path";
 import { type Stats } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import path from "node:path";
+import { brotliCompressSync, gzipSync } from "node:zlib";
 
 const DEFAULT_PORT = 9080;
 const MAX_PORT = 65535;
@@ -142,6 +146,52 @@ async function compressedSibling(
   } catch {
     return null;
   }
+}
+
+const CANONICAL_LINK = /(<link\s+rel="canonical"\s+href=")([^"]*)(")/;
+
+// index.html ships a homepage canonical. For self-canonical pages, serve the
+// same shell with that one href pointed at the page itself, so the initial
+// HTML is right for crawlers. The variant gets its own ETag so a cached
+// homepage shell is never revalidated as this page's.
+async function selfCanonicalIndexResponse(
+  request: Request,
+  indexPath: string,
+  resolvedRoot: string,
+  canonicalPath: string,
+): Promise<Response | null> {
+  const raw = await fileResponse(
+    new Request(request.url),
+    indexPath,
+    resolvedRoot,
+  );
+  if (!raw) {
+    return null;
+  }
+
+  const html = (await raw.text()).replace(
+    CANONICAL_LINK,
+    (_match, start: string, href: string, end: string) =>
+      `${start}${new URL(canonicalPath, href).href}${end}`,
+  );
+  const headers = new Headers(raw.headers);
+  headers.delete("content-length");
+  const etag = `${(headers.get("etag") ?? '""').slice(0, -1)}-${canonicalPath.slice(1)}"`;
+  headers.set("ETag", etag);
+
+  const mtimeMs = Date.parse(headers.get("last-modified") ?? "");
+  if (isNotModified(request, etag, Number.isNaN(mtimeMs) ? 0 : mtimeMs)) {
+    return new Response(null, { status: 304, headers });
+  }
+
+  const encoding = pickEncoding(request.headers.get("accept-encoding"));
+  if (encoding) {
+    headers.set("Content-Encoding", encoding);
+    const body = encoding === "br" ? brotliCompressSync(html) : gzipSync(html);
+    return new Response(body, { headers });
+  }
+
+  return new Response(html, { headers });
 }
 
 function isInsideRoot(resolvedRoot: string, resolvedPath: string): boolean {
@@ -296,6 +346,19 @@ const server = Bun.serve({
         status: 404,
         headers: notFound?.headers,
       });
+    }
+
+    const canonicalPath = servesGuestMeet ? null : selfCanonicalPath(pathname);
+    if (canonicalPath) {
+      const canonicalResponse = await selfCanonicalIndexResponse(
+        request,
+        path.join(root, "index.html"),
+        resolvedRoot,
+        canonicalPath,
+      );
+      if (canonicalResponse) {
+        return canonicalResponse;
+      }
     }
 
     return indexResponse;

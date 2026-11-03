@@ -21,8 +21,26 @@ const PARAM_PATHS = [
   /^\/auth\/[^/]+\/callback$/,
 ];
 
+/**
+ * Public pages whose `<link rel="canonical">` points at themselves rather
+ * than the homepage URL index.html ships with. serve-web.ts rewrites the tag
+ * in the initial HTML so crawlers see it without running JS; the client's
+ * useCanonicalPath keeps it right after in-app navigation.
+ */
+const SELF_CANONICAL_PATHS = new Set(["/life", "/shortcuts"]);
+
+function normalizePath(pathname: string): string {
+  return pathname.split("?")[0]?.replace(/\/+$/, "") || "/";
+}
+
+/** The canonical path for a self-canonical page, or null to keep the default. */
+export function selfCanonicalPath(pathname: string): string | null {
+  const path = normalizePath(pathname);
+  return SELF_CANONICAL_PATHS.has(path) ? path : null;
+}
+
 export function isCalendarSpaPath(pathname: string): boolean {
-  const path = pathname.split("?")[0]?.replace(/\/+$/, "") || "/";
+  const path = normalizePath(pathname);
   return (
     EXACT_PATHS.has(path) || PARAM_PATHS.some((pattern) => pattern.test(path))
   );
