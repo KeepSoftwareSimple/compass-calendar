@@ -38,7 +38,7 @@ export const CalendarHeader: FC<Props> = ({
   showNavigation = true,
 }) => {
   return (
-    <div className="flex h-12 w-full shrink-0 items-center gap-3 text-text-muted">
+    <header className="flex h-12 w-full shrink-0 items-center gap-3 text-text-muted">
       {/* min-w-0 lets the title cluster shrink so the sidebar toggle stays in
           layout. Avoid overflow-hidden here — SelectView's menu is absolutely
           positioned inside this cluster and must paint below the header. */}
@@ -79,6 +79,6 @@ export const CalendarHeader: FC<Props> = ({
       <div className="z-2 flex shrink-0 items-center pr-5">
         <SidebarToggleButton />
       </div>
-    </div>
+    </header>
   );
 };
