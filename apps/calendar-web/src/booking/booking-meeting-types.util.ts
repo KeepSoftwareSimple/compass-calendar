@@ -2,9 +2,9 @@ import {
   type AdminPutBookingPageInput,
   BOOKING_MAX_MEETING_TYPES,
   type BookingDurationMinutes,
-  type BookingMeetingType,
   type BookingMeetingTypes,
   defaultMeetingTypeLabel,
+  meetingTypeWithDuration,
   resolveBookingMeetingTypes,
 } from "@core/types/booking.contracts";
 import { BOOKING_DURATION_OPTIONS } from "@web/booking/booking.util";
@@ -29,19 +29,6 @@ export const meetingTypesPatch = (
   return { durationMinutes: first.durationMinutes, meetingTypes: types };
 };
 
-/** A default label follows its duration; a label the host typed stays put. */
-const withDuration = (
-  type: BookingMeetingType,
-  durationMinutes: BookingDurationMinutes,
-): BookingMeetingType => ({
-  ...type,
-  durationMinutes,
-  label:
-    type.label === defaultMeetingTypeLabel(type.durationMinutes)
-      ? defaultMeetingTypeLabel(durationMinutes)
-      : type.label,
-});
-
 /**
  * Change one type's duration. A form that never held `meetingTypes` (a page
  * from before meeting types, or the setup wizard) keeps sending only
@@ -57,7 +44,7 @@ export const setMeetingTypeDuration = (
   }
   return meetingTypesPatch(
     formMeetingTypes(form).map((type, i) =>
-      i === index ? withDuration(type, durationMinutes) : type,
+      i === index ? meetingTypeWithDuration(type, durationMinutes) : type,
     ),
   );
 };

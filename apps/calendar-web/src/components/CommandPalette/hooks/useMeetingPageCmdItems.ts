@@ -7,15 +7,16 @@ import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import { settingsActions } from "@web/settings/settings.store";
 
-export const MEETING_PAGE_PENDING_CMD_ID = "meeting-page-pending";
+/** Loaded command id to the placeholder shown in its slot while it loads. */
+export const MEETING_PAGE_PENDING_CMD_IDS = {
+  "open-meeting-page": "meeting-page-pending",
+  "setup-meeting-page": "meeting-page-pending",
+} as const;
 
-/** Ids the loaded row can take; Recent shows the pending row in their place. */
-export const MEETING_PAGE_LOADED_CMD_IDS: readonly string[] = [
-  "open-meeting-page",
-  "setup-meeting-page",
-];
+export const MEETING_PAGE_PENDING_CMD_ID =
+  MEETING_PAGE_PENDING_CMD_IDS["open-meeting-page"];
 
-const MEETING_PAGE_KEYWORDS = ["booking", "meeting link", "share", "meet"];
+const MEETING_PAGE_KEYWORDS = ["booking", "meeting link", "share"];
 
 /** Opens the public meeting page or starts setup, depending on host state. */
 export function useMeetingPageCmdItems(
@@ -40,7 +41,7 @@ export function useMeetingPageCmdItems(
         label: "Meeting page",
         icon: CalendarPlusIcon,
         disabled: true,
-        keywords: MEETING_PAGE_KEYWORDS,
+        keywords: [...MEETING_PAGE_KEYWORDS, "meet"],
       },
     ];
   }
@@ -56,14 +57,7 @@ export function useMeetingPageCmdItems(
         id: "open-meeting-page",
         label: "Open meeting page",
         icon: ArrowSquareOut,
-        keywords: [
-          "booking",
-          "meeting link",
-          "public",
-          "share",
-          "meet",
-          "schedule",
-        ],
+        keywords: [...MEETING_PAGE_KEYWORDS, "public", "meet", "schedule"],
         onClick: () => {
           window.open(bookingUrl, "_blank", "noopener,noreferrer");
         },
@@ -77,12 +71,10 @@ export function useMeetingPageCmdItems(
       label: "Set up meeting page",
       icon: CalendarPlusIcon,
       keywords: [
-        "booking",
+        ...MEETING_PAGE_KEYWORDS,
         "availability",
-        "meeting link",
         "configure",
         "setup",
-        "share",
       ],
       onClick: () =>
         settingsActions.openSettings("booking", { fromPalette: true }),

@@ -27,8 +27,7 @@ import {
   PublicGetBookingReservationResponseSchema,
   RescheduleBookingReservationInputSchema,
   RescheduleBookingReservationResponseSchema,
-  resolveBookingMeetingType,
-  resolveBookingMeetingTypes,
+  resolvePageMeetingType,
   toPublicBookingPage,
 } from "@core/types/booking.contracts";
 import { createsGoogleMeetFromConference } from "@core/types/calendar.contracts";
@@ -722,10 +721,7 @@ export class PublicBookingService {
   ): Promise<BookingSlotsResponse> {
     const page = await resolveEnabledPage(slug);
     const query = parseSlotsQuery(rawQuery);
-    const meetingType = resolveBookingMeetingType(
-      resolveBookingMeetingTypes(page),
-      query.meetingTypeId,
-    );
+    const meetingType = resolvePageMeetingType(page, query.meetingTypeId);
     return this.computeSlotsForPage(page, query, meetingType.durationMinutes);
   }
 
@@ -916,10 +912,7 @@ export class PublicBookingService {
     await assertHostAllowsGuestWrites(page.userId);
     const input = CreateBookingReservationInputSchema.parse(rawInput);
     assertGuestEmail(input.guestEmail);
-    const meetingType = resolveBookingMeetingType(
-      resolveBookingMeetingTypes(page),
-      input.meetingTypeId,
-    );
+    const meetingType = resolvePageMeetingType(page, input.meetingTypeId);
     assertPinnedDuration(input.durationMinutes, meetingType.durationMinutes);
 
     const slotStart = new Date(input.slotStart);

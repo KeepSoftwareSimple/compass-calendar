@@ -158,6 +158,29 @@ export const resolveBookingMeetingType = (
   return types.find((type) => type.id === id) ?? first;
 };
 
+/** Resolve stored or derived types, then pick by id (type #1 if missing). */
+export const resolvePageMeetingType = (
+  page: {
+    durationMinutes: BookingDurationMinutes;
+    meetingTypes?: BookingMeetingTypes | undefined;
+  },
+  id: string | undefined,
+): BookingMeetingType =>
+  resolveBookingMeetingType(resolveBookingMeetingTypes(page), id);
+
+/** A default label follows its duration; a label the host typed stays put. */
+export const meetingTypeWithDuration = (
+  type: BookingMeetingType,
+  durationMinutes: BookingDurationMinutes,
+): BookingMeetingType => ({
+  ...type,
+  durationMinutes,
+  label:
+    type.label === defaultMeetingTypeLabel(type.durationMinutes)
+      ? defaultMeetingTypeLabel(durationMinutes)
+      : type.label,
+});
+
 const HH_MM_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const LocalTimeOfDaySchema = z

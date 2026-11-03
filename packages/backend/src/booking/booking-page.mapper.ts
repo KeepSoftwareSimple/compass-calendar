@@ -5,8 +5,8 @@ import {
   type BookingMeetingTypes,
   type BookingPage,
   BookingPageSchema,
-  defaultMeetingTypeLabel,
   defaultMeetingTypes,
+  meetingTypeWithDuration,
   pickAdminPutBookingPageInput,
   resolveBookingMeetingTypes,
 } from "@core/types/booking.contracts";
@@ -108,11 +108,7 @@ export const meetingTypesForPut = (
   if (!first || first.durationMinutes === input.durationMinutes) {
     return current;
   }
-  const label =
-    first.label === defaultMeetingTypeLabel(first.durationMinutes)
-      ? defaultMeetingTypeLabel(input.durationMinutes)
-      : first.label;
-  return [{ ...first, label, durationMinutes: input.durationMinutes }, ...rest];
+  return [meetingTypeWithDuration(first, input.durationMinutes), ...rest];
 };
 
 export const mapPutInputToRecordFields = (

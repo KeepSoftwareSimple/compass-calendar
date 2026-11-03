@@ -28,9 +28,8 @@ import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { AttendeeRsvpStatus } from "@web/views/Forms/EventForm/AttendeeRsvpStatus";
 
 /**
- * Pluggable suggestion source for the guest combobox. WP-06 plugs the
- * Google-contacts proxy in here; until then the field defaults to no
- * suggestions and is a plain email-chip input.
+ * Fetches guest suggestions for the attendee combobox. Raw email chips
+ * still work when the source is missing or returns nothing.
  */
 export type AttendeeSuggestionSource = (
   query: string,
