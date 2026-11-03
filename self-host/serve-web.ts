@@ -3,6 +3,7 @@ import {
   isBareMeetLandingPath,
   isGuestMeetStaticPath,
 } from "../apps/calendar-web/guest-meet-static-path";
+import { isCalendarSpaPath } from "../apps/calendar-web/spa-route-path";
 import { type Stats } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import path from "node:path";
@@ -274,6 +275,27 @@ const server = Bun.serve({
       if (landingResponse) {
         return landingResponse;
       }
+    }
+
+    // Unknown paths still get the SPA shell (it renders the NotFound view)
+    // but with a real 404 so crawlers do not index them. booking-web routes
+    // its own paths client-side, so it keeps the plain fallback.
+    if (!servesGuestMeet && !isCalendarSpaPath(pathname)) {
+      // Never answer a 404 with an empty 304: always send the full shell.
+      const unconditional = new Request(request.url, {
+        headers: {
+          "accept-encoding": request.headers.get("accept-encoding") ?? "",
+        },
+      });
+      const notFound = await fileResponse(
+        unconditional,
+        path.join(root, "index.html"),
+        resolvedRoot,
+      );
+      return new Response(notFound?.body ?? "Not Found", {
+        status: 404,
+        headers: notFound?.headers,
+      });
     }
 
     return indexResponse;
