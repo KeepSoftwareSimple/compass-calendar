@@ -1136,6 +1136,8 @@ export interface HostBookingSettingsStubOptions {
   noWritableCalendars?: boolean;
   /** When false, stay on week view instead of opening Settings. */
   openSettings?: boolean;
+  /** Saved `meetingTypes`. Omitted, the page has only type #1. */
+  meetingTypes?: Array<{ id: string; label: string; durationMinutes: number }>;
   /** Mark welcome, showcase, and first-event as done so sidebar nudges can show. */
   completeOnboarding?: boolean;
 }
@@ -1201,6 +1203,7 @@ export async function prepareSignedInBookingSettingsPage(
     weeklyAvailability,
     minNoticeHours: 4,
     maxHorizonDays: 60,
+    ...(options.meetingTypes ? { meetingTypes: options.meetingTypes } : {}),
   };
 
   const savedPageFields = {

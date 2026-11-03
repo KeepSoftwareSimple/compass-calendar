@@ -188,6 +188,13 @@ public struct SettingsBookingSectionView: View {
                     Text("\(option.rawValue) min").tag(option)
                 }
             }
+            if let otherTypes = BookingMeetingTypesLogic.otherTypesSummary(
+                BookingMeetingTypesLogic.resolve(model.bookingStore.serverPage)
+            ) {
+                Text(otherTypes)
+                    .font(.rubik(12))
+                    .foregroundStyle(theme.textMutedColor)
+            }
             if !writableCalendars.isEmpty {
                 Picker("Destination calendar", selection: model.bookingStore.form.destinationBinding(calendars: model.calendars)) {
                     ForEach(writableCalendars, id: \.id) { calendar in

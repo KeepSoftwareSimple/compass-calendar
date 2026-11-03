@@ -199,6 +199,45 @@ for (const [label, status, expected] of [
   });
 }
 
+test("Meeting tab fields stay put when saved meeting types load in", async ({
+  page,
+}) => {
+  await prepareSignedInBookingSettingsPage(page, {
+    openSettings: false,
+    meetingTypes: [
+      { id: "default", label: "Intro call", durationMinutes: 45 },
+      { id: "type-deep", label: "Deep dive", durationMinutes: 60 },
+      { id: "type-quick", label: "Quick sync", durationMinutes: 15 },
+    ],
+  });
+  const pageGate = await holdGet(page, "/api/booking/page");
+
+  const settingsDialog = await openMeetingTab(page);
+  await trackTops(page, {
+    duration: { selector: "#booking-duration" },
+    types: { selector: '[aria-label="Meeting types"]' },
+    save: { selector: "button", text: "Save changes" },
+  });
+  await expect.poll(pageGate.heldCount).toBeGreaterThan(0);
+  await page.waitForTimeout(300);
+
+  pageGate.release();
+  const rows = settingsDialog
+    .getByRole("list", { name: "Meeting types" })
+    .getByRole("listitem");
+  await expect(rows).toHaveCount(3);
+  await expect(
+    settingsDialog.getByRole("textbox", { name: "Meeting type 3 name" }),
+  ).toHaveValue("Quick sync");
+  await page.waitForTimeout(300);
+
+  // The saved types paint with the form, not one row and then three.
+  const tops = await readTops(page);
+  expect(tops.duration).toHaveLength(1);
+  expect(tops.types).toHaveLength(1);
+  expect(tops.save).toHaveLength(1);
+});
+
 function settingsText(text: string) {
   return (settingsDialog: Locator) =>
     settingsDialog.getByText(text, { exact: false }).first();
