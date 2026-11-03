@@ -74,3 +74,30 @@ export function importOrReload<T>(importer: () => Promise<T>): Promise<T> {
     throw error;
   });
 }
+
+let missingChunkRejectionHandlerInstalled = false;
+
+/**
+ * Catches post-deploy chunk 404s that escape wrapped import() calls (React.lazy,
+ * fire-and-forget dynamic imports) before PostHog records an unhandled rejection.
+ */
+export function installMissingChunkUnhandledRejectionHandler(
+  storage: Pick<Storage, "getItem" | "setItem"> = sessionStorage,
+  reload: () => void = reloadLocation,
+): void {
+  if (missingChunkRejectionHandlerInstalled) return;
+  if (typeof window === "undefined") return;
+  missingChunkRejectionHandlerInstalled = true;
+
+  window.addEventListener(
+    "unhandledrejection",
+    (event) => {
+      if (
+        reloadOnceForMissingChunk(event.reason, "lazy-import", storage, reload)
+      ) {
+        event.preventDefault();
+      }
+    },
+    true,
+  );
+}

@@ -52,7 +52,6 @@ public struct PostHogBatchClient: Sendable {
     private let transport: PostHogBatchTransport
     private let platform: String
     private var queue: [PostHogQueuedCapture] = []
-    private var distinctId: String?
     public private(set) var pendingRetryCount = 0
 
     public init(
@@ -65,10 +64,6 @@ public struct PostHogBatchClient: Sendable {
         self.platform = platform
     }
 
-    public mutating func setDistinctId(_ distinctId: String?) {
-        self.distinctId = distinctId
-    }
-
     public var queuedCount: Int {
         queue.count
     }
@@ -79,13 +74,29 @@ public struct PostHogBatchClient: Sendable {
 
     public mutating func enqueue(
         event: String,
+        distinctId: String,
+        sessionId: String?,
         properties: ProductEventProperties = [:]
     ) throws {
         guard configuration != nil else { return }
-        guard let distinctId else {
+        let trimmed = distinctId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
             throw PostHogBatchClientError.missingDistinctId
         }
-        queue.append(PostHogQueuedCapture(event: event, distinctId: distinctId, properties: properties))
+        var merged = properties
+        if let sessionId, !sessionId.isEmpty {
+            merged["$session_id"] = .string(sessionId)
+        }
+        queue.append(
+            PostHogQueuedCapture(event: event, distinctId: trimmed, properties: merged))
+    }
+
+    public mutating func enqueue(_ capture: PostHogQueuedCapture, sessionId: String?) throws {
+        try enqueue(
+            event: capture.event,
+            distinctId: capture.distinctId,
+            sessionId: sessionId,
+            properties: capture.properties)
     }
 
     public mutating func flush(maxAttempts: Int = 3) async throws {

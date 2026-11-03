@@ -1,4 +1,9 @@
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
+import {
+  GO_TO_DATE_ANNOUNCEMENT_TARGET_YMD,
+  GO_TO_DATE_PARSE_VECTORS,
+  GO_TO_DATE_REFERENCE_NOW_ISO,
+} from "@core/test/go-to-date.vectors.data";
 import dayjs from "@core/util/date/dayjs";
 import {
   goToDateAnnouncement,
@@ -6,34 +11,18 @@ import {
   parseUserDate,
 } from "@web/common/utils/datetime/web.date.util";
 
-const PARSE_CASES = [
-  ["2026-10-03", "2026-10-03"],
-  ["2026/10/29", "2026-10-29"],
-  ["10/29", "2026-10-29"],
-  ["10-29", "2026-10-29"],
-  ["10.29.2026", "2026-10-29"],
-  ["29/10", "2026-10-29"],
-  ["2026-10", "2026-10-01"],
-  ["october 2026", "2026-10-01"],
-  ["oct 3", "2026-10-03"],
-  ["october 29", "2026-10-29"],
-  ["jan 3", "2027-01-03"],
-  ["2/30", null],
-  ["hello", null],
-] as const;
-
 export const buildGoToDateFixtures = () => {
-  const now = dayjs("2026-09-15T12:00:00.000Z");
-  const target = dayjs("2026-10-03");
+  const now = dayjs(GO_TO_DATE_REFERENCE_NOW_ISO);
+  const target = dayjs(GO_TO_DATE_ANNOUNCEMENT_TARGET_YMD);
 
   return {
     referenceNow: now.toISOString(),
     cases: [
-      ...PARSE_CASES.map(([input, expected]) => ({
+      ...GO_TO_DATE_PARSE_VECTORS.map(({ input, expectedYmd }) => ({
         id: `parse-${input.replace(/\s+/g, "-")}`,
         input: { text: input, now: now.toISOString() },
         output: {
-          expected,
+          expected: expectedYmd,
           parsed:
             parseUserDate(input, now)?.format(YEAR_MONTH_DAY_FORMAT) ?? null,
         },

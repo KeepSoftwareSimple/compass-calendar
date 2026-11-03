@@ -6,7 +6,13 @@ export const MICROSOFT_REQUEST_TIMEOUT_MS = 30_000;
 
 export const MICROSOFT_CALENDAR_LIST_SELECT =
   "id,name,color,hexColor,canEdit,canShare,isDefaultCalendar,owner,isRemovable";
-export const MICROSOFT_EVENT_PAGE_SIZE = 200;
+const MICROSOFT_EVENT_PAGE_SIZE = 200;
+
+// Graph Prefer header: wall clocks in UTC, which is the zone contract the
+// normalizer assumes when it resolves a timed event's real time zone.
+export const MICROSOFT_GRAPH_OUTLOOK_TIMEZONE = "UTC";
+export const MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE = `outlook.timezone="${MICROSOFT_GRAPH_OUTLOOK_TIMEZONE}"`;
+export const MICROSOFT_GRAPH_PREFER_EVENT_PAGE = `odata.maxpagesize=${MICROSOFT_EVENT_PAGE_SIZE}, ${MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE}`;
 
 // Fields the M-04 normalizer reads from a Graph event resource.
 export const MICROSOFT_EVENT_SELECT = [
@@ -24,6 +30,8 @@ export const MICROSOFT_EVENT_SELECT = [
   "seriesMasterId",
   "originalStart",
   "originalStartTimeZone",
+  "originalEndTimeZone",
+  "cancelledOccurrences",
   "organizer",
   "attendees",
   "location",

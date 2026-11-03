@@ -1,4 +1,3 @@
-import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   type Attendee,
   type Conference,
@@ -7,18 +6,19 @@ import {
 } from "@core/types/event-attendance.contracts";
 import { withColor, withColorHex } from "@core/types/event-color.contracts";
 import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
-import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
+import { cancelledOccurrencesToExdateRules } from "@sync/providers/microsoft/microsoft-cancelled-occurrences";
 import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-event-category.map";
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
-import { windowsZoneToIana } from "@sync/providers/microsoft/windows-zones";
+import { requireIanaTimeZone } from "@sync/providers/microsoft/microsoft-timezone";
 import {
   ProviderEventError,
   type ProviderEventRead,
   type ProviderEventRecurrence,
 } from "@sync/providers/provider-event.port";
+import { parseProviderSchedule } from "@sync/providers/provider-schedule.util";
 
 const RFC3339_OFFSET = dayjs.DateFormat.RFC3339_OFFSET;
 const DATE_ONLY = dayjs.DateFormat.YEAR_MONTH_DAY_FORMAT;
@@ -82,7 +82,7 @@ export interface GraphEvent {
   readonly seriesMasterId?: string;
   readonly originalStart?: string;
   readonly originalStartTimeZone?: string;
-  readonly occurrenceId?: string;
+  readonly originalEndTimeZone?: string;
   readonly cancelledOccurrences?: readonly string[];
   readonly exceptionOccurrences?: readonly GraphEvent[];
   readonly ["exceptionOccurrences@odata.nextLink"]?: string;
@@ -124,6 +124,7 @@ export function normalizeMicrosoftEvent(
   }
 
   const providerVersion = requireVersion(item);
+  const schedule = mapSchedule(item);
 
   return {
     kind: "event",
@@ -131,10 +132,10 @@ export function normalizeMicrosoftEvent(
     providerVersion,
     providerUpdatedAt: item.lastModifiedDateTime ?? null,
     content: mapContent(item, masterCategories),
-    schedule: mapSchedule(item),
+    schedule,
     busy: item.showAs !== "free",
     ...(item.iCalUId ? { icalUid: item.iCalUId } : {}),
-    recurrence: mapRecurrence(item),
+    recurrence: mapRecurrence(item, schedule),
   };
 }
 
@@ -291,7 +292,7 @@ function mapSchedule(item: GraphEvent) {
         "All-day event start/end could not be resolved to dates",
       );
     }
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "allDay",
       start: startDate,
       end: endDate,
@@ -299,14 +300,11 @@ function mapSchedule(item: GraphEvent) {
   }
 
   if (start.dateTime && end.dateTime) {
-    const timeZone = toIanaTimeZone(
-      item.recurrence?.range.recurrenceTimeZone ??
-        item.originalStartTimeZone ??
-        start.timeZone ??
-        end.timeZone ??
-        "UTC",
+    const startFieldZone = toIanaTimeZone(
+      start.timeZone ?? end.timeZone ?? "UTC",
     );
-    return parseSchedule({
+    const timeZone = resolveTimedEventTimeZone(item, startFieldZone);
+    return parseProviderSchedule({
       kind: "timed",
       start: toOffsetIso(start, timeZone),
       end: toOffsetIso(end, timeZone),
@@ -330,10 +328,32 @@ function extractDatePart(
   return parsed.format(DATE_ONLY);
 }
 
+/**
+ * Reads come back under `Prefer: outlook.timezone="UTC"`, so a UTC start field
+ * carries no zone of its own: fall back to the series' recurrence zone, then to
+ * the original start zone. Any other start-field zone is the event's real one.
+ */
+function resolveTimedEventTimeZone(
+  item: GraphEvent,
+  startFieldZone: string,
+): string {
+  if (startFieldZone !== "UTC") return startFieldZone;
+  const recurrenceZone = item.recurrence?.range?.recurrenceTimeZone
+    ? toIanaTimeZone(item.recurrence.range.recurrenceTimeZone)
+    : null;
+  if (recurrenceZone && recurrenceZone !== "UTC") return recurrenceZone;
+  const originalStartZone = item.originalStartTimeZone
+    ? toIanaTimeZone(item.originalStartTimeZone)
+    : null;
+  if (originalStartZone && originalStartZone !== "UTC") {
+    return originalStartZone;
+  }
+  return "UTC";
+}
+
 function toIanaTimeZone(timeZone: string): string {
-  if (TimezoneSchema.safeParse(timeZone).success) return timeZone;
   try {
-    return windowsZoneToIana(timeZone);
+    return requireIanaTimeZone(timeZone);
   } catch {
     throw new ProviderEventError(
       "unmappableSchedule",
@@ -342,22 +362,21 @@ function toIanaTimeZone(timeZone: string): string {
   }
 }
 
-function parseSchedule(candidate: unknown) {
-  const parsed = EventScheduleSchema.safeParse(candidate);
-  if (!parsed.success) {
-    throw new ProviderEventError(
-      "unmappableSchedule",
-      "Event start/end could not be resolved to a schedule",
-      { cause: parsed.error },
-    );
-  }
-  return parsed.data;
-}
-
-function mapRecurrence(item: GraphEvent): ProviderEventRecurrence {
+function mapRecurrence(
+  item: GraphEvent,
+  schedule: ReturnType<typeof mapSchedule>,
+): ProviderEventRecurrence {
   if (item.type === "seriesMaster" && item.recurrence) {
     try {
-      return { kind: "seriesMaster", rules: toRRule(item.recurrence) };
+      const rules = [
+        ...toRRule(item.recurrence),
+        ...cancelledOccurrencesToExdateRules(
+          item.cancelledOccurrences,
+          item,
+          schedule,
+        ),
+      ];
+      return { kind: "seriesMaster", rules };
     } catch (error) {
       if (error instanceof UnsupportedRecurrenceError) {
         throw new ProviderEventError(
@@ -368,13 +387,6 @@ function mapRecurrence(item: GraphEvent): ProviderEventRecurrence {
       }
       throw error;
     }
-  }
-  if (item.type === "exception" && item.seriesMasterId && item.originalStart) {
-    return {
-      kind: "instance",
-      seriesProviderId: item.seriesMasterId,
-      recurrenceId: toCanonicalRecurrenceId(item.originalStart),
-    };
   }
   if (item.seriesMasterId && item.originalStart) {
     return {
@@ -390,6 +402,11 @@ function toCanonicalRecurrenceId(originalStart: string): string {
   return new Date(originalStart).toISOString();
 }
 
+function stripGraphDateTimeFraction(dateTime: string): string {
+  return dateTime.replace(/\.\d+$/, "");
+}
+
+/** Graph wall clocks arrive in UTC (see the Prefer header), then shift to `timeZone`. */
 function toOffsetIso(value: GraphDateTimeTimeZone, timeZone: string): string {
   if (!value.dateTime) {
     throw new ProviderEventError(
@@ -397,10 +414,7 @@ function toOffsetIso(value: GraphDateTimeTimeZone, timeZone: string): string {
       "Event date-time had no dateTime",
     );
   }
-  const anchored = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value.dateTime)
-    ? dayjs(value.dateTime).tz(timeZone)
-    : dayjs
-        .tz(value.dateTime, toIanaTimeZone(value.timeZone ?? timeZone))
-        .tz(timeZone);
+  const raw = stripGraphDateTimeFraction(value.dateTime);
+  const anchored = dayjs.utc(raw).tz(timeZone);
   return anchored.format(RFC3339_OFFSET);
 }

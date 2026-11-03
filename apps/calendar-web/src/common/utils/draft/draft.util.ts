@@ -1,4 +1,5 @@
 import { type CalendarId, EventIdSchema } from "@core/types/domain-primitives";
+import { atCivilTime } from "@core/util/date/civil-day";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import {
   ID_GRID_EVENTS_ALLDAY,
@@ -103,24 +104,19 @@ export const createAlldayDraft = (
 };
 
 export const getDraftTimes = (targetDay: Dayjs) => {
-  const now = dayjs().tz(getEffectiveTimeZone());
-  const currentMinute = now.minute();
-  const nextMinuteInterval = roundToNext(currentMinute, GRID_TIME_STEP);
-
-  let start = targetDay
-    .startOf("day")
-    .hour(now.hour())
-    .minute(nextMinuteInterval)
-    .second(0);
-  // minute(60) overflows into the next hour, and at 23:xx that is the next
-  // day. Keep the draft on the selected column, on the last grid slot.
-  if (!start.isSame(targetDay, "day")) {
-    start = targetDay
-      .startOf("day")
-      .hour(23)
-      .minute(60 - GRID_TIME_STEP)
-      .second(0);
-  }
+  const timeZone = getEffectiveTimeZone();
+  const now = dayjs().tz(timeZone);
+  const minutes = now.hour() * 60 + roundToNext(now.minute(), GRID_TIME_STEP);
+  // Rounding up at 23:xx can reach midnight, the next day. Keep the draft on
+  // the selected column, on the last grid slot.
+  const lastSlot = 24 * 60 - GRID_TIME_STEP;
+  const clamped = Math.min(minutes, lastSlot);
+  const start = atCivilTime(
+    targetDay,
+    timeZone,
+    Math.floor(clamped / 60),
+    clamped % 60,
+  );
   const startDate = start.format();
   const endDate = timedDraftEnd(start).format();
 

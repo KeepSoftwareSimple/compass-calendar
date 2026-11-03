@@ -1,6 +1,6 @@
 import { session } from "@web/auth/compass/session/Session";
 import * as posthogBootstrap from "@web/auth/posthog/posthog.bootstrap";
-import * as sessionExpiredToast from "@web/common/utils/toast/session-expired.toast";
+import * as openAuthModalUtil from "@web/components/AuthModal/open-auth-modal.util";
 import {
   closeStream,
   getSseDegradedSinceMs,
@@ -98,7 +98,7 @@ describe("sse.client degraded state", () => {
     });
     Math.random = () => 0.5;
     openAuthModal = spyOn(
-      sessionExpiredToast,
+      openAuthModalUtil,
       "openAuthModalFromOutsideRouter",
     ).mockResolvedValue(undefined);
     spyOn(session, "doesSessionExist").mockResolvedValue(true);

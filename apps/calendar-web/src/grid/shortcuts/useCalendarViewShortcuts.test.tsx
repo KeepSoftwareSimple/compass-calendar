@@ -3,12 +3,27 @@ import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { act, type PropsWithChildren } from "react";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import * as statusToastUtil from "@web/common/utils/toast/status-toast.util";
+import {
+  initialFirstEventPromptState,
+  useFirstEventPromptStore,
+} from "@web/components/FirstEventPrompt/first-event.store";
+import {
+  initialShortcutShowcaseState,
+  useShortcutShowcaseStore,
+} from "@web/components/ShortcutShowcase/showcase.store";
 import {
   createGridEventDraft,
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import { draftActions } from "@web/events/stores/draft.store";
+import {
+  readAllDayRowExpanded,
+  resetAllDayRowCollapseStoreForTests,
+  setAllDayRowCollapsible,
+} from "@web/grid/all-day-row/allDayRowCollapse.store";
 import {
   edgeFocusActions,
   initialEdgeFocusState,
@@ -48,6 +63,12 @@ const wrapper = ({ children }: PropsWithChildren) => (
 
 beforeEach(() => {
   HotkeyManager.resetInstance();
+  persistentBrowserStore.remove(STORAGE_KEYS.FIRST_EVENT_DONE);
+  useShortcutShowcaseStore.setState(initialShortcutShowcaseState, true);
+  useFirstEventPromptStore.setState(
+    { isDone: true, isCelebrating: false },
+    true,
+  );
 });
 
 afterEach(() => {
@@ -58,6 +79,8 @@ afterEach(() => {
   draftActions.discard();
   useEdgeFocusStore.setState(initialEdgeFocusState, true);
   eventJumpActions.reset();
+  persistentBrowserStore.remove(STORAGE_KEYS.ALL_DAY_ROW_EXPANDED);
+  resetAllDayRowCollapseStoreForTests();
 });
 
 describe("useCalendarViewShortcuts", () => {
@@ -103,6 +126,21 @@ describe("useCalendarViewShortcuts", () => {
     await waitFor(() => {
       expect(onCreateTimedEvent).toHaveBeenCalled();
     });
+  });
+
+  it("defers C to the first-event prompt while it is active", () => {
+    useFirstEventPromptStore.setState({
+      ...initialFirstEventPromptState,
+      isDone: false,
+    });
+    const onCreateTimedEvent = mock();
+
+    renderHook(() => useCalendarViewShortcuts({ onCreateTimedEvent }), {
+      wrapper,
+    });
+    pressKey("C");
+
+    expect(onCreateTimedEvent).not.toHaveBeenCalled();
   });
 
   it("does not create an all-day event when typing in an input", async () => {
@@ -245,5 +283,36 @@ describe("useCalendarViewShortcuts", () => {
     pressKey("Escape");
 
     expect(getTimeTravelZone()).toBe("America/Denver");
+  });
+
+  it("toggles a busy all-day row with Shift+A and remembers the choice", () => {
+    setAllDayRowCollapsible(true);
+    renderHook(() => useCalendarViewShortcuts({}), { wrapper });
+    const shiftA = {
+      keyDownInit: { shiftKey: true },
+      keyUpInit: { shiftKey: true },
+    };
+
+    expect(readAllDayRowExpanded()).toBe(false);
+    pressKey("A", shiftA);
+    expect(readAllDayRowExpanded()).toBe(true);
+    expect(persistentBrowserStore.get(STORAGE_KEYS.ALL_DAY_ROW_EXPANDED)).toBe(
+      "true",
+    );
+    pressKey("A", shiftA);
+    expect(readAllDayRowExpanded()).toBe(false);
+  });
+
+  it("leaves Shift+A to the Saturday jump while event jump is active", () => {
+    setAllDayRowCollapsible(true);
+    eventJumpActions.setActive(true);
+    renderHook(() => useCalendarViewShortcuts({}), { wrapper });
+
+    pressKey("A", {
+      keyDownInit: { shiftKey: true },
+      keyUpInit: { shiftKey: true },
+    });
+
+    expect(readAllDayRowExpanded()).toBe(false);
   });
 });

@@ -212,9 +212,20 @@ public final class BillingStore {
         }
     }
 
-    public func cancelSubscriptionAtPeriodEnd() async {
+    public func cancelSubscriptionAtPeriodEnd(
+        submission: SubscriptionCancelReasonSubmission? = nil
+    ) async {
         let revision = sessionRevision
         await runSubmitting {
+            if let submission {
+                var properties: ProductEventProperties = [
+                    "reason": .string(submission.reason.rawValue),
+                ]
+                if submission.reason == .other, let details = submission.details {
+                    properties["details"] = .string(details)
+                }
+                analytics.track(.subscriptionCancelReasonSubmitted, properties: properties)
+            }
             _ = try await billingAPI.cancelSubscription()
             guard revision == sessionRevision else { return }
             analytics.track(.billingCancelScheduled, properties: [:])

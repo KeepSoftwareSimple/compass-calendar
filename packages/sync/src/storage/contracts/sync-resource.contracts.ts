@@ -10,7 +10,6 @@ import { ObjectIdStringSchema } from "@core/types/type.utils";
 // A connection's calendar list, or one calendar's event collection — each an
 // independently synchronized unit of work.
 export const ResourceKindSchema = z.enum(["calendarList", "events"]);
-export type ResourceKind = z.infer<typeof ResourceKindSchema>;
 
 // A newly discovered calendar does not become ready merely because its first
 // import produced a cursor. It must also establish its watch (or prove watch is

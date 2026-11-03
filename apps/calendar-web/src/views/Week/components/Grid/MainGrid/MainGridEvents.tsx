@@ -5,7 +5,7 @@ import { suppressedSeriesIdForDraft } from "@web/events/grid-event-draft.adapter
 import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import {
-  mergeGridEventWithDraftOverlay,
+  timedEventsForDeckLayout,
   useGridDraftOverlay,
 } from "@web/events/hooks/useGridDraftOverlay";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
@@ -83,8 +83,12 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
     ],
   );
   const timedEventItems = useMemo(
-    () => createTimedEventLayout(visibleTimedEvents, hiddenEventIds),
-    [hiddenEventIds, visibleTimedEvents],
+    () =>
+      createTimedEventLayout(
+        timedEventsForDeckLayout(visibleTimedEvents, draftOverlay),
+        hiddenEventIds,
+      ),
+    [draftOverlay, hiddenEventIds, visibleTimedEvents],
   );
   // Resolved once per event here (not inside each card) and kept referentially
   // stable across renders where neither the events nor the calendars changed,
@@ -126,16 +130,11 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
             isReadOnly,
           }) => {
             const isPlaceholder = event._id === draftId;
-            const eventForDisplay = mergeGridEventWithDraftOverlay(
-              event,
-              draftOverlay,
-            );
-            // The placeholder can carry a live (dragging/resizing) calendarId
-            // from the draft store; everything else reuses the stable,
-            // list-level resolved identity above.
+            // `item.event` already carries the live draft schedule from
+            // timedEventsForDeckLayout; re-merging at render would be a no-op.
             const displayChrome = resolvePlaceholderCardChrome(
               calendarLookup,
-              eventForDisplay,
+              event,
               isPlaceholder,
               { calendarIdentity, focusColor },
             );
@@ -144,7 +143,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
               <GridRegisteredTimedEvent
                 calendarIdentity={displayChrome.calendarIdentity}
                 deckLayout={deckLayout}
-                event={eventForDisplay}
+                event={event}
                 focusColor={displayChrome.focusColor}
                 guestResponse={guestResponse}
                 isHidden={isHidden}

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { getDraftContainer } from "@web/common/utils/draft/draft.util";
 import { gridEventDraftToGridEvent } from "@web/events/grid-event-draft.adapter";
+import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { selectGridDraft, useDraftStore } from "@web/events/stores/draft.store";
 import { positionAllDayDraftEvent } from "@web/grid/layout/all-day-draft.position";
@@ -23,6 +24,7 @@ export const Draft: FC<Props> = ({ measurements, weekProps }) => {
     endOfView: weekProps.query.endOfView,
   });
   const draft = useDraftStore(selectGridDraft);
+  const hiddenEventIds = useHiddenEventIds();
 
   const draftGridEvent: GridEvent | null = useMemo(
     () => (draft ? gridEventDraftToGridEvent(draft) : null),
@@ -38,11 +40,12 @@ export const Draft: FC<Props> = ({ measurements, weekProps }) => {
   );
   const deckLayout = useMemo(
     () =>
-      getActiveTimedDraftDeckLayout(draftGridEvent, [
-        ...timedEvents,
-        ...allDayEvents,
-      ]),
-    [allDayEvents, draftGridEvent, timedEvents],
+      getActiveTimedDraftDeckLayout(
+        draftGridEvent,
+        [...timedEvents, ...allDayEvents],
+        hiddenEventIds,
+      ),
+    [allDayEvents, draftGridEvent, hiddenEventIds, timedEvents],
   );
   const recurringPreviews = useMemo(
     () =>

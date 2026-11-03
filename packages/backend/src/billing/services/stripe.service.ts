@@ -17,6 +17,7 @@ import {
   BillingHttpError,
   wrapStripeFailure,
 } from "@backend/billing/billing.errors";
+import { syntheticCheckoutSessionMetadata } from "@backend/billing/checkout-session-synthetic.util";
 import billingService from "@backend/billing/services/billing.service";
 import { applySubscription } from "@backend/billing/services/billing.webhook.service";
 import {
@@ -27,9 +28,10 @@ import { stripeExpandableId } from "@backend/billing/stripe-expandable-id.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { isStripeConfigured } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
+import { isPosthogSyntheticAccount } from "@backend/user/posthog-synthetic-account.util";
 
 /** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
-const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v8-";
+const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v10-";
 
 function syntheticJourneyCheckoutDiscounts(user: {
   email: string;
@@ -235,6 +237,13 @@ export class StripeService {
     }
 
     const discounts = syntheticJourneyCheckoutDiscounts(user);
+    const syntheticJourneyCheckout = discounts !== undefined;
+    // Only synthetic sessions get metadata, so real users' create params (and
+    // their per-user idempotency keys) are unchanged.
+    const syntheticAnalyticsAccount = isPosthogSyntheticAccount(
+      user.email,
+      user.isSynthetic,
+    );
 
     const session = await this.stripe
       .createCheckoutSession(
@@ -244,16 +253,26 @@ export class StripeService {
           client_reference_id: userId,
           line_items: [{ price: getStripePriceId(), quantity: 1 }],
           ...(discounts ? { discounts } : {}),
-          // Card is required to start the trial. Default is `always`, but pin
-          // it so a Dashboard setting cannot silently skip collection.
-          payment_method_collection: "always",
-          // Stripe Tax is a create-param, not a Dashboard toggle. Because we
-          // always pass an existing `customer`, these three go together: the
-          // billing address has to be collected and written back to the
-          // Customer or there is no address to calculate tax from.
-          automatic_tax: { enabled: true },
-          customer_update: { address: "auto" },
-          billing_address_collection: "required",
+          ...(syntheticAnalyticsAccount
+            ? { metadata: syntheticCheckoutSessionMetadata() }
+            : {}),
+          // Real checkout always collects a card. Synthetic prod journey uses a
+          // 100% discount and `if_required` so live Stripe never sees test cards.
+          payment_method_collection: syntheticJourneyCheckout
+            ? "if_required"
+            : "always",
+          // Stripe Tax is a create-param, not a Dashboard toggle. Real checkout
+          // passes an existing `customer`, so address collection and
+          // `customer_update` go with `automatic_tax`. Synthetic prod journey is
+          // fully discounted: skip tax and address so embedded Checkout can
+          // complete without a card on live Stripe.
+          ...(syntheticJourneyCheckout
+            ? {}
+            : {
+                automatic_tax: { enabled: true },
+                customer_update: { address: "auto" },
+                billing_address_collection: "required" as const,
+              }),
           ...checkoutReturnParams(options),
           subscription_data: {
             ...trialFields,
@@ -341,7 +360,15 @@ export class StripeService {
 
     const subscriptionId = billing?.stripeSubscriptionId;
     if (!subscriptionId) {
-      return { ...mongo, price: null, paymentMethod: null, invoices: [] };
+      const catalogPrice = isStripeConfigured(CONFIG)
+        ? await getCatalogPrice(this.stripe)
+        : null;
+      return {
+        ...mongo,
+        price: catalogPrice ?? null,
+        paymentMethod: null,
+        invoices: [],
+      };
     }
 
     if (!isStripeConfigured(CONFIG)) {
@@ -449,7 +476,7 @@ export class StripeService {
       .createCheckoutSession({
         mode: "setup",
         customer: customerId,
-        payment_method_types: ["card"],
+        allowed_payment_method_types: ["card"],
         client_reference_id: userId,
         setup_intent_data: { metadata: { compassUserId: userId } },
         ...checkoutReturnParams(options),
@@ -496,10 +523,9 @@ type BillingInterval = NonNullable<
 const isBillingInterval = (value: string): value is BillingInterval =>
   value === "day" || value === "week" || value === "month" || value === "year";
 
-const mapPrice = (
-  subscription: Stripe.Subscription,
+const mapStripePriceObject = (
+  price: Stripe.Price | null | undefined,
 ): BillingSubscriptionResponse["price"] => {
-  const price = subscription.items.data[0]?.price;
   if (!price || typeof price === "string") return null;
   const amount = price.unit_amount;
   const interval = price.recurring?.interval;
@@ -512,6 +538,36 @@ const mapPrice = (
     return null;
   }
   return { amount, currency: price.currency, interval };
+};
+
+const mapPrice = (
+  subscription: Stripe.Subscription,
+): BillingSubscriptionResponse["price"] => {
+  return mapStripePriceObject(subscription.items.data[0]?.price);
+};
+
+let cachedCatalogPrice: BillingSubscriptionResponse["price"] | null | undefined;
+
+/** Clears the in-memory Stripe catalog price cache (tests only). */
+export function resetCatalogPriceCacheForTests(): void {
+  cachedCatalogPrice = undefined;
+}
+
+const getCatalogPrice = async (
+  stripe: StripeBillingGateway,
+): Promise<BillingSubscriptionResponse["price"] | null> => {
+  if (cachedCatalogPrice !== undefined) {
+    return cachedCatalogPrice;
+  }
+  try {
+    const price = await stripe
+      .retrievePrice(getStripePriceId())
+      .catch(wrapStripeFailure);
+    cachedCatalogPrice = mapStripePriceObject(price);
+  } catch {
+    cachedCatalogPrice = null;
+  }
+  return cachedCatalogPrice;
 };
 
 const mapInvoice = (

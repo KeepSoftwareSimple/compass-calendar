@@ -3,10 +3,7 @@ import {
   type APIInterface as EmailPasswordAPIInterface,
   type RecipeInterface as EmailPasswordRecipeInterface,
 } from "supertokens-node/recipe/emailpassword/types";
-import {
-  type APIInterface as SessionAPIInterface,
-  type SessionContainerInterface,
-} from "supertokens-node/recipe/session/types";
+import { type SessionContainerInterface } from "supertokens-node/recipe/session/types";
 import {
   type APIInterface as ThirdPartyAPIInterface,
   type RecipeInterface as ThirdPartyRecipeInterface,
@@ -80,8 +77,4 @@ export type EmailPasswordAuthInput =
 export type EmailPasswordAuthResponse = Extract<
   Awaited<ReturnType<SignUpPOSTFn>> | Awaited<ReturnType<SignInPOSTFn>>,
   { status: "OK" }
->;
-
-export type SessionSignOutPOSTFn = NonNullable<
-  SessionAPIInterface["signOutPOST"]
 >;

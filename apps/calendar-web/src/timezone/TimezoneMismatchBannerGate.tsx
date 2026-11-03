@@ -5,7 +5,7 @@ import {
 } from "@web/timezone/effective-timezone.store";
 import { TimezoneMismatchBanner } from "@web/timezone/TimezoneMismatchBanner";
 import {
-  isTimezoneMismatchBannerActive,
+  shouldShowTimezoneMismatch,
   snoozeTimezoneMismatch,
   useTimezoneMismatchSnoozedBrowser,
 } from "@web/timezone/timezone-mismatch";
@@ -20,7 +20,7 @@ export function TimezoneMismatchBannerGate() {
   }
 
   if (
-    !isTimezoneMismatchBannerActive(
+    !shouldShowTimezoneMismatch(
       pinnedTimeZone,
       browserTimeZone,
       snoozedForBrowser,

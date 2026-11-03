@@ -42,10 +42,7 @@ import {
   selectIsEventFormOpen,
   useDraftStore,
 } from "@web/events/stores/draft.store";
-import {
-  HIDDEN_EVENT_STRIP_WIDTH,
-  TIMED_EVENT_FAN_INDENT,
-} from "@web/grid/grid.constants";
+import { HIDDEN_EVENT_STRIP_WIDTH } from "@web/grid/grid.constants";
 import * as realUsegridmeasurements from "@web/grid/hooks/useGridMeasurements";
 import { dayEventRegistry } from "@web/grid/interaction/view-event-registry";
 import { useNowCueStore } from "@web/grid/now-cue/now-cue.store";
@@ -412,7 +409,7 @@ describe("DayCalendarGrid", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("lays overlapping timed events out as a left-anchored deck", () => {
+  it("lays overlapping timed events out as side-by-side columns", () => {
     setDayEvents([
       createTimedEvent({
         _id: "early-overlap",
@@ -423,7 +420,7 @@ describe("DayCalendarGrid", () => {
       createTimedEvent({
         _id: "late-overlap",
         endDate: "2026-05-20T10:45:00.000",
-        startDate: "2026-05-20T09:30:00.000",
+        startDate: "2026-05-20T09:15:00.000",
         title: "Late overlap",
       }),
       createTimedEvent({
@@ -441,8 +438,8 @@ describe("DayCalendarGrid", () => {
     const solo = screen.getByRole("button", { name: /timed event: solo/i });
 
     expect(parseFloat(early.style.width)).toBe(parseFloat(late.style.width));
-    expect(parseFloat(late.style.left) - parseFloat(early.style.left)).toBe(
-      TIMED_EVENT_FAN_INDENT,
+    expect(parseFloat(late.style.left)).toBe(
+      parseFloat(early.style.left) + parseFloat(early.style.width),
     );
     expect(early.style.boxShadow).toContain("0 0 0 0.75px");
     expect(late.style.boxShadow).toContain("0 0 0 0.75px");

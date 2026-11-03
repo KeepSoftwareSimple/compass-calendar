@@ -3,12 +3,3 @@ export const AFTER_TMRW_MULTIPLE = 1.5;
 export const FLEX_TODAY = 21.4;
 export const FLEX_TMRW = 18.6;
 export const FLEX_EQUAL = 14.285714285714286; // 100 / 7
-const HEADER_HEIGHT = 40;
-
-const PAGE_MARGIN_TOP = 35;
-
-const WEEK_DAYS_HEIGHT = 26;
-const WEEK_DAYS_MARGIN_Y = 22;
-
-export const GRID_Y_START =
-  PAGE_MARGIN_TOP + HEADER_HEIGHT + WEEK_DAYS_HEIGHT + WEEK_DAYS_MARGIN_Y;

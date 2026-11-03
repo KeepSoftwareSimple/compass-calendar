@@ -1,6 +1,12 @@
 import { ObjectId } from "bson";
 import { act } from "react";
 import {
+  CIVIL_DAY_DENVER,
+  CIVIL_DAY_NEW_YORK,
+  CIVIL_DAY_US_FALL_BACK_YMD,
+  CIVIL_DAY_US_SPRING_FORWARD_YMD,
+} from "@core/test/civil-day.vectors.data";
+import {
   civilDayLengthMinutes,
   civilHourSlotCount,
   formatInstantInTimeZone,
@@ -26,11 +32,11 @@ import {
 import { timedIntentAt } from "@web/views/Week/pointer-intent/grid-pointer-target";
 import { afterEach, describe, expect, it, setSystemTime } from "bun:test";
 
-const denver = "America/Denver";
+const denver = CIVIL_DAY_DENVER;
 const london = "Europe/London";
-const newYork = "America/New_York";
-const fallBackDenver = "2026-11-01";
-const springForwardDenver = "2027-03-14";
+const newYork = CIVIL_DAY_NEW_YORK;
+const fallBackDenver = CIVIL_DAY_US_FALL_BACK_YMD;
+const springForwardDenver = CIVIL_DAY_US_SPRING_FORWARD_YMD;
 
 const visibleDenverDates = (dayKey: string) => [
   { date: dayjs.tz(`${dayKey}T12:00`, denver), key: dayKey },

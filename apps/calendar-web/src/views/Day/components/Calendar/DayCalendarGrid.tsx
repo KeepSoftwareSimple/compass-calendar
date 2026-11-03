@@ -38,6 +38,10 @@ import { EVENT_WIDTH_MINIMUM } from "@web/grid/grid.constants";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { useGridMeasurements } from "@web/grid/hooks/useGridMeasurements";
 import { withAllDayColumnTints } from "@web/grid/utils/allDayColumnTint.util";
+import {
+  allDayHiddenCountsByColumn,
+  isAllDayLaneFolded,
+} from "@web/grid/utils/allDayRowHeight.util";
 import { EditSequenceMenu } from "@web/shortcuts/edit-sequence/EditSequenceMenu";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
 import {
@@ -90,12 +94,13 @@ export function DayCalendarGrid() {
     error: eventsError,
     events: dayEvents,
     isError: isErrorEvents,
+    isAwaitingSignIn,
     isFetching,
     isPending,
     refetch,
     timedEvents,
   } = useDayEventViewModel({ startDate, endDate });
-  // Session expiry already surfaces SessionExpiredToast — don't also show
+  // Session expiry already opens the login modal — don't also show
   // "Couldn't load events" / Retry for the same failure.
   const showEventsLoadError = shouldShowContextualLoadError(
     isErrorEvents,
@@ -105,6 +110,7 @@ export function DayCalendarGrid() {
     isPending,
     showEventsLoadError,
     isFetching,
+    isAwaitingSignIn,
   );
   const { connection, refresh, state: googleState } = useConnectGoogle();
   const { isImportingEmpty, isImportFailed } = eventGridFirstImportFlags({
@@ -172,6 +178,25 @@ export function DayCalendarGrid() {
       isDisplayedEvent,
       visibleDates,
     ]);
+
+  const allDayHiddenCounts = useMemo(
+    () =>
+      allDayHiddenCountsByColumn(
+        visibleDates.length,
+        renderedAllDayEvents,
+        (event) => [getCalendarColumnIndex(event)],
+      ),
+    [getCalendarColumnIndex, renderedAllDayEvents, visibleDates.length],
+  );
+  const allDayDraftId = gridDraft ? getGridDraftId(gridDraft) : undefined;
+  const allDayForceExpanded = useMemo(
+    () =>
+      allDayDraftId !== undefined &&
+      isAllDayLaneFolded(
+        renderedAllDayEvents.find((event) => event._id === allDayDraftId),
+      ),
+    [allDayDraftId, renderedAllDayEvents],
+  );
 
   const tintedVisibleDates = useMemo(
     () => withAllDayColumnTints(visibleDates, renderedAllDayEvents, "calendar"),
@@ -455,6 +480,8 @@ export function DayCalendarGrid() {
           />
           <EventGrid
             allDayEventsLayer={allDayEventsLayer}
+            allDayForceExpanded={allDayForceExpanded}
+            allDayHiddenCounts={allDayHiddenCounts}
             allDayRowsCount={allDayRowsCount}
             gridRefs={gridRefs}
             highlightedColumnKey={focusedColumnKey}

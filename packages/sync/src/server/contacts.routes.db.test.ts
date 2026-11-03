@@ -23,6 +23,8 @@ import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { signInternalRequest } from "@sync/auth/internal-auth";
 import { type SyncConfig } from "@sync/config/sync.config";
+import { GooglePeopleAdapter } from "@sync/providers/google/google-people.adapter";
+import { MicrosoftPeopleAdapter } from "@sync/providers/microsoft/microsoft-people.adapter";
 import {
   type ProviderAuthAdapter,
   type ProviderAuthorization,
@@ -32,12 +34,14 @@ import {
   type ContactsPort,
   ContactsSearchError,
   type ContactsSearchInput,
+  type ContactsSearchSources,
 } from "@sync/providers/provider-contacts.port";
 import {
   buildProviderRegistry,
   ProviderRegistry,
 } from "@sync/providers/provider-registry";
 import { CONTACTS_SUGGESTIONS_PATH } from "@sync/server/contacts.routes";
+import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { CredentialRepository } from "@sync/storage/repositories/credential.repository";
 import { ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
@@ -83,10 +87,23 @@ class FakeAuthAdapter implements ProviderAuthAdapter {
   async revoke(): Promise<void> {}
 }
 
+// Records the search the route issues, but defers the scope -> surface
+// mapping to the real adapter under test, so the `sources` assertions below
+// still prove the route hands each provider's own scopes to its own adapter.
 class FakeContactsPort implements ContactsPort {
   calls: ContactsSearchInput[] = [];
   result: ContactSuggestion[] = [];
   error?: unknown;
+  #real: ContactsPort;
+
+  constructor(real: ContactsPort) {
+    this.#real = real;
+  }
+
+  sourcesForGrantedScopes(granted: ReadonlySet<string>): ContactsSearchSources {
+    return this.#real.sourcesForGrantedScopes(granted);
+  }
+
   async searchContacts(
     input: ContactsSearchInput,
   ): Promise<ContactSuggestion[]> {
@@ -121,6 +138,7 @@ describe("GET /internal/contacts/suggestions", () => {
   let base: string;
   let authAdapter: FakeAuthAdapter;
   let contacts: FakeContactsPort;
+  let microsoftContacts: FakeContactsPort;
 
   const startService = async (
     config: SyncConfig = testConfig(),
@@ -204,12 +222,34 @@ describe("GET /internal/contacts/suggestions", () => {
             ...google,
             callbackPath: "/sync/microsoft",
             notificationsCallbackPath: "/sync/notifications/microsoft",
-            adapters: { ...google.adapters, auth: authAdapter, contacts },
+            adapters: {
+              ...google.adapters,
+              auth: authAdapter,
+              contacts: microsoftContacts,
+            },
           },
         ],
       ]),
     );
   };
+
+  // Only the fields the past-guest search reads; the aggregation never
+  // parses the full event record.
+  const seedEventWithGuests = (
+    tenantId: string,
+    principalId: string,
+    attendees: { email: string; displayName: string | null }[],
+  ) =>
+    mongo.db.collection(SYNC_COLLECTIONS.events).insertOne({
+      tenantId,
+      principalId,
+      content: {
+        attendees: attendees.map((attendee) => ({
+          ...attendee,
+          responseStatus: "accepted",
+        })),
+      },
+    });
 
   const suggest = (tenantId: string, principalId: string, q?: string) =>
     fetch(
@@ -224,7 +264,8 @@ describe("GET /internal/contacts/suggestions", () => {
     connections = new ProviderConnectionRepository(mongo.db);
     credentials = new CredentialRepository(mongo.db);
     authAdapter = new FakeAuthAdapter();
-    contacts = new FakeContactsPort();
+    contacts = new FakeContactsPort(new GooglePeopleAdapter());
+    microsoftContacts = new FakeContactsPort(new MicrosoftPeopleAdapter());
   });
 
   afterEach(async () => {
@@ -303,7 +344,7 @@ describe("GET /internal/contacts/suggestions", () => {
     expect(authAdapter.minted).toBe(0);
   });
 
-  it("refuses typed when no connection has the contacts capability", async () => {
+  it("suggests past guests without any contacts grant", async () => {
     const tenantId = objectId() as TenantId;
     const principalId = objectId() as PrincipalId;
     // A connection WITHOUT the contacts grant (calendar-only capabilities).
@@ -320,27 +361,88 @@ describe("GET /internal/contacts/suggestions", () => {
       state: "healthy",
       stateReason: null,
     });
+    await seedEventWithGuests(tenantId, principalId, [
+      { email: "me@example.com", displayName: "Me" },
+      { email: "sarah@example.com", displayName: "Sarah Chen" },
+      { email: "sam@example.com", displayName: null },
+    ]);
+    await seedEventWithGuests(tenantId, principalId, [
+      { email: "Sarah@Example.com", displayName: null },
+      { email: "bob@example.com", displayName: "Bob" },
+    ]);
+    await startService();
+
+    const res = await suggest(tenantId, principalId, "SA");
+
+    expect(res.status).toBe(200);
+    // Most-invited first, one entry per address (case-insensitive), the
+    // user's own account excluded, the name kept when any event had it.
+    expect(await res.json()).toEqual({
+      suggestions: [
+        { email: "sarah@example.com", displayName: "Sarah Chen" },
+        { email: "sam@example.com", displayName: null },
+      ],
+    });
+    expect(contacts.calls).toHaveLength(0);
+  });
+
+  it("matches the query literally, never as a pattern", async () => {
+    const tenantId = objectId();
+    const principalId = objectId();
+    await seedEventWithGuests(tenantId, principalId, [
+      { email: "a.b@example.com", displayName: null },
+      { email: "axb@example.com", displayName: null },
+    ]);
+    await startService();
+
+    const res = await suggest(tenantId, principalId, "a.b");
+
+    expect(await res.json()).toEqual({
+      suggestions: [{ email: "a.b@example.com", displayName: null }],
+    });
+  });
+
+  it("lists past guests before contacts, without duplicates", async () => {
+    const tenantId = objectId();
+    const principalId = objectId();
+    await seedContactsConnection(tenantId, principalId, [
+      GOOGLE_SCOPE_CONTACTS_READONLY,
+    ]);
+    await seedEventWithGuests(tenantId, principalId, [
+      { email: "alice@example.com", displayName: "Alice Doe" },
+    ]);
+    contacts.result = [
+      { email: "albert@example.com", displayName: null },
+      { email: "ALICE@example.com", displayName: "Alice D." },
+    ];
     await startService();
 
     const res = await suggest(tenantId, principalId, "al");
 
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "contacts_not_granted" });
-    expect(contacts.calls).toHaveLength(0);
+    expect(await res.json()).toEqual({
+      suggestions: [
+        { email: "alice@example.com", displayName: "Alice Doe" },
+        { email: "albert@example.com", displayName: null },
+      ],
+    });
   });
 
-  it("never serves another principal's contacts grant", async () => {
+  it("never serves another principal's contacts or past guests", async () => {
     const tenantId = objectId();
     const owner = objectId();
     const stranger = objectId();
     await seedContactsConnection(tenantId, owner, [
       GOOGLE_SCOPE_CONTACTS_READONLY,
     ]);
+    await seedEventWithGuests(tenantId, owner, [
+      { email: "alice@example.com", displayName: null },
+    ]);
     await startService();
 
     const res = await suggest(tenantId, stranger, "al");
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ suggestions: [] });
     expect(contacts.calls).toHaveLength(0);
   });
 
@@ -351,7 +453,9 @@ describe("GET /internal/contacts/suggestions", () => {
       MICROSOFT_SCOPE_CALENDARS_READWRITE,
       MICROSOFT_SCOPE_PEOPLE_READ,
     ]);
-    contacts.result = [{ email: "bob@example.com", displayName: "Bob Smith" }];
+    microsoftContacts.result = [
+      { email: "bob@example.com", displayName: "Bob Smith" },
+    ];
     await startService(testConfig(), registryWithMicrosoft());
 
     const res = await suggest(tenantId, principalId, "bo");
@@ -360,7 +464,7 @@ describe("GET /internal/contacts/suggestions", () => {
     expect(await res.json()).toEqual({
       suggestions: [{ email: "bob@example.com", displayName: "Bob Smith" }],
     });
-    expect(contacts.calls).toEqual([
+    expect(microsoftContacts.calls).toEqual([
       {
         accessToken: "minted-access-token",
         query: "bo",
@@ -369,43 +473,29 @@ describe("GET /internal/contacts/suggestions", () => {
     ]);
   });
 
-  it("maps a provider rate-limit to a typed retryable 429", async () => {
+  it("skips an account whose contact search fails and keeps the rest", async () => {
     const tenantId = objectId();
     const principalId = objectId();
     await seedContactsConnection(tenantId, principalId, [
       GOOGLE_SCOPE_CONTACTS_READONLY,
     ]);
-    contacts.error = new ContactsSearchError(
-      "rateLimited",
-      "Google throttled the contact search",
-    );
-    await startService();
-
-    const res = await suggest(tenantId, principalId, "al");
-
-    expect(res.status).toBe(429);
-    expect(await res.json()).toEqual({
-      error: "rate_limited",
-      retryable: true,
-    });
-  });
-
-  it("maps other provider search failures to a typed retryable 503", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    await seedContactsConnection(tenantId, principalId, [
-      GOOGLE_SCOPE_CONTACTS_READONLY,
+    await seedEventWithGuests(tenantId, principalId, [
+      { email: "alice@example.com", displayName: null },
     ]);
-    contacts.error = new ContactsSearchError("searchFailed", "Search failed");
     await startService();
 
-    const res = await suggest(tenantId, principalId, "al");
+    for (const error of [
+      new ContactsSearchError("rateLimited", "Google throttled the search"),
+      new ContactsSearchError("searchFailed", "Search failed"),
+    ]) {
+      contacts.error = error;
+      const res = await suggest(tenantId, principalId, "al");
 
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({
-      error: "contacts_unavailable",
-      retryable: true,
-    });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({
+        suggestions: [{ email: "alice@example.com", displayName: null }],
+      });
+    }
   });
 
   it("rejects a missing or oversized query", async () => {

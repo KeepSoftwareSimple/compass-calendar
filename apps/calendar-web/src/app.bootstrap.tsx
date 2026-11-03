@@ -14,6 +14,7 @@ import {
   initializeDatabaseWithErrorHandling,
   showDbInitErrorToast,
 } from "@web/common/utils/app-init.util";
+import { mountCompassE2EHelpers } from "@web/common/utils/toast/mount-compass-e2e-helpers";
 import { App } from "@web/components/App/App";
 import { router } from "@web/routers";
 import { hydrateEffectiveTimeZonePreference } from "@web/timezone/effective-timezone.store";
@@ -55,6 +56,7 @@ export async function bootstrapApp(): Promise<void> {
     "aHR0cHM6Ly9jb21wYXNzY2FsZW5kYXIubm90aW9uLnNpdGUvaDNsbDAtZGF0LTMwYzIzN2JkZThmNDgwNTdhZmYxZDRiODU0YjAzMjYz",
   );
 
+  mountCompassE2EHelpers();
   root.render(<App />);
   // Arm the input-driven form preload only once the first navigation has
   // resolved. Armed at render, the first mouse move (common while the app is

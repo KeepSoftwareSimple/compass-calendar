@@ -1,7 +1,8 @@
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import {
   clampSidebarWidth,
+  resolveSidebarWidthForViewport,
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_DIVIDER_WIDTH,
   SIDEBAR_MAX_WIDTH,
@@ -17,6 +18,14 @@ import {
 const MAIN_MIN_WIDTH = 480;
 const KEYBOARD_STEP = 16;
 
+const subscribeViewportWidth = (onStoreChange: () => void) => {
+  window.addEventListener("resize", onStoreChange);
+  return () => window.removeEventListener("resize", onStoreChange);
+};
+
+const getViewportWidth = () =>
+  typeof window === "undefined" ? 1280 : window.innerWidth;
+
 const clampDragWidth = (width: number, dynamicMax: number) =>
   Math.max(SIDEBAR_MIN_WIDTH, Math.min(width, SIDEBAR_MAX_WIDTH, dynamicMax));
 
@@ -27,7 +36,13 @@ const KEYBOARD_WIDTHS = {
 } as const;
 
 export function useResizableSidebar() {
-  const [width, setWidth] = useState(readSidebarWidth);
+  const [storedWidth, setStoredWidth] = useState(readSidebarWidth);
+  const viewportWidth = useSyncExternalStore(
+    subscribeViewportWidth,
+    getViewportWidth,
+    getViewportWidth,
+  );
+  const width = resolveSidebarWidthForViewport(storedWidth, viewportWidth);
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{
     startX: number;
@@ -36,11 +51,11 @@ export function useResizableSidebar() {
   } | null>(null);
   // Tracked in a ref, not read from render: pointermove state updates are
   // batched asynchronously, so pointerup would otherwise persist a stale width.
-  const widthRef = useRef(width);
+  const widthRef = useRef(storedWidth);
 
   const applyWidth = useCallback((next: number) => {
     widthRef.current = next;
-    setWidth(next);
+    setStoredWidth(next);
   }, []);
 
   // Clamp, apply, and persist in one step — shared by keyboard and reset paths.

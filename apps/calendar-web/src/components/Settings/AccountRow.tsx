@@ -11,7 +11,9 @@ import { connectionProviderKind } from "@web/auth/providers/connection-provider.
 import { ProviderMark } from "@web/auth/providers/ProviderMark";
 import { useGoogleSyncRefreshSnapshot } from "@web/auth/providers/sync.refresh";
 import { SyncStatusLine } from "@web/calendars/SyncStatusLine";
+import { useMinuteTick } from "@web/common/hooks/useMinuteTick";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 import { useSseDegraded } from "@web/sse/hooks/useSseDegraded";
 
 const OUTLINE_BUTTON_CLASSNAME =
@@ -42,12 +44,13 @@ export const AccountRow: FC<AccountRowProps> = ({
   setConfirming,
 }) => {
   const accountEmail = connection.accountEmail ?? "Unknown account";
+  const nowMs = useMinuteTick().valueOf();
   const refreshSnapshot = useGoogleSyncRefreshSnapshot();
   const sseDegraded = useSseDegraded();
   const syncStatus = getGoogleSyncStatus(
     connection.connectionState ?? "NOT_CONNECTED",
     connection,
-    Date.now(),
+    nowMs,
     {
       refreshGaveUp: refreshSnapshot.gaveUp,
       refreshInFlight: refreshSnapshot.isRefreshing,
@@ -65,7 +68,7 @@ export const AccountRow: FC<AccountRowProps> = ({
   const lastSyncedLabel =
     isOtherwiseHealthy && sseDegraded
       ? null
-      : formatLastSyncedLabel(connection.lastSyncedAt);
+      : formatLastSyncedLabel(connection.lastSyncedAt, nowMs);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const disconnectButtonRef = useRef<HTMLButtonElement>(null);
   const wasConfirmingRef = useRef(isConfirming);
@@ -135,7 +138,9 @@ export const AccountRow: FC<AccountRowProps> = ({
             ref={confirmButtonRef}
             type="button"
           >
-            {isDisconnecting ? "Disconnecting…" : "Confirm"}
+            <StableLabel labels={["Confirm", "Disconnecting…"]}>
+              {isDisconnecting ? "Disconnecting…" : "Confirm"}
+            </StableLabel>
           </button>
           <button
             className={OUTLINE_BUTTON_CLASSNAME}

@@ -247,8 +247,8 @@ describe("shortcut menu sections", () => {
         }).find((section) => section.id === "focus");
 
       expect(stripMetadata(findFocus("day")?.shortcuts ?? [])).toEqual([
-        { keys: ["i"], label: "Focus month picker" },
-        { keys: ["u"], label: "Focus calendar event" },
+        { keys: ["i"], label: "Move focus right (sidebar or event form)" },
+        { keys: ["u"], label: "Move focus left (calendar grid)" },
         { keys: ["f"], label: "Flash jump keys" },
         {
           keys: ["Shift", "m"],
@@ -270,8 +270,8 @@ describe("shortcut menu sections", () => {
         },
       ]);
       expect(stripMetadata(findFocus("week")?.shortcuts ?? [])).toEqual([
-        { keys: ["i"], label: "Focus month picker" },
-        { keys: ["u"], label: "Focus calendar event" },
+        { keys: ["i"], label: "Move focus right (sidebar or event form)" },
+        { keys: ["u"], label: "Move focus left (calendar grid)" },
         { keys: ["f"], label: "Flash jump keys" },
         {
           keys: ["Shift", "m"],

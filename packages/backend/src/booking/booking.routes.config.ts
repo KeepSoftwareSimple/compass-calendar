@@ -94,6 +94,8 @@ const adminPageGetLimiter = adminLimiter("booking:admin-get", 60);
 const adminPageStatusGetLimiter = adminLimiter("booking:admin-status", 60);
 const adminPagePutLimiter = adminLimiter("booking:admin-put", 20);
 const adminNewMeetingsClaimLimiter = adminLimiter("booking:admin-claim", 20);
+const adminOwnerUpcomingLimiter = adminLimiter("booking:owner-upcoming", 60);
+const adminOwnerCancelLimiter = adminLimiter("booking:owner-cancel", 20);
 
 /**
  * Host admin routes require a session. Public guest routes are unauthenticated.
@@ -135,6 +137,19 @@ export class BookingRoutes extends CommonRoutesConfig {
     this.app
       .route(`/api/booking/pages/:slug/reservations`)
       .post(publicConfirmLimiter, bookingController.createReservation);
+
+    this.app
+      .route(`/api/booking/pages/:slug/owner/upcoming`)
+      .all(verifySession())
+      .get(
+        adminOwnerUpcomingLimiter,
+        bookingController.getHostUpcomingReservations,
+      );
+
+    this.app
+      .route(`/api/booking/pages/:slug/owner/reservations/:id/cancel`)
+      .all(verifySession())
+      .post(adminOwnerCancelLimiter, bookingController.cancelHostReservation);
 
     this.app
       .route(`/api/booking/reservations/:id`)

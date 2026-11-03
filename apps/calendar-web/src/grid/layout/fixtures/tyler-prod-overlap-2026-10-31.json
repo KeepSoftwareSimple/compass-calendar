@@ -1,0 +1,147 @@
+{
+  "day": "2026-10-31",
+  "timeZone": "America/Denver",
+  "instanceCount": 9,
+  "instances": [
+    {
+      "eventId": "58bfb78bcb937dfe721da488",
+      "calendarId": "6a662800acf42800601132c4",
+      "label": "event-1da488",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T06:00:00-06:00",
+        "end": "2026-10-31T07:00:00-06:00",
+        "timeZone": "America/Denver"
+      },
+      "recurrence": {
+        "kind": "occurrence",
+        "recurrenceId": "2026-10-31T12:00:00.000Z"
+      },
+      "color": "coral",
+      "colorHex": "#e67c73"
+    },
+    {
+      "eventId": "6ada47f4064b6306e1fd76fe",
+      "calendarId": "6a662800acf42800601132c4",
+      "label": "event-fd76fe",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T08:00:00-06:00",
+        "end": "2026-10-31T11:00:00-06:00",
+        "timeZone": "America/Denver"
+      },
+      "recurrence": {
+        "kind": "occurrence",
+        "recurrenceId": "2026-10-31T14:00:00.000Z"
+      }
+    },
+    {
+      "eventId": "6aced1f2b4515f656d930fbe",
+      "calendarId": "6a662800acf42800601132c4",
+      "label": "H: Fall Festival | Venture Church",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T14:00:00-06:00",
+        "end": "2026-10-31T17:00:00-06:00",
+        "timeZone": "America/Denver"
+      },
+      "recurrence": {
+        "kind": "single"
+      },
+      "color": "blue",
+      "colorHex": "#039be5"
+    },
+    {
+      "eventId": "6a6a3234a3f00a3867f615e1",
+      "calendarId": "6a6a1220a3f00a3867f5743a",
+      "label": "Monthly Ritual",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T18:00:00.000Z",
+        "end": "2026-10-31T19:30:00.000Z",
+        "timeZone": "Europe/Berlin"
+      },
+      "recurrence": {
+        "kind": "single"
+      }
+    },
+    {
+      "eventId": "6a8313927f0219811f36f89a",
+      "calendarId": "6a83138c7f0219811f36f838",
+      "label": "Monthly Ritual",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T19:00:00+01:00",
+        "end": "2026-10-31T20:30:00+01:00",
+        "timeZone": "Europe/Berlin"
+      },
+      "recurrence": {
+        "kind": "single"
+      }
+    },
+    {
+      "eventId": "6ae222d0975a6404abf9c624",
+      "calendarId": "6a662800acf42800601132c4",
+      "label": "Record Compass demo",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T16:00:00-06:00",
+        "end": "2026-10-31T18:00:00-06:00",
+        "timeZone": "America/Denver"
+      },
+      "recurrence": {
+        "kind": "single"
+      }
+    },
+    {
+      "eventId": "a0a09611e0b4294c26f2f10a",
+      "calendarId": "6ab816c82e957dbb143b6c48",
+      "label": "Unwind",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T19:00:00-06:00",
+        "end": "2026-10-31T20:00:00-06:00",
+        "timeZone": "America/Denver"
+      },
+      "recurrence": {
+        "kind": "occurrence",
+        "recurrenceId": "2026-11-01T01:00:00.000Z"
+      },
+      "color": "orange"
+    },
+    {
+      "eventId": "3d4f8155502403b165fa55d2",
+      "calendarId": "6a662800acf42800601132c4",
+      "label": "Update 4e2d",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T18:30:00-06:00",
+        "end": "2026-10-31T19:00:00-06:00",
+        "timeZone": "America/Denver"
+      },
+      "recurrence": {
+        "kind": "occurrence",
+        "recurrenceId": "2026-11-01T00:30:00.000Z"
+      },
+      "color": "orange",
+      "colorHex": "#f4511e"
+    },
+    {
+      "eventId": "6a8db82c1155fcd5223bd262",
+      "calendarId": "6a7df362127b1f4a000b57d5",
+      "label": "Update 4e2d",
+      "schedule": {
+        "kind": "timed",
+        "start": "2026-10-31T19:30:00-06:00",
+        "end": "2026-10-31T20:00:00-06:00",
+        "timeZone": "America/Denver"
+      },
+      "recurrence": {
+        "kind": "occurrence",
+        "recurrenceId": "2026-11-01T01:30:00.000Z"
+      },
+      "color": "orange",
+      "colorHex": "#f4511e"
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 import { z } from "zod/v4";
-import { BookingReservationStatusSchema } from "@core/types/booking.contracts";
+import {
+  BookingMeetingTypeIdSchema,
+  BookingReservationStatusSchema,
+} from "@core/types/booking.contracts";
 import { TimeZoneSchema } from "@core/types/domain-primitives";
 import { zObjectId } from "@core/types/object-id.schema";
 
@@ -10,8 +13,6 @@ export const BookingGuestActionSchema = z.enum([
   "cancelled",
   "rescheduled",
 ]);
-export type BookingGuestAction = z.infer<typeof BookingGuestActionSchema>;
-
 export const BookingReservationRecordSchema = z.strictObject({
   _id: ObjectIdSchema,
   pageId: ObjectIdSchema,
@@ -21,6 +22,10 @@ export const BookingReservationRecordSchema = z.strictObject({
   guestEmail: z.string().trim().min(1).max(320),
   notes: z.string().trim().max(4000).nullable(),
   guestTimeZone: TimeZoneSchema,
+  // Snapshot of the meeting type at booking time. Absent on reservations
+  // made before meeting types; the slot length is the source of truth.
+  meetingTypeId: BookingMeetingTypeIdSchema.optional(),
+  meetingTypeLabel: z.string().trim().min(1).max(256).optional(),
   status: BookingReservationStatusSchema,
   calendarEventId: z.string().trim().min(1).max(256).nullable(),
   cancelTokenHash: z.string().trim().min(1).max(256),

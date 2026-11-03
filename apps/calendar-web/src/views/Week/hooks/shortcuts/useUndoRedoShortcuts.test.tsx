@@ -59,7 +59,12 @@ const setup = () => {
       // The write contract's guest-edit field never round-trips into the
       // read-side Event content this stub returns.
       const { attendees: _guestEdit, ...content } = input.content;
-      return { ...before, id, content, schedule: input.schedule };
+      return {
+        ...before,
+        id,
+        content,
+        schedule: input.schedule ?? before.schedule,
+      };
     },
     delete: async () => {},
   };

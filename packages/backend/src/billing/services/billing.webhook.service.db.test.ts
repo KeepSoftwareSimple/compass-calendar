@@ -614,6 +614,42 @@ describe("Stripe webhook", () => {
     });
   });
 
+  it("tags checkout_expired as synthetic from session metadata after the journey user is deleted", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
+    const deletedUserId = mongoService.objectId().toString();
+    const stripe = stubBillingGateway({});
+
+    await processStripeEvent(
+      {
+        id: "evt_checkout_expired_synthetic",
+        type: "checkout.session.expired",
+        created: 1_775_000_100,
+        data: {
+          object: {
+            id: "cs_expired_synthetic",
+            mode: "subscription",
+            client_reference_id: deletedUserId,
+            customer: null,
+            subscription: null,
+            metadata: { compassSynthetic: "true" },
+          },
+        },
+      } as unknown as Stripe.Event,
+      stripe,
+    );
+
+    expect(capture).toHaveBeenCalledWith({
+      event: "checkout_expired",
+      userId: deletedUserId,
+      properties: {
+        checkout_session_id: "cs_expired_synthetic",
+        $internal_or_test_user: true,
+        is_synthetic: true,
+      },
+    });
+  });
+
   it("acks a duplicate delivery without a second write", async () => {
     using _env = mockEnv(stripeConfigured);
     const userId = mongoService.objectId();

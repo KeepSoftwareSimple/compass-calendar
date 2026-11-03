@@ -7,7 +7,10 @@ import {
   setupTestDb,
 } from "@backend/__tests__/helpers/mock.db.setup";
 import { mockEnv } from "@backend/__tests__/helpers/mock.setup";
-import { StripeService } from "@backend/billing/services/stripe.service";
+import {
+  resetCatalogPriceCacheForTests,
+  StripeService,
+} from "@backend/billing/services/stripe.service";
 import { stubBillingGateway } from "@backend/billing/services/stripe-billing-gateway.test-helpers";
 import mongoService from "@backend/common/services/mongo.service";
 import {
@@ -33,6 +36,7 @@ describe("StripeService", () => {
     await setupTestDb(import.meta.url);
   });
   beforeEach(cleanupCollections);
+  beforeEach(resetCatalogPriceCacheForTests);
   afterAll(cleanupTestDb);
 
   it("creates a Checkout session in subscription mode with a trial", async () => {
@@ -82,7 +86,8 @@ describe("StripeService", () => {
         .payment_method_collection,
     ).toBe("always");
     expect(
-      (sessionArgs as { payment_method_types?: unknown }).payment_method_types,
+      (sessionArgs as { allowed_payment_method_types?: unknown })
+        .allowed_payment_method_types,
     ).toBeUndefined();
     // Stripe Tax needs all three together with an existing customer: drop
     // one and tax silently calculates as zero instead of erroring.
@@ -106,12 +111,122 @@ describe("StripeService", () => {
         .custom_text,
     ).toBeUndefined();
     expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-      idempotencyKey: `compass-checkout-v8-${userId.toString()}`,
+      idempotencyKey: `compass-checkout-v10-${userId.toString()}`,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
     expect(stored?.billing?.stripeCustomerId).toBe("cus_1");
     expect(stored?.billing?.subscriptionStatus).toBe("awaiting_checkout");
+  });
+
+  it("applies synthetic journey coupon discounts only for configured synthetic accounts", async () => {
+    using _env = mockEnv({
+      ...stripeConfigured,
+      STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: "coupon_synthetic_100",
+      SYNTHETIC_JOURNEY_EMAILS: ["lance.essert+prod-journey-google@gmail.com"],
+    });
+    const syntheticUserId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: syntheticUserId,
+      email: "lance.essert+prod-journey-google+journey1730123456789@gmail.com",
+      name: "Synthetic Journey",
+      firstName: "Synthetic",
+      lastName: "Journey",
+      locale: "en",
+      isSynthetic: true,
+    });
+    const realUserId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: realUserId,
+      email: "real.customer@gmail.com",
+      name: "Real Customer",
+      firstName: "Real",
+      lastName: "Customer",
+      locale: "en",
+    });
+
+    const sessionsCreate = mock(() =>
+      Promise.resolve({ client_secret: "cs_discount" }),
+    );
+    const stripeService = new StripeService(
+      stubBillingGateway({
+        createCustomer: mock(() => Promise.resolve({ id: "cus_discount" })),
+        createCheckoutSession: sessionsCreate,
+      }),
+    );
+
+    await stripeService.createCheckoutSession(syntheticUserId.toString());
+    const syntheticArgs = (
+      sessionsCreate.mock.calls as unknown[][]
+    )[0]?.[0] as {
+      discounts?: Array<{ coupon?: string; promotion_code?: string }>;
+    };
+    expect(syntheticArgs.discounts).toEqual([
+      { coupon: "coupon_synthetic_100" },
+    ]);
+    expect((syntheticArgs as { metadata?: unknown }).metadata).toEqual({
+      compassSynthetic: "true",
+    });
+    expect(
+      (syntheticArgs as { payment_method_collection?: string })
+        .payment_method_collection,
+    ).toBe("if_required");
+    expect(
+      (syntheticArgs as { automatic_tax?: { enabled?: boolean } })
+        .automatic_tax,
+    ).toBeUndefined();
+    expect(
+      (syntheticArgs as { billing_address_collection?: string })
+        .billing_address_collection,
+    ).toBeUndefined();
+
+    sessionsCreate.mockClear();
+    await stripeService.createCheckoutSession(realUserId.toString());
+    const realArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
+      discounts?: Array<{ coupon?: string; promotion_code?: string }>;
+    };
+    expect(realArgs.discounts).toBeUndefined();
+    expect((realArgs as { metadata?: unknown }).metadata).toBeUndefined();
+    expect(
+      (realArgs as { payment_method_collection?: string })
+        .payment_method_collection,
+    ).toBe("always");
+  });
+
+  it("maps promo_ synthetic journey discount ids to Stripe promotion_code checkout params", async () => {
+    using _env = mockEnv({
+      ...stripeConfigured,
+      STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: "promo_synthetic_100",
+      SYNTHETIC_JOURNEY_EMAILS: ["runner@example.com"],
+    });
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "runner+journey1730123456789@example.com",
+      name: "Runner",
+      firstName: "Runner",
+      lastName: "Bot",
+      locale: "en",
+      isSynthetic: true,
+    });
+
+    const sessionsCreate = mock(() =>
+      Promise.resolve({ client_secret: "cs_promo" }),
+    );
+    const stripeService = new StripeService(
+      stubBillingGateway({
+        createCustomer: mock(() => Promise.resolve({ id: "cus_promo" })),
+        createCheckoutSession: sessionsCreate,
+      }),
+    );
+
+    await stripeService.createCheckoutSession(userId.toString());
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
+      discounts?: Array<{ coupon?: string; promotion_code?: string }>;
+    };
+    expect(sessionArgs.discounts).toEqual([
+      { promotion_code: "promo_synthetic_100" },
+    ]);
   });
 
   it("omits trial when trialStartedAt is set without a subscription", async () => {
@@ -763,18 +878,29 @@ describe("StripeService", () => {
       });
     });
 
-    it("returns nulls and skips Stripe when there is no subscription id", async () => {
+    it("returns the Stripe catalog price when there is no subscription id", async () => {
       using _env = mockEnv(stripeConfigured);
       const userId = await seedUser({
         subscriptionStatus: "awaiting_checkout",
         stripeCustomerId: "cus_pending",
       });
 
-      const retrieve = mock(() => Promise.reject(new Error("no stripe")));
+      const retrieveSubscription = mock(() =>
+        Promise.reject(new Error("no subscription")),
+      );
+      const retrievePrice = mock(() =>
+        Promise.resolve({
+          id: "price_test",
+          unit_amount: 799,
+          currency: "usd",
+          recurring: { interval: "month" },
+        }),
+      );
       const invoicesList = mock(() => Promise.reject(new Error("no stripe")));
       const stripeService = new StripeService(
         stubBillingGateway({
-          retrieveSubscription: retrieve,
+          retrieveSubscription,
+          retrievePrice,
           listInvoices: invoicesList,
         }),
       );
@@ -783,14 +909,17 @@ describe("StripeService", () => {
         userId.toString(),
       );
 
-      expect(retrieve).not.toHaveBeenCalled();
+      expect(retrieveSubscription).not.toHaveBeenCalled();
       expect(invoicesList).not.toHaveBeenCalled();
+      expect((retrievePrice.mock.calls as unknown[][])[0]?.[0]).toBe(
+        "price_test",
+      );
       expect(result).toEqual({
         subscriptionStatus: "awaiting_checkout",
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
         trialEndsAt: null,
-        price: null,
+        price: { amount: 799, currency: "usd", interval: "month" },
         paymentMethod: null,
         invoices: [],
       });
@@ -973,7 +1102,7 @@ describe("StripeService", () => {
       expect(sessionArgs.ui_mode).toBeUndefined();
       expect(sessionArgs.redirect_on_completion).toBeUndefined();
       expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-        idempotencyKey: `compass-checkout-v8-desktop-${userId.toString()}`,
+        idempotencyKey: `compass-checkout-v10-desktop-${userId.toString()}`,
       });
     });
 
@@ -1067,7 +1196,7 @@ describe("StripeService", () => {
       expect((sessionsCreate.mock.calls as unknown[][])[0]?.[0]).toEqual({
         mode: "setup",
         customer: "cus_card",
-        payment_method_types: ["card"],
+        allowed_payment_method_types: ["card"],
         ui_mode: "embedded_page",
         redirect_on_completion: "never",
         client_reference_id: userId.toString(),

@@ -10,23 +10,22 @@ import { stripOAuthCallbackQueryFromHistory } from "@web/auth/callback/strip-oau
 import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useRedirectStaleProviderOAuthReplay } from "@web/auth/callback/useRedirectStaleProviderOAuthReplay";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
+import { trackGoogleOAuthScopesRecoverySucceeded } from "@web/auth/posthog/google-oauth-scopes-recovery-funnel";
 import { trackOAuthSignupFailed } from "@web/auth/posthog/oauth-signup-funnel";
-import {
-  trackSignupCompleted,
-  trackSignupStep,
-} from "@web/auth/posthog/signup-funnel";
+import { scheduleSignupCompleted } from "@web/auth/posthog/signup-completed-coordinator";
+import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { completeProviderAuthorization } from "@web/auth/providers/authorization/complete-provider-authorization";
 import {
   isSignInProviderKind,
   PROVIDER_AUTHORIZATION_ERROR_MESSAGE,
 } from "@web/auth/providers/authorization/provider-authorization.constants";
+import { consumeGoogleOAuthScopesRecoveryPending } from "@web/auth/providers/authorization/provider-authorization.storage";
 import { recordOAuthSignInCallbackLanding } from "@web/auth/providers/authorization/record-oauth-signin-callback-landing";
 import { missingPermissionsActions } from "@web/auth/providers/missing-permissions.store";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
-import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
-import { getToast } from "@web/common/utils/toast/toast.port";
+import { queuePendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
 
@@ -81,20 +80,35 @@ export async function completeProviderAuthCallback({
     // Cancelling is a choice, not a fault. An error toast for it reads as a
     // Compass failure and discourages the retry that would have worked.
     if (result.reason === "oauth_user_cancelled") {
-      getToast().info(result.message, getToastDefaultOptions());
+      queuePendingShellToast({ variant: "info", message: result.message });
     } else if (result.reason === "oauth_missing_scopes") {
-      // Unchecking a permission on the consent screen deserves an
-      // explanation and a one-click retry, not a toast.
-      missingPermissionsActions.open(provider);
+      const missingScopes = result.missingScopes ?? [];
+      // Every Google sign-in that comes back short on calendar scopes, from
+      // signup or log in, gets the short one-click retry. Other providers
+      // keep the per-permission explainer.
+      if (provider === "google" && missingScopes.length > 0) {
+        missingPermissionsActions.openGoogleSignupRecovery(missingScopes, {
+          signupFlow: result.signupFlow === true,
+        });
+      } else {
+        // Unchecking a permission on the consent screen deserves an
+        // explanation and a one-click retry, not a toast.
+        missingPermissionsActions.open(provider);
+      }
     } else {
-      showErrorToast(result.message);
+      queuePendingShellToast({ variant: "error", message: result.message });
     }
-  } else if (result.isNewUser) {
-    trackSignupCompleted(provider);
-    track("calendar_connected", { source: `signup_${provider}` });
-    trackSignupStep("calendar_connected", { method: provider });
   } else {
-    track("login_completed", { method: provider });
+    if (consumeGoogleOAuthScopesRecoveryPending()) {
+      trackGoogleOAuthScopesRecoverySucceeded();
+    }
+    if (result.isNewUser) {
+      scheduleSignupCompleted(provider);
+      track("calendar_connected", { source: `signup_${provider}` });
+      trackSignupStep("calendar_connected", { method: provider });
+    } else {
+      track("login_completed", { method: provider });
+    }
   }
 
   navigate(result.returnPath, { replace: true });

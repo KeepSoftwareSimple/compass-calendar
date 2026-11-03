@@ -440,6 +440,38 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
   edits. **Discard** (Shift+Escape or Mod+Enter) closes Settings without
   saving.
 
+## Meeting types
+
+A page offers one to three meeting types (`meetingTypes`: `id`, `label`,
+`durationMinutes` of 15, 30, 45 or 60). `durationMinutes` stays on the page
+and always mirrors type #1. Pages saved before meeting types derive one
+`default` type named `<n> min meeting` at read time; a PUT without
+`meetingTypes` (older clients) keeps the stored types and moves type #1 to
+the new duration. Slots, booking and reservations carry the type id;
+reservations snapshot `meetingTypeId` and `meetingTypeLabel`, and confirmed
+reservations block their real interval. Unknown or missing ids fall back to
+type #1. `bun run cli backfill-meeting-types` (dry-run, `--apply` to write)
+stores the derived type in Mongo; it is optional because reads already
+derive it.
+
+Settings > Meeting lists the types as rows (name, duration, remove). T adds
+a type and focuses its name; the "Add type" button stays in place but hides
+at three. On a focused row, Enter edits its name and Enter in the name
+returns to the row. Delete removes the focused row only when the row itself
+has focus, never while typing in its name, and the last type cannot be
+removed. Keycaps under the list show T, Enter and Delete. Saving
+still goes through the save bar (Mod+Enter). An empty name blocks the save
+with "Name each meeting type." The setup wizard only sets type #1.
+
+The public page shows "Pick a meeting" above the calendar only when it has
+two or more types; one-type pages look unchanged. Keys 1, 2 and 3 pick a
+type (not while typing). `?type=<id>` opens that type and an unknown id
+falls back to type #1; picking type #1 drops the param. Picking a type
+clears the chosen slot, and times reload in place without moving the
+layout. Slot requests for type #1 send no `meetingTypeId` (same cache key
+as before); a reservation always sends the chosen `meetingTypeId`, type #1
+included. Reschedule keeps the meeting's own length.
+
 ## Busy occupancy
 
 v1.1 occupancy is RSVP-strict. Sync still returns facts only; Booking
@@ -511,9 +543,10 @@ There is no host reservation inbox.
   neither reschedule secret. Cancel and edit use `?token=` on the
   confirmation URL (see Guest cancel and edit details).
 - `/meet/reschedule/:id?token=` reuses the public month/slot picker. Do
-  not re-collect name, email, or notes. Confirm and reschedule both pin
-  `durationMinutes` from the page the guest saw: a mismatch with the
-  current page duration is `409`.
+  not re-collect name, email, or notes. Confirm pins `durationMinutes`
+  from the meeting type the guest saw: a mismatch is `409`. Reschedule
+  keeps the reservation's own length (older clients may still send the
+  page duration); any other duration is `409`.
 - In-place Google PATCH of the existing event: same `calendarEventId`,
   same Meet URL, same attendees. `invitation: "all"`,
   `attendeesEdit: "preserve"`. Compass still sends no email.
@@ -594,15 +627,16 @@ Unauthenticated:
   duration, timezone, enabled). `404` when missing or disabled. A host who cannot write is `409` with
   `This page is not accepting meetings.` (no billing, plan, or payment
   wording).
-- `GET /api/booking/pages/:slug/slots?start=&end=&timeZone=` — bookable
+- `GET /api/booking/pages/:slug/slots?start=&end=&timeZone=&meetingTypeId=` — bookable
   instants for that window, computed in the **host** timezone. `timeZone`
   is required (guest rendering and logs) and does not change the slot
   set. The guest UI requests **one month at a time** (plus prefetch of
   adjacent months). Window must be within the 60-day horizon. A host who
   cannot write is `{ slots: [], bookable: false }`.
 - `POST /api/booking/pages/:slug/reservations` — `{slotStart, guestName,
-  guestEmail, notes?, guestTimeZone, durationMinutes}`. `durationMinutes`
-  must match the page. Mismatch is `409` with no Google event. Re-checks
+  guestEmail, notes?, guestTimeZone, durationMinutes, meetingTypeId?}`.
+  `durationMinutes` must match the chosen meeting type (type #1 when
+  `meetingTypeId` is missing or unknown). Mismatch is `409` with no Google event. Re-checks
   billing and busy, then creates. A host who cannot write is the same
   `409` as GET page and submits no create command.
 - `GET /api/booking/reservations/:id` — public confirmation payload
@@ -619,8 +653,9 @@ Unauthenticated:
   omitting its current start from the returned list.
   Same window rules as the public page slots endpoint.
 - `POST /api/booking/reservations/:id/reschedule` — `{token, slotStart,
-  guestTimeZone, durationMinutes}`. `durationMinutes` must match the page
-  (same pin as confirm). In-place calendar PATCH. Same slot is an
+  guestTimeZone, durationMinutes}`. `durationMinutes` must match the
+  reservation's booked length (the page duration is also accepted from
+  older clients). In-place calendar PATCH. Same slot is an
   idempotent success. Create response includes `rescheduleUrl`.
 
 Authenticated (host session + writable billing, same as event writes):

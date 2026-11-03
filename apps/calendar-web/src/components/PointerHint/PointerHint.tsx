@@ -56,9 +56,10 @@ export const PointerHint: FC = () => {
   if (!body) return null;
 
   const isGridSlotHint =
-    attempt.source === "pointer" &&
-    typeof attempt.message === "string" &&
-    attempt.message.startsWith("Type ");
+    attempt.tone === "soft" ||
+    (attempt.source === "pointer" &&
+      typeof attempt.message === "string" &&
+      attempt.message.startsWith("Type "));
 
   return (
     <div

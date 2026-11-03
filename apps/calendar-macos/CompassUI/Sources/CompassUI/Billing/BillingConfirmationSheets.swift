@@ -1,4 +1,5 @@
 import CompassData
+import CompassKit
 import SwiftUI
 
 public struct BillingUpgradeConfirmationSheet: View {
@@ -46,6 +47,10 @@ public struct BillingCancelConfirmationSheet: View {
     public let periodEndLabel: String
     public let isTrialing: Bool
 
+    @State private var selectedReason: SubscriptionCancelReason?
+    @State private var otherDetails = ""
+    @FocusState private var otherDetailsFocused: Bool
+
     public init(billingStore: BillingStore, periodEndLabel: String, isTrialing: Bool) {
         self.billingStore = billingStore
         self.periodEndLabel = periodEndLabel
@@ -61,20 +66,132 @@ public struct BillingCancelConfirmationSheet: View {
                 guard !billingStore.isSubmitting else { return }
                 billingStore.isCancelConfirmationPresented = false
             }
-            BillingDialogPanel(title: "Cancel your plan?", message: message, onDismiss: dismiss) {
-                HStack(spacing: 12) {
-                    OverlayPanelActionButton(
-                        billingStore.isSubmitting ? "Canceling…" : "Cancel subscription",
-                        variant: .destructive,
-                        shortcut: ["Enter"]
-                    ) { Task { await billingStore.cancelSubscriptionAtPeriodEnd() } }
-                    .keyboardShortcut(.defaultAction)
-                    OverlayPanelActionButton("Keep plan", shortcut: ["Esc"], action: dismiss)
-                        .keyboardShortcut(.cancelAction)
+            let submit = {
+                guard !billingStore.isSubmitting else { return }
+                let submission = buildSubmission()
+                Task { await billingStore.cancelSubscriptionAtPeriodEnd(submission: submission) }
+            }
+            BillingDialogPanel(
+                title: "Cancel your plan?",
+                message: message,
+                onDismiss: dismiss,
+                maxWidth: 440,
+                bodySpacing: 12
+            ) {
+                VStack(alignment: .leading, spacing: 12) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Why are you canceling? (optional)")
+                                .font(.rubik(13))
+                                .foregroundStyle(theme.textColor)
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(SubscriptionCancelReason.allCases, id: \.self) { reason in
+                                    Button {
+                                        selectedReason = reason
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(
+                                                systemName: selectedReason == reason
+                                                    ? "largecircle.fill.circle"
+                                                    : "circle"
+                                            )
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(
+                                                selectedReason == reason
+                                                    ? theme.accentColor : theme.textMutedColor
+                                            )
+                                            Text(reason.label)
+                                                .font(.rubik(13))
+                                                .foregroundStyle(theme.textColor)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            RoundedRectangle(
+                                                cornerRadius: NativeWebLayoutTokens.radiusDefault
+                                            )
+                                            .stroke(
+                                                selectedReason == reason
+                                                    ? theme.accentColor : theme.borderColor,
+                                                lineWidth: 1
+                                            )
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityAddTraits(selectedReason == reason ? .isSelected : [])
+                                }
+                            }
+                            .accessibilityElement(children: .contain)
+                            .accessibilityLabel("Why are you canceling? (optional)")
+
+                            if selectedReason == .other {
+                                ZStack(alignment: .topLeading) {
+                                    TextEditor(text: $otherDetails)
+                                        .font(.rubik(13))
+                                        .foregroundStyle(theme.textColor)
+                                        .scrollContentBackground(.hidden)
+                                        .focused($otherDetailsFocused)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .accessibilityLabel("Other reason")
+                                        .accessibilityIdentifier("compass-cancel-reason-other")
+                                        .onChange(of: otherDetails) { _, value in
+                                            if value.count > 500 { otherDetails = String(value.prefix(500)) }
+                                        }
+                                    if otherDetails.isEmpty {
+                                        Text("Tell us more (optional).")
+                                            .font(.rubik(13))
+                                            .foregroundStyle(theme.textMutedColor)
+                                            .padding(.horizontal, 13)
+                                            .padding(.vertical, 4)
+                                            .allowsHitTesting(false)
+                                    }
+                                }
+                                .frame(height: 56)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
+                                        .stroke(
+                                            otherDetailsFocused ? theme.accentColor : theme.borderColor,
+                                            lineWidth: 1
+                                        )
+                                )
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 260)
+
+                    HStack(spacing: 12) {
+                        OverlayPanelActionButton(
+                            billingStore.isSubmitting ? "Canceling…" : "Cancel subscription",
+                            variant: .destructive,
+                            shortcut: ["Mod", "Enter"],
+                            action: submit
+                        )
+                        .keyboardShortcut(.return, modifiers: .command)
+                        OverlayPanelActionButton("Keep plan", shortcut: ["Esc"], action: dismiss)
+                            .keyboardShortcut(.cancelAction)
+                    }
+                    .disabled(billingStore.isSubmitting)
                 }
-                .disabled(billingStore.isSubmitting)
+            }
+            .onAppear {
+                selectedReason = nil
+                otherDetails = ""
             }
         }
+    }
+
+    private func buildSubmission() -> SubscriptionCancelReasonSubmission? {
+        guard let selectedReason else { return nil }
+        if selectedReason != .other {
+            return SubscriptionCancelReasonSubmission(reason: selectedReason)
+        }
+        let trimmed = otherDetails.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SubscriptionCancelReasonSubmission(
+            reason: .other,
+            details: trimmed.isEmpty ? nil : trimmed
+        )
     }
 }
 
@@ -83,16 +200,18 @@ private struct BillingDialogPanel<Actions: View>: View {
     let title: String
     let message: String
     let onDismiss: () -> Void
+    var maxWidth: CGFloat = 400
+    var bodySpacing: CGFloat = 24
     @ViewBuilder let actions: Actions
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: bodySpacing) {
             ModalDialogTitle(title)
             ModalDialogMessage(message)
             actions
         }
         .accessibilityAddTraits(.isModal)
-        .modalDialogChrome(maxWidth: 400, identifier: "compass-billing-dialog")
+        .modalDialogChrome(maxWidth: maxWidth, identifier: "compass-billing-dialog")
         .onExitCommand(perform: onDismiss)
     }
 }

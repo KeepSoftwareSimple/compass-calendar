@@ -23,6 +23,26 @@ export type AppAccess =
   | { kind: "open" };
 
 /**
+ * Shared gate for `/api/billing/status`. One predicate so access and the
+ * layout-hold hook cannot drift on error, auth, or unconfigured Stripe.
+ */
+function useBillingAccessQuery() {
+  const { authenticated } = useContext(SessionContext);
+  const configQuery = useAppConfigQuery();
+  const billingEnabled =
+    isBillingEnforced(configQuery.data) &&
+    authenticated &&
+    !configQuery.isError &&
+    configQuery.data?.billing.isConfigured === true;
+  return {
+    authenticated,
+    configQuery,
+    billingEnabled,
+    billingQuery: useBillingStatusQuery(billingEnabled),
+  };
+}
+
+/**
  * Resolves what a visitor is allowed to do.
  *
  * Anonymous visitors are unconditionally open: playing with the sample events
@@ -34,14 +54,8 @@ export type AppAccess =
  * state never locks a paying user out of their calendar.
  */
 export function useAppAccess(): AppAccess {
-  const { authenticated } = useContext(SessionContext);
-  const configQuery = useAppConfigQuery();
+  const { authenticated, configQuery, billingQuery } = useBillingAccessQuery();
   const enforced = isBillingEnforced(configQuery.data);
-  const billingEnabled =
-    enforced &&
-    authenticated &&
-    configQuery.data?.billing.isConfigured === true;
-  const billingQuery = useBillingStatusQuery(billingEnabled);
 
   if (!enforced) {
     return { kind: "open" };
@@ -70,4 +84,16 @@ export function useAppAccess(): AppAccess {
     trialEndsAt: billingQuery.data.trialEndsAt,
     cancelAtPeriodEnd: billingQuery.data.cancelAtPeriodEnd,
   };
+}
+
+/**
+ * True while a signed-in user's plan is still loading on an install that
+ * enforces billing, i.e. the one window where useAppAccess reads `open` but
+ * will likely flip to `server`. Lets plan-dependent chrome (the Settings
+ * Billing tab) hold its space instead of popping in and shoving its
+ * neighbours down.
+ */
+export function useIsAppAccessPending(): boolean {
+  const { billingEnabled, billingQuery } = useBillingAccessQuery();
+  return billingEnabled && billingQuery.isPending;
 }

@@ -272,7 +272,6 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       supertokens:
-        # supertokens-node@24 requires CDI 5.4; self-host compose still pins 11.0.2.
         image: supertokens/supertokens-postgresql:12.2.0
         env:
           API_KEYS: local-dev-supertokens-key

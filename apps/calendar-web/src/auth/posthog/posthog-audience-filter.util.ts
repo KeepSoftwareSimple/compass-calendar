@@ -4,10 +4,7 @@ import {
   isInternalOrTestHostname,
   isNonHumanUserAgent,
 } from "@core/analytics/posthog-audience.util";
-import {
-  isSyntheticAccountEmail,
-  syntheticAccountPosthogFlags,
-} from "@core/analytics/synthetic-account.util";
+import { isSyntheticAccountEmail } from "@core/analytics/synthetic-account.util";
 
 export const POSTHOG_INTERNAL_OR_TEST_USER_PROPERTY =
   "$internal_or_test_user" as const;
@@ -23,15 +20,26 @@ export function posthogInternalOrTestUserRegistration(): Record<
 /**
  * Drop automated traffic before it reaches PostHog. Internal and test users
  * stay captured but carry `$internal_or_test_user` for cohort filters.
+ *
+ * Signed-in synthetic journey accounts run in headless Playwright, so their
+ * user agent looks automated. Their events already carry the `is_synthetic`
+ * super property, which keeps them out of product cohorts, so they pass. Without
+ * this, browser-only events such as `checkout_opened` could never be checked
+ * from a journey run.
  */
 export function filterPosthogAudience(
   event: CaptureResult | null,
 ): CaptureResult | null {
   if (!event) return null;
+  if (isSyntheticTaggedEvent(event)) return event;
   if (typeof navigator !== "undefined") {
     if (isNonHumanUserAgent(navigator.userAgent)) return null;
   }
   return event;
+}
+
+function isSyntheticTaggedEvent(event: CaptureResult): boolean {
+  return event.properties?.["is_synthetic"] === true;
 }
 
 export function shouldRegisterInternalOrTestUserFromBrowser(): boolean {
@@ -58,8 +66,4 @@ export function shouldRegisterSyntheticAccount(input: {
     shouldRegisterInternalOrTestUserFromEmail(input.email) ||
     isSyntheticAccountEmail(input.email)
   );
-}
-
-export function syntheticAccountPosthogRegistration(): Record<string, boolean> {
-  return syntheticAccountPosthogFlags();
 }

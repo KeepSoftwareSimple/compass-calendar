@@ -98,7 +98,6 @@ describe("EventGrid", () => {
     render(
       <EventGrid
         allDayEventsLayer={<div />}
-        allDayGridOffsetTopPx={123}
         allDayRowsCount={3}
         gridRefs={createGridRefs()}
         timedEventsLayer={<div />}
@@ -113,7 +112,7 @@ describe("EventGrid", () => {
     );
 
     const allDayRow = screen.getByRole("region", { name: "All-day events" });
-    expect(getComputedStyle(allDayRow).height).toBe("97px");
+    expect(getComputedStyle(allDayRow).height).toBe("98px");
     expect(getComputedStyle(allDayRow).minHeight).toBe("75px");
   });
 
@@ -316,5 +315,12 @@ describe("EventGrid", () => {
     expect(isEventGridLoading(false, true, true)).toBe(true);
     expect(isEventGridLoading(false, true, false)).toBe(false);
     expect(isEventGridLoading(false, false, true)).toBe(false);
+  });
+
+  it("hides the loader while a remote read waits on sign-in (#5033)", () => {
+    // The query is disabled, so it stays pending forever; the loader must not.
+    expect(isEventGridLoading(true, false, false, true)).toBe(false);
+    expect(isEventGridLoading(false, true, true, true)).toBe(false);
+    expect(isEventGridLoading(true, false, false, false)).toBe(true);
   });
 });

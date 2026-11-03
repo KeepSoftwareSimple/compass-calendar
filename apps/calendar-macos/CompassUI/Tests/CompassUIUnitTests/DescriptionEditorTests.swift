@@ -37,7 +37,7 @@ final class DescriptionEditorTests: XCTestCase {
 
     func testPartialSelectionBulletsOnlySelectedLinesInHardBreakParagraph() {
         var html =
-            "<p>PLACES<br>Magpie Art Supply, LLC<br>Paper and Grace<br>Sacks Thrift Store<br>Salvation Army<br>UFS BZN</p>"
+            "<p>LIST<br>- Frames<br>- Art supplies</p><p>PLACES<br>Magpie Art Supply, LLC<br>Paper and Grace<br>Sacks Thrift Store<br>Salvation Army<br>UFS BZN</p>"
         let coordinator = DescriptionEditorView.Coordinator(html: Binding(get: { html }, set: { html = $0 }))
         let editor = DescriptionTextView()
         coordinator.textView = editor
@@ -52,7 +52,7 @@ final class DescriptionEditorTests: XCTestCase {
         XCTAssertTrue(html.contains("<ul>"))
         XCTAssertEqual(html.components(separatedBy: "<li>").count - 1, 5)
         XCTAssertTrue(html.contains("PLACES"))
-        XCTAssertFalse(html.contains("- Frames"))
+        XCTAssertTrue(html.contains("<p>LIST<br>- Frames<br>- Art supplies</p>"))
 
         editor.toggleList(ordered: false)
         XCTAssertFalse(html.contains("<ul>"))
@@ -150,7 +150,9 @@ final class DescriptionEditorTests: XCTestCase {
                 .link: URL(string: "https://two.example/b")!,
             ])
         )
-        XCTAssertTrue(editor.openDescriptionLink(at: 1))
+        var openedURLs: [URL] = []
+        XCTAssertTrue(editor.openDescriptionLink(at: 1, openURL: { openedURLs.append($0) }))
+        XCTAssertEqual(openedURLs.map(\.absoluteString), ["https://two.example/b"])
     }
 
     func testBookingManagementLinksSkipHintSlotAttachments() {

@@ -26,6 +26,7 @@ import {
 import { useCalendarViewShortcuts } from "@web/grid/shortcuts/useCalendarViewShortcuts";
 import { NotificationPermissionBannerGate } from "@web/notifications/NotificationPermissionBannerGate";
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
+import { useCalendarUiFocusLeftShortcut } from "@web/shortcuts/ui-focus/useUiFocusShortcuts";
 import { TimezoneMismatchBannerGate } from "@web/timezone/TimezoneMismatchBannerGate";
 import { DayCalendarGrid } from "@web/views/Day/components/Calendar/DayCalendarGrid";
 import { Header } from "@web/views/Day/components/Header/Header";
@@ -63,6 +64,7 @@ export const DayViewContent = memo(() => {
   useDayEvents(dateInView);
 
   useFocusSidebarShortcut();
+  useCalendarUiFocusLeftShortcut(focusFirstDayCalendarEvent);
   useSidebarShortcuts();
   useAttachPointerIntentTracker();
   const isTrialing = useIsTrialing();
@@ -98,7 +100,6 @@ export const DayViewContent = memo(() => {
   useCalendarViewShortcuts({
     onCreateTimedEvent: handleCreateTimedEvent,
     onCreateAllDayEvent: handleCreateAllDayEvent,
-    onFocusCalendar: focusFirstDayCalendarEvent,
     onNextPeriod: navigateToNextDay,
     onPrevPeriod: navigateToPreviousDay,
     onGoToToday: handleGoToToday,
@@ -127,7 +128,7 @@ export const DayViewContent = memo(() => {
       <div
         id={ID_MAIN}
         ref={mainRef}
-        className="flex h-screen flex-1 flex-col overflow-hidden bg-background pt-5 pl-8 transition-[width] duration-200 ease-out motion-reduce:transition-none"
+        className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-background pt-5 pl-4 transition-[width] duration-200 ease-out motion-reduce:transition-none xl:pl-8"
       >
         <Header />
         <CalendarConnectionBannerGate />

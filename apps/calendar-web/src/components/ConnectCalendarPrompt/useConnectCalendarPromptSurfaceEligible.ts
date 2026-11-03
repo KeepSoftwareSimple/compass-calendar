@@ -5,7 +5,7 @@ import {
   useConnectAppleStore,
 } from "@web/auth/providers/connect-apple.store";
 import {
-  selectMissingPermissionsProvider,
+  selectIsMissingPermissionsOpen,
   useMissingPermissionsStore,
 } from "@web/auth/providers/missing-permissions.store";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
@@ -45,8 +45,9 @@ export function useConnectCalendarPromptSurfaceEligible(
   const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
   const isAboutOpen = useSettingsStore(selectIsAboutOpen);
   const isAppleFormOpen = useConnectAppleStore(selectConnectAppleOpen);
-  const isMissingPermissionsOpen =
-    useMissingPermissionsStore(selectMissingPermissionsProvider) !== null;
+  const isMissingPermissionsOpen = useMissingPermissionsStore(
+    selectIsMissingPermissionsOpen,
+  );
 
   return selectConnectCalendarPromptSurfaceEligible({
     authenticated,

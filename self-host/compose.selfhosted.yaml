@@ -3,7 +3,11 @@
 # profile-less cloud/Atlas deploys that have no mongo service in the
 # base compose.yaml.
 services:
-  backend:
+  backend-a:
+    depends_on:
+      mongo:
+        condition: service_healthy
+  backend-b:
     depends_on:
       mongo:
         condition: service_healthy

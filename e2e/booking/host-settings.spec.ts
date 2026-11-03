@@ -596,7 +596,7 @@ test("sidebar nudge opens Meeting settings and hides once the page is live", asy
   );
 });
 
-test("sidebar nudge M shortcut opens Meeting settings", async ({ page }) => {
+test("sidebar nudge / shortcut opens Meeting settings", async ({ page }) => {
   await prepareSignedInBookingSettingsPage(page, {
     configured: false,
     openSettings: false,
@@ -607,9 +607,9 @@ test("sidebar nudge M shortcut opens Meeting settings", async ({ page }) => {
   await expect(nudge).toBeVisible();
   await expect(
     nudge.getByRole("button", { name: "Set up meeting page" }),
-  ).toContainText("M");
+  ).toContainText("/");
 
-  await page.keyboard.press("M");
+  await page.keyboard.press("/");
 
   const settingsDialog = page.getByRole("dialog", { name: "Settings" });
   await expect(settingsDialog).toBeVisible();

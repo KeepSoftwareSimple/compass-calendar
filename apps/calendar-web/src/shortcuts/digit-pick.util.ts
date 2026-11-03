@@ -20,6 +20,7 @@ const PICK_CODES = [
 ];
 
 import { PICK_KEY_LABELS as CORE_PICK_KEY_LABELS } from "@core/shortcuts/digit-pick.constants";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 
 export const PICK_KEY_LABELS = [...CORE_PICK_KEY_LABELS];
 
@@ -56,7 +57,7 @@ export function physicalDigitIndex(
 export function digitPickIndex(
   event: Pick<KeyboardEvent, "code" | "key" | "ctrlKey" | "metaKey" | "altKey">,
 ): number | null {
-  if (event.ctrlKey || event.metaKey || event.altKey) return null;
+  if (hasCommandModifier(event)) return null;
 
   return physicalDigitIndex(event);
 }

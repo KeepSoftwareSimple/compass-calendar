@@ -84,9 +84,7 @@ public enum GridLayoutSnapshotBuilder {
             )
         }
 
-        let deckInputs = scenario.timedEvents.map {
-            TimedDeckEventInput(id: $0.eventId, startDate: $0.startDate, endDate: $0.endDate)
-        }
+        let deckInputs = timedDeckInputs(for: scenario)
         let deckLayout = TimedDeckLayoutEngine.createTimedEventLayout(
             events: deckInputs,
             hiddenEventIds: scenario.hiddenEventIds
@@ -94,6 +92,9 @@ public enum GridLayoutSnapshotBuilder {
         let deckById = Dictionary(uniqueKeysWithValues: deckLayout.map { ($0.eventId, $0) })
 
         for timed in scenario.timedEvents {
+            if timedDraftOverlay(matching: timed.eventId, in: scenario) != nil {
+                continue
+            }
             guard let deckItem = deckById[timed.eventId] else { continue }
             let columnIndex = columnIndexForEvent(
                 calendarId: timed.calendarId,
@@ -104,7 +105,8 @@ public enum GridLayoutSnapshotBuilder {
             let base = EventPositionCalculator.getTimedEventPosition(
                 EventPositionCalculator.TimedEventInput(
                     startDate: timed.startDate,
-                    endDate: timed.endDate
+                    endDate: timed.endDate,
+                    timeZone: timed.timeZone
                 ),
                 measurements: measurements,
                 visibleDates: visibleDates,
@@ -115,17 +117,27 @@ public enum GridLayoutSnapshotBuilder {
                 deckLayout: deckItem.deckLayout,
                 isHidden: deckItem.isHidden
             )
+            var cardZIndex = display.zIndex ?? 1
+            if let deckLayout = deckItem.deckLayout,
+               scenario.draftOverlay?.eventId == timed.eventId
+            {
+                cardZIndex = TimedDeckLayoutEngine.elevateTimedDeckZIndex(
+                    deckLayout: deckLayout,
+                    zIndex: cardZIndex
+                )
+            }
             cards.append(
                 makeCard(
                     eventId: timed.eventId,
                     kind: .timed,
                     label: timed.title,
                     frame: display,
-                    zIndex: display.zIndex ?? 1,
+                    zIndex: cardZIndex,
                     lookup: lookup,
                     calendarId: timed.calendarId,
                     colorHex: timed.colorHex,
-                    isHidden: deckItem.isHidden
+                    isHidden: deckItem.isHidden,
+                    isDeck: deckItem.deckLayout != nil
                 )
             )
         }
@@ -254,6 +266,44 @@ public enum GridLayoutSnapshotBuilder {
         }
     }
 
+    private static func timedDraftOverlay(
+        matching eventId: String,
+        in scenario: GridLayoutScenario
+    ) -> GridLayoutDraftOverlay? {
+        guard let draft = scenario.draftOverlay,
+              draft.eventId == eventId,
+              draft.schedule.kind == .timed
+        else { return nil }
+        return draft
+    }
+
+    private static func formattedTimedScheduleISO(
+        for draft: GridLayoutDraftOverlay
+    ) -> (start: String, end: String) {
+        (
+            CompassDateParsing.formatLikeDayjs(draft.schedule.start),
+            CompassDateParsing.formatLikeDayjs(draft.schedule.end)
+        )
+    }
+
+    private static func timedDeckInputs(for scenario: GridLayoutScenario) -> [TimedDeckEventInput] {
+        scenario.timedEvents.map { timed in
+            if let draft = timedDraftOverlay(matching: timed.eventId, in: scenario) {
+                let formatted = formattedTimedScheduleISO(for: draft)
+                return TimedDeckEventInput(
+                    id: timed.eventId,
+                    startDate: formatted.start,
+                    endDate: formatted.end
+                )
+            }
+            return TimedDeckEventInput(
+                id: timed.eventId,
+                startDate: timed.startDate,
+                endDate: timed.endDate
+            )
+        }
+    }
+
     private static func columnIndexForEvent(
         calendarId: String?,
         scenario: GridLayoutScenario,
@@ -296,7 +346,8 @@ public enum GridLayoutSnapshotBuilder {
         lookup: CalendarLookup,
         calendarId: String?,
         colorHex: String?,
-        isHidden: Bool
+        isHidden: Bool,
+        isDeck: Bool = false
     ) -> GridLayoutCardSnapshot {
         GridLayoutCardSnapshot(
             accessibilityIdentifier: GridLayoutAccessibility.eventIdentifier(eventId: eventId),
@@ -310,7 +361,8 @@ public enum GridLayoutSnapshotBuilder {
             isHiddenStrip: isHidden,
             kind: kind,
             label: label,
-            zIndex: zIndex
+            zIndex: zIndex,
+            isDeck: isDeck
         )
     }
 
@@ -376,26 +428,46 @@ public enum GridLayoutSnapshotBuilder {
             )
         }
 
-        let startISO = CompassDateParsing.formatLikeDayjs(draft.schedule.start)
-        let endISO = CompassDateParsing.formatLikeDayjs(draft.schedule.end)
+        let formatted = formattedTimedScheduleISO(for: draft)
+        let startISO = formatted.start
+        let endISO = formatted.end
         let columnIndex = columnIndexForEvent(
             calendarId: draft.calendarId,
             scenario: scenario,
             visibleDates: visibleDates,
             startDate: startISO
         )
+        let deckInputs = timedDeckInputs(for: scenario)
+        let deckLayout = TimedDeckLayoutEngine.createTimedEventLayout(
+            events: deckInputs,
+            hiddenEventIds: scenario.hiddenEventIds
+        )
+            .first(where: { $0.eventId == draft.eventId })?
+            .deckLayout
         let position = EventPositionCalculator.getTimedEventPosition(
             EventPositionCalculator.TimedEventInput(
                 startDate: startISO,
                 endDate: endISO,
-                isDraft: true
+                isDraft: deckLayout == nil
             ),
             measurements: measurements,
             visibleDates: visibleDates,
             columnIndex: scenario.layoutMode == .day ? columnIndex : nil
         )
-        var floated = position
-        floated.zIndex = 10_000
+        let display = TimedDeckLayoutEngine.applyTimedEventDisplayPosition(
+            position,
+            deckLayout: deckLayout,
+            isHidden: false
+        )
+        var floated = display
+        if let deckLayout {
+            floated.zIndex = TimedDeckLayoutEngine.elevateTimedDeckZIndex(
+                deckLayout: deckLayout,
+                zIndex: floated.zIndex ?? 1
+            )
+        } else {
+            floated.zIndex = 10_000
+        }
 
         return GridLayoutCardSnapshot(
             accessibilityIdentifier: GridLayoutAccessibility.eventIdentifier(eventId: draft.eventId),
@@ -409,7 +481,7 @@ public enum GridLayoutSnapshotBuilder {
             isHiddenStrip: false,
             kind: .timed,
             label: displayTitle,
-            zIndex: 10_000,
+            zIndex: floated.zIndex ?? 10_000,
             isDraft: true,
             showsInlineTitleEditor: draft.showsInlineTitleEditor
         )

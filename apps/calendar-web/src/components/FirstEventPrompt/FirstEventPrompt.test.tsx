@@ -1,8 +1,11 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { ID_MAIN } from "@web/common/constants/web.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
+import { BottomNoticeStack } from "@web/components/BottomNoticeStack/BottomNoticeStack";
 import {
   initialFirstEventPromptState,
   noteFirstRealEventCreated,
@@ -12,28 +15,63 @@ import {
   initialShortcutShowcaseState,
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
+import * as realUseIsNarrowSidebarLayout from "@web/components/Sidebar/hooks/useIsNarrowSidebarLayout";
 import {
   createGridEventDraft,
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import { draftActions } from "@web/events/stores/draft.store";
+import { viewActions } from "@web/events/stores/view.store";
 import {
   initialSettingsState,
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
 
-const emitViewCommand = mock(() => undefined);
+const quickCreateFirstEvent = mock(() => undefined);
 
-mock.module("@web/common/utils/dom/view-command-bus", () => ({
-  emitViewCommand,
-  onViewCommand: () => () => undefined,
-}));
-
-const { FirstEventPrompt } = await import(
-  "@web/components/FirstEventPrompt/FirstEventPrompt"
+mock.module(
+  "@web/components/FirstEventPrompt/useQuickCreateFirstEvent",
+  () => ({
+    useQuickCreateFirstEvent: () => quickCreateFirstEvent,
+  }),
 );
+
+let isNarrowSidebarLayout = false;
+let isNarrowLayoutMocked = true;
+const actualUseIsNarrowSidebarLayout =
+  realUseIsNarrowSidebarLayout.useIsNarrowSidebarLayout;
+mockModuleForFile(
+  "@web/components/Sidebar/hooks/useIsNarrowSidebarLayout",
+  realUseIsNarrowSidebarLayout,
+  {
+    useIsNarrowSidebarLayout: () =>
+      isNarrowLayoutMocked
+        ? isNarrowSidebarLayout
+        : actualUseIsNarrowSidebarLayout(),
+  },
+);
+
+afterAll(() => {
+  isNarrowLayoutMocked = false;
+});
+
+const moduleUrl = new URL(
+  `./FirstEventPrompt.tsx?test=${Math.random().toString(36).slice(2)}`,
+  import.meta.url,
+);
+const { FirstEventPrompt } = (await import(
+  moduleUrl.href
+)) as typeof import("./FirstEventPrompt");
 
 const markShowcaseSeen = () => {
   persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE, "true");
@@ -41,7 +79,8 @@ const markShowcaseSeen = () => {
 
 describe("FirstEventPrompt", () => {
   beforeEach(() => {
-    emitViewCommand.mockClear();
+    isNarrowSidebarLayout = false;
+    quickCreateFirstEvent.mockClear();
     draftActions.discard();
     useFirstEventPromptStore.setState({ ...initialFirstEventPromptState });
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
@@ -144,17 +183,123 @@ describe("FirstEventPrompt", () => {
     expect(
       screen.getByText("Your calendar is ready. Add something to it."),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Add event" })).toBeTruthy();
+    const addEvent = screen.getByRole("button", { name: "Add event" });
+    expect(addEvent).toBeTruthy();
+    expect(addEvent.className).toContain("c-button-primary");
+    expect(screen.getByText("C")).toBeTruthy();
   });
 
-  it("starts a timed draft when Add event is clicked", async () => {
+  const rectOf = (left: number, right: number) =>
+    ({
+      left,
+      right,
+      x: left,
+      width: right - left,
+      top: 0,
+      bottom: 0,
+      y: 0,
+      height: 0,
+      toJSON: () => ({}),
+    }) as DOMRect;
+
+  /** Places the stack and the main column, which ends where the sidebar begins. */
+  const withStackGeometry = (
+    geometry: { stackRight: number; mainRight: number },
+    run: () => void,
+  ) => {
+    const main = document.createElement("div");
+    main.id = ID_MAIN;
+    document.body.appendChild(main);
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+      if (this.id === ID_MAIN) return rectOf(0, geometry.mainRight);
+      if (this.classList.contains("compass-bottom-notice-stack")) {
+        return rectOf(16, geometry.stackRight);
+      }
+      return original.call(this);
+    };
+    try {
+      run();
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = original;
+      main.remove();
+    }
+  };
+
+  it("keeps the default bottom inset at 1280px when the right sidebar is open", () => {
+    markShowcaseSeen();
+    act(() => viewActions.setSidebarOpen(true));
+    withStackGeometry({ stackRight: 400, mainRight: 903 }, () => {
+      render(
+        <BottomNoticeStack>
+          <FirstEventPrompt />
+        </BottomNoticeStack>,
+      );
+
+      const stack = screen.getByRole("region", { name: "Notifications" });
+      expect(stack.getAttribute("data-clears-sidebar-footer")).toBeNull();
+      expect(stack.className).not.toContain(
+        "compass-bottom-notice-stack--clears-footer",
+      );
+    });
+  });
+
+  it("lifts the bottom stack above the footer on narrow layouts with the sidebar open", () => {
+    isNarrowSidebarLayout = true;
+    markShowcaseSeen();
+    act(() => viewActions.setSidebarOpen(true));
+    withStackGeometry({ stackRight: 344, mainRight: 96 }, () => {
+      render(
+        <BottomNoticeStack>
+          <FirstEventPrompt />
+        </BottomNoticeStack>,
+      );
+
+      const stack = screen.getByRole("region", { name: "Notifications" });
+      expect(stack).toHaveAttribute("data-clears-sidebar-footer", "true");
+      expect(
+        screen.getByRole("complementary", { name: "Create your first event" }),
+      ).toBeTruthy();
+    });
+  });
+
+  it("uses the shared bottom stack width on narrow layouts when the sidebar is closed", () => {
+    isNarrowSidebarLayout = true;
+    markShowcaseSeen();
+    act(() => viewActions.setSidebarOpen(false));
+    withStackGeometry({ stackRight: 344, mainRight: 360 }, () => {
+      render(
+        <BottomNoticeStack>
+          <FirstEventPrompt />
+        </BottomNoticeStack>,
+      );
+
+      expect(
+        screen.getByRole("complementary", { name: "Create your first event" }),
+      ).toBeTruthy();
+      const stack = screen.getByRole("region", { name: "Notifications" });
+      expect(stack.getAttribute("data-clears-sidebar-footer")).toBeNull();
+    });
+  });
+
+  it("creates the default first event when Add event is clicked", async () => {
     const user = userEvent.setup();
     markShowcaseSeen();
     render(<FirstEventPrompt />);
 
     await user.click(screen.getByRole("button", { name: "Add event" }));
 
-    expect(emitViewCommand).toHaveBeenCalledWith("CREATE_TIMED_DRAFT");
+    expect(quickCreateFirstEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates the default first event when C is pressed", async () => {
+    const user = userEvent.setup();
+    markShowcaseSeen();
+    render(<FirstEventPrompt />);
+
+    await user.keyboard("c");
+
+    expect(quickCreateFirstEvent).toHaveBeenCalledTimes(1);
   });
 
   it("celebrates on the first real event, then retires the card for good", async () => {

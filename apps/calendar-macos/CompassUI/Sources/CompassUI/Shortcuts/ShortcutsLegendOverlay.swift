@@ -16,14 +16,14 @@ public struct ShortcutsLegendOverlay: View {
     public var body: some View {
         if legendStore.isOpen {
             ZStack {
-                theme.overlayBackdropColor
+                theme.panelBackdropColor
                     .ignoresSafeArea()
                     .onTapGesture { legendStore.close() }
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Keyboard shortcuts")
-                            .font(.rubik(16))
+                            .font(.rubik(15, weight: .medium))
                             .foregroundStyle(theme.textColor)
                         Spacer()
                         Button("Close") { legendStore.close() }
@@ -53,10 +53,14 @@ public struct ShortcutsLegendOverlay: View {
                     .frame(maxHeight: 420)
                 }
                 .padding(16)
-                .frame(maxWidth: 560)
+                .frame(maxWidth: 640)
                 .background(theme.surfacePanelColor)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .accessibilityIdentifier("compass-native-shortcuts-legend")
+                .shadow(color: theme.shadowDefaultColor, radius: 24, x: 0, y: 16)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Keyboard shortcuts")
+                .accessibilityIdentifier("compass-native-shortcuts-panel")
+                .padding(.horizontal, 24)
             }
             .focusOnAppear($searchFocused)
         }

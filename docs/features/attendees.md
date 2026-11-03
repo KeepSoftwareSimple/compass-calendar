@@ -1,9 +1,10 @@
 # Attendees, Contacts, And RSVP
 
 Compass supports adding/removing guests on events you organize on a
-**writable Google calendar**, an optional Google-contacts suggestion picker
-for that guest field, and RSVP (accepted/declined/tentative) to events
-you're invited to — per occurrence or for a whole series. Compass never
+**writable Google calendar**, guest suggestions for that field (past guests
+from the user's calendars, plus contacts from accounts that opted in), and
+RSVP (accepted/declined/tentative) to events you're invited to — per
+occurrence or for a whole series. Compass never
 sends email itself; Google emails guests via `sendUpdates` when asked to.
 
 Non-organizer guest-list editing (`guestsCanModify`) is out of scope for v1:
@@ -194,28 +195,38 @@ asserting the list is unchanged.
 
 Flow:
 
-1. Per-connection `grantedScopes` (already the mechanism incremental
-   Google auth uses) derive a `suggestContacts` capability
-   (`google-capabilities.ts`), surfaced on `GoogleSyncConnectionSummary` /
-   `selectCanSuggestContacts` in the web's `user-metadata.store.ts`.
-2. `AttendeeField` gets a real `suggestionSource` only when the capability
-   is true; otherwise it falls back to a plain email-chip input with no
-   network calls (`emptySuggestionSource`), and a non-nagging
-   "Enable contact suggestions" nudge can render in the listbox footer
-   (`EnableContactSuggestionsNudge.tsx`, frequency rule pinned in
+1. Suggestions do not depend on the contacts grant. Sync's
+   `GET /internal/contacts/suggestions` first searches the user's own synced
+   events for past guests (`EventRepository.searchPastGuests`: email or name
+   contains the query, most-invited first, the user's own account emails
+   excluded). That works for every account and provider with no extra
+   permission, like location autofill.
+2. Contacts are added after past guests, from each connection whose
+   `grantedScopes` derive the `suggestContacts` capability
+   (`google-capabilities.ts`, `microsoft-capabilities.ts`), deduped by email.
+   Each account is searched independently: a throttled or revoked account is
+   skipped with a static warn line and never blanks the others.
+3. `AttendeeField` gets a suggestion source whenever the user has any
+   connection. While a lookup runs the listbox says "Searching..." (a typed
+   full email stays addable with Enter); text that matches nobody says "No
+   matches. Type their full email."
+4. When a search finds nobody and some account could add contacts but has
+   not (`selectContactsOfferConnection`; providers per
+   `offersContactsFeature`), the listbox footer says "Missing someone? Turn
+   on contacts for <that account>" (`EnableContactSuggestionsNudge.tsx`).
+   Consent is pinned to that connection, so sync sends a login hint and
+   rejects a different account (`accountMismatch`). Frequency is pinned in
    `contact-nudge.gate.test.ts`: at most once per session, dismissal
-   persisted forever).
-3. Typing debounces 250ms (`CONTACT_SUGGESTION_DEBOUNCE_MS`) and requires
+   persisted forever.
+5. Typing debounces 250ms (`CONTACT_SUGGESTION_DEBOUNCE_MS`) and requires
    ≥2 characters (`CONTACT_SUGGESTION_QUERY_MIN_LENGTH`) before querying
    `GET /api/contacts/suggestions?q=` → backend `contacts.controller.ts`
-   → sync `GET /internal/contacts/suggestions` (principal-scoped) →
-   `google-people.adapter.ts` → the People API, ranked and merged. Every
-   layer degrades a failure to a typed empty result (backend: `[]` under a
-   200, never a 4xx/5xx bubbled to the UI) so a sync outage never fires an
-   error toast per keystroke. `e2e/attendees/contact-suggestions.spec.ts`
-   exercises the full min-length + debounce + pick-a-suggestion path
-   against a stubbed suggestions endpoint.
-4. Privacy: neither the query string nor any suggestion/contact content is
+   → sync. The backend still degrades any sync failure to `[]` under a 200,
+   so a sync outage never fires an error toast per keystroke.
+   `e2e/attendees/contact-suggestions.spec.ts` exercises the full
+   min-length + debounce + pick-a-suggestion path against a stubbed
+   suggestions endpoint.
+6. Privacy: neither the query string nor any suggestion/contact content is
    ever logged, on either the sync or backend side — both emit only static
    log lines built from content-free error facts
    (`kind`/`status`/`correlationId`); pinned literally in

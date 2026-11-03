@@ -2,9 +2,8 @@ import { type Editor } from "@tiptap/react";
 import { useCallback } from "react";
 import { KEYMAP } from "@core/shortcuts/keymap";
 import {
-  findLinkElement,
-  linkAtCaret,
   openDescriptionLink,
+  resolveDescriptionLinkTarget,
 } from "@web/components/DescriptionEditor/description-link.util";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
@@ -17,10 +16,11 @@ export function useDescriptionEditorOpenLinkAtCaretShortcut(
   const handler = useCallback(
     (event: KeyboardEvent) => {
       if (!editor || !editorRoot) return;
-      const link =
-        linkAtCaret(editor) ??
-        findLinkElement(editorRoot, event.target) ??
-        findLinkElement(editorRoot, document.activeElement);
+      const link = resolveDescriptionLinkTarget(
+        editor,
+        editorRoot,
+        event.target,
+      );
       if (!link?.href) return;
       openDescriptionLink(link.href);
       recordHandledShortcutInvocation("edit-open-description-link");

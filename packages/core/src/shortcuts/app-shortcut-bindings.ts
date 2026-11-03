@@ -72,6 +72,7 @@ export const APP_SHORTCUT_BINDINGS = {
     hotkey: VIEW_SHORTCUT_KEYS.life.toUpperCase(),
     keycaps: [VIEW_SHORTCUT_KEYS.life],
   },
+  navToggleAllDay: { hotkey: "Shift+A", keycaps: ["Shift", "A"] },
   createAllDay: { hotkey: "Shift+C", keycaps: ["Shift", "C"] },
   createPlaceDiscard: { hotkey: "Escape", keycaps: ["Escape"] },
   focusSidebar: { hotkey: "I", keycaps: [letterKeycap("I")] },
@@ -106,9 +107,6 @@ export const APP_SHORTCUT_BINDINGS = {
   editOpenDescriptionLink: {
     hotkey: KEYMAP.openDescriptionLinkAtCaret.hotkey,
     keycaps: [...KEYMAP.openDescriptionLinkAtCaret.keycaps],
-  },
-  editOpenDescriptionLinkDigit: {
-    keycaps: [...KEYMAP.openDescriptionLinkByDigit.keycaps],
   },
   editFieldLeaderInForm: { hotkey: "Mod+E", keycaps: ["Mod+E"] },
   editFormActions: { hotkey: "Mod+0", keycaps: hotkeyKeycaps("Mod+0") },
@@ -148,6 +146,7 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "nav-week-view": APP_SHORTCUT_BINDINGS.navWeekView.keycaps,
   "nav-life-view": APP_SHORTCUT_BINDINGS.navLifeView.keycaps,
   "create-timed": [KEYMAP.createEvent.hotkey.toLowerCase()],
+  "nav-toggle-allday": APP_SHORTCUT_BINDINGS.navToggleAllDay.keycaps,
   "create-allday": APP_SHORTCUT_BINDINGS.createAllDay.keycaps,
   "create-place-discard": APP_SHORTCUT_BINDINGS.createPlaceDiscard.keycaps,
   "focus-sidebar": APP_SHORTCUT_BINDINGS.focusSidebar.keycaps,
@@ -174,8 +173,6 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "edit-copy-meeting-link": APP_SHORTCUT_BINDINGS.editCopyMeetingLink.keycaps,
   "edit-open-description-link":
     APP_SHORTCUT_BINDINGS.editOpenDescriptionLink.keycaps,
-  "edit-open-description-link-digit":
-    APP_SHORTCUT_BINDINGS.editOpenDescriptionLinkDigit.keycaps,
   "edit-field-leader-in-form": [
     ...APP_SHORTCUT_BINDINGS.editFieldLeaderInForm.keycaps,
   ],

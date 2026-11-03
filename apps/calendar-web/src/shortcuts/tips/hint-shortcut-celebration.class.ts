@@ -1,4 +1,4 @@
-import { hintShortcutPartLabel } from "@core/shortcuts/hint-shortcut-celebration.util";
+import { hintShortcutCelebrationKeyForPart } from "@core/shortcuts/hint-shortcut-celebration.util";
 import {
   selectHintShortcutCelebrationKey,
   useHintShortcutCelebrationStore,
@@ -11,7 +11,7 @@ export function hintShortcutCelebrationClassForPart(
   activeKey: string | null,
 ): string {
   if (!hintId || !activeKey) return "";
-  const partKey = `${hintId}:${hintShortcutPartLabel(part)}`;
+  const partKey = hintShortcutCelebrationKeyForPart(hintId, part);
   return partKey === activeKey ? "c-keycap-next" : "";
 }
 

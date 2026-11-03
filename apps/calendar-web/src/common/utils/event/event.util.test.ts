@@ -16,11 +16,16 @@ import {
   addId,
   focusCalendarEventElement,
   focusCalendarEventElementAfterDiscard,
+  getFocusedCalendarEvent,
   isEventInRange,
   refocusEventElement,
 } from "@web/common/utils/event/event.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
-import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
+import {
+  GRID_EVENT_READ_ONLY_ATTRIBUTE,
+  WEEK_INTERACTION_EVENT_ID_ATTRIBUTE,
+  WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE,
+} from "@web/grid/interaction/view-event-registry";
 import {
   afterEach,
   beforeEach,
@@ -88,6 +93,65 @@ describe("handleError", () => {
     // backend error are different situations and must not dedupe on the
     // same toastId.
     expect(EVENT_SAVE_UNAVAILABLE_TOAST_ID).not.toBe(GENERIC_ERROR_TOAST_ID);
+  });
+
+  describe("when the backend never answered", () => {
+    const setOnline = (value: boolean) =>
+      Object.defineProperty(navigator, "onLine", {
+        configurable: true,
+        value,
+      });
+
+    afterEach(() => setOnline(true));
+
+    it("does not blame the user's connection when Compass is restarting", () => {
+      // Regression: a save during a production deploy hit the backend's
+      // restart window (gateway 502) while the user was online, and the toast
+      // said "check your connection".
+      setOnline(true);
+
+      handleError(createServerError(Status.BAD_GATEWAY));
+
+      expect(mocks.error.mock.calls[0]?.[0]).toBe(
+        "Couldn't reach Compass, it may be restarting. Your change was not applied.",
+      );
+      expect(mocks.error.mock.calls[0]?.[1]).toMatchObject({
+        toastId: EVENT_SAVE_UNAVAILABLE_TOAST_ID,
+      });
+    });
+
+    it("says the user is offline only when the browser reports offline", () => {
+      setOnline(false);
+      const error = new TypeError("Failed to fetch");
+
+      handleError(error);
+
+      expect(mocks.error.mock.calls[0]?.[0]).toBe(
+        "Couldn't save, you're offline. Your change was not applied.",
+      );
+    });
+
+    it("offers Try again once the automatic retries are used up", () => {
+      setOnline(true);
+      const onRetry = mock(() => {});
+      const error = new Error("Request failed");
+      error.name = "ApiError";
+
+      handleError(error, onRetry);
+
+      const [content, options] = mocks.error.mock.calls[0] ?? [];
+      expect(options).toMatchObject({
+        toastId: EVENT_SAVE_UNAVAILABLE_TOAST_ID,
+      });
+      const props = (
+        content as { props: { message: string; onRetry: () => void } }
+      ).props;
+      expect(props.message).toBe(
+        "Couldn't reach Compass, it may be restarting. Your change was not applied.",
+      );
+      props.onRetry();
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("shows a storage toast on quota or blocked local writes instead of the raw exception", () => {
@@ -569,5 +633,61 @@ describe("refocusEventElement", () => {
 
     expect(document.activeElement).not.toBe(staleElement);
     expect(flushes).toBeLessThanOrEqual(31);
+  });
+});
+
+describe("getFocusedCalendarEvent", () => {
+  it("returns the stamped card when focus sits on a child node", () => {
+    const card = document.createElement("div");
+    card.setAttribute(WEEK_INTERACTION_EVENT_ID_ATTRIBUTE, "event-1");
+    card.setAttribute(WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE, "all-day");
+    const title = document.createElement("span");
+    title.tabIndex = -1;
+    card.append(title);
+    document.body.append(card);
+    title.focus();
+
+    const focused = getFocusedCalendarEvent();
+    expect(focused?.eventId).toBe("event-1");
+    expect(focused?.element).toBe(card);
+  });
+
+  it("reads the event id from the keydown target when activeElement is elsewhere", () => {
+    const card = document.createElement("div");
+    card.setAttribute(WEEK_INTERACTION_EVENT_ID_ATTRIBUTE, "event-2");
+    card.setAttribute(WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE, "timed");
+    document.body.append(card);
+
+    const scroller = document.createElement("div");
+    scroller.tabIndex = 0;
+    document.body.append(scroller);
+    scroller.focus();
+
+    const keyboardEvent = new KeyboardEvent("keydown", {
+      key: "x",
+      bubbles: true,
+    });
+    Object.defineProperty(keyboardEvent, "target", { value: card });
+
+    const focused = getFocusedCalendarEvent(keyboardEvent);
+    expect(focused?.eventId).toBe("event-2");
+    expect(focused?.element).toBe(card);
+  });
+
+  it("falls back to a read-only card that is never drag/resize registered", () => {
+    const card = document.createElement("button");
+    card.setAttribute(WEEK_INTERACTION_EVENT_ID_ATTRIBUTE, "read-only-event");
+    card.setAttribute(WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE, "all-day");
+    card.setAttribute(GRID_EVENT_READ_ONLY_ATTRIBUTE, "true");
+    Object.defineProperty(card, "offsetParent", {
+      configurable: true,
+      get: () => document.body,
+    });
+    document.body.append(card);
+    card.focus();
+
+    const focused = getFocusedCalendarEvent();
+    expect(focused?.eventId).toBe("read-only-event");
+    expect(focused?.element).toBe(card);
   });
 });

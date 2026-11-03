@@ -114,6 +114,14 @@ describe("MissingPermissionsModal", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("renders nothing while the Google signup recovery screen is active", () => {
+    missingPermissionsActions.openGoogleSignupRecovery([
+      "https://www.googleapis.com/auth/calendar.events",
+    ]);
+    renderModal();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("lists the requested permissions for the provider", () => {
     missingPermissionsActions.open("google");
     renderModal();

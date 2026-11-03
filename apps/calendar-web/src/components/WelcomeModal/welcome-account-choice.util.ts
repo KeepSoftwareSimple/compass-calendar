@@ -16,14 +16,9 @@ export function welcomeTrialPrimaryLabel(kind: ProviderKind): string {
   return `Start free trial with ${providerDisplayName(kind)}`;
 }
 
-/** Short trial terms for welcome screen 3 (same facts as `BillingGateModal`). */
+/** Short trial terms for welcome screen 3 (same facts as `formatTrialStartPriceLine`). */
 export function welcomeTrialCardTermsLine(
   trialLengthDays: number = BILLING_PLAN.TRIAL_LENGTH_DAYS,
 ): string {
   return `${trialLengthDays}-day free trial. Card required, no charge until it ends.`;
-}
-
-/** Signup trial step only (title already states the trial length). */
-export function signupTrialStepTermsLine(): string {
-  return "Card required. No charge until the trial ends.";
 }

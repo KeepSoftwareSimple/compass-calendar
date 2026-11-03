@@ -166,6 +166,7 @@ enum HTMLFragmentAppKit {
                 ]
                 if let link, let url = URL(string: link) {
                     attrs[.link] = url
+                    attrs[.toolTip] = link
                     attrs[.foregroundColor] = linkColor
                     attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue
                 }

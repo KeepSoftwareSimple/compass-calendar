@@ -5,7 +5,6 @@ import * as browserTimezone from "@web/timezone/browser-timezone";
 import {
   getEffectiveTimeZone,
   resetEffectiveTimeZoneStoreForTests,
-  setEffectiveTimeZoneForTests,
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
@@ -26,7 +25,7 @@ describe("GridTimezoneLabel", () => {
   it("is a focusable button named with the effective zone abbreviation", async () => {
     const user = userEvent.setup();
     act(() => {
-      setEffectiveTimeZoneForTests("America/Denver");
+      setPinnedTimeZone("America/Denver");
     });
 
     render(
@@ -49,7 +48,7 @@ describe("GridTimezoneLabel", () => {
 
   it("updates the label when the effective timezone changes", () => {
     act(() => {
-      setEffectiveTimeZoneForTests("UTC");
+      setPinnedTimeZone("UTC");
     });
 
     render(<GridTimezoneLabel />);
@@ -58,7 +57,7 @@ describe("GridTimezoneLabel", () => {
     ).toBeInTheDocument();
 
     act(() => {
-      setEffectiveTimeZoneForTests("Asia/Kolkata");
+      setPinnedTimeZone("Asia/Kolkata");
     });
 
     expect(
@@ -102,7 +101,7 @@ describe("GridTimezoneLabel", () => {
 
     try {
       act(() => {
-        setEffectiveTimeZoneForTests("Pacific/Kiritimati");
+        setPinnedTimeZone("Pacific/Kiritimati");
       });
 
       render(<GridTimezoneLabel />);
@@ -173,7 +172,7 @@ describe("GridTimezoneLabel", () => {
 
   it("shows the Esc exit hint on the second timezone label", async () => {
     act(() => {
-      setEffectiveTimeZoneForTests("America/New_York");
+      setPinnedTimeZone("America/New_York");
       setTimeTravelZone("America/Denver");
     });
 
@@ -191,7 +190,7 @@ describe("GridTimezoneLabel", () => {
 
   it("anchors the exit hint on the second timezone button itself", () => {
     act(() => {
-      setEffectiveTimeZoneForTests("America/New_York");
+      setPinnedTimeZone("America/New_York");
       setTimeTravelZone("America/Denver");
     });
 
@@ -213,7 +212,7 @@ describe("GridTimezoneLabel", () => {
 
   it("shows both abbreviations without a remove control while a second zone is active", () => {
     act(() => {
-      setEffectiveTimeZoneForTests("America/New_York");
+      setPinnedTimeZone("America/New_York");
       setTimeTravelZone("America/Denver");
     });
 

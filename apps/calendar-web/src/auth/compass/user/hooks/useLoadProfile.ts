@@ -8,8 +8,7 @@ import {
   hasUserEverAuthenticated,
   markUserAsAuthenticated,
 } from "@web/auth/compass/state/auth.state.util";
-import { showSessionExpiredToast } from "@web/common/utils/toast/error-toast.util";
-import { openAuthModalFromOutsideRouter } from "@web/common/utils/toast/session-expired.toast";
+import { openAuthModalFromOutsideRouter } from "@web/components/AuthModal/open-auth-modal.util";
 
 export type UseLoadProfileResult = {
   email: string | null;
@@ -58,10 +57,8 @@ export function useLoadProfile(
 
         if (isUnauthorized) {
           if (hasUserEverAuthenticated()) {
-            showSessionExpiredToast();
-            // The calendar behind the toast shows local demo events, which a
-            // returning user reads as lost data — and a dismissed toast would
-            // strand them there. Seat the login form front and center instead.
+            // One clean prompt: seat the login form front and center. No
+            // toast, since notices stay hidden while the modal is open.
             void openAuthModalFromOutsideRouter("login");
           }
           return;

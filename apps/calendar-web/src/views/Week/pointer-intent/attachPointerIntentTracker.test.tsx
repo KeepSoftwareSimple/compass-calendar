@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as posthogBootstrap from "@web/auth/posthog/posthog.bootstrap";
@@ -193,12 +193,38 @@ describe("attachPointerIntentTracker", () => {
     await user.pointer({ keys: "[/MouseLeft]", target: column });
 
     const attempt = usePointerHintStore.getState().latestAttempt;
-    expect(attempt?.shortcutKey).toEqual(["Shift", "C"]);
-    expect(attempt?.message).toMatch(/all-day event/i);
+    // Week view teaches the mouse-free path: pick the day, then create.
+    expect(attempt?.keys).toEqual([
+      ["Shift", "T"],
+      ["Shift", "C"],
+    ]);
+    expect(attempt?.message).toBe(
+      "Press {0} to pick Tuesday, then {1} for an all-day event.",
+    );
+    expect(attempt?.tone).toBe("soft");
     expect(capture).toHaveBeenCalledWith(
       "pointer_intent_detected",
       expect.objectContaining({ intent: "allday-click" }),
     );
+  });
+
+  it("does not treat the all-day row toggle as an empty all-day click", async () => {
+    const user = userEvent.setup();
+    document.body.innerHTML = `
+      <section id="${ID_GRID_ALLDAY_ROW}">
+        <div id="${ID_ALLDAY_COLUMNS}">
+          <div data-grid-date="2026-09-29" style="width: 200px; height: 40px">
+            <button data-allday-row-control type="button">+2 more</button>
+          </div>
+        </div>
+      </section>
+    `;
+    const button = screen.getByRole("button", { name: "+2 more" });
+
+    await user.pointer({ keys: "[MouseLeft>]", target: button });
+    await user.pointer({ keys: "[/MouseLeft]", target: button });
+
+    expect(usePointerHintStore.getState().latestAttempt).toBeNull();
   });
 
   it("shows the keyboard-create hint on an intentional empty timed-grid click (do not remove)", async () => {
@@ -284,6 +310,36 @@ describe("attachPointerIntentTracker", () => {
     expect(
       track.mock.calls.some(([event]) => event === "pointer_hint_shown"),
     ).toBe(false);
+  });
+
+  it("pulses slot-click at Explorer on every empty timed-grid click", async () => {
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "edit-open": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 10, recentImpressions: 0 },
+        "create-typed-time": { invocations: 10, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    const user = userEvent.setup();
+    const column = document.getElementById(ID_GRID_COLUMNS_TIMED)!
+      .firstElementChild as HTMLElement;
+
+    for (let click = 0; click < 4; click += 1) {
+      usePointerHintStore.setState(initialPointerHintState, true);
+      await user.pointer({
+        keys: "[MouseLeft>]",
+        target: column,
+        coords: { clientY: 720 },
+      });
+      expect(usePointerHintStore.getState().pulse).toBe(1);
+      expect(
+        track.mock.calls.some(([event]) => event === "pointer_hint_shown"),
+      ).toBe(true);
+    }
   });
 
   it("records pointer_intent_detected when muted but not pointer_hint_shown", async () => {

@@ -129,7 +129,7 @@ export function WelcomeLinks({
   }
 
   return (
-    <div className="flex items-center justify-between border-border border-t pt-4">
+    <div className="flex w-full flex-col items-center gap-3 border-border border-t pt-4">
       <div className="flex items-center gap-3">
         {SOCIAL_LINKS.map(({ id, label, href }, index) => {
           const SocialIcon = SOCIAL_ICONS[id];
@@ -141,24 +141,18 @@ export function WelcomeLinks({
               href={href}
               label={label}
               flashedKey={flashedKey}
-              className="c-focus-ring inline-flex items-center gap-1 text-text-muted transition-colors hover:text-text"
+              className="c-focus-ring inline-flex shrink-0 items-center gap-1 text-text-muted transition-colors hover:text-text"
             >
               <SocialIcon size={18} weight="bold" />
             </JumpAnchor>
           );
         })}
       </div>
-      <div className="flex items-center gap-4 text-text-muted text-xs">
-        <a
-          href={ROOT_ROUTES.SHORTCUTS}
-          className="c-focus-ring inline-flex items-center gap-1 underline-offset-4 hover:text-text hover:underline"
-        >
+      <div className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-1 text-text-muted text-xs">
+        <a href={ROOT_ROUTES.SHORTCUTS} className={linkClassName}>
           Shortcuts
         </a>
-        <a
-          href={PRACTICE_LINK.href}
-          className="c-focus-ring inline-flex items-center gap-1 underline-offset-4 hover:text-text hover:underline"
-        >
+        <a href={PRACTICE_LINK.href} className={linkClassName}>
           {PRACTICE_LINK.label}
         </a>
         <JumpAnchor
@@ -166,7 +160,7 @@ export function WelcomeLinks({
           digit={PRICING_LINK.shortcut}
           href={PRICING_LINK.href}
           flashedKey={flashedKey}
-          className="c-focus-ring inline-flex items-center gap-1 underline-offset-4 hover:text-text hover:underline"
+          className={linkClassName}
         >
           {PRICING_LINK.label}
         </JumpAnchor>
@@ -177,7 +171,7 @@ export function WelcomeLinks({
             digit={digit}
             href={href}
             flashedKey={flashedKey}
-            className="c-focus-ring inline-flex items-center gap-1 underline-offset-4 hover:text-text hover:underline"
+            className={linkClassName}
           >
             {label}
           </JumpAnchor>

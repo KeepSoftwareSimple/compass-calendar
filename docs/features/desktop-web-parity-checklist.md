@@ -38,7 +38,7 @@ This checklist compares **apps/calendar-web** (reference UI) with **apps/calenda
 
 | Item | Web | macOS | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Font family | Rubik (`index.css` `@theme`) | `Resources/Fonts/Rubik-Variable.ttf`, `.rubik()` | ✅ | |
+| Font family | Rubik (`index.css` `@theme`) | `Resources/Fonts/Rubik-Variable.ttf`, `.rubik()` | ✅ | Fixed XcodeGen packaging: the previous resource declaration omitted every font from the built app, causing system fallback. Font files now appear in the built bundle; fresh local launch inspected. Broader typography and layout acceptance remains partial |
 | Base size 14px | `text-sm` / body | `RootView` `.font(.rubik(14))` | ✅ | |
 | Scale (10–20px utilities) | Tailwind `--font-size-*` | Per-view hardcoded point sizes | 🟡 | No shared typography export yet |
 | VT323 / Caveat (special) | Web where used | Bundled fonts | 🟡 | Spot-check Life / onboarding |
@@ -76,8 +76,8 @@ This checklist compares **apps/calendar-web** (reference UI) with **apps/calenda
 
 | Item | Web | macOS | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Calendar nav + title + sidebar toggle | In-content header row (`CalendarHeader`, `h-12`) | Unified title bar beside traffic lights (`MacTitleBarChromeMetrics`) | ✅ | Tyler: reclaim vertical space; window drag on empty title-bar background |
-| Parity screenshot grid region | Crop includes in-viewport header band | Regional grid crop starts at `mainContentTopInset` (52px); web crop skips 48px header | ✅ | `.github/scripts/compose-desktop-parity-shots.py` `grid_region_crop()` |
+| Calendar nav + title + sidebar toggle | In-content header row (`CalendarHeader`, `h-12`) | Unified title bar beside traffic lights (`MacTitleBarChromeMetrics`) | ✅ | Compact 28pt band, 13pt system title and 14pt navigation icons. Local native regression passes, including title/nav alignment with the actual window close button |
+| Parity screenshot grid region | Crop includes in-viewport header band | Regional grid crop starts at `mainContentTopInset` (44px); web crop skips 48px header | ✅ | `.github/scripts/compose-desktop-parity-shots.py` `grid_region_crop()` |
 
 ---
 
@@ -126,7 +126,7 @@ This checklist compares **apps/calendar-web** (reference UI) with **apps/calenda
 | Close unchanged / edited event | ✅ | 2026-10-23: only changed existing events prompt, like web. Unchanged edits, reverted edits, and create drafts close immediately. Four model regressions pass; native tests verify Close prompts instead of saving edits, Cancel preserves them, and Shift+Escape discards without saving |
 | Header actions keyboard focus | ✅ | Mod+0 focuses the first toolbar button after the parent releases title focus, including repeated jumps. Tab / Shift+Tab move through actions, Return / Space activate them, and shortcut help names the keys. Native screenshot inspection at 720×630 confirms a visible Close focus outline; three focused native regressions and full strict verification pass |
 | Form duplicate undo / redo | ✅ | Form duplication records its create in undo history. Model and native tests verify duplicate → undo → redo without modifying the original |
-| Calendar / recurrence / RSVP shortcut focus | 🟡 | [#4783](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4783): source audit found these sections use `focusField` for a painted highlight without binding keyboard focus to their menu or buttons. Live acceptance and fixes remain, including signed-in RSVP |
+| Calendar / recurrence / RSVP shortcut focus | 🟡 | [#4783](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4783): Actual focus, repeated jumps, keyboard activation and Tab/Shift+Tab traversal pass in both themes after #4870, #4873, #4895 and #4897. The attendee fixture proves scope-dialog callbacks without submitting a real response. Signed-in native RSVP acceptance remains open |
 
 #### 2026-10-22 popover and capture verification
 
@@ -185,7 +185,7 @@ Found a separate capture reliability defect with multiple installed Compass buil
 | --- | --- | --- |
 | Billing past due | ✅ | |
 | Demo events, update ready | ✅ | |
-| Meeting nudge, connect prompts, first-event | ✅ | Sidebar meeting-page nudge (`M`), local-mode trial card (`S`, Esc), first-event card completes on first create |
+| Meeting nudge, connect prompts, first-event | ✅ | Sidebar meeting-page nudge (`/`), local-mode trial card (`S`, Esc), first-event card completes on first create |
 | Connection + timezone banners | ✅ | Reconnect / Retry / Refresh / Learn more (`G`); timezone mismatch Switch / Keep; Auto zone follows the Mac each minute |
 | Status toasts | 🟡 | `StatusToastOverlay` vs web toast stack |
 | Focus latest notice **`p`** | ✅ | Connection banner, sample events, meeting nudge, trial card, update, past due |
@@ -337,7 +337,7 @@ Legend: **Mod** = ⌘ on macOS. Web bindings from `APP_SHORTCUT_BINDINGS` / `KEY
 5. **Keyboard gaps** — `focus-event` (U), Shift+M week-day focus, palette undo/redo.
 6. **Event form logistics card** — match web #4599: one FormCard for Location, Add Google Meet, Add guests; Description in the following FormCard (not nested mini-panels).
 
-Each PR should link a child issue, include before/after screenshots (web Chromium + macOS snapshot or manual), label `agent-automerge`, and pass macOS workflow on GitHub runners.
+Each PR should link a child issue, include before/after screenshots (web Chromium + macOS snapshot or manual), enable auto-merge, and pass the macOS workflow on GitHub runners.
 
 ---
 
@@ -408,3 +408,57 @@ The compact-window CI follow-up reproduces Settings export hit testing at 720×6
 The welcome modal now uses the existing background tint and applies the shared 8pt blur only to the content behind it, matching the web OverlayPanel treatment. Primary-button text and shadow use semantic theme colors. A native regression covers forward and backward navigation through the three welcome steps in both themes without starting authentication.
 
 Local WelcomeKeyboardTests passed on an interactive desktop on 2026-10-23, exercising clicks, Enter and Escape across all three steps in both themes. Both native window screenshots were inspected: the panel stays sharp, underlying content is blurred, and button text is readable. CI run 39897743843 also passed. Swift contract and desktop export checks pass. This verifies the corrected treatment and navigation, not complete pixel equality. See #4766 and #4767.
+
+### 2026-10-24 native client polish follow-up
+
+Issues #4800 and #4801 address bundled fonts, compact title-bar controls, clickable month days, shortcut hover help, reduced-motion-aware sidebar/form transitions and consistent command-palette/shortcuts-helper surfaces and width. Native interaction regressions pass for actual traffic-light alignment, month clicks, date-to-time Tab navigation, time-arrow menu ownership, plain Return versus Command+Return, held Command hints and matching panel widths. The helper has a named accessibility group separate from its visibility-only test probe.
+
+Command-hold detection needed a running clock for the manual timer engines and had to stop treating modifier transitions as character autorepeats. The monitor also reconciles current modifier state when a key window misses a flags event. A native test holds Command without forcing hint visibility and verifies that the hints disappear on release.
+
+Untouched legacy June samples move to the current week once. Edited or deleted recurring families, edited samples and real events are preserved. Initial narrow/partial-week windows and Today include the current day; explicit date selection survives resizing. Package regressions cover these cases, and a fresh 720pt local launch showed October 23, Friday, with visible samples instead of an empty Sunday. Overlapping event labels, the blank short-chip observation and broader visual/signed-in acceptance remain open for further investigation.
+
+### 2026-10-24 event form footer follow-up
+
+Fresh main comparison run 40048315826 confirms that the title-bar sidebar toggle renders; draft #4667's older rendering experiments are not needed for that capture. The event form footer still squeezed instruction text into two- and three-line word fragments. Its instruction groups now retain their natural width and move onto separate centered rows when the sidebar is narrow. Both-theme native regressions assert single-line instruction bounds and preserve screenshot evidence. The unchanged baseline failed at 42pt for “between fields” and 28pt for “for actions”; corrected local captures show readable groups. Other visual and signed-in acceptance gaps remain open.
+
+### 2026-10-25 event label visibility follow-up
+
+Fresh main capture run 40264860791 shows blank titles on top-clipped Lunch with Sam and Exercise cards and overlapping Wednesday labels. Card text now clips independently of the external focus outline, and timed cards update title placement against the visible viewport when scrolling. A regression fails on the previous unclipped hierarchy; focused tests cover clipping, preserved focus outlines, visible title bounds and scroll-back restoration. Runtime and screenshot verification is tracked in #4840. These focused checks do not establish complete visual parity or signed-in acceptance.
+
+### 2026-10-26 overlapping deck contrast follow-up
+
+The web gives overlapping timed cards a background-colored separation ring and a shadow; native snapshots previously discarded deck membership and only draft cards had a shadow. Native cards now retain that membership and paint a 0.75pt background edge plus focus-sensitive shadow without changing shared deck geometry. Both-theme tests cover edges, focus elevation and pooled-view cleanup, with backward-compatible snapshot decoding. Actual isolated strict and screenshot evidence is tracked in #4842; the full visual and signed-in acceptance audit remains open.
+
+### 2026-10-26 command palette placement follow-up
+
+The composited reference in run 40328832414 confirms that the palette sits below the web's 15vh inset: flexible top and bottom spacers shared unused height. The top inset is now fixed while the bottom retains flexible space. The existing short/full-results regression also checks top position through filtering and clearing in both themes and records window screenshots. Runtime evidence is tracked in #4847; this does not close the broader palette typography or signed-in acceptance review.
+
+### 2026-10-26 command palette typography follow-up
+
+A hidden local web browser measured palette text at16px with24px line height,18px icons,40px rows and49px search header. Native plain/search/highlighted text and icon sizes now follow those measurements, with fixed line boxes and results padding inside the50vh maximum. Both-theme sizing regressions also assert full and filtered row heights; actual runtime/capture evidence is tracked in #4861. Signed-in acceptance and broader visual parity remain open.
+
+### 2026-10-26 Settings navigation focus follow-up
+
+Web Settings initially focuses the current navigation button and paints its focus ring separately from the selected-page marker. Native Settings now requests current-page focus after mounting and shows an accent outline while that button owns keyboard focus. Both-theme regression coverage exercises initial focus, Tab/Shift+Tab return and Escape; screenshot/runtime evidence is tracked in #4863. Other Settings layout and signed-in acceptance gaps remain open.
+
+### 2026-10-27 Settings field line-box follow-up
+
+A hidden anonymous web browser measured Settings field labels at14px with20px line height and the timezone button at30px including padding and border. Native field labels now reserve20pt and the timezone chrome reserves30pt without changing fonts or forcing the native calendar menu to that height. Both-theme hosting-view geometry tests cover those dimensions; runtime and composited screenshot evidence is tracked in #4867. Helper text metrics, other Settings surfaces and signed-in acceptance remain open.
+
+### 2026-10-27 calendar-menu shortcut focus follow-up
+
+Calendar-menu shortcut requests now bind actual focus to the create form menu, including repeated jumps, and the outline follows that focus. Both-theme native coverage opens the menu with Mod+5 and Space, selects with Return, repeats the jump after returning to Title, and dismisses the menu without closing the form. Merged #4873 passed native and web strict verification in [run 40524460116](https://github.com/KeepSoftwareSimple/compass-calendar/actions/runs/40524460116). Both-theme focus screenshots were inspected. Follow-up #4897 verified Tab departure and Shift+Tab return in both themes; signed-in native acceptance remains open under #4783.
+### 2026-10-27 recurrence shortcut focus follow-up
+
+The recurrence shortcut now requests actual focus on its toggle, including repeated jumps while the requested field remains unchanged. The visible outline follows actual toggle focus rather than the last requested field. Both-theme native coverage exercises Mod+4, Space activation, Tab departure, repeated Mod+4 and Return activation without saving. Merged #4870 passed native and web strict verification in [run 40502421944](https://github.com/KeepSoftwareSimple/compass-calendar/actions/runs/40502421944). Both-theme regressions verify actual focus, Space/Return activation, Tab/Shift+Tab traversal and repeated jumps without saving. Focus screenshots were inspected. Signed-in native acceptance remains open under #4783.
+
+### 2026-10-27 RSVP keyboard focus follow-up
+
+RSVP shortcut requests now focus the current response or first response, with visible focus and native Space/Return activation. Arrow keys move and respond like web radios; selected text uses the semantic on-accent color. A named attendee/occurrence demo fixture exercises scope-dialog activation without credentials or network writes. Merged #4895 passed native and web strict verification in [run 40593523044](https://github.com/KeepSoftwareSimple/compass-calendar/actions/runs/40593523044); both-theme focus screenshots were inspected. Merged #4897 passed both strict legs in [run 40614039506](https://github.com/KeepSoftwareSimple/compass-calendar/actions/runs/40614039506), verifying one RSVP Tab stop, Tab departure and Shift+Tab return alongside calendar traversal and existing activation checks. These fixture results do not establish real signed-in response submission, which remains open under #4783.
+
+
+### 2026-10-28 chrome details and acceptance boundary
+
+Merged #4902 passed native and web strict verification in [run 40695748356](https://github.com/KeepSoftwareSimple/compass-calendar/actions/runs/40695748356), with no required checks skipped. Both-theme native regressions and inspected screenshots verify header spacing, theme focus, chevrons and the filled Today dot. Repeated Alt+Arrow navigation preserves the sidebar hint until its displayed shortcut is used. The composited capture in [run 40679103906](https://github.com/KeepSoftwareSimple/compass-calendar/actions/runs/40679103906) confirms the sampled past green event fill matches web RGB (15, 104, 58); base palette samples match, while a sampled one-pixel grid rule differs by one green quantization step. These observations do not establish whole-window pixel equality.
+
+A signed-in staging **web** pass on 2026-10-27 verified create, edit, reload persistence and cleanup of one uniquely labelled test event in the visibly confirmed test account's primary calendar. Only that test record was removed, and a reload confirmed its absence. This was not native acceptance or a real invitation response. Previously observed configuration/billing HTTP 502 errors also prevent a blanket endpoint-health claim. Native signed-in RSVP submission and the broader signed-build acceptance runbook remain outstanding.

@@ -80,7 +80,7 @@ function buildBodyParagraphs(input: BookingHostEmailContentInput): string[] {
     lines.push(
       `Previous time (guest): ${formatBookingEmailWhen(input.previousSlotStart, input.guestTimeZone)}`,
     );
-    if (hostWhen && input.previousSlotStart) {
+    if (hostWhen) {
       lines.push(
         `Previous time (your calendar): ${formatBookingEmailWhen(input.previousSlotStart, input.pageTimeZone)}`,
       );

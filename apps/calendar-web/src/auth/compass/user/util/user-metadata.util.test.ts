@@ -1,14 +1,24 @@
 import { type UserMetadata } from "@core/types/user.types";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { BaseApi } from "@web/api/base/base.api";
+import { USER_METADATA_REQUEST_TIMEOUT_MS } from "@web/api/user.api";
 import { resetGoogleReconnectRequiredForTests } from "@web/auth/providers/reconnect.state";
+import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { GOOGLE_DELAYED_TOAST_ID } from "@web/common/constants/toast.constants";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   applyUserMetadataSideEffects,
   refreshUserMetadata,
 } from "./user-metadata.util";
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+  spyOn,
+} from "bun:test";
 
 const googleConnection = (
   connectionState: UserMetadata["connections"] extends (infer T)[] | undefined
@@ -148,6 +158,59 @@ describe("refreshUserMetadata force coalescing", () => {
 
     resolveFirst({ data: attention });
     await Promise.all([inFlight, forceA, forceB]);
+
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("refreshUserMetadata metadata fetch timeout", () => {
+  let get: ReturnType<typeof spyOn> | undefined;
+
+  beforeEach(() => {
+    userMetadataActions.set(healthy);
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    get?.mockRestore();
+    get = undefined;
+    jest.useRealTimers();
+  });
+
+  it("releases single-flight after abort so a forced refresh can fetch again", async () => {
+    get = spyOn(BaseApi, "get");
+    get
+      .mockImplementationOnce(
+        (_url: string, config?: { signal?: AbortSignal }) => {
+          return new Promise((_resolve, reject) => {
+            const signal = config?.signal;
+            if (!signal) {
+              reject(new Error("expected abort signal"));
+              return;
+            }
+            if (signal.aborted) {
+              reject(
+                Object.assign(new Error("aborted"), { name: "AbortError" }),
+              );
+              return;
+            }
+            signal.addEventListener("abort", () => {
+              reject(
+                Object.assign(new Error("aborted"), { name: "AbortError" }),
+              );
+            });
+          }) as never;
+        },
+      )
+      .mockResolvedValueOnce({ data: attention } as never);
+
+    const hung = refreshUserMetadata();
+    await Promise.resolve();
+
+    jest.advanceTimersByTime(USER_METADATA_REQUEST_TIMEOUT_MS);
+    await hung;
+
+    await refreshUserMetadata({ force: true });
 
     expect(get).toHaveBeenCalledTimes(2);
   });

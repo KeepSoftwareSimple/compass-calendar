@@ -22,6 +22,9 @@ export function useBareLetterShortcut(
   letter: string,
   handler: (event: KeyboardEvent) => boolean,
   shortcutId?: ShortcutRegistryId,
+  standDown: (
+    event: KeyboardEvent,
+  ) => boolean = shouldStandDownBareLetterShortcut,
 ): void {
   // Held in a ref so a handler that closes over changing state (a mutation
   // callback, say) does not resubscribe the listener on every render.
@@ -34,7 +37,7 @@ export function useBareLetterShortcut(
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       if (!isBareLetterKey(event, letter)) return;
-      if (shouldStandDownBareLetterShortcut(event)) return;
+      if (standDown(event)) return;
       if (!handlerRef.current(event)) return;
 
       event.preventDefault();
@@ -46,5 +49,5 @@ export function useBareLetterShortcut(
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [letter, shortcutId]);
+  }, [letter, shortcutId, standDown]);
 }

@@ -357,6 +357,51 @@ describe("microsoft-recurrence", () => {
   });
 });
 
+describe("microsoft-recurrence Graph shape normalization", () => {
+  it("maps PascalCase daysOfWeek to weekly BYDAY", () => {
+    const [rule] = toRRule(
+      recurrence(
+        {
+          type: "weekly",
+          interval: 1,
+          daysOfWeek: ["Sunday", "Tuesday", "Friday", "Saturday"] as never,
+          firstDayOfWeek: "Sunday" as never,
+        },
+        noEnd(),
+      ),
+    );
+    expect(rule).toBe("RRULE:FREQ=WEEKLY;BYDAY=SU,TU,FR,SA;WKST=SU");
+  });
+
+  it("treats daily pattern with daysOfWeek as weekly", () => {
+    const [rule] = toRRule(
+      recurrence(
+        {
+          type: "daily",
+          interval: 1,
+          daysOfWeek: ["sunday", "tuesday", "friday", "saturday"],
+        },
+        noEnd(),
+      ),
+    );
+    expect(rule).toBe("RRULE:FREQ=WEEKLY;BYDAY=SU,TU,FR,SA;WKST=SU");
+  });
+
+  it("defaults missing weekly interval to 1", () => {
+    const [rule] = toRRule(
+      recurrence(
+        {
+          type: "weekly",
+          daysOfWeek: ["monday"],
+          firstDayOfWeek: "sunday",
+        } as GraphRecurrencePattern,
+        noEnd(),
+      ),
+    );
+    expect(rule).toBe("RRULE:FREQ=WEEKLY;BYDAY=MO;WKST=SU");
+  });
+});
+
 describe("microsoft-recurrence day coverage", () => {
   const days: GraphDayOfWeek[] = [
     "sunday",

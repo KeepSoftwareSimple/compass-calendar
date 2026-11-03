@@ -56,6 +56,8 @@ export type CompleteProviderAuthorizationResult =
       reason: SignupFailureReason;
       /** The underlying error, so `signup_failed` never ships with it empty. */
       error: string;
+      missingScopes?: readonly string[];
+      signupFlow?: boolean;
     };
 
 const AUTHORIZATION_ERROR_MESSAGE: Record<ProviderKind, string> = {
@@ -76,12 +78,17 @@ const fail = (
   returnPath: string = DEFAULT_CALENDAR_ROUTE,
   message = AUTHORIZATION_ERROR_MESSAGE[provider],
   error: string = reason,
+  extras: {
+    missingScopes?: readonly string[];
+    signupFlow?: boolean;
+  } = {},
 ): CompleteProviderAuthorizationResult => ({
   message,
   reason,
   returnPath,
   status: "failed",
   error,
+  ...extras,
 });
 
 const getApiError = (error: unknown): ApiError | undefined => {
@@ -154,14 +161,11 @@ export async function completeProviderAuthorization({
 
   const requiredScopes = PROVIDER_AUTH_SCOPES_REQUIRED[provider];
   const grantedScopes = new Set((params.get("scope") ?? "").split(" "));
-  const isMissingRequiredScope = requiredScopes.some(
+  const missingScopes = requiredScopes.filter(
     (scope) => !grantedScopes.has(scope),
   );
 
-  if (isMissingRequiredScope) {
-    const missingScopes = requiredScopes.filter(
-      (scope) => !grantedScopes.has(scope),
-    );
+  if (missingScopes.length > 0) {
     // The message is no longer shown as a toast: the missing-permissions
     // modal explains this failure instead, so this falls through to the
     // default per-provider message that other callers still read.
@@ -171,6 +175,10 @@ export async function completeProviderAuthorization({
       returnPath,
       undefined,
       `missing_scopes:${missingScopes.join(",")}`,
+      {
+        missingScopes,
+        signupFlow: savedIntent.signupFlow === true,
+      },
     );
   }
 

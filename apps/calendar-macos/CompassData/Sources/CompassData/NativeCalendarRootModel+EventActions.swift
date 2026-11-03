@@ -276,21 +276,13 @@ extension NativeCalendarRootModel {
         let expected = undo ? after : before
         guard let current = try? eventsStore.fetchAllEvents().first(where: { $0.id == id }),
               current.calendarId == expected.calendarId,
-              current.schedule == expected.schedule,
-              normalizedContent(current.content) == normalizedContent(expected.content)
+              EventScheduleEqual.matches(current.schedule, expected.schedule),
+              EventDetailsEqualForUndo.matches(current.content, expected.content)
         else {
             statusToastStore.show(id: "undo-status", message: "Event changed since your last edit")
             return false
         }
         return true
-    }
-
-    private func normalizedContent(_ content: EventContent) -> EventContent {
-        guard case .details(let value) = content else { return content }
-        return .details(.init(
-            attendees: value.attendees, color: value.color, colorHex: value.colorHex,
-            conference: value.conference, description: value.description, kind: value.kind,
-            location: value.location ?? "", organizer: value.organizer, title: value.title))
     }
 
     private func replayUndoEntry(_ entry: UndoHistoryEntry) async {
@@ -335,6 +327,9 @@ extension NativeCalendarRootModel {
 
     private func replaceEvent(with event: Event) async {
         guard case .details(let details) = event.content else { return }
+        let current = loadedEvents.first { $0.id == event.id }
+        let scheduleUnchanged =
+            current.map { EventScheduleEqual.matches(event.schedule, $0.schedule) } ?? false
         let input = ReplaceEventInput(
             calendarId: eventsStore.source == .local ? event.calendarId : nil,
             content: .init(
@@ -342,7 +337,8 @@ extension NativeCalendarRootModel {
                 color: details.color, description: details.description, kind: "details",
                 location: details.location ?? "", title: details.title),
             recurrence: .preserve(.init(kind: "preserve")), restore: true,
-            schedule: event.schedule, scope: .this)
+            schedule: scheduleUnchanged ? nil : event.schedule,
+            scope: .this)
         do {
             try await eventsStore.replaceOptimistic(id: event.id, input: input, optimisticEvent: event)
             refreshLoadedEvents()

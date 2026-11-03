@@ -7,7 +7,7 @@ import {
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import { getGridDraftId } from "@web/events/grid-event-draft.adapter";
-import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
+import { withoutHiddenEventId } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { GridRegisteredAllDayEvent } from "@web/grid/components/GridRegisteredAllDayEvent";
 import { GridRegisteredTimedEvent } from "@web/grid/components/GridRegisteredTimedEvent";
@@ -49,13 +49,10 @@ function hiddenEventIdsWithoutActiveDraft(
   hiddenEventIds: ReadonlySet<string>,
   draft: GridEventDraft | null,
 ): ReadonlySet<string> {
-  const draftId = draft ? getGridDraftId(draft) : undefined;
-  if (!draftId || !isEventIdHidden(draftId, hiddenEventIds)) {
-    return hiddenEventIds;
-  }
-  const next = new Set(hiddenEventIds);
-  next.delete(draftId);
-  return next;
+  return withoutHiddenEventId(
+    hiddenEventIds,
+    draft ? getGridDraftId(draft) : undefined,
+  );
 }
 
 export const DayCalendarAllDayEventsLayer = ({

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import dayjs from "@core/util/date/dayjs";
 import {
   ensureSidebarOpen,
   getViewSwitcherButton,
@@ -87,28 +88,16 @@ const providerCalendar = (
   accountEmail,
 });
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
 function toOffsetDateTime(date: Date): string {
-  const offsetMinutes = -date.getTimezoneOffset();
-  const sign = offsetMinutes >= 0 ? "+" : "-";
-  const hours = pad(Math.floor(Math.abs(offsetMinutes) / 60));
-  const minutes = pad(Math.abs(offsetMinutes) % 60);
-  const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  const timePart = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-
-  return `${datePart}T${timePart}${sign}${hours}:${minutes}`;
+  return dayjs(date).tz(TIME_ZONE).format();
 }
 
 function todayAtMinutes(minutesFromMidnight: number): Date {
-  const now = new Date();
-  return new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    0,
-    minutesFromMidnight,
-  );
+  return dayjs()
+    .tz(TIME_ZONE)
+    .startOf("day")
+    .add(minutesFromMidnight, "minute")
+    .toDate();
 }
 
 function buildEvent(

@@ -277,6 +277,7 @@ final class NativeLaunchTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
         app.launch()
+        app.activate()
 
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))

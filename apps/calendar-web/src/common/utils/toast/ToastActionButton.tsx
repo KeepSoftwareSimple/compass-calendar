@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { NOTICE_PRIMARY_BUTTON_CLASS } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
   type NoticeActionKey,
@@ -19,7 +20,7 @@ export function ToastActionButton({
 
   return (
     <button
-      className="flex w-full items-center justify-center gap-2 rounded bg-accent-secondary px-3 py-2 font-medium text-on-accent text-sm transition-colors hover:bg-accent-secondary-hover"
+      className={`${NOTICE_PRIMARY_BUTTON_CLASS} w-full self-stretch`}
       onClick={onClick}
       type="button"
     >

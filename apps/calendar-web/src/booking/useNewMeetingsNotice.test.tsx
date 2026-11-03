@@ -27,7 +27,7 @@ import * as realRouters from "@web/routers";
 import * as realSseClient from "@web/sse/client/sse.client";
 import {
   resetEffectiveTimeZoneStoreForTests,
-  setEffectiveTimeZoneForTests,
+  setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import {
   afterAll,
@@ -168,7 +168,7 @@ describe("useNewMeetingsNotice", () => {
     mockClaimNewMeetings.mockResolvedValue({ count: 0, latest: null });
     mockNavigate.mockClear();
     registerToastPort(port);
-    setEffectiveTimeZoneForTests("America/Chicago");
+    setPinnedTimeZone("America/Chicago");
     setSystemTime(new Date("2026-09-09T12:00:00.000Z"));
     Object.defineProperty(document, "visibilityState", {
       configurable: true,

@@ -146,6 +146,18 @@ describe("ContextMenuItems", () => {
     ).toBeInTheDocument();
   });
 
+  it("uses background focus styling instead of the global focus ring on rows", () => {
+    const event = createMockGridEvent({ title: "Test Event" });
+
+    renderWithTheme(<ContextMenuItems event={event} close={mockClose} />, {
+      event,
+    });
+
+    const edit = screen.getByRole("menuitem", { name: "Edit" });
+    expect(edit.className).toContain("c-context-menu-item");
+    expect(edit.className).not.toContain("c-focus-ring");
+  });
+
   it("shows the keyboard shortcut for each read-only menu item", () => {
     const event = createMockGridEvent({
       title: "Test Event",

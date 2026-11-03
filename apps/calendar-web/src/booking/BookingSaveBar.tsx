@@ -2,9 +2,14 @@ import {
   OverlayPanelActionButton,
   OverlayPanelActions,
 } from "@web/components/OverlayPanel/OverlayPanel";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 import { settingsShortcutAttrs } from "@web/settings/useSettingsShortcuts";
 
 export const BOOKING_SAVE_CHANGES_LABEL = "Save changes";
+
+const BOOKING_SAVING_LABEL = "Saving…";
+
+const BOOKING_SAVE_LABELS = [BOOKING_SAVE_CHANGES_LABEL, BOOKING_SAVING_LABEL];
 
 export const BOOKING_SETTINGS_SAVE_BAR_CLASS_NAME =
   "sticky -bottom-8 z-10 border-border border-t bg-surface-panel pt-3 pb-8";
@@ -20,7 +25,9 @@ export function BookingSaveBar({
   isPending,
   onSubmit,
 }: BookingSaveBarProps) {
-  const pendingLabel = isPending ? "Saving…" : BOOKING_SAVE_CHANGES_LABEL;
+  const pendingLabel = isPending
+    ? BOOKING_SAVING_LABEL
+    : BOOKING_SAVE_CHANGES_LABEL;
 
   return (
     <div
@@ -39,7 +46,7 @@ export function BookingSaveBar({
           variant="primary"
           {...settingsShortcutAttrs("save-booking")}
         >
-          {pendingLabel}
+          <StableLabel labels={BOOKING_SAVE_LABELS}>{pendingLabel}</StableLabel>
         </OverlayPanelActionButton>
       </OverlayPanelActions>
       {error ? (

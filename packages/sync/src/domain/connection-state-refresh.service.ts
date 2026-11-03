@@ -159,12 +159,20 @@ export async function gatherConnectionStateEvidence(
   const activeEventSuccessAts = activeCalendars.map(
     (calendar) => eventsByCalendar.get(calendar._id)?.lastSuccessAt ?? null,
   );
-  const lastSyncedAt =
+  const eventLastSyncedAt =
     activeEventSuccessAts.length === 0
-      ? (calendarList?.lastSuccessAt ?? null)
+      ? null
       : activeEventSuccessAts.every((at) => at instanceof Date)
         ? minDate(...activeEventSuccessAts)
         : null;
+  const listLastSyncedAt = calendarList?.lastSuccessAt ?? null;
+  const lastSyncedAtCandidates = [eventLastSyncedAt, listLastSyncedAt].filter(
+    (at): at is Date => at instanceof Date,
+  );
+  const lastSyncedAt =
+    lastSyncedAtCandidates.length === 0
+      ? null
+      : minDate(...lastSyncedAtCandidates);
 
   return {
     disconnectedAt: connection.disconnectedAt,

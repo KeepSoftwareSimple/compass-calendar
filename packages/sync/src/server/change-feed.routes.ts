@@ -11,6 +11,7 @@ import {
   ChangeFeedResumeQuerySchema,
   GlobalChangeFeedResponseSchema,
 } from "@core/types/sync/change-feed.contracts";
+import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import {
   readChangeFeed,
   readGlobalChangeFeed,
@@ -127,7 +128,12 @@ export function registerChangeFeedRoutes(
           .status(Status.OK)
           .json(GlobalChangeFeedResponseSchema.parse(response));
       } catch (error) {
-        logger.error("Failed to read global change feed", redactedCause(error));
+        logMongoNetworkError(
+          logger,
+          "Failed to read global change feed",
+          error,
+          redactedCause(error),
+        );
         respondInternalError(res);
       }
     },

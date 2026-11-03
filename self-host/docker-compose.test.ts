@@ -100,7 +100,7 @@ describe("self-host docker compose", () => {
     expect(dockerfile).not.toContain("posthog:");
   });
 
-  it("mounts compass.yaml into the backend container", () => {
+  it("mounts compass.yaml into backend app containers", () => {
     const compose = readFileSync(join(import.meta.dir, "compose.yaml"), {
       encoding: "utf8",
     });
@@ -114,6 +114,8 @@ describe("self-host docker compose", () => {
         "{COMPASS_CONFIG_FILE:-./compass.yaml}:/app/compass.yaml:ro",
       ),
     );
+    expect(compose).toContain("backend-a:");
+    expect(compose).toContain("backend-b:");
   });
 
   it("exports COMPASS_CONFIG_REVISION from compass.yaml for compose", () => {
@@ -205,6 +207,7 @@ describe("self-host docker compose", () => {
     expect(webBlock).toContain("switchbacktech/compass-web:");
     expect(webBlock).toContain("*web-port");
     expect(webBlock).toContain("depends_on:");
+    expect(webBlock).toContain("api-proxy:");
     expect(webBlock).toContain("condition: service_healthy");
 
     expect(compose).toContain("switchbacktech/compass-booking-web:");
@@ -253,33 +256,29 @@ describe("self-host docker compose", () => {
     expect(compose).toContain("compass_sync_logs:");
   });
 
-  it("omits the backend mongo dependency from the base compose file", () => {
+  it("omits mongo dependencies from backend app services in the base compose file", () => {
     const compose = readFileSync(join(import.meta.dir, "compose.yaml"), {
       encoding: "utf8",
     });
 
-    // mongo is gated behind the `selfhosted` profile, so a profile-less
-    // cloud/Atlas deploy has no mongo container. A hard depends_on in the base
-    // file makes that project invalid ("depends on undefined service mongo").
-    // `required: false` is the wrong fix: Compose treats an unhealthy optional
-    // dependency as satisfied and starts backend before mongo is ready.
-    // Match the top-level service definition ("\n  backend:\n", exactly two
-    // spaces of indent), not the x-local-bindings anchor ("  backend:
-    // &backend-port ...") nor the web service's nested "depends_on: backend:".
     const backendBlock = compose
-      .slice(compose.indexOf("\n  backend:\n") + 1)
+      .slice(compose.indexOf("\n  backend-a:\n") + 1)
       .split(/\n {2}\w/)[0];
     expect(backendBlock).not.toContain("mongo:");
-    expect(backendBlock).toContain("start_period: 90s");
-    expect(compose).toContain("stop_grace_period: 30s");
+    expect(compose).toContain("start_period: 90s");
+    expect(compose).toContain("stop_grace_period: 60s");
+    expect(compose).toContain("api-proxy:");
+    expect(compose).toContain("api-proxy: &api-proxy-port");
   });
 
-  it("waits for mongo before starting backend and sync via the selfhosted overlay", () => {
+  it("waits for mongo before starting backend slots and sync via the selfhosted overlay", () => {
     const overlay = readFileSync(
       join(import.meta.dir, "compose.selfhosted.yaml"),
       { encoding: "utf8" },
     );
 
+    expect(overlay).toContain("backend-a:");
+    expect(overlay).toContain("backend-b:");
     expect(overlay).toContain("depends_on:");
     expect(overlay).toContain("mongo:");
     expect(overlay).toContain("condition: service_healthy");
@@ -382,6 +381,9 @@ describe("self-host installer", () => {
 
     const deploy = readRepoFile(".github/workflows/_deploy-environment.yml");
     expect(deploy).toContain('ORCHESTRATION_DIR/config.sh"');
+    expect(deploy).toContain("api-proxy/nginx.conf");
+    expect(deploy).not.toContain("rm -rf ~/compass/api-proxy");
+    expect(deploy).toContain('ORCHESTRATION_DIR/rolling-backend.sh"');
     expect(deploy.indexOf('ORCHESTRATION_DIR/config.sh"')).toBeLessThan(
       deploy.indexOf('ORCHESTRATION_DIR/compass"'),
     );
@@ -539,10 +541,89 @@ describe("self-host helper", () => {
     );
   });
 
-  it("updates in place with compose wait", () => {
+  it("rolls the backend before updating the rest of the stack", () => {
     const helper = readRepoFile("self-host/compass");
+    const rolling = readRepoFile("self-host/rolling-backend.sh");
 
+    expect(helper).toContain("rolling_backend_update");
+    expect(helper).toContain("run_compose_wait");
+    expect(helper).toContain(
+      "compose up -d --force-recreate --no-deps web booking-web",
+    );
     expect(helper).toContain("compose up -d --remove-orphans --wait");
+    expect(helper).toContain(
+      'timeout "$wait_sec" "$0" __internal_compose_docker',
+    );
+    expect(helper).not.toMatch(/timeout "\$wait_sec" compose /);
+    expect(helper).toContain("rolling-backend.sh");
+    expect(rolling).toContain("migrate_from_legacy_backend");
+    expect(rolling).toContain("legacy_backend_publishing_port");
+    expect(rolling).toContain("legacy_backend_container_id");
+    expect(rolling).toContain("up_api_proxy_with_bind_retry");
+    expect(rolling).toContain("rollback_legacy_cutover");
+    expect(helper).toContain("migrate_from_legacy_backend");
+  });
+
+  it("passes the compose wait timeout script check", async () => {
+    const scriptPath = join(import.meta.dir, "compose-wait-timeout.test.sh");
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok compose-wait-timeout-script-check");
+    expect(stderr).toBe("");
+  });
+
+  it("passes the cutover rollback script check", async () => {
+    const scriptPath = join(
+      import.meta.dir,
+      "rolling-backend.cutover-rollback.test.sh",
+    );
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok cutover-rollback-script-check");
+    expect(stderr).toContain(
+      "rollback active_slot=b after unstable proxy health",
+    );
+  }, 15000);
+
+  it("passes the legacy-to-proxy migration script check", async () => {
+    const scriptPath = join(
+      import.meta.dir,
+      "rolling-backend.migration.test.sh",
+    );
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok legacy-proxy-migration-script-check");
+    expect(stderr).toBe("");
   });
 
   it("prunes unused images around update so release tags cannot fill the disk", () => {
@@ -551,7 +632,7 @@ describe("self-host helper", () => {
 
     expect(helper).toContain("prune_unused_images");
     expect(helper).toContain("timeout 120 docker image prune -af");
-    expect(updateBlock).toContain("compose logs --tail=100 mongo backend");
+    expect(updateBlock).toContain("compose logs --tail=100 mongo backend-a");
   });
 
   it("applies the selfhosted mongo overlay when the selfhosted profile is active", () => {
@@ -678,6 +759,12 @@ describe("staging deploy workflow", () => {
     expect(workflow).not.toContain("&& secrets.STRIPE_SECRET_KEY ||");
     expect(workflow).toContain("'stripe:'");
     expect(workflow).toContain("publishableKey:");
+    expect(workflow).toContain("deploy-write-stripe-synthetic-discount.sh");
+    expect(workflow).toContain(
+      "STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: $".concat(
+        "{{ secrets.STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID }}",
+      ),
+    );
     expect(workflow).toContain("staging-selfhosted must omit this block");
   });
 
@@ -800,6 +887,42 @@ describe("staging deploy workflow", () => {
     expect(bookingDockerfile).toContain("ARG POSTHOG_HOST=");
   });
 
+  it("can run a save-loop proof against cloud or selfhosted staging", () => {
+    const workflow = readRepoFile(".github/workflows/deploy-staging.yml");
+
+    expect(workflow).toContain("run_save_loop_proof");
+    expect(workflow).toContain("save_loop_proof_target");
+    expect(workflow).toContain("staging-selfhosted");
+    expect(workflow).toContain("save-loop-bootstrap");
+    expect(workflow).toContain("save-loop-during-deploy");
+    expect(workflow).toContain("https://selfhosted.compasscalendar.com");
+    expect(workflow).toContain(".github/scripts/deploy-save-loop.sh");
+    expect(workflow).toContain("always()");
+  });
+
+  it("re-resolves api-proxy backend upstream via Docker DNS", () => {
+    const nginx = readRepoFile("self-host/api-proxy/nginx.conf");
+    const upstream = readRepoFile("self-host/api-proxy/active-backend.conf");
+    const rolling = readRepoFile("self-host/rolling-backend.sh");
+
+    expect(nginx).toContain("resolver 127.0.0.11");
+    expect(nginx).toContain("worker_shutdown_timeout 30s");
+    expect(nginx).toContain("proxy_connect_timeout 5s");
+    expect(nginx).toContain(
+      "proxy_next_upstream error timeout http_502 http_503 http_504",
+    );
+    expect(nginx).toContain("proxy_pass http://$backend_upstream");
+    expect(upstream).toContain("set $backend_upstream backend-a:3000");
+    expect(rolling).toContain("sync_api_proxy_after_deploy");
+    expect(rolling).toContain("nginx -s reload");
+    expect(rolling).toContain("--force-recreate --no-deps api-proxy");
+    expect(rolling).toContain("wait_for_proxy_health_stable");
+    expect(rolling).toContain("reload_api_proxy_for_cutover");
+    expect(rolling).toContain("compass-backend-cutover:");
+    expect(rolling).toContain("stopping backend-");
+    expect(rolling).toContain("cutover complete active_slot=");
+  });
+
   it("runs deploy health checks after each staging deploy", () => {
     const workflow = readRepoFile(".github/workflows/deploy-staging.yml");
 
@@ -846,6 +969,20 @@ describe("staging deploy workflow", () => {
 });
 
 describe("deploy health check script", () => {
+  it("fails deploy health when public version.json does not match the release", () => {
+    const script = readRepoFile(".github/scripts/deploy-health-check.sh");
+
+    expect(script).toContain(
+      'run_check "public-frontend-version" check_public_frontend_version',
+    );
+    expect(script).toContain(
+      'run_check "loopback-web-version" remote_check_loopback_web_version',
+    );
+    expect(script).not.toContain(
+      "validate_frontend_version >/tmp/compass-frontend-version-check.log 2>&1 || true",
+    );
+  });
+
   it("accepts an HTML frontend response", async () => {
     const dir = makeTempDir();
     const bodyPath = join(dir, "frontend.html");

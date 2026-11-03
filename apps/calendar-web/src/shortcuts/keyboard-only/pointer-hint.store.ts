@@ -13,10 +13,9 @@ export type PointerHintAttempt = {
   /** Pointer-intent copy with placeholders resolved to keycaps in the UI. */
   message?: string;
   keys?: string[][];
+  /** Quiet, small pill used for empty-grid click teaching. */
+  tone?: "soft";
 };
-
-/** @deprecated Use {@link PointerHintAttempt}. */
-export type PalettePointerHintAttempt = PointerHintAttempt;
 
 export type PointerHintState = {
   /** Increments on every teach pulse so the hint can re-animate. */

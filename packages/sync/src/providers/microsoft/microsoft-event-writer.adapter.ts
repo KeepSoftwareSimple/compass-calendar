@@ -16,6 +16,7 @@ import { microsoftGraphRequest } from "@sync/providers/microsoft/microsoft-graph
 import {
   MICROSOFT_EVENT_SELECT,
   MICROSOFT_GRAPH_BASE_URL,
+  MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE,
 } from "@sync/providers/microsoft/microsoft-http.constants";
 import {
   type GraphCalendarMeetingSettings,
@@ -254,6 +255,10 @@ function toGraphPatchBody(input: ProviderPatchInput): GraphEventWriteBody {
     input.recurrence,
     input.invitation,
     input.attendees,
+    {
+      writeSchedule: input.writeSchedule,
+      colorOnly: input.colorOnly,
+    },
   );
 }
 
@@ -263,7 +268,11 @@ function toGraphWriteBody(
   recurrence: ProviderWriteRecurrence,
   invitation: InvitationIntent,
   attendees?: readonly Attendee[],
+  options?: { writeSchedule?: boolean; colorOnly?: true },
 ): GraphEventWriteBody {
+  if (options?.colorOnly) {
+    return { ...microsoftCategoryFields(content.color) };
+  }
   return {
     subject: content.title,
     body: {
@@ -271,9 +280,11 @@ function toGraphWriteBody(
       content: content.description ?? "",
     },
     location: { displayName: content.location ?? "" },
-    ...scheduleFields(schedule),
+    ...(options?.writeSchedule !== false ? scheduleFields(schedule) : {}),
     showAs: "busy",
-    ...recurrenceField(recurrence, schedule),
+    ...(options?.writeSchedule !== false
+      ? recurrenceField(recurrence, schedule)
+      : {}),
     ...attendeesField(attendees, invitation),
     ...microsoftCategoryFields(content.color),
   };
@@ -525,7 +536,7 @@ class FetchMicrosoftEventWriteApi implements MicrosoftEventWriteApi {
     ifMatch: string | null = null,
   ): Promise<GraphEvent> {
     const headers: Record<string, string> = {
-      Prefer: 'outlook.timezone="UTC"',
+      Prefer: MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE,
     };
     if (ifMatch) headers["If-Match"] = ifMatch;
 
@@ -549,7 +560,7 @@ class FetchMicrosoftEventWriteApi implements MicrosoftEventWriteApi {
       accessToken: this.#accessToken,
       url,
       method,
-      headers: { Prefer: 'outlook.timezone="UTC"' },
+      headers: { Prefer: MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE },
       fallbackError: "microsoft_event_write_failed",
     });
     return data.value ?? [];
@@ -560,7 +571,7 @@ class FetchMicrosoftEventWriteApi implements MicrosoftEventWriteApi {
       accessToken: this.#accessToken,
       url,
       method,
-      headers: { Prefer: 'outlook.timezone="UTC"' },
+      headers: { Prefer: MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE },
       fallbackError: "microsoft_event_write_failed",
     });
   }

@@ -1,5 +1,6 @@
 import { Logger } from "@core/logger/winston.logger";
 import { emailListIncludes } from "@core/util/email.util";
+import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { renderBookingHostEmail } from "@backend/email/booking-host-email.content";
 import { loadBookingHostEmailDispatchContext } from "@backend/email/booking-host-email.context";
@@ -22,11 +23,15 @@ import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
   buildUnsubscribeTokenForUser,
   buildUnsubscribeUrls,
+  type EmailUnsubscribeScope,
   isBookingHostEmailStopped,
   isEmailSequenceStopped,
 } from "@backend/email/email-unsubscribe";
 import { buildEmailProvider } from "@backend/email/providers/email.client";
-import { type EmailProvider } from "@backend/email/providers/email.port";
+import {
+  type EmailProvider,
+  type EmailSendInput,
+} from "@backend/email/providers/email.port";
 import { dispatchReflection } from "@backend/email/reflection-dispatch";
 import { enqueueDueReflections } from "@backend/email/reflection-enrollment";
 import { findWelcomeStep } from "@backend/email/welcome-sequence";
@@ -45,6 +50,7 @@ import {
   getWelcomeStepCtaBaseHref,
   getWelcomeStepTemplateAlias,
 } from "@backend/email/welcome-sequence.templates";
+import { isSyntheticAccount } from "@backend/user/synthetic-account.service";
 
 const logger = Logger("app:email.dispatch");
 
@@ -61,6 +67,32 @@ const isAllowlistedRecipient = (email: string): boolean => {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+/**
+ * The unsubscribe links for a recipient and the headers that carry them.
+ * Both are absent when the signing secret is unset: a send without a token
+ * goes out with no unsubscribe affordance rather than a broken one.
+ */
+const resolveUnsubscribe = (
+  userIdHex: string,
+  scope?: EmailUnsubscribeScope,
+): {
+  readonly unsubscribe: ReturnType<typeof buildUnsubscribeUrls> | undefined;
+  readonly headers: Record<string, string>;
+} => {
+  const token = buildUnsubscribeTokenForUser(userIdHex);
+  if (token === null) {
+    return { unsubscribe: undefined, headers: {} };
+  }
+  const unsubscribe = buildUnsubscribeUrls(token, scope);
+  return {
+    unsubscribe,
+    headers: {
+      "List-Unsubscribe": unsubscribe.listUnsubscribeHeader,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  };
+};
+
 const isInvalidRecipientError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
@@ -73,6 +105,14 @@ const isInvalidRecipientError = (error: unknown): boolean => {
     /\(\s*(400|422)\s*\)/.test(message) &&
     /invalid|recipient|bounce|undeliverable/i.test(message)
   );
+};
+
+/** The per-row facts every dispatch path reports on: ids, log prefix, analytics. */
+type DispatchRowContext = {
+  readonly row: EmailSendRecord;
+  readonly userIdHex: string;
+  readonly label: string;
+  readonly analyticsBase?: Record<string, boolean | number | string>;
 };
 
 export class EmailDispatchService {
@@ -151,8 +191,10 @@ export class EmailDispatchService {
       return;
     }
     const cycle = this.dispatchDue().catch((error: unknown) => {
-      logger.error(
+      logMongoNetworkError(
+        logger,
         "Welcome email dispatch cycle failed",
+        error,
         error instanceof Error
           ? { message: error.message }
           : { error: String(error) },
@@ -166,102 +208,38 @@ export class EmailDispatchService {
     });
   };
 
-  async #dispatchBookingHostRow(row: EmailSendRecord): Promise<void> {
-    const userIdHex = row.userId.toHexString();
-    const kind = row.stepKey as BookingHostEmailKind;
-    const analyticsBase = {
-      sequence: "booking-host",
-      kind,
-      reservation_id: row.reservationId?.toHexString() ?? "",
-    };
-
-    const skip = async (reason: string) => {
-      await emailSendRepository.markSkipped(row._id, reason);
-      void emailAnalytics.capture({
-        event: "email_skipped",
-        userId: userIdHex,
-        step: row.stepKey,
-        properties: analyticsBase,
-      });
-      logger.info("Booking host email skipped", {
-        rowId: row._id,
-        stepKey: row.stepKey,
-        reason,
-      });
-    };
-
-    if (!row.reservationId) {
-      await skip("Missing reservation");
-      return;
-    }
-
-    const context = await loadBookingHostEmailDispatchContext({
-      userId: row.userId,
-      reservationId: row.reservationId,
+  async #skipRow(context: DispatchRowContext, reason: string): Promise<void> {
+    const { row, userIdHex, label, analyticsBase } = context;
+    await emailSendRepository.markSkipped(row._id, reason);
+    void emailAnalytics.capture({
+      event: "email_skipped",
+      userId: userIdHex,
+      step: row.stepKey,
+      properties: analyticsBase,
     });
-    if (!context) {
-      await skip("Missing booking context");
-      return;
-    }
-
-    if (context.user.isSynthetic) {
-      await skip("Synthetic account");
-      return;
-    }
-
-    if (isBookingHostEmailStopped(context.user.emailPreferences)) {
-      await emailSendRepository.markCanceled(row._id);
-      return;
-    }
-
-    if (!isAllowlistedRecipient(context.user.email)) {
-      await skip("Recipient not allowlisted");
-      return;
-    }
-
-    const reservation = context.reservation;
-    if (!reservation) {
-      await skip("Reservation not found");
-      return;
-    }
-
-    const unsubscribeToken = buildUnsubscribeTokenForUser(userIdHex);
-    const unsubscribe =
-      unsubscribeToken !== null
-        ? buildUnsubscribeUrls(unsubscribeToken, "booking-host")
-        : undefined;
-
-    const rendered = renderBookingHostEmail({
-      kind,
-      guestName: reservation.guestName,
-      guestEmail: reservation.guestEmail,
-      notes: reservation.notes,
-      durationMinutes: context.durationMinutes,
-      pageTimeZone: context.page!.timeZone,
-      guestTimeZone: reservation.guestTimeZone,
-      slotStart: reservation.slotStart,
-      slotEnd: reservation.slotEnd,
-      previousSlotStart: reservation.previousSlotStart,
-      conference: context.conference,
-      openInCompassUrl: context.openInCompassUrl,
-      unsubscribe,
+    logger.info(`${label} skipped`, {
+      rowId: row._id,
+      stepKey: row.stepKey,
+      reason,
     });
+  }
 
-    const headers: Record<string, string> = {};
-    if (unsubscribe) {
-      headers["List-Unsubscribe"] = unsubscribe.listUnsubscribeHeader;
-      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
-    }
+  // The tail every sequence shares: re-check the stop signal and the row's
+  // claim inside the try so an unsubscribe or a competing worker that lands
+  // mid-dispatch cancels the row instead of double-sending, then send and
+  // either record the send or back off toward `failed`.
+  async #deliverRow(
+    context: DispatchRowContext,
+    delivery: {
+      readonly stillSendable: () => Promise<boolean>;
+      readonly send: EmailSendInput;
+      readonly afterSent?: () => Promise<void>;
+    },
+  ): Promise<void> {
+    const { row, userIdHex, label, analyticsBase } = context;
 
     try {
-      const freshContext = await loadBookingHostEmailDispatchContext({
-        userId: row.userId,
-        reservationId: row.reservationId!,
-      });
-      if (
-        !freshContext ||
-        isBookingHostEmailStopped(freshContext.user.emailPreferences)
-      ) {
+      if (!(await delivery.stillSendable())) {
         await emailSendRepository.markCanceled(row._id);
         return;
       }
@@ -269,14 +247,7 @@ export class EmailDispatchService {
         return;
       }
 
-      const result = await this.getProvider().send({
-        idempotencyKey: row._id,
-        to: context.user.email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-        headers,
-      });
+      const result = await this.getProvider().send(delivery.send);
       const marked = await emailSendRepository.markSent(
         row._id,
         result.messageId,
@@ -290,14 +261,15 @@ export class EmailDispatchService {
         step: row.stepKey,
         properties: analyticsBase,
       });
-      logger.info("Booking host email sent", {
+      logger.info(`${label} sent`, {
         rowId: row._id,
         stepKey: row.stepKey,
       });
+      await delivery.afterSent?.();
     } catch (error) {
       const message = errorMessage(error);
       if (isInvalidRecipientError(error)) {
-        await skip(message);
+        await this.#skipRow(context, message);
         return;
       }
 
@@ -317,7 +289,7 @@ export class EmailDispatchService {
           properties: analyticsBase,
         });
       }
-      logger.warn("Booking host email send failed", {
+      logger.warn(`${label} send failed`, {
         rowId: row._id,
         stepKey: row.stepKey,
         message,
@@ -325,24 +297,105 @@ export class EmailDispatchService {
     }
   }
 
+  async #dispatchBookingHostRow(row: EmailSendRecord): Promise<void> {
+    const userIdHex = row.userId.toHexString();
+    const kind = row.stepKey as BookingHostEmailKind;
+    const context: DispatchRowContext = {
+      row,
+      userIdHex,
+      label: "Booking host email",
+      analyticsBase: {
+        sequence: "booking-host",
+        kind,
+        reservation_id: row.reservationId?.toHexString() ?? "",
+      },
+    };
+    const skip = (reason: string) => this.#skipRow(context, reason);
+
+    const reservationId = row.reservationId;
+    if (!reservationId) {
+      await skip("Missing reservation");
+      return;
+    }
+
+    const booking = await loadBookingHostEmailDispatchContext({
+      userId: row.userId,
+      reservationId,
+    });
+    if (!booking) {
+      await skip("Missing booking context");
+      return;
+    }
+
+    if (isSyntheticAccount(booking.user.email, booking.user.isSynthetic)) {
+      await skip("Synthetic account");
+      return;
+    }
+
+    if (isBookingHostEmailStopped(booking.user.emailPreferences)) {
+      await emailSendRepository.markCanceled(row._id);
+      return;
+    }
+
+    if (!isAllowlistedRecipient(booking.user.email)) {
+      await skip("Recipient not allowlisted");
+      return;
+    }
+
+    const reservation = booking.reservation;
+
+    const { unsubscribe, headers } = resolveUnsubscribe(
+      userIdHex,
+      "booking-host",
+    );
+
+    const rendered = renderBookingHostEmail({
+      kind,
+      guestName: reservation.guestName,
+      guestEmail: reservation.guestEmail,
+      notes: reservation.notes,
+      durationMinutes: booking.durationMinutes,
+      pageTimeZone: booking.page.timeZone,
+      guestTimeZone: reservation.guestTimeZone,
+      slotStart: reservation.slotStart,
+      slotEnd: reservation.slotEnd,
+      previousSlotStart: reservation.previousSlotStart,
+      conference: booking.conference,
+      openInCompassUrl: booking.openInCompassUrl,
+      unsubscribe,
+    });
+
+    await this.#deliverRow(context, {
+      stillSendable: async () => {
+        const fresh = await loadBookingHostEmailDispatchContext({
+          userId: row.userId,
+          reservationId,
+        });
+        return (
+          !!fresh && !isBookingHostEmailStopped(fresh.user.emailPreferences)
+        );
+      },
+      send: {
+        idempotencyKey: row._id,
+        to: booking.user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+        headers,
+      },
+    });
+  }
+
   async #dispatchWelcomeRow(row: EmailSendRecord): Promise<void> {
     const userIdHex = row.userId.toHexString();
     const previewLoop = isPreviewLoopRow(row);
-    const analyticsBase = previewLoop ? { preview_loop: true } : undefined;
-
-    const skip = async (reason: string) => {
-      await emailSendRepository.markSkipped(row._id, reason);
-      void emailAnalytics.capture({
-        event: "email_skipped",
-        userId: userIdHex,
-        step: row.stepKey,
-        properties: analyticsBase,
-      });
-      logger.info("Welcome email skipped", {
-        rowId: row._id,
-        stepKey: row.stepKey,
-      });
+    const context: DispatchRowContext = {
+      row,
+      userIdHex,
+      label: "Welcome email",
+      analyticsBase: previewLoop ? { preview_loop: true } : undefined,
     };
+    const skip = (reason: string) => this.#skipRow(context, reason);
 
     const step = findWelcomeStep(row.stepKey);
     if (!step) {
@@ -357,7 +410,7 @@ export class EmailDispatchService {
       return;
     }
 
-    if (user.isSynthetic) {
+    if (isSyntheticAccount(user.email, user.isSynthetic)) {
       await skip("Synthetic account");
       return;
     }
@@ -396,11 +449,7 @@ export class EmailDispatchService {
       return;
     }
 
-    const unsubscribeToken = buildUnsubscribeTokenForUser(userIdHex);
-    const unsubscribe =
-      unsubscribeToken !== null
-        ? buildUnsubscribeUrls(unsubscribeToken)
-        : undefined;
+    const { unsubscribe, headers } = resolveUnsubscribe(userIdHex);
 
     const ctaUrl = appendWelcomeEmailUtm(ctaBaseHref, row.stepKey);
     const templateVariables = buildWelcomeResendTemplateVariables({
@@ -409,23 +458,12 @@ export class EmailDispatchService {
       firstName: user.firstName,
     });
 
-    const headers: Record<string, string> = {};
-    if (unsubscribe) {
-      headers["List-Unsubscribe"] = unsubscribe.listUnsubscribeHeader;
-      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
-    }
-
-    try {
-      const freshUser = await loadWelcomeSequenceUser(row.userId);
-      if (!freshUser || isEmailSequenceStopped(freshUser.emailPreferences)) {
-        await emailSendRepository.markCanceled(row._id);
-        return;
-      }
-      if (!(await emailSendRepository.isQueued(row._id))) {
-        return;
-      }
-
-      const result = await this.getProvider().send({
+    await this.#deliverRow(context, {
+      stillSendable: async () => {
+        const fresh = await loadWelcomeSequenceUser(row.userId);
+        return !!fresh && !isEmailSequenceStopped(fresh.emailPreferences);
+      },
+      send: {
         idempotencyKey: row._id,
         to: user.email,
         template: {
@@ -433,56 +471,11 @@ export class EmailDispatchService {
           variables: templateVariables,
         },
         headers,
-      });
-      const marked = await emailSendRepository.markSent(
-        row._id,
-        result.messageId,
-      );
-      if (!marked) {
-        return;
-      }
-      void emailAnalytics.capture({
-        event: "email_sent",
-        userId: userIdHex,
-        step: row.stepKey,
-        properties: analyticsBase,
-      });
-      logger.info("Welcome email sent", {
-        rowId: row._id,
-        stepKey: row.stepKey,
-      });
-      if (previewLoop) {
-        await handlePreviewLoopAfterSend(row, now);
-      }
-    } catch (error) {
-      const message = errorMessage(error);
-      if (isInvalidRecipientError(error)) {
-        await skip(message);
-        return;
-      }
-
-      const nextAttemptAt = new Date(
-        Date.now() + emailSendBackoffMs(row.attemptCount + 1),
-      );
-      const updated = await emailSendRepository.recordFailure(
-        row._id,
-        message,
-        nextAttemptAt,
-      );
-      if (updated?.status === "failed") {
-        void emailAnalytics.capture({
-          event: "email_failed",
-          userId: userIdHex,
-          step: row.stepKey,
-          properties: analyticsBase,
-        });
-      }
-      logger.warn("Welcome email send failed", {
-        rowId: row._id,
-        stepKey: row.stepKey,
-        message,
-      });
-    }
+      },
+      ...(previewLoop
+        ? { afterSent: () => handlePreviewLoopAfterSend(row, now) }
+        : {}),
+    });
   }
 }
 

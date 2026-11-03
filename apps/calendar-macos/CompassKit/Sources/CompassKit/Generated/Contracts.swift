@@ -135,13 +135,14 @@ public struct AdminGetBookingPageResponse: Codable, Hashable, Sendable {
     public let hostUserId: String
     public let id: String
     public let maxHorizonDays: Int
+    public let meetingTypes: [BookingPageMeetingTypes]?
     public let minNoticeHours: Int
     public let slug: String
     public let timeZone: IANATimeZone
     public let updatedAt: DateTime
     public let weeklyAvailability: [BookingPageWeeklyAvailability]
 
-    public init(blockingCalendarIds: [String], bookingUrl: String, createdAt: DateTime, destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, hostUserId: String, id: String, maxHorizonDays: Int, minNoticeHours: Int, slug: String, timeZone: IANATimeZone, updatedAt: DateTime, weeklyAvailability: [BookingPageWeeklyAvailability]) {
+    public init(blockingCalendarIds: [String], bookingUrl: String, createdAt: DateTime, destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, hostUserId: String, id: String, maxHorizonDays: Int, meetingTypes: [BookingPageMeetingTypes]? = nil, minNoticeHours: Int, slug: String, timeZone: IANATimeZone, updatedAt: DateTime, weeklyAvailability: [BookingPageWeeklyAvailability]) {
         self.blockingCalendarIds = blockingCalendarIds
         self.bookingUrl = bookingUrl
         self.createdAt = createdAt
@@ -151,6 +152,7 @@ public struct AdminGetBookingPageResponse: Codable, Hashable, Sendable {
         self.hostUserId = hostUserId
         self.id = id
         self.maxHorizonDays = maxHorizonDays
+        self.meetingTypes = meetingTypes
         self.minNoticeHours = minNoticeHours
         self.slug = slug
         self.timeZone = timeZone
@@ -166,18 +168,20 @@ public struct AdminGetBookingPageSetupResponse: Codable, Hashable, Sendable {
     public let enabled: Bool
     public let isConfigured: Bool
     public let maxHorizonDays: Int
+    public let meetingTypes: [BookingPageMeetingTypes]?
     public let minNoticeHours: Int
     public let suggestedSlug: String
     public let timeZone: IANATimeZone
     public let weeklyAvailability: [BookingPageWeeklyAvailability]
 
-    public init(blockingCalendarIds: [String], destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, isConfigured: Bool, maxHorizonDays: Int, minNoticeHours: Int, suggestedSlug: String, timeZone: IANATimeZone, weeklyAvailability: [BookingPageWeeklyAvailability]) {
+    public init(blockingCalendarIds: [String], destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, isConfigured: Bool, maxHorizonDays: Int, meetingTypes: [BookingPageMeetingTypes]? = nil, minNoticeHours: Int, suggestedSlug: String, timeZone: IANATimeZone, weeklyAvailability: [BookingPageWeeklyAvailability]) {
         self.blockingCalendarIds = blockingCalendarIds
         self.destinationCalendarId = destinationCalendarId
         self.durationMinutes = durationMinutes
         self.enabled = enabled
         self.isConfigured = isConfigured
         self.maxHorizonDays = maxHorizonDays
+        self.meetingTypes = meetingTypes
         self.minNoticeHours = minNoticeHours
         self.suggestedSlug = suggestedSlug
         self.timeZone = timeZone
@@ -191,17 +195,19 @@ public struct AdminPutBookingPageInput: Codable, Hashable, Sendable {
     public let durationMinutes: DurationMinutesEnum
     public let enabled: Bool
     public let maxHorizonDays: Int
+    public let meetingTypes: [BookingPageMeetingTypes]?
     public let minNoticeHours: Int
     public let slug: String?
     public let timeZone: IANATimeZone
     public let weeklyAvailability: [BookingPageWeeklyAvailability]
 
-    public init(blockingCalendarIds: [String], destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, maxHorizonDays: Int, minNoticeHours: Int, slug: String? = nil, timeZone: IANATimeZone, weeklyAvailability: [BookingPageWeeklyAvailability]) {
+    public init(blockingCalendarIds: [String], destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, maxHorizonDays: Int, meetingTypes: [BookingPageMeetingTypes]? = nil, minNoticeHours: Int, slug: String? = nil, timeZone: IANATimeZone, weeklyAvailability: [BookingPageWeeklyAvailability]) {
         self.blockingCalendarIds = blockingCalendarIds
         self.destinationCalendarId = destinationCalendarId
         self.durationMinutes = durationMinutes
         self.enabled = enabled
         self.maxHorizonDays = maxHorizonDays
+        self.meetingTypes = meetingTypes
         self.minNoticeHours = minNoticeHours
         self.slug = slug
         self.timeZone = timeZone
@@ -477,13 +483,14 @@ public struct BookingPage: Codable, Hashable, Sendable {
     public let hostUserId: String
     public let id: String
     public let maxHorizonDays: Int
+    public let meetingTypes: [BookingPageMeetingTypes]?
     public let minNoticeHours: Int
     public let slug: String
     public let timeZone: IANATimeZone
     public let updatedAt: DateTime
     public let weeklyAvailability: [BookingPageWeeklyAvailability]
 
-    public init(blockingCalendarIds: [String], createdAt: DateTime, destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, hostUserId: String, id: String, maxHorizonDays: Int, minNoticeHours: Int, slug: String, timeZone: IANATimeZone, updatedAt: DateTime, weeklyAvailability: [BookingPageWeeklyAvailability]) {
+    public init(blockingCalendarIds: [String], createdAt: DateTime, destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, hostUserId: String, id: String, maxHorizonDays: Int, meetingTypes: [BookingPageMeetingTypes]? = nil, minNoticeHours: Int, slug: String, timeZone: IANATimeZone, updatedAt: DateTime, weeklyAvailability: [BookingPageWeeklyAvailability]) {
         self.blockingCalendarIds = blockingCalendarIds
         self.createdAt = createdAt
         self.destinationCalendarId = destinationCalendarId
@@ -492,11 +499,24 @@ public struct BookingPage: Codable, Hashable, Sendable {
         self.hostUserId = hostUserId
         self.id = id
         self.maxHorizonDays = maxHorizonDays
+        self.meetingTypes = meetingTypes
         self.minNoticeHours = minNoticeHours
         self.slug = slug
         self.timeZone = timeZone
         self.updatedAt = updatedAt
         self.weeklyAvailability = weeklyAvailability
+    }
+}
+
+public struct BookingPageMeetingTypes: Codable, Hashable, Sendable {
+    public let durationMinutes: DurationMinutesEnum
+    public let id: String
+    public let label: String
+
+    public init(durationMinutes: DurationMinutesEnum, id: String, label: String) {
+        self.durationMinutes = durationMinutes
+        self.id = id
+        self.label = label
     }
 }
 
@@ -1372,15 +1392,17 @@ public struct PublicGetBookingPageResponse: Codable, Hashable, Sendable {
     public let enabled: Bool
     public let hostDisplayName: String
     public let maxHorizonDays: Int
+    public let meetingTypes: [BookingPageMeetingTypes]?
     public let timeZone: IANATimeZone
 
-    public init(conference: ConferenceEnum? = nil, createsGoogleMeet: Bool, durationMinutes: DurationMinutesEnum, enabled: Bool, hostDisplayName: String, maxHorizonDays: Int, timeZone: IANATimeZone) {
+    public init(conference: ConferenceEnum? = nil, createsGoogleMeet: Bool, durationMinutes: DurationMinutesEnum, enabled: Bool, hostDisplayName: String, maxHorizonDays: Int, meetingTypes: [BookingPageMeetingTypes]? = nil, timeZone: IANATimeZone) {
         self.conference = conference
         self.createsGoogleMeet = createsGoogleMeet
         self.durationMinutes = durationMinutes
         self.enabled = enabled
         self.hostDisplayName = hostDisplayName
         self.maxHorizonDays = maxHorizonDays
+        self.meetingTypes = meetingTypes
         self.timeZone = timeZone
     }
 }
@@ -1398,10 +1420,10 @@ public struct ReplaceEventInput: Codable, Hashable, Sendable {
     public let invitation: InvitationEnum?
     public let recurrence: ReplaceEventInputRecurrence
     public let restore: Bool?
-    public let schedule: EventSchedule
+    public let schedule: EventSchedule?
     public let scope: ScopeEnum
 
-    public init(calendarId: CalendarId? = nil, content: CreateEventInputContent, invitation: InvitationEnum? = nil, recurrence: ReplaceEventInputRecurrence, restore: Bool? = nil, schedule: EventSchedule, scope: ScopeEnum) {
+    public init(calendarId: CalendarId? = nil, content: CreateEventInputContent, invitation: InvitationEnum? = nil, recurrence: ReplaceEventInputRecurrence, restore: Bool? = nil, schedule: EventSchedule? = nil, scope: ScopeEnum) {
         self.calendarId = calendarId
         self.content = content
         self.invitation = invitation

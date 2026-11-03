@@ -1,7 +1,7 @@
 # Weekly reflection private trial
 
 This runbook covers operator preparation and activation of the private daily
-trial. Read the [implementation plan](../Features/weekly-reflection-plan.md) for
+trial. Read the [implementation plan](../features/weekly-reflection-plan.md) for
 the agreed behavior and the pull request for verification evidence and remaining
 rollout prerequisites. A successful local preview is not production deployment
 approval. Follow AGENTS.md for production changes.

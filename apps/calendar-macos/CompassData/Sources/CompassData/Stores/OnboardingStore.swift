@@ -69,7 +69,7 @@ public final class OnboardingStore {
     }
 
     public func advanceWelcomeStep() {
-        welcomeStep = min(welcomeStep + 1, 3)
+        welcomeStep = min(welcomeStep + 1, 4)
     }
 
     public func retreatWelcomeStep() {

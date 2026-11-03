@@ -8,7 +8,10 @@ import {
   type ProviderEventId,
 } from "@core/types/sync/identity.contracts";
 import { resolveUpdateSchedule } from "@sync/domain/merge-update-content";
-import { occurrenceScheduleAfterSeriesEdit } from "@sync/domain/occurrence-projection";
+import {
+  occurrenceScheduleAfterSeriesEdit,
+  scheduleStartAt,
+} from "@sync/domain/occurrence-projection";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
 import { storedSeriesRecurrence } from "@sync/domain/provider-command.intent-match";
 import {
@@ -144,6 +147,10 @@ async function commitProviderSeriesUpdate(
     exceptions,
     convertsToSingle,
   );
+  const nextSchedule = resolveUpdateSchedule(input.schedule, master.schedule);
+  const seriesStartMoved =
+    scheduleStartAt(nextSchedule).getTime() !==
+    scheduleStartAt(master.schedule).getTime();
 
   // Align or remove discarded overrides at Google first, then clear local
   // copies. Kept cancelled tombstones are not touched at the provider.
@@ -171,7 +178,7 @@ async function commitProviderSeriesUpdate(
           content,
           schedule: occurrenceScheduleAfterSeriesEdit(
             master.schedule,
-            resolveUpdateSchedule(input.schedule, master.schedule),
+            nextSchedule,
             exceptionInstant(exception),
           ),
           recurrence: { kind: "instance" },
@@ -189,14 +196,24 @@ async function commitProviderSeriesUpdate(
             provider.connectionId,
           );
         }
-        const stop = await resolveFailedOverrideAlign(
-          deps,
-          command,
-          provider,
-          exceptionProviderEventId,
-          alignResult.stop.reason,
-        );
-        if (stop) return stop;
+        // Once the master patch moves the series start, Google answers a
+        // patch to an override keyed by the old start with a generic 400.
+        // The master write already landed, so failing here would leave
+        // Google moved and Compass not. An "Apply to series?" promotion of a
+        // just-moved occurrence takes this path.
+        const supersededByMove =
+          seriesStartMoved &&
+          alignResult.stop.reason === "providerRejectedChange";
+        if (!supersededByMove) {
+          const stop = await resolveFailedOverrideAlign(
+            deps,
+            command,
+            provider,
+            exceptionProviderEventId,
+            alignResult.stop.reason,
+          );
+          if (stop) return stop;
+        }
       }
     }
 

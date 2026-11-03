@@ -1,26 +1,13 @@
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
-import { focusFirstSidebarItem } from "@web/components/Sidebar/util/sidebarFocus.util";
-import {
-  selectIsSidebarOpen,
-  useViewStore,
-  viewActions,
-} from "@web/events/stores/view.store";
-import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
+import { moveCalendarUiFocusRight } from "@web/shortcuts/ui-focus/ui-focus-region.util";
+import { useUiFocusLetterShortcut } from "@web/shortcuts/ui-focus/useUiFocusLetterShortcut";
 
-/** Mount once per view: registers the "i" hotkey, which opens the sidebar
- * (if closed) and focuses its first item, or just focuses it if already open. */
+/** Mount once per calendar view: `i` moves focus one region right (sidebar). */
 export function useFocusSidebarShortcut() {
-  useAppShortcutUp(
+  useUiFocusLetterShortcut(
     APP_SHORTCUT_BINDINGS.focusSidebar.hotkey,
     () => {
-      if (selectIsSidebarOpen(useViewStore.getState())) {
-        focusFirstSidebarItem();
-        return;
-      }
-
-      viewActions.setSidebarOpen(true);
-      // The sidebar renders conditionally; focus after the open commits.
-      requestAnimationFrame(() => focusFirstSidebarItem());
+      moveCalendarUiFocusRight();
     },
     { shortcutId: "focus-sidebar" },
   );

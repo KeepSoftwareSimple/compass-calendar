@@ -42,8 +42,11 @@ import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { RetryableSaveToast } from "@web/common/utils/toast/retryable-save.toast";
 import {
+  calendarEventIdElementSelector,
   calendarEventIdValueSelector,
+  dayEventTargeting,
   readCalendarEventIdFromElement,
+  weekEventTargeting,
 } from "@web/grid/interaction/view-event-registry";
 
 export const gridEventDefaultPosition: GridEvent["position"] = {
@@ -129,20 +132,47 @@ export const assembleGridEvent = (event: EventWithDates): GridEvent => {
 export const getCalendarEventIdFromElement = (element: HTMLElement) =>
   readCalendarEventIdFromElement(element);
 
+const resolveFocusedCalendarEventFromTarget = (
+  target: EventTarget | null,
+): { element: HTMLElement; eventId: string } | null => {
+  if (!(target instanceof HTMLElement)) return null;
+
+  const card = target.closest(calendarEventIdElementSelector());
+  if (!(card instanceof HTMLElement)) return null;
+
+  const eventId = readCalendarEventIdFromElement(card);
+  if (!eventId) return null;
+
+  return { element: card, eventId };
+};
+
 /**
  * The focused event card and its id, or null when focus sits anywhere else.
  * The precondition every shortcut that acts on "the event you are on" shares
- * (`m` opens its menu, `x` hides it), so none of them has to re-derive what
+ * (`.` opens its menu, `x` hides it), so none of them has to re-derive what
  * counts as a card.
+ *
+ * Resolves the stamped card node (not a descendant) so coordinates and
+ * registry checks stay stable after React remounts. When DOM focus is
+ * ambiguous, the keydown target and the view navigable fallback (read-only
+ * cards that never register for drag/resize) are consulted too.
  */
-export const getFocusedCalendarEvent = (): {
-  element: HTMLElement;
-  eventId: string;
-} | null => {
-  const active = document.activeElement;
-  if (!(active instanceof HTMLElement)) return null;
-  const eventId = getCalendarEventIdFromElement(active);
-  return eventId ? { element: active, eventId } : null;
+export const getFocusedCalendarEvent = (
+  keyboardEvent?: Pick<KeyboardEvent, "target">,
+): { element: HTMLElement; eventId: string } | null => {
+  const fromDom =
+    resolveFocusedCalendarEventFromTarget(document.activeElement) ??
+    (keyboardEvent
+      ? resolveFocusedCalendarEventFromTarget(keyboardEvent.target)
+      : null);
+  if (fromDom) return fromDom;
+
+  const navigable =
+    weekEventTargeting.getFocusedNavigableGridEventTarget() ??
+    dayEventTargeting.getFocusedNavigableGridEventTarget();
+  if (!navigable) return null;
+
+  return { element: navigable.element, eventId: navigable.eventId };
 };
 
 /**
@@ -295,6 +325,22 @@ const mutationToastMessage = (
   );
 };
 
+const OFFLINE_SAVE_MESSAGE =
+  "Couldn't save, you're offline. Your change was not applied.";
+const BACKEND_UNREACHABLE_SAVE_MESSAGE =
+  "Couldn't reach Compass, it may be restarting. Your change was not applied.";
+
+/**
+ * Only blame the user's connection when the browser itself says it is
+ * offline. Otherwise the request left the device and Compass did not answer
+ * (a deploy restart or a gateway 502/503/504), which "check your connection"
+ * used to misreport as the user's network.
+ */
+const backendUnavailableSaveMessage = (): string =>
+  typeof navigator !== "undefined" && navigator.onLine === false
+    ? OFFLINE_SAVE_MESSAGE
+    : BACKEND_UNREACHABLE_SAVE_MESSAGE;
+
 export const handleError = (
   error: Error,
   onRetry?: () => void,
@@ -315,10 +361,17 @@ export const handleError = (
 
   if (isBackendUnavailableError(error)) {
     // No HTTP response reached us at all (offline, DNS, dropped connection)
-    // or a 502/503/504 - the optimistic edit is about to roll back with
-    // nothing else on screen to explain why.
+    // or a 502/503/504, and the mutation layer has already re-sent the write
+    // for about 45 seconds (event-write-retry.ts). The optimistic edit is
+    // about to roll back with nothing else on screen to explain why.
     showErrorToast(
-      "Couldn't save - check your connection. Your change was not applied.",
+      onRetry
+        ? createElement(RetryableSaveToast, {
+            message: backendUnavailableSaveMessage(),
+            toastId: EVENT_SAVE_UNAVAILABLE_TOAST_ID,
+            onRetry,
+          })
+        : backendUnavailableSaveMessage(),
       { toastId: EVENT_SAVE_UNAVAILABLE_TOAST_ID },
     );
     return;

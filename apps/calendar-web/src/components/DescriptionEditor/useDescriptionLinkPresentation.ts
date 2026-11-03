@@ -1,9 +1,11 @@
 import { type Editor } from "@tiptap/react";
 import { useEffect, useRef } from "react";
 import {
+  applyDescriptionLinkAccessibleLabel,
   displayHostForDescriptionLink,
   listDescriptionLinks,
   shouldShortenDescriptionLinkLabel,
+  withEditorDomObserverPaused,
 } from "@web/components/DescriptionEditor/description-link.util";
 
 /** Display-only host labels; ProseMirror HTML stays unchanged. */
@@ -30,15 +32,9 @@ export function useDescriptionLinkPresentation(
     }
     presentationAppliedRef.current = true;
 
-    const domObserver = (
-      editor.view as unknown as {
-        domObserver: { stop: () => void; start: () => void };
-      }
-    ).domObserver;
-    domObserver.stop();
-    try {
+    withEditorDomObserverPaused(editor, () => {
       for (const link of listDescriptionLinks(editorRoot)) {
-        link.title = link.href;
+        applyDescriptionLinkAccessibleLabel(link);
         const text = link.textContent ?? "";
         if (!shouldShortenDescriptionLinkLabel(text, link.href)) continue;
 
@@ -47,8 +43,6 @@ export function useDescriptionLinkPresentation(
           link.textContent = host;
         }
       }
-    } finally {
-      domObserver.start();
-    }
+    });
   }, [editor, editorRoot, isFocused]);
 }

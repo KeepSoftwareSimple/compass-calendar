@@ -7,6 +7,7 @@ import { noteAnonymousShortcutEngagementIfEligible } from "@web/auth/posthog/not
 import { track } from "@web/auth/posthog/track";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { getAppLockReasons } from "@web/shortcuts/app-lock";
+import { hasAnyModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { REGISTRY_HINT_SHORTCUT_CELEBRATION_KEYS } from "@web/shortcuts/tips/hint-shortcut-celebration.registry";
 import {
@@ -371,8 +372,7 @@ export function recordShortcutUnavailableAttempt(
             document.activeElement?.tagName.toLowerCase() ?? "none",
           context: lockContext(),
           is_repeat: event.repeat,
-          was_modifier_held:
-            event.altKey || event.ctrlKey || event.metaKey || event.shiftKey,
+          was_modifier_held: hasAnyModifier(event),
         }
       : { context: lockContext() }),
   });

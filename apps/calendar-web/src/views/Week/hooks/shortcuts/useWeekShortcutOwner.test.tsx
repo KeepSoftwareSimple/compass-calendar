@@ -17,11 +17,17 @@ import {
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
+import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { ID_EVENT_FORM, ID_SIDEBAR } from "@web/common/constants/web.constants";
-import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { emitViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
+import { useFirstEventPromptStore } from "@web/components/FirstEventPrompt/first-event.store";
+import {
+  initialShortcutShowcaseState,
+  useShortcutShowcaseStore,
+} from "@web/components/ShortcutShowcase/showcase.store";
 import {
   createGridEventDraft,
   getGridDraftId,
@@ -51,6 +57,7 @@ import {
   eventJumpActions,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 import {
   afterEach,
   beforeEach,
@@ -231,6 +238,12 @@ const getCreateMutation = (queryClient: QueryClient) =>
 
 beforeEach(() => {
   HotkeyManager.resetInstance();
+  persistentBrowserStore.remove(STORAGE_KEYS.FIRST_EVENT_DONE);
+  useShortcutShowcaseStore.setState(initialShortcutShowcaseState, true);
+  useFirstEventPromptStore.setState(
+    { isDone: true, isCelebrating: false },
+    true,
+  );
   useEdgeFocusStore.setState(initialEdgeFocusState, true);
   useEventClipboardStore.setState(initialEventClipboardState, true);
   draftActions.discard();

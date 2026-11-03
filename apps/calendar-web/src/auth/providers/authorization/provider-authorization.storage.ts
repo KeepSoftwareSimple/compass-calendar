@@ -15,6 +15,8 @@ export const ProviderAuthorizationIntentSchema = z.object({
     .startsWith("/")
     .refine((path) => !path.startsWith("//")),
   createdAt: z.number(),
+  /** Set when OAuth began from the signup trial path so callbacks can branch. */
+  signupFlow: z.boolean().optional(),
 });
 
 export type ProviderAuthorizationIntent = z.infer<
@@ -86,17 +88,34 @@ export function clearProviderAuthorizationIntent(
   sessionBrowserStore.remove(getStorageKey(provider, state));
 }
 
+function markSessionFlag(key: string): void {
+  sessionBrowserStore.set(key, "1");
+}
+
+function consumeSessionFlag(key: string): boolean {
+  const wasSet = sessionBrowserStore.get(key) !== null;
+  if (wasSet) {
+    sessionBrowserStore.remove(key);
+  }
+  return wasSet;
+}
+
 const googleNeedsConsentRetryKey = `${GOOGLE_AUTH_INTENT_STORAGE_PREFIX}.needsConsentRetry`;
 
 export function markGoogleAuthNeedsConsentRetry(): void {
-  sessionBrowserStore.set(googleNeedsConsentRetryKey, "1");
+  markSessionFlag(googleNeedsConsentRetryKey);
 }
 
 export function consumeGoogleAuthNeedsConsentRetry(): boolean {
-  const needsRetry =
-    sessionBrowserStore.get(googleNeedsConsentRetryKey) !== null;
-  if (needsRetry) {
-    sessionBrowserStore.remove(googleNeedsConsentRetryKey);
-  }
-  return needsRetry;
+  return consumeSessionFlag(googleNeedsConsentRetryKey);
+}
+
+const googleScopesRecoveryPendingKey = `${GOOGLE_AUTH_INTENT_STORAGE_PREFIX}.scopesRecoveryPending`;
+
+export function markGoogleOAuthScopesRecoveryPending(): void {
+  markSessionFlag(googleScopesRecoveryPendingKey);
+}
+
+export function consumeGoogleOAuthScopesRecoveryPending(): boolean {
+  return consumeSessionFlag(googleScopesRecoveryPendingKey);
 }

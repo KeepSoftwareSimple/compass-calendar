@@ -143,8 +143,8 @@ report from a speculative concern.
 1. Run the `simplify` skill on the complete base-to-head diff after the fix. Apply
    behavior-preserving simplifications, commit them separately when they change
    code, and re-run behavior-adjacent checks.
-2. Follow the `ship` skill for verify, ready PR, and the `agent-automerge`
-   label. Do not bypass its safeguards.
+2. Follow the `ship` skill for verify, ready PR, and auto-merge. Do not
+   bypass its safeguards.
 3. Do not create or merge a pull request if validation is incomplete, an
    unrelated dirty change overlaps, a material finding remains unresolved, or
    the target/base branch is unclear. State the blocker instead.

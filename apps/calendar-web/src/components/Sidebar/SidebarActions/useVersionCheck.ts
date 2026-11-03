@@ -26,6 +26,8 @@ function getVersionCheckUrl() {
 
 export interface VersionCheckResult {
   isUpdateAvailable: boolean;
+  /** Server semver when it differs from the loaded bundle; otherwise null. */
+  availableVersion: string | null;
   currentVersion: string;
 }
 
@@ -41,6 +43,7 @@ export interface VersionCheckResult {
  */
 export const useVersionCheck = (): VersionCheckResult => {
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
+  const [availableVersion, setAvailableVersion] = useState<string | null>(null);
   const isCheckingRef = useRef(false);
 
   const checkVersion = useCallback(async () => {
@@ -79,7 +82,13 @@ export const useVersionCheck = (): VersionCheckResult => {
         return;
       }
 
-      setIsUpdateAvailable(serverVersion !== APP_VERSION);
+      if (serverVersion !== APP_VERSION) {
+        setIsUpdateAvailable(true);
+        setAvailableVersion(serverVersion);
+      } else {
+        setIsUpdateAvailable(false);
+        setAvailableVersion(null);
+      }
     } catch (error) {
       console.error("Version check failed:", error);
     } finally {
@@ -109,5 +118,9 @@ export const useVersionCheck = (): VersionCheckResult => {
     !envConstants.IS_DEV,
   );
 
-  return { isUpdateAvailable, currentVersion: APP_VERSION };
+  return {
+    isUpdateAvailable,
+    availableVersion,
+    currentVersion: APP_VERSION,
+  };
 };

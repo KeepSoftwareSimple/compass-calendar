@@ -29,6 +29,8 @@ interface Props {
   selectedEndDate: Date;
   selectedStartDate: Date;
   startTime: SelectOption<string>;
+  /** Stored event zone on save; display parsing stays in the calendar zone. */
+  timedOutputTimeZone?: string;
 }
 
 export const TimePickers: FC<Props> = ({
@@ -39,6 +41,7 @@ export const TimePickers: FC<Props> = ({
   selectedEndDate,
   selectedStartDate,
   startTime,
+  timedOutputTimeZone,
 }) => {
   const datePickers = useOpenSide();
   const {
@@ -127,6 +130,7 @@ export const TimePickers: FC<Props> = ({
       endTime,
       scheduleStart,
       scheduleEnd,
+      timedOutputTimeZone,
     });
     commitTimedSchedule(mapped);
   };
@@ -151,13 +155,16 @@ export const TimePickers: FC<Props> = ({
       changed === "start" ? selectedStartDate : selectedEndDate;
     const complimentDate = dayjs(anchorDate).add(dayOffset, "day").toDate();
 
-    const mapped = tryMapToBackend({
-      startDate: changed === "start" ? anchorDate : complimentDate,
-      endDate: changed === "start" ? complimentDate : anchorDate,
-      startTime: changed === "start" ? option : corrected,
-      endTime: changed === "start" ? corrected : option,
-      isAllDay: false,
-    });
+    const mapped = tryMapToBackend(
+      {
+        startDate: changed === "start" ? anchorDate : complimentDate,
+        endDate: changed === "start" ? complimentDate : anchorDate,
+        startTime: changed === "start" ? option : corrected,
+        endTime: changed === "start" ? corrected : option,
+        isAllDay: false,
+      },
+      timedOutputTimeZone,
+    );
 
     if (!mapped.ok) {
       rejectTimeSelection(changed);

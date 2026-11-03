@@ -106,15 +106,19 @@ export function getEffectiveTimeZone(): string {
   return currentEffectiveTimeZone();
 }
 
+function applyTrackedBrowserTimeZone(timeZone: string): void {
+  browserTimeZoneStore.set(timeZone);
+  if (pinnedTimeZoneStore.get() === null) {
+    syncEffectiveTimeZone();
+  }
+}
+
 /**
  * Refresh the tracked browser zone. The effective zone only follows this
  * value in Auto mode (no pin).
  */
 export function refreshEffectiveTimeZoneFromBrowser(): void {
-  browserTimeZoneStore.set(getBrowserTimeZone());
-  if (pinnedTimeZoneStore.get() === null) {
-    syncEffectiveTimeZone();
-  }
+  applyTrackedBrowserTimeZone(getBrowserTimeZone());
 }
 
 /**
@@ -179,20 +183,12 @@ export function useBrowserTimeZone(): string {
   return useSyncExternalStore(subscribe, getTrackedBrowserTimeZone);
 }
 
-/** Test-only: pin in memory (and storage when available) without extra UI. */
-export function setEffectiveTimeZoneForTests(timeZone: string): void {
-  setPinnedTimeZone(timeZone);
-}
-
 /** Test-only: set the tracked browser zone without going through Intl. */
 export function setBrowserTimeZoneForTests(timeZone: string): void {
   if (!isValidTimeZone(timeZone)) {
     return;
   }
-  browserTimeZoneStore.set(timeZone);
-  if (pinnedTimeZoneStore.get() === null) {
-    syncEffectiveTimeZone();
-  }
+  applyTrackedBrowserTimeZone(timeZone);
 }
 
 export function resetEffectiveTimeZoneStoreForTests(): void {

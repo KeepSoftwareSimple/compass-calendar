@@ -5,7 +5,7 @@ import { type PropsWithChildren } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { billingQueryKeys } from "@web/billing/billing.query";
-import { useAppAccess } from "@web/billing/useAppAccess";
+import { useAppAccess, useIsAppAccessPending } from "@web/billing/useAppAccess";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { beforeEach, describe, expect, it } from "bun:test";
 
@@ -299,6 +299,80 @@ describe("useAppAccess", () => {
       wrapper: createWrapper(false, client),
     });
     expect(result.current).toEqual({ kind: "open" });
+    expect(billingHits).toBe(0);
+  });
+});
+
+describe("useIsAppAccessPending", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("is true while an authenticated plan is still loading", async () => {
+    stubConfig(true);
+    server.use(
+      http.get(`${ENV_WEB.API_BASEURL}/billing/status`, async () => {
+        await delay(500);
+        return HttpResponse.json({
+          subscriptionStatus: "active",
+          trialEndsAt: null,
+          isReadOnly: false,
+        });
+      }),
+    );
+
+    const { result } = renderHook(() => useIsAppAccessPending(), {
+      wrapper: createWrapper(true),
+    });
+    await waitFor(() => {
+      expect(result.current).toBe(true);
+    });
+  });
+
+  it("is false for an anonymous visitor", () => {
+    stubConfig(true);
+    let billingHits = 0;
+    server.use(
+      http.get(`${ENV_WEB.API_BASEURL}/billing/status`, () => {
+        billingHits += 1;
+        return HttpResponse.json({
+          subscriptionStatus: "active",
+          trialEndsAt: null,
+          isReadOnly: false,
+        });
+      }),
+    );
+
+    const { result } = renderHook(() => useIsAppAccessPending(), {
+      wrapper: createWrapper(),
+    });
+    expect(result.current).toBe(false);
+    expect(billingHits).toBe(0);
+  });
+
+  it("is false when config fails, and does not fetch billing", async () => {
+    let billingHits = 0;
+    server.use(
+      http.get(
+        `${ENV_WEB.API_BASEURL}/config`,
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+      http.get(`${ENV_WEB.API_BASEURL}/billing/status`, () => {
+        billingHits += 1;
+        return HttpResponse.json({
+          subscriptionStatus: "active",
+          trialEndsAt: null,
+          isReadOnly: false,
+        });
+      }),
+    );
+
+    const { result } = renderHook(() => useIsAppAccessPending(), {
+      wrapper: createWrapper(true),
+    });
+    await waitFor(() => {
+      expect(result.current).toBe(false);
+    });
     expect(billingHits).toBe(0);
   });
 });

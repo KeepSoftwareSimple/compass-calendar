@@ -59,7 +59,9 @@ test.describe("Desktop web parity captures", () => {
     await prepareParityDemoWeek(page);
     await page.locator("#mainGrid").focus();
     await page.keyboard.down(modKey);
-    await page.waitForTimeout(600);
+    await expect(page.locator("[data-page-jump-hints]")).toBeVisible({
+      timeout: 2_000,
+    });
     await page.screenshot({ path: join(outputDir, "mod-hold-overlay.png") });
     await page.keyboard.up(modKey);
   });
@@ -132,7 +134,10 @@ test.describe("Desktop web parity captures", () => {
     await expect(page.getByLabel("Command palette search")).toBeVisible({
       timeout: 10_000,
     });
-    await page.screenshot({ path: join(outputDir, "command-palette.png") });
+    await page.screenshot({
+      path: join(outputDir, "command-palette.png"),
+      animations: "disabled",
+    });
   });
 
   test("settings", async ({ page }) => {

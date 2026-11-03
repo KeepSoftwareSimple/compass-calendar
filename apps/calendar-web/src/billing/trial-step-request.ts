@@ -1,5 +1,8 @@
 import { track } from "@web/auth/posthog/track";
-import { isAwaitingCheckoutWriteLocked } from "@web/billing/billing-write-lock";
+import {
+  isAwaitingCheckoutForTrialStep,
+  syncAwaitingCheckoutWriteLockFromServer,
+} from "@web/billing/awaiting-checkout-trial-eligible";
 import { openStartTrialStepModal } from "@web/components/AuthModal/auth-modal-runtime";
 
 export type TrialGateTrigger = "write" | "banner";
@@ -8,10 +11,6 @@ export type TrialGateTrigger = "write" | "banner";
 export type TrialGateEventAction = "create" | "replace" | "delete";
 
 let pendingTrigger: TrialGateTrigger | null = null;
-
-/** Copy for StartTrialStep when the user hit a write block. */
-export const TRIAL_STEP_WRITE_LEAD =
-  "Add a card to start your 7-day free trial and save changes to your calendar.";
 
 export function consumeTrialStepTrigger(): TrialGateTrigger | null {
   const trigger = pendingTrigger;
@@ -27,11 +26,26 @@ export function resetTrialStepRequestForTests(): void {
  * Opens the in-modal trial step for `awaiting_checkout` accounts. Expired and
  * canceled users keep the full-screen billing gate instead.
  */
-export async function requestTrialStep(options: {
+export type RequestTrialStepOptions = {
   trigger: TrialGateTrigger;
   eventAction?: TrialGateEventAction;
-}): Promise<boolean> {
-  if (!isAwaitingCheckoutWriteLocked()) return false;
+  /** Set when `/api/event` returned `BILLING_REQUIRED`. */
+  serverBillingRequired?: boolean;
+};
+
+export async function requestTrialStep(
+  options: RequestTrialStepOptions,
+): Promise<boolean> {
+  if (
+    !isAwaitingCheckoutForTrialStep({
+      serverBillingRequired: options.serverBillingRequired,
+    })
+  ) {
+    return false;
+  }
+  if (options.serverBillingRequired) {
+    syncAwaitingCheckoutWriteLockFromServer();
+  }
 
   pendingTrigger = options.trigger;
   track("trial_gate_triggered", {
@@ -55,7 +69,7 @@ export async function requestTrialStep(options: {
 export function blockAwaitingCheckoutEventWrite(
   eventAction: TrialGateEventAction,
 ): boolean {
-  if (!isAwaitingCheckoutWriteLocked()) return false;
+  if (!isAwaitingCheckoutForTrialStep()) return false;
   void requestTrialStep({ trigger: "write", eventAction });
   return true;
 }

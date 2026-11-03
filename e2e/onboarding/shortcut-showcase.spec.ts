@@ -22,6 +22,8 @@ const dismissWelcomeWithExplore = async (page: Page) => {
     welcomeDialog.getByRole("button", { name: "On this device only" }),
   ).toBeVisible();
   await page.keyboard.press("s");
+  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
+  await page.keyboard.press("Enter");
   await expect(welcomeDialog).toBeHidden();
 };
 
@@ -108,10 +110,25 @@ const clearTheQueue = async (page: Page) => {
   await expect(showcase).toContainText("Task 9/11");
 
   // page-jump-peek: hold Mod alone until the numbers appear, then Mod+1.
+  const modHoldStarted = Date.now();
   await page.keyboard.down("Control");
   await page.keyboard.down("Meta");
-  await page.waitForTimeout(800);
-  await page.keyboard.press("1");
+  const pageJumpChip = showcase
+    .locator("span.c-keycap.scale-150")
+    .filter({ hasText: "1" });
+  await expect
+    .poll(
+      async () => {
+        if (Date.now() - modHoldStarted < 650) {
+          return false;
+        }
+        return pageJumpChip.isVisible();
+      },
+      { timeout: 3_000 },
+    )
+    .toBe(true);
+  await page.keyboard.down("1");
+  await page.keyboard.up("1");
   await page.keyboard.up("Meta");
   await page.keyboard.up("Control");
   await expect(showcase).toContainText("Task 10/11");

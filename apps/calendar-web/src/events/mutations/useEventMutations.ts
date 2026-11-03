@@ -5,32 +5,18 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
-import {
-  DateTimeSchema,
-  type EventId,
-  EventIdSchema,
-} from "@core/types/domain-primitives";
-import {
-  type Event,
-  type EventRecurrence,
-  type EventSchedule,
-} from "@core/types/event.contracts";
-import {
-  type Attendee,
-  type AttendeeInput,
-  type RsvpResponseStatus,
-} from "@core/types/event-attendance.contracts";
+import { type EventId, EventIdSchema } from "@core/types/domain-primitives";
+import { type Event, type EventSchedule } from "@core/types/event.contracts";
+import { type RsvpResponseStatus } from "@core/types/event-attendance.contracts";
 import {
   type CreateEventInput,
   type RecurrenceScope,
   type ReplaceEventInput,
   type RsvpEventInput,
 } from "@core/types/event-command.contracts";
+import { eventSchedulesEqual } from "@core/util/event/event-schedule-equal";
 import { shiftSeriesScheduleByOccurrenceEdit } from "@core/util/event/shift-series-schedule-by-occurrence-edit";
-import {
-  decodeOccurrenceId,
-  rootSeriesMasterId,
-} from "@core/util/occurrence-id";
+import { decodeOccurrenceId } from "@core/util/occurrence-id";
 import {
   getApiErrorCode,
   isAbortError,
@@ -67,7 +53,13 @@ import {
 import { noteFirstRealEventCreated } from "@web/components/FirstEventPrompt/first-event.store";
 import { EventApi } from "@web/events/event.api";
 import { editableContent } from "@web/events/grid-event-draft.adapter";
-import { eventSchedulesEqual } from "@web/events/mutations/event-schedule-equal";
+import {
+  mergeReplaceInput,
+  optimisticEventFromCreate,
+  rsvpEventContent,
+  seriesIdOf,
+  seriesWriteKey,
+} from "@web/events/mutations/event-mutation-optimistic.util";
 import {
   calendarIdFromMutationInput,
   resolveMutationProvider,
@@ -141,6 +133,10 @@ import {
   UNRECORDED_HISTORY_ENTRY,
   undoEntryForWrite,
 } from "./event.mutation-history";
+import {
+  eventWriteRetryDelay,
+  shouldRetryEventWrite,
+} from "./event-write-retry";
 
 type EventMutationContext = {
   previousQueries: Array<[QueryKey, unknown]>;
@@ -182,17 +178,6 @@ function restoreWriteKeyFromSnapshot(
     // Preserve optional fields like demoEventIds on the query payload.
     queryClient.setQueryData(queryKey, { ...current, ids, entities });
   }
-}
-
-const nowDateTime = () => DateTimeSchema.parse(new Date().toISOString());
-
-// An occurrence's series is its own recurrence pointer; the series base's
-// series is itself. Shared by the replace and delete optimistic callbacks,
-// which both need the series id to gather every cached instance.
-function seriesIdOf(event: Event | null | undefined): EventId | null {
-  if (event?.recurrence.kind === "occurrence") return event.recurrence.seriesId;
-  if (event?.recurrence.kind === "series") return event.id;
-  return null;
 }
 
 // Remote/sync treat scope-"all" schedule as the series master. The client
@@ -272,6 +257,7 @@ function resolveRemoteReplaceSchedule(
   seriesMasterSchedule: EventSchedule | undefined,
 ): ReplaceEventInput {
   if (source !== "remote" || input.scope !== "all") return input;
+  if (input.schedule === undefined) return input;
 
   const parts = decodeOccurrenceId(id);
   if (!parts) return input;
@@ -286,185 +272,6 @@ function resolveRemoteReplaceSchedule(
       input.schedule,
     ),
   };
-}
-
-// Replay flows (undo/redo, snapshot restore in useUndoRedo) deliberately
-// funnel a full read-side Event["content"] through the write input type, so
-// their attendee entries really carry responseStatus as excess structure; a
-// genuine guest-edit input's entries never do. When building optimistic
-// Event content, keep only real read-state entries: a replay restores its
-// guest list without flicker exactly as before.
-function readAttendees(
-  attendees: CreateEventInput["content"]["attendees"],
-): readonly Attendee[] | undefined {
-  if (attendees === undefined) return undefined;
-  const withStatus = attendees.filter(
-    (attendee): attendee is Attendee => "responseStatus" in attendee,
-  );
-  return withStatus.length === attendees.length ? withStatus : undefined;
-}
-
-// The counterpart to readAttendees: a genuine guest edit (no entry carries
-// responseStatus — see the wire boundary in grid-event-draft.adapter.ts).
-function isGuestEditInput(
-  attendees: CreateEventInput["content"]["attendees"],
-): attendees is readonly AttendeeInput[] {
-  return (
-    attendees?.every((attendee) => !("responseStatus" in attendee)) ?? false
-  );
-}
-
-// Optimistic read-shape for an intended guest list, mirroring sync's
-// merge-by-email (WP-02) and the backend's synthesized response (WP-03):
-// retained emails keep their current responseStatus/displayName, new emails
-// enter as needsAction, dropped emails disappear. The settle refetch still
-// owns the provider-confirmed list; a failed save rolls back through the
-// snapshot restore like every other optimistic write.
-function optimisticGuestList(
-  intended: readonly AttendeeInput[],
-  existing: readonly Attendee[] | undefined,
-): readonly Attendee[] {
-  const byEmail = new Map(
-    (existing ?? []).map((attendee) => [
-      attendee.email.toLowerCase(),
-      attendee,
-    ]),
-  );
-  return intended.map(
-    (attendee) =>
-      byEmail.get(attendee.email.toLowerCase()) ?? {
-        email: attendee.email,
-        displayName: attendee.displayName,
-        responseStatus: "needsAction" as const,
-      },
-  );
-}
-
-function optimisticAttendeesFromInput(
-  attendees: CreateEventInput["content"]["attendees"],
-  existing?: readonly Attendee[],
-) {
-  return isGuestEditInput(attendees)
-    ? optimisticGuestList(attendees, existing)
-    : readAttendees(attendees);
-}
-
-// Optimistic RSVP: rewrite only the caller's own attendee entry (matched by
-// the calendar's account email, case-insensitively — the same self-match sync
-// applies), leaving every other guest's provider-owned status untouched.
-// Events without a matching entry pass through unchanged.
-function rsvpEventContent(
-  event: Event,
-  accountEmail: string,
-  responseStatus: RsvpResponseStatus,
-): Event {
-  if (event.content.kind !== "details" || !event.content.attendees) {
-    return event;
-  }
-  return {
-    ...event,
-    content: {
-      ...event.content,
-      attendees: event.content.attendees.map((attendee) =>
-        attendee.email.toLowerCase() === accountEmail.toLowerCase()
-          ? { ...attendee, responseStatus }
-          : attendee,
-      ),
-    },
-  };
-}
-
-// A create's optimistic insert needs a full Event before the server response
-// lands; recurrence is a strict subset of EditableRecurrence ("single" |
-// "series"), so it's assignable as-is.
-function optimisticEventFromCreate(input: CreateEventInput): Event {
-  const { attendees, ...details } = input.content;
-  const optimisticAttendees = optimisticAttendeesFromInput(attendees);
-  return {
-    id: input.id as EventId,
-    calendarId: input.calendarId,
-    content:
-      optimisticAttendees === undefined
-        ? details
-        : { ...details, attendees: optimisticAttendees },
-    schedule: input.schedule,
-    recurrence: input.recurrence as EventRecurrence,
-    createdAt: nowDateTime(),
-    updatedAt: null,
-  };
-}
-
-// The form only ever submits the editable subset (title/description/
-// location/color/attendees) — organizer/conference stay read-only,
-// provider-sourced fields the server never asks the client to resubmit.
-// Merging input.content wholesale onto the optimistic cache entry would make
-// those fields flicker away until the settle-time refetch restores them from
-// the server.
-function mergeReplaceContent(
-  existing: Event["content"],
-  input: ReplaceEventInput["content"],
-): Event["content"] {
-  // Same replay-vs-guest-edit split as optimisticEventFromCreate: read-state
-  // attendee entries re-enter the optimistic cache as-is; a genuine guest
-  // edit merges optimistically against the cached list (new guests render as
-  // needsAction immediately and settle from sync).
-  const { attendees, ...details } = input;
-  const existingAttendees =
-    existing.kind === "details" ? existing.attendees : undefined;
-  const optimisticAttendees = optimisticAttendeesFromInput(
-    attendees,
-    existingAttendees,
-  );
-  const replayInput =
-    optimisticAttendees === undefined
-      ? details
-      : { ...details, attendees: optimisticAttendees };
-  if (existing.kind !== "details") return replayInput;
-  // Slot writes (including null clear) supersede a provider custom hex on the
-  // optimistic card. Palette resolution prefers colorHex over color, so keeping
-  // the old hex would leave the prior fill until settle/refetch.
-  if (replayInput.kind === "details" && replayInput.color !== undefined) {
-    const { colorHex: _cleared, ...withoutHex } = existing;
-    return { ...withoutHex, ...replayInput };
-  }
-  return { ...existing, ...replayInput };
-}
-
-function mergeReplaceInput(existing: Event, input: ReplaceEventInput): Event {
-  const recurrence: EventRecurrence =
-    input.recurrence.kind === "preserve"
-      ? existing.recurrence
-      : input.recurrence.kind === "series"
-        ? { kind: "series", rules: input.recurrence.rules }
-        : { kind: "single" };
-
-  return {
-    ...existing,
-    calendarId: input.calendarId ?? existing.calendarId,
-    content: mergeReplaceContent(existing.content, input.content),
-    schedule: input.schedule,
-    recurrence,
-    updatedAt: nowDateTime(),
-  };
-}
-
-// A series-scope replace ("all"/"thisAndFollowing") serializes against the
-// series id, not the (arbitrary) instance id the edit was submitted through
-// — otherwise concurrent edits to different instances of the same series
-// wouldn't serialize against each other.
-function seriesWriteKey(
-  original: Event | null,
-  scope: RecurrenceScope,
-  fallbackId: EventId,
-): EventId {
-  if (scope === "this" || !original) return fallbackId;
-  const seriesId =
-    original.recurrence.kind === "occurrence"
-      ? original.recurrence.seriesId
-      : original.recurrence.kind === "series"
-        ? original.id
-        : fallbackId;
-  return EventIdSchema.parse(rootSeriesMasterId(seriesId));
 }
 
 // The envelope every serialized event mutation's variables carry: the write
@@ -547,6 +354,8 @@ export type EventMutationDependencies = {
   repository?: EventRepository;
   markWrite?: () => Promise<unknown>;
   reportError?: (error: Error, onRetry?: () => void) => void;
+  /** Delay before re-sending a write the backend never answered. */
+  writeRetryDelay?: (attempt: number) => number;
 };
 
 export function useEventMutations(
@@ -565,6 +374,7 @@ export function useEventMutations(
       ? noteAnonymousWriteEngagementIfEligible
       : undefined;
   const baseReportError = dependencies.reportError ?? handleError;
+  const writeRetryDelay = dependencies.writeRetryDelay ?? eventWriteRetryDelay;
   const reportError = (
     error: Error,
     onRetry?: () => void,
@@ -691,6 +501,14 @@ export function useEventMutations(
   ) => ({
     mutationKey: eventMutationKeys.operation(operation),
     mutationFn,
+    // A write the backend never answered (deploy restart, dropped
+    // connection, gateway 502/503/504) is re-sent automatically. The
+    // optimistic edit stays on screen and the mutation stays pending while
+    // it retries, so a save made mid-deploy lands instead of rolling back.
+    // Paused, not failed, while the browser reports offline (TanStack's
+    // default online network mode).
+    retry: shouldRetryEventWrite,
+    retryDelay: (attempt: number) => writeRetryDelay(attempt),
     onMutate: async (variables: Variables): Promise<EventMutationContext> => {
       await queryClient.cancelQueries({ queryKey: eventQueryKeys.all });
       const previousQueries = queryClient.getQueriesData<unknown>({
@@ -720,7 +538,11 @@ export function useEventMutations(
         void queryClient.invalidateQueries({
           queryKey: billingQueryKeys.status,
         });
-        void requestTrialStep({ trigger: "write", eventAction: operation });
+        void requestTrialStep({
+          trigger: "write",
+          eventAction: operation,
+          serverBillingRequired: true,
+        });
       }
       reportError(
         error,
@@ -918,6 +740,14 @@ export function useEventMutations(
           variables.input,
           variables.seriesMasterSchedule,
         );
+        const repositoryInput: ReplaceEventInput = {
+          ...input,
+          schedule:
+            input.schedule ??
+            (source === "local"
+              ? findEventInCache(queryClient, variables.id, source)?.schedule
+              : undefined),
+        };
         const wrote = await writeAfterPreceding(
           variables.writeKey,
           // Must be the exact variables object mutate registered — a spread
@@ -931,8 +761,8 @@ export function useEventMutations(
               .replace(
                 variables.id,
                 {
-                  ...input,
-                  content: editableContent(input.content),
+                  ...repositoryInput,
+                  content: editableContent(repositoryInput.content),
                 },
                 signal,
               )
@@ -1176,6 +1006,7 @@ export function useEventMutations(
         }
         if (
           original?.providerManaged === true &&
+          payload.input.schedule !== undefined &&
           !eventSchedulesEqual(original.schedule, payload.input.schedule)
         ) {
           showErrorToast(PROVIDER_MANAGED_SCHEDULE_TOAST);

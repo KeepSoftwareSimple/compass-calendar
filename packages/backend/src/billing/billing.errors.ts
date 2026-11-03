@@ -39,6 +39,9 @@ export function logBillingHttpError(
 }
 
 export function wrapStripeFailure(e: unknown): never {
+  if (e instanceof Stripe.errors.StripeConnectionError) {
+    throw new BillingHttpError(Status.BAD_GATEWAY, BILLING_CLIENT_MESSAGE, e);
+  }
   if (e instanceof Stripe.errors.StripeError) {
     const stripeStatus = e.statusCode ?? 0;
     const status =

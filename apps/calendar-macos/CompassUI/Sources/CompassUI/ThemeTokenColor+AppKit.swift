@@ -4,7 +4,7 @@ import CompassKit
 extension ThemeTokenColor {
     var nsColor: NSColor {
         NSColor(
-            red: red,
+            srgbRed: red,
             green: green,
             blue: blue,
             alpha: alpha
@@ -23,6 +23,6 @@ enum EventCardColorParser {
         let red = CGFloat((value >> 16) & 0xFF) / 255
         let green = CGFloat((value >> 8) & 0xFF) / 255
         let blue = CGFloat(value & 0xFF) / 255
-        return NSColor(red: red, green: green, blue: blue, alpha: 1)
+        return NSColor(srgbRed: red, green: green, blue: blue, alpha: 1)
     }
 }

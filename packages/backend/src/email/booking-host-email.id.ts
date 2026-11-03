@@ -2,6 +2,12 @@ import { type BookingGuestActionKind } from "@core/types/booking.contracts";
 
 export type BookingHostEmailKind = BookingGuestActionKind;
 
+export function isBookingHostEmailKind(
+  kind: string | undefined | null,
+): kind is BookingHostEmailKind {
+  return kind === "booked" || kind === "cancelled" || kind === "rescheduled";
+}
+
 export function buildBookingHostEmailLedgerId(input: {
   reservationId: string;
   lastGuestActionAt: Date;

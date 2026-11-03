@@ -66,12 +66,24 @@ final class LevelsStoreTests: XCTestCase {
         XCTAssertTrue(analytics.events.contains(where: { $0.0 == .shortcutLevelUp }))
     }
 
-    func testTipRotationUsesUnusedRegistryRows() throws {
+    func testUnrelatedAndRepeatedNavigationKeepsDisplayedTipStable() throws {
         let registry = try ShortcutRegistry()
-        let store = LevelsStore(registry: registry, defaults: MemoryDefaults())
-        let firstTip = store.currentTip?.shortcutId
-        store.recordShortcutInvocation(.navNext, section: "navigate")
-        XCTAssertNotEqual(store.currentTip?.shortcutId, firstTip)
+        let defaults = MemoryDefaults()
+        let store = LevelsStore(registry: registry, defaults: defaults)
+        store.pinShortcutTip(id: ShortcutId.focusPageJump.rawValue)
+        let tip = try XCTUnwrap(store.currentTip)
+        for _ in 0 ..< 8 {
+            store.recordShortcutInvocation(.navScrollHourDown, section: "navigate")
+            store.recordShortcutInvocation(.navScrollHourUp, section: "navigate")
+            XCTAssertEqual(store.currentTip, tip)
+        }
+        let usage = ShortcutUsagePersistence.readProfile(from: defaults)
+        XCTAssertEqual(usage.shortcuts[ShortcutId.navScrollHourDown.rawValue]?.invocations, 8)
+        XCTAssertEqual(usage.shortcuts[ShortcutId.navScrollHourUp.rawValue]?.invocations, 8)
+        store.recordShortcutInvocation(.focusPageJump, section: "focus")
+        XCTAssertNotEqual(store.currentTip?.shortcutId, tip.shortcutId)
+        XCTAssertNotEqual(store.currentTip?.shortcutId, ShortcutId.navScrollHourDown.rawValue)
+        XCTAssertNotEqual(store.currentTip?.shortcutId, ShortcutId.navScrollHourUp.rawValue)
     }
 
     func testHintCelebrationOnlyFiresOncePerPinnedTip() throws {

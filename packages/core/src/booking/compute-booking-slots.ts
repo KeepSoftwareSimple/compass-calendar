@@ -86,21 +86,48 @@ const availabilityForWeekday = (
   weekday: number,
 ) => weeklyAvailability.filter((interval) => interval.weekday === weekday);
 
-// dayjs.tz isValid stays true for nonexistent spring-forward times; it
-// shifts them to the next real instant (02:00 EST → 03:00 EDT). A
-// round-trip through the requested wall clock drops those gaps.
-// Ambiguous fall-back times use dayjs.tz's earlier offset; later
-// repeats of the same wall clock are not a second grid point, and
-// seenStarts drops any UTC collision.
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Resolve a wall clock in `timeZone` to a UTC instant without consulting the
+// current clock. dayjs.tz seeds its guess from Date.now(), so an ambiguous
+// fall-back wall time resolved through it silently changes which of the two
+// real instants it returns once the machine crosses the transition. That made
+// identical pinned inputs produce different slots before and after a fall-back
+// boundary.
+//
+// Instead, probe the offsets a day either side of the naive instant, which
+// bracket any single transition, and try them in chronological order:
+//   - Ambiguous fall-back times take the earlier (pre-transition) offset.
+//     The repeated wall clock is not a second grid point, and seenStarts
+//     drops any UTC collision.
+//   - Nonexistent spring-forward times (02:00 EST → 03:00 EDT) match neither
+//     candidate's round-trip, so the gap is dropped.
 const localWallInstant = (wallStart: string, timeZone: string) => {
-  const localStart = dayjs.tz(wallStart, "YYYY-MM-DD HH:mm", timeZone);
-  if (
-    !localStart.isValid() ||
-    localStart.format("YYYY-MM-DD HH:mm") !== wallStart
-  ) {
+  const naive = dayjs.utc(wallStart, "YYYY-MM-DD HH:mm");
+  if (!naive.isValid()) {
     return null;
   }
-  return localStart;
+
+  const naiveMs = naive.valueOf();
+  const earlierOffset = dayjs(naiveMs - DAY_MS)
+    .tz(timeZone)
+    .utcOffset();
+  const laterOffset = dayjs(naiveMs + DAY_MS)
+    .tz(timeZone)
+    .utcOffset();
+  const candidateOffsets =
+    earlierOffset === laterOffset
+      ? [earlierOffset]
+      : [earlierOffset, laterOffset];
+
+  for (const offsetMinutes of candidateOffsets) {
+    const candidate = dayjs(naiveMs - offsetMinutes * 60 * 1000).tz(timeZone);
+    if (candidate.format("YYYY-MM-DD HH:mm") === wallStart) {
+      return candidate;
+    }
+  }
+
+  return null;
 };
 
 /**

@@ -2,11 +2,6 @@ import { type Express, type RequestHandler } from "express";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import {
-  GOOGLE_SCOPE_CONTACTS_OTHER_READONLY,
-  GOOGLE_SCOPE_CONTACTS_READONLY,
-} from "@core/providers/google.scopes";
-import { MICROSOFT_SCOPE_PEOPLE_READ } from "@core/providers/microsoft.scopes";
-import {
   CONTACT_SUGGESTION_MAX_RESULTS,
   CONTACT_SUGGESTION_QUERY_MAX_LENGTH,
   CONTACT_SUGGESTION_QUERY_MIN_LENGTH,
@@ -16,9 +11,11 @@ import {
 import { type SyncExecutionMode } from "@sync/config/sync.config";
 import { CredentialCustody } from "@sync/credentials/credential-custody.service";
 import { ProviderAuthError } from "@sync/providers/provider-auth.port";
+import { dedupeContactSuggestionsByEmail } from "@sync/providers/provider-contact-suggestions";
 import {
   type ContactsPort,
   ContactsSearchError,
+  hasGrantedContactsSource,
 } from "@sync/providers/provider-contacts.port";
 import {
   type ProviderRegistry,
@@ -51,10 +48,11 @@ export interface ContactsApiDeps {
 }
 
 // Internal, authenticated attendee-suggestion lookup. Principal-scoped: the
-// tenant/principal come from the signed auth context, and only connections
-// that actually granted a contacts scope are queried. The response carries
-// {email, displayName} pairs and NOTHING else from the People API; neither the
-// query nor any contact content is ever logged.
+// tenant/principal come from the signed auth context. Results are the user's
+// past guests (from their own synced events) followed by contacts from each
+// connection that granted a contacts scope. The response carries
+// {email, displayName} pairs and NOTHING else; neither the query nor any
+// contact content is ever logged.
 export function registerContactsRoutes(
   app: Express,
   deps: ContactsApiDeps,
@@ -67,8 +65,9 @@ export function registerContactsRoutes(
       const auth = requireAuth(req, res);
       if (!auth) return;
       if (!ensureConnected(deps.mongo, res)) return;
-      // Suggestions always touch the provider (contacts are never cached), so
-      // a passive or unconfigured service refuses like begin does.
+      // Contact lookups touch the provider (contacts are never cached), so a
+      // passive or unconfigured service refuses like begin does; the active
+      // service answers past guests and contacts together.
       if (deps.execution === "passive" || deps.registry.kinds().length === 0) {
         res.status(Status.CONFLICT).json({ error: "provider_work_disabled" });
         return;
@@ -83,6 +82,14 @@ export function registerContactsRoutes(
         return;
       }
       const query = rawQuery.trim();
+      // A sub-minimum prefix matches half an address book: empty result,
+      // no read, no provider call, no quota burned.
+      if (query.length < CONTACT_SUGGESTION_QUERY_MIN_LENGTH) {
+        res
+          .status(Status.OK)
+          .json(ContactSuggestionsResponseSchema.parse({ suggestions: [] }));
+        return;
+      }
 
       try {
         const repos = syncRepositories(deps.mongo);
@@ -90,90 +97,75 @@ export function registerContactsRoutes(
           auth.tenantId,
           auth.principalId,
         );
-        // The capability is the contract: no contacts grant on any connection
-        // is a typed refusal (the browser hides/offers the feature from it),
-        // never a 500.
-        const capable = connections.filter((connection) =>
-          connection.capabilities.includes("suggestContacts"),
+        const ownEmails = connections.flatMap((connection) =>
+          connection.account.email
+            ? [connection.account.email.toLowerCase()]
+            : [],
         );
-        if (capable.length === 0) {
-          res.status(Status.FORBIDDEN).json({ error: "contacts_not_granted" });
-          return;
-        }
 
-        // A sub-minimum prefix matches half an address book: empty result,
-        // no provider call, no quota burned.
-        if (query.length < CONTACT_SUGGESTION_QUERY_MIN_LENGTH) {
-          res
-            .status(Status.OK)
-            .json(ContactSuggestionsResponseSchema.parse({ suggestions: [] }));
-          return;
-        }
+        // Past guests come first: people the user already meets with, from
+        // every connected account, with no contacts grant needed.
+        const collected: ContactSuggestion[] =
+          await repos.events.searchPastGuests(
+            auth.tenantId,
+            auth.principalId,
+            query,
+            {
+              excludeEmails: ownEmails,
+              limit: CONTACT_SUGGESTION_MAX_RESULTS,
+            },
+          );
 
+        // Then each account that granted contacts. One account failing
+        // (throttled, revoked) never blanks the others' results.
         const custody = new CredentialCustody(
           repos.credentials,
           resolveAuthFrom(deps.registry),
-          undefined,
-          undefined,
-          deps.credentialAtRestKey,
+          { credentialEncryptionKey: deps.credentialAtRestKey },
         );
-        const collected: ContactSuggestion[] = [];
-        for (const connection of capable) {
+        for (const connection of connections) {
+          if (!connection.capabilities.includes("suggestContacts")) continue;
           if (!deps.registry.has(connection.provider)) continue;
           const contacts = deps.registry.get(connection.provider).adapters
             .contacts;
           if (!contacts) continue;
-          const suggestions = await searchConnection(
-            contacts,
-            custody,
-            repos.credentials,
-            connection,
-            query,
-          );
-          collected.push(...suggestions);
+          try {
+            collected.push(
+              ...(await searchConnection(
+                contacts,
+                custody,
+                repos.credentials,
+                connection,
+                query,
+              )),
+            );
+          } catch (error) {
+            if (
+              !(error instanceof ContactsSearchError) &&
+              !(error instanceof ProviderAuthError)
+            ) {
+              throw error;
+            }
+            // Static line, response-fact-only cause: never the query or
+            // contact content.
+            logger.warn(
+              "Contact search failed for one account",
+              redactedCause(error),
+            );
+          }
         }
 
         res.status(Status.OK).json(
           ContactSuggestionsResponseSchema.parse({
-            suggestions: dedupeByEmail(collected).slice(
-              0,
-              CONTACT_SUGGESTION_MAX_RESULTS,
-            ),
+            suggestions: dedupeContactSuggestionsByEmail(collected)
+              .filter(
+                (suggestion) =>
+                  !ownEmails.includes(suggestion.email.toLowerCase()),
+              )
+              .slice(0, CONTACT_SUGGESTION_MAX_RESULTS),
           }),
         );
       } catch (error) {
-        if (error instanceof ContactsSearchError) {
-          // Typed provider failures map to typed transport responses. The
-          // log line is static and the cause is response-fact-only — neither
-          // ever carries the query or contact content.
-          if (error.reason === "rateLimited") {
-            logger.warn("Contact search throttled by the provider");
-            res.status(Status.TOO_MANY_REQUESTS).json({
-              error: "rate_limited",
-              retryable: true,
-            });
-            return;
-          }
-          logger.warn("Contact search failed", redactedCause(error));
-          res
-            .status(Status.SERVICE_UNAVAILABLE)
-            .json({ error: "contacts_unavailable", retryable: true });
-          return;
-        }
-        if (error instanceof ProviderAuthError) {
-          // The connection's credential could not mint a token right now
-          // (refresh failure, revoked grant). Suggestions are a convenience:
-          // report unavailable and let connection-state repair handle the
-          // credential, rather than failing with a 500.
-          logger.warn(
-            "Contact suggestions could not mint an access token",
-            redactedCause(error),
-          );
-          res
-            .status(Status.SERVICE_UNAVAILABLE)
-            .json({ error: "contacts_unavailable", retryable: true });
-          return;
-        }
         logger.error(
           "Failed to serve contact suggestions",
           redactedCause(error),
@@ -187,7 +179,10 @@ export function registerContactsRoutes(
 // Query one connection's granted People surfaces. The credential record is
 // consulted ONLY for its granted scopes (which surfaces the user consented
 // to); a connection without a stored credential (e.g. just disconnected)
-// contributes nothing rather than failing the request.
+// contributes nothing rather than failing the request. Which scope unlocks
+// which surface is the adapter's business, so the route never names a
+// provider — a newly registered one maps its own scopes instead of silently
+// inheriting Google's.
 async function searchConnection(
   contacts: ContactsPort,
   custody: CredentialCustody,
@@ -197,42 +192,9 @@ async function searchConnection(
 ): Promise<ContactSuggestion[]> {
   const credential = await credentials.findByConnection(connection._id);
   if (!credential || !isOauthRefreshCredential(credential)) return [];
-  const granted = new Set(credential.scopes);
-  const sources = contactsSourcesFor(connection.provider, granted);
-  if (!sources.contacts && !sources.otherContacts) return [];
+  const sources = contacts.sourcesForGrantedScopes(new Set(credential.scopes));
+  if (!hasGrantedContactsSource(sources)) return [];
 
   const accessToken = await custody.getValidAccessToken(connection._id);
   return contacts.searchContacts({ accessToken, query, sources });
-}
-
-function contactsSourcesFor(
-  provider: ProviderConnectionRecord["provider"],
-  granted: Set<string>,
-): { contacts: boolean; otherContacts: boolean } {
-  if (provider === "microsoft") {
-    return {
-      contacts: granted.has(MICROSOFT_SCOPE_PEOPLE_READ),
-      otherContacts: false,
-    };
-  }
-  return {
-    contacts: granted.has(GOOGLE_SCOPE_CONTACTS_READONLY),
-    otherContacts: granted.has(GOOGLE_SCOPE_CONTACTS_OTHER_READONLY),
-  };
-}
-
-// Across connections the same address can appear twice; keep the first
-// occurrence (connection listing order, each list already ranked).
-function dedupeByEmail(
-  suggestions: readonly ContactSuggestion[],
-): ContactSuggestion[] {
-  const seen = new Set<string>();
-  const unique: ContactSuggestion[] = [];
-  for (const suggestion of suggestions) {
-    const key = suggestion.email.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(suggestion);
-  }
-  return unique;
 }

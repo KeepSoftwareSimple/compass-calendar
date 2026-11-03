@@ -21,6 +21,8 @@ afterAll(() => {
 });
 
 const {
+  trackCheckoutBack,
+  trackCheckoutOpened,
   trackLocalModeSelected,
   trackSignupCompleted,
   trackSignupFailed,
@@ -36,11 +38,20 @@ describe("signup funnel", () => {
     capture.mockClear();
   });
 
+  it("always sends a non-empty step property", () => {
+    trackSignupStep("trial_step_viewed", { source: "signup_trial_step" });
+
+    const payload = capture.mock.calls[0]?.[1] as { step?: string };
+    expect(typeof payload.step).toBe("string");
+    expect(payload.step?.length).toBeGreaterThan(0);
+  });
+
   it("shapes a step as signup_step_viewed with step_name", () => {
     trackSignupStep("oauth_callback_returned", { method: "google" });
 
     expect(capture).toHaveBeenCalledWith("signup_step_viewed", {
       step_name: "oauth_callback_returned",
+      step: "oauth_callback_returned",
       method: "google",
     });
   });
@@ -50,6 +61,7 @@ describe("signup funnel", () => {
 
     expect(capture).toHaveBeenCalledWith("signup_step_viewed", {
       step_name: "welcome_viewed",
+      step: "welcome_viewed",
     });
   });
 
@@ -103,6 +115,7 @@ describe("signup funnel", () => {
     });
     expect(capture).toHaveBeenNthCalledWith(2, "signup_step_viewed", {
       step_name: "signup_cta_clicked",
+      step: "signup_cta_clicked",
       source: "welcome_modal_google",
     });
   });
@@ -115,7 +128,20 @@ describe("signup funnel", () => {
     });
     expect(capture).toHaveBeenNthCalledWith(2, "signup_step_viewed", {
       step_name: "account_created",
+      step: "account_created",
       method: "email",
+    });
+  });
+
+  it("tracks checkout_opened and checkout_back", () => {
+    trackCheckoutOpened({ source: "signup_trial_step" });
+    trackCheckoutBack({ source: "gate" });
+
+    expect(capture).toHaveBeenNthCalledWith(1, "checkout_opened", {
+      source: "signup_trial_step",
+    });
+    expect(capture).toHaveBeenNthCalledWith(2, "checkout_back", {
+      source: "gate",
     });
   });
 
@@ -126,16 +152,19 @@ describe("signup funnel", () => {
 
     expect(capture).toHaveBeenNthCalledWith(1, "signup_step_viewed", {
       step_name: "trial_step_viewed",
+      step: "trial_step_viewed",
       source: "signup_trial_step",
       method: "email",
     });
     expect(capture).toHaveBeenNthCalledWith(2, "signup_step_viewed", {
       step_name: "trial_step_completed",
+      step: "trial_step_completed",
       source: "welcome_modal",
       method: "google",
     });
     expect(capture).toHaveBeenNthCalledWith(3, "signup_step_viewed", {
       step_name: "trial_step_abandoned",
+      step: "trial_step_abandoned",
       source: "anon_nudge",
       method: "email",
     });

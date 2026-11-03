@@ -3,7 +3,6 @@ import { useCallback } from "react";
 import { KEYMAP } from "@core/shortcuts/keymap";
 import {
   copyDescriptionLinkUrl,
-  findLinkElement,
   resolveDescriptionLinkToCopy,
 } from "@web/components/DescriptionEditor/description-link.util";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
@@ -17,8 +16,11 @@ export function useDescriptionEditorCopyLinkShortcut(
     (event: KeyboardEvent) => {
       if (!editor || !editorRoot) return;
 
-      const focusedLink = findLinkElement(editorRoot, event.target);
-      const url = resolveDescriptionLinkToCopy(editor, editorRoot, focusedLink);
+      const url = resolveDescriptionLinkToCopy(
+        editor,
+        editorRoot,
+        event.target,
+      );
       if (!url) return;
 
       void copyDescriptionLinkUrl(url);

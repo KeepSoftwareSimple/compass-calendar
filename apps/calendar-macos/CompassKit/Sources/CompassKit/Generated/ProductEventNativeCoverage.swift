@@ -13,7 +13,8 @@ public enum ProductEventNativeCoverage: Sendable {
         .shortcutInvoked,
         .shortcutLevelUp,
         .shortcutLevelBadgeToggled,
-        .hintShortcutFirstUsed
+        .hintShortcutFirstUsed,
+        .subscriptionCancelReasonSubmitted
     ]
 
     /// Events owned by the web client until a native call site is registered.
@@ -27,6 +28,9 @@ public enum ProductEventNativeCoverage: Sendable {
         .oauthFailed,
         .oauthReturn,
         .signupStepViewed,
+        .googleOauthScopesRecoveryViewed,
+        .googleOauthScopesRecoveryRetryClicked,
+        .googleOauthScopesRecoverySucceeded,
         .signupFailed,
         .eventCreated,
         .eventEdited,
@@ -56,6 +60,8 @@ public enum ProductEventNativeCoverage: Sendable {
         .connectPromptDismissed,
         .trialConverted,
         .trialCelebrationShown,
+        .checkoutOpened,
+        .checkoutBack,
         .billingGateShown,
         .billingGateCtaClicked,
         .billingGateShortcutConverted,

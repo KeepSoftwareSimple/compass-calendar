@@ -65,6 +65,10 @@ async function build() {
   }
 
   await copyStaticAssets(OUTDIR);
+  await Bun.write(
+    path.join(OUTDIR, "version.json"),
+    JSON.stringify({ version: "dev" }, null, 2),
+  );
 
   return true;
 }

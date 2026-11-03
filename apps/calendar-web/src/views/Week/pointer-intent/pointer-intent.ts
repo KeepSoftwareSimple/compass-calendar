@@ -20,7 +20,16 @@ export type SlotClickIntentContext = {
   timeLabel: string;
 };
 
-export type IntentMessageContext = Partial<SlotClickIntentContext>;
+export type AllDayClickIntentContext = {
+  /** Week view: the Shift+day keycaps that select the clicked column. */
+  dayKeycaps: string[];
+  /** Weekday name for the clicked column ("Tuesday"). */
+  dayLabel: string;
+};
+
+export type IntentMessageContext = Partial<
+  SlotClickIntentContext & AllDayClickIntentContext
+>;
 
 export type IntentTeaching = {
   shortcutIds: readonly ShortcutRegistryId[];
@@ -37,9 +46,14 @@ export const INTENT_TEACHING: Record<PointerIntent, IntentTeaching> = {
     message: (ctx) =>
       `Type ${ctx.timeKey ?? ""} to create at ${ctx.timeLabel ?? ""}, or press {1}.`,
   },
+  // Teach the mouse-free path: pick the day from the keyboard, then create.
+  // Day view has one day, so it skips straight to the create key.
   "allday-click": {
-    shortcutIds: ["create-allday"],
-    message: () => "Press {0} for an all-day event.",
+    shortcutIds: ["focus-week-day", "create-allday"],
+    message: (ctx) =>
+      ctx.dayLabel
+        ? `Press {0} to pick ${ctx.dayLabel}, then {1} for an all-day event.`
+        : "Press {1} for an all-day event.",
   },
   "card-drag": {
     shortcutIds: ["edit-move-later", "edit-move-hour-later"],

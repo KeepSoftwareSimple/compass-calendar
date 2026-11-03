@@ -16,7 +16,19 @@ import {
   initialEdgeFocusState,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
-import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
+import {
+  resetEffectiveTimeZoneStoreForTests,
+  setPinnedTimeZone,
+} from "@web/timezone/effective-timezone.store";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  mock,
+  setSystemTime,
+  spyOn,
+} from "bun:test";
 import "@testing-library/jest-dom";
 
 import { AllDayEventCard } from "./AllDayEventCard";
@@ -51,7 +63,34 @@ const position = {
 
 describe("EventCard", () => {
   afterEach(() => {
+    setSystemTime();
     useEdgeFocusStore.setState(initialEdgeFocusState, true);
+    resetEffectiveTimeZoneStoreForTests();
+  });
+
+  it("labels timed events in the pinned calendar zone, not the event zone wall clock", () => {
+    setSystemTime(new Date("2026-10-31T17:00:00.000Z"));
+    setPinnedTimeZone("America/Denver");
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent({
+          startDate: "2099-10-31T18:00:00.000Z",
+          endDate: "2099-10-31T19:30:00.000Z",
+          timeZone: "Europe/Berlin",
+          title: "Monthly Ritual",
+        })}
+        motionMode="idle"
+        position={{ ...position, height: 80 }}
+      />,
+    );
+
+    expect(screen.getByText("12 - 1:30 PM")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Timed event: Monthly Ritual, 12 - 1:30 PM",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("renders timed event details and interaction attributes", () => {

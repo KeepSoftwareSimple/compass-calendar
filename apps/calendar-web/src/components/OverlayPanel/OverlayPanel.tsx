@@ -14,6 +14,7 @@ import { getFocusableElements } from "@web/common/utils/focusable-elements";
 import { useOverlayEscape } from "@web/components/OverlayPanel/overlay-escape";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
+import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 
 /** Stable, low-cardinality label for a panel's app-lock reason. */
 function lockLabel(name: string | undefined): string {
@@ -70,6 +71,8 @@ interface Props {
   widthClassName?: string;
   /** Extra classes for the backdrop (e.g. overflow for tall dialogs) */
   backdropClassName?: string;
+  /** Overrides default modal body padding (default: `p-8`). */
+  bodyPaddingClassName?: string;
   /**
    * Backdrop cross-axis alignment. `"top"` pins the panel under a 5vh inset
    * so height changes grow downward instead of recentering.
@@ -104,6 +107,7 @@ export const OverlayPanel = ({
   variant = "modal",
   widthClassName = "w-[400px]",
   backdropClassName,
+  bodyPaddingClassName = "p-8",
   panelClassName,
   closing = false,
   anchor = "center",
@@ -157,6 +161,7 @@ export const OverlayPanel = ({
     align === "start" ? "items-start" : "items-center",
     variant === "modal" && [
       widthClassName,
+      scrollChildrenOnly && "min-h-0",
       "max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl outline-none will-change-transform",
       "transition-transform duration-400 ease-out data-closing:scale-105 motion-reduce:transition-none",
       panelClassName ??
@@ -168,10 +173,11 @@ export const OverlayPanel = ({
   );
 
   const scrollBodyClasses = classNames(
-    "flex min-h-0 w-full flex-1 flex-col p-8",
+    "flex min-h-0 w-full flex-1 flex-col",
+    bodyPaddingClassName,
     scrollChildrenOnly
-      ? "max-h-[min(720px,calc(90vh-2rem))] gap-4 overflow-hidden"
-      : "gap-6 overflow-y-auto",
+      ? "max-h-[min(720px,calc(100dvh-7rem))] min-h-0 gap-4 overflow-hidden"
+      : "min-h-0 flex-1 gap-6 overflow-y-auto",
     align === "start" ? "items-start" : "items-center",
   );
 
@@ -209,7 +215,7 @@ export const OverlayPanel = ({
         return;
       }
     }
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && onModEnter) {
+    if (e.key === "Enter" && isModKeyHeld(e) && onModEnter) {
       // Prevent the focused button (often Cancel) from activating on Enter.
       e.preventDefault();
       e.stopPropagation();
@@ -257,11 +263,11 @@ export const OverlayPanel = ({
   );
 
   const panelBody = scrollChildrenOnly ? (
-    <>
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       {panelHeader}
       <div className={scrollChildrenClasses}>{children}</div>
       {footer ? <div className="w-full shrink-0">{footer}</div> : null}
-    </>
+    </div>
   ) : (
     <>
       {panelHeader}

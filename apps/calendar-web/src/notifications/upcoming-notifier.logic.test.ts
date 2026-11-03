@@ -11,7 +11,7 @@ import {
   pruneFiredKeys,
   toNotifiableEvents,
 } from "@web/notifications/upcoming-notifier.logic";
-import { setEffectiveTimeZoneForTests } from "@web/timezone/effective-timezone.store";
+import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
 import { describe, expect, it } from "bun:test";
 
 const NOW = dayjs("2026-03-10T09:00:00.000Z");
@@ -56,7 +56,7 @@ describe("announceUpcomingEvents", () => {
 
   it("shows the event title and how long until start", () => {
     const { port, show } = seam();
-    setEffectiveTimeZoneForTests("America/Denver");
+    setPinnedTimeZone("America/Denver");
 
     announceUpcomingEvents(port, NOW, [eventAt(3, "standup")], new Set());
 
@@ -68,7 +68,7 @@ describe("announceUpcomingEvents", () => {
 
   it("states the start time in the calendar's timezone, not the browser's", () => {
     const { port, show } = seam();
-    setEffectiveTimeZoneForTests("Europe/Berlin");
+    setPinnedTimeZone("Europe/Berlin");
 
     announceUpcomingEvents(port, NOW, [eventAt(3)], new Set());
 
@@ -169,7 +169,7 @@ describe("pruneFiredKeys", () => {
 
 describe("notifiableEventQueryRange", () => {
   it("keeps today's local day and extends into tomorrow for long lead times", () => {
-    setEffectiveTimeZoneForTests("America/Denver");
+    setPinnedTimeZone("America/Denver");
     const now = dayjs.tz("2026-07-16 23:56", "America/Denver");
 
     const { startDate, endDate } = notifiableEventQueryRange(now);

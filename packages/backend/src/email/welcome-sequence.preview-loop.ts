@@ -13,11 +13,18 @@ import {
   type WelcomeSequenceUser,
 } from "@backend/email/welcome-sequence";
 import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
+import {
+  nextPreviewLoopMonthlyStart,
+  nextPreviewLoopMonthlyStartAfterCompletion,
+} from "@backend/email/welcome-sequence.preview-loop.schedule";
 import { createHash } from "node:crypto";
 
 const PREVIEW_LOOP_ROW_ID_PREFIX = "preview-loop:" as const;
-const DEFAULT_PREVIEW_LOOP_GAP_DAYS = 1;
 const DEFAULT_PREVIEW_LOOP_MAX_PER_DAY = 10;
+const DUPLICATE_GENERATION_SKIP_REASON =
+  "Duplicate preview generation retired" as const;
+const AWAITING_MONTHLY_PREVIEW_SKIP_REASON =
+  "Awaiting monthly preview window" as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -37,12 +44,6 @@ export function previewLoopScheduleProfile(): ScheduleProfile {
     CONFIG.EMAIL_SCHEDULE_PROFILE ??
     "real"
   );
-}
-
-export function previewLoopGapMs(): number {
-  const days =
-    CONFIG.EMAIL_PREVIEW_LOOP_GAP_DAYS ?? DEFAULT_PREVIEW_LOOP_GAP_DAYS;
-  return days * DAY_MS;
 }
 
 export function previewLoopMaxEmailsPerDay(): number {
@@ -210,6 +211,93 @@ async function findLatestPreviewGeneration(
   return row?.previewLoopGeneration ?? null;
 }
 
+async function findQueuedPreviewGenerations(
+  recipientEmail: string,
+): Promise<number[]> {
+  const rows = await mongoService.emailSend
+    .find(previewLoopRecipientFilter(recipientEmail, { status: "queued" }), {
+      projection: { previewLoopGeneration: 1 },
+    })
+    .toArray();
+  const generations = new Set<number>();
+  for (const row of rows) {
+    if (row.previewLoopGeneration !== undefined) {
+      generations.add(row.previewLoopGeneration);
+    }
+  }
+  return [...generations].sort((a, b) => a - b);
+}
+
+async function previewGenerationHasRows(
+  recipientEmail: string,
+  generation: number,
+): Promise<boolean> {
+  const row = await mongoService.emailSend.findOne(
+    previewLoopRecipientFilter(recipientEmail, {
+      previewLoopGeneration: generation,
+    }),
+    { projection: { _id: 1 } },
+  );
+  return row !== null;
+}
+
+async function skipPreviewLoopQueuedRows(
+  recipientEmail: string,
+  now: Date,
+  lastError: string,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  await mongoService.emailSend.updateMany(
+    previewLoopRecipientFilter(recipientEmail, {
+      status: "queued",
+      ...extra,
+    }),
+    {
+      $set: {
+        status: "skipped",
+        lastError,
+        updatedAt: now,
+      },
+    },
+  );
+}
+
+/** Clears queued preview rows until the next 1st-at-8:00-Denver window opens. */
+export async function pausePreviewLoopUntilMonthlyStart(
+  recipientEmail: string,
+  now: Date,
+): Promise<void> {
+  const nextStart = nextPreviewLoopMonthlyStart(now);
+  if (now.getTime() >= nextStart.getTime()) {
+    return;
+  }
+  await skipPreviewLoopQueuedRows(
+    recipientEmail,
+    now,
+    AWAITING_MONTHLY_PREVIEW_SKIP_REASON,
+  );
+}
+
+/**
+ * At most one generation may have queued rows. Extra generations are skipped
+ * so restarts and competing pollers cannot double-send the same step.
+ */
+export async function dedupePreviewLoopQueuedGenerations(
+  recipientEmail: string,
+  now: Date,
+): Promise<void> {
+  const queuedGenerations = await findQueuedPreviewGenerations(recipientEmail);
+  if (queuedGenerations.length <= 1) {
+    return;
+  }
+  await skipPreviewLoopQueuedRows(
+    recipientEmail,
+    now,
+    DUPLICATE_GENERATION_SKIP_REASON,
+    { previewLoopGeneration: { $in: queuedGenerations.slice(1) } },
+  );
+}
+
 interface PreviewGenerationState {
   /**
    * Every step of the sequence reached a terminal sent / skipped state, so a
@@ -265,6 +353,9 @@ export async function enqueuePreviewLoopGeneration(
   if (!isPreviewLoopRecipient(normalized)) {
     return;
   }
+  if (await previewGenerationHasRows(normalized, generation)) {
+    return;
+  }
   const userId = await resolvePreviewLoopUserId(normalized);
   await ensurePreviewLoopUserDocument(normalized, userId);
   const profile = previewLoopScheduleProfile();
@@ -276,6 +367,18 @@ export async function enqueuePreviewLoopGeneration(
     profile,
   );
   await emailSendRepository.insertMany(rows);
+}
+
+async function enqueuePreviewLoopAtMonthlyStart(
+  email: string,
+  generation: number,
+  now: Date,
+): Promise<void> {
+  await enqueuePreviewLoopGeneration(
+    email,
+    generation,
+    nextPreviewLoopMonthlyStart(now),
+  );
 }
 
 export async function ensurePreviewLoopForRecipient(
@@ -297,9 +400,12 @@ export async function ensurePreviewLoopForRecipient(
     return;
   }
 
+  await dedupePreviewLoopQueuedGenerations(normalized, now);
+  await pausePreviewLoopUntilMonthlyStart(normalized, now);
+
   const latestGeneration = await findLatestPreviewGeneration(normalized);
   if (latestGeneration === null) {
-    await enqueuePreviewLoopGeneration(normalized, 1, now);
+    await enqueuePreviewLoopAtMonthlyStart(normalized, 1, now);
     return;
   }
 
@@ -310,32 +416,35 @@ export async function ensurePreviewLoopForRecipient(
   if (generation.isStale) {
     // Rows from a retired step list can sit queued for days (their sendAt is
     // still in the future). Retire them now so the new sequence starts fresh.
-    await mongoService.emailSend.updateMany(
-      previewLoopRecipientFilter(normalized, {
-        previewLoopGeneration: latestGeneration,
-        status: "queued",
-      }),
-      {
-        $set: {
-          status: "skipped",
-          lastError: "Retired welcome step list",
-          updatedAt: now,
-        },
-      },
+    await skipPreviewLoopQueuedRows(
+      normalized,
+      now,
+      "Retired welcome step list",
+      { previewLoopGeneration: latestGeneration },
     );
-    await enqueuePreviewLoopGeneration(normalized, latestGeneration + 1, now);
+    await enqueuePreviewLoopAtMonthlyStart(
+      normalized,
+      latestGeneration + 1,
+      now,
+    );
     return;
   }
-  if (!generation.isComplete || !generation.lastSentAt) {
+  if (!generation.isComplete) {
     return;
   }
 
-  const nextStartAt = generation.lastSentAt.getTime() + previewLoopGapMs();
-  if (now.getTime() < nextStartAt) {
+  const nextStartAt = nextPreviewLoopMonthlyStartAfterCompletion(
+    generation.lastSentAt ?? now,
+  );
+  if (now.getTime() < nextStartAt.getTime()) {
     return;
   }
 
-  await enqueuePreviewLoopGeneration(normalized, latestGeneration + 1, now);
+  await enqueuePreviewLoopGeneration(
+    normalized,
+    latestGeneration + 1,
+    nextStartAt,
+  );
 }
 
 export async function ensurePreviewLoopEnrollments(

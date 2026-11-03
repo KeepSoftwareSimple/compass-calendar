@@ -61,6 +61,27 @@ export function isSyntheticAccountEmail(
   );
 }
 
+/**
+ * Inboxes that skip Stripe billing gates and persisted automation flags.
+ * Unlike {@link isSyntheticAccountEmail}, the Playwright-only
+ * `@compasscaltest.invalid` domain is excluded unless it carries a `+journey`
+ * tag so staging can exercise the real trial funnel without polluting prod
+ * analytics (those addresses stay synthetic in PostHog via
+ * `isSyntheticAccountEmail`).
+ */
+export function isBillingAutomationBypassEmail(
+  email: string,
+  journeyBaseEmails: readonly string[] = [],
+): boolean {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return false;
+  if (isInternalOrTestEmail(normalized)) return true;
+  if (SYNTHETIC_JOURNEY_LOCAL_TAG.test(localPart(normalized))) return true;
+  return journeyBaseEmails.some((base) =>
+    emailMatchesSyntheticJourneyBase(normalized, base),
+  );
+}
+
 export function isSyntheticAccountHeaderValue(
   value: string | string[] | undefined,
 ): boolean {
@@ -68,4 +89,26 @@ export function isSyntheticAccountHeaderValue(
   const raw = Array.isArray(value) ? value[0] : value;
   const trimmed = raw?.trim().toLowerCase();
   return trimmed === "1" || trimmed === "true" || trimmed === "yes";
+}
+
+/** Redact journey plus-address local parts in CI logs while keeping +journey digits. */
+export function redactJourneyEmailForLog(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 0) return "***";
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const journeySuffix = local.match(/\+journey\d+$/i)?.[0];
+  if (journeySuffix) {
+    const before = local.slice(0, local.length - journeySuffix.length);
+    const plus = before.indexOf("+");
+    const safeLocal =
+      plus >= 0
+        ? `${before.slice(0, plus)}+***${journeySuffix}`
+        : `${before}${journeySuffix}`;
+    return `${safeLocal}@${domain}`;
+  }
+  const plus = local.indexOf("+");
+  const safeLocal =
+    plus >= 0 ? `${local.slice(0, plus)}+***` : `${local.slice(0, 2)}***`;
+  return `${safeLocal}@${domain}`;
 }

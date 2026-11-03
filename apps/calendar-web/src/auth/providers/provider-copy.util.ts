@@ -147,6 +147,13 @@ export function reconnectPointerHint(kind: ProviderKind): string {
 
 export const MISSING_PERMISSIONS_TITLE = "Compass needs calendar access";
 
+export const GOOGLE_SIGNUP_SCOPES_RECOVERY_TITLE = MISSING_PERMISSIONS_TITLE;
+
+export const GOOGLE_SIGNUP_SCOPES_RECOVERY_MESSAGE =
+  "Allow calendar access on the next screen so Compass can show your events.";
+
+export const GOOGLE_SIGNUP_SCOPES_RECOVERY_RETRY_LABEL = "Try again";
+
 export const MISSING_PERMISSIONS_INTRO: Record<ProviderKind, string> = {
   google:
     "Google let you skip some permissions, and Compass can't sync without them. Here is what each one is for:",

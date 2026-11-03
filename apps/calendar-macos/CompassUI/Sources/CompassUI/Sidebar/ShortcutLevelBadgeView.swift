@@ -14,9 +14,7 @@ struct ShortcutLevelBadgeView: View {
                     .font(.rubik(12))
                     .foregroundStyle(theme.textMutedColor)
                     .frame(width: 36, height: 36)
-                    .background(theme.surfaceColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(theme.borderColor, lineWidth: 1))
+                    .contentShape(Rectangle())
                     .scaleEffect(levelsStore.badgePulsing ? 1.06 : 1)
                     .animation(.easeInOut(duration: 0.35), value: levelsStore.badgePulsing)
             }

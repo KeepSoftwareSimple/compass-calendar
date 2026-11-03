@@ -1,5 +1,4 @@
 import {
-  type ParsedRecurringInstanceId,
   parseRecurringInstanceEventId,
   recurringInstanceEventId,
 } from "@sync/providers/recurring-instance-id";
@@ -10,8 +9,6 @@ import {
 // carry only this id (no recurringEventId / originalStartTime). Mint and parse
 // must stay byte-identical so a sparse cancellation reconstructs the same
 // recurrenceId the series projection uses.
-
-export type ParsedGoogleInstanceId = ParsedRecurringInstanceId;
 
 export const googleInstanceEventId = recurringInstanceEventId;
 export const parseGoogleInstanceEventId = parseRecurringInstanceEventId;

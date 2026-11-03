@@ -98,7 +98,7 @@ test("end time menu opens without shifting the form panel horizontally", async (
   await expect(page.getByRole("listbox")).toHaveCount(0);
 });
 
-test("date picker arrow keys move the highlight while the input stays focused", async ({
+test("date picker arrow keys focus the grid and move the highlight", async ({
   page,
 }, testInfo) => {
   await openTimedEventFormWithKeyboard(page);
@@ -109,14 +109,15 @@ test("date picker arrow keys move the highlight while the input stays focused", 
   await startDate.focus();
   await page.keyboard.press("ArrowDown");
   await expect(page.locator(".react-datepicker")).toBeVisible();
-  await expect(startDate).toBeFocused();
-
   await page.keyboard.press("ArrowDown");
   const highlighted = page.locator(".react-datepicker__day--keyboard-selected");
+  await expect(highlighted).toBeFocused();
+
+  await page.keyboard.press("ArrowDown");
   await expect(highlighted).toBeVisible();
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/event-form-date-picker-arrow-highlight.png",
+    path: test.info().outputPath("event-form-date-picker-arrow-highlight.png"),
   });
   await page.screenshot({
     path: testInfo.outputPath("event-form-date-picker-arrow-highlight.png"),

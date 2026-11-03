@@ -3,6 +3,7 @@ import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { SHORTCUT_HINTS } from "@web/shortcuts/tips/shortcut-tips.data";
 
 const weekNavParts = SHORTCUT_HINTS["week-nav"].parts;
+const gridScrollParts = SHORTCUT_HINTS["grid-scroll"].parts;
 
 /** Registry shortcuts that map to a specific keycap group in a sidebar hint. */
 export const REGISTRY_HINT_SHORTCUT_CELEBRATION_KEYS: Partial<
@@ -10,17 +11,17 @@ export const REGISTRY_HINT_SHORTCUT_CELEBRATION_KEYS: Partial<
 > = {
   "nav-scroll-down": hintShortcutCelebrationKeyAtPartIndex(
     "grid-scroll",
-    SHORTCUT_HINTS["grid-scroll"].parts,
+    gridScrollParts,
     2,
   )!,
   "nav-scroll-hour-down": hintShortcutCelebrationKeyAtPartIndex(
     "grid-scroll",
-    SHORTCUT_HINTS["grid-scroll"].parts,
+    gridScrollParts,
     0,
   )!,
   "nav-scroll-hour-up": hintShortcutCelebrationKeyAtPartIndex(
     "grid-scroll",
-    SHORTCUT_HINTS["grid-scroll"].parts,
+    gridScrollParts,
     0,
   )!,
   "nav-previous": hintShortcutCelebrationKeyAtPartIndex(

@@ -30,10 +30,20 @@ const onboardingStorageState = (origin: string) => ({
   ],
 });
 
+// A preinstalled Chromium whose build differs from the pinned Playwright
+// version (Claude Code web ships /opt/pw-browsers/chromium). Unset, Playwright
+// uses its own download.
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+
+const ciReporters: [string, { outputFile: string }][] = [
+  ["json", { outputFile: "test-results/playwright-report.json" }],
+];
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI ? [["list"], ...ciReporters] : "list",
   // Two workers share one dev server and the CI container's 2 vCPUs; running
   // both browsers concurrently there causes React renders/saves to blow
   // through assertion timeouts under load (different spec each time). Serial
@@ -49,6 +59,9 @@ export default defineConfig({
     colorScheme: "light",
     timezoneId: "UTC",
     trace: "on-first-retry",
+    ...(chromiumExecutablePath
+      ? { launchOptions: { executablePath: chromiumExecutablePath } }
+      : {}),
   },
   projects: [
     {

@@ -119,7 +119,7 @@ describe("MeetingPageNudge", () => {
     expect(selectSettingsPage(useSettingsStore.getState())).toBe("booking");
   });
 
-  it("opens Settings on the Meeting tab from the M shortcut", async () => {
+  it("opens Settings on the Meeting tab from the / shortcut", async () => {
     server.use(http.get(bookingPageUrl, () => HttpResponse.json(savedOffPage)));
     renderNudge();
 
@@ -134,6 +134,16 @@ describe("MeetingPageNudge", () => {
 
     expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(true);
     expect(selectSettingsPage(useSettingsStore.getState())).toBe("booking");
+  });
+
+  it("does not open Settings from bare M", async () => {
+    server.use(http.get(bookingPageUrl, () => HttpResponse.json(savedOffPage)));
+    renderNudge();
+    await screen.findByRole("button", { name: "Set up meeting page" });
+
+    pressKey("M");
+
+    expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(false);
   });
 
   it("hides after Dismiss and sets the storage key", async () => {

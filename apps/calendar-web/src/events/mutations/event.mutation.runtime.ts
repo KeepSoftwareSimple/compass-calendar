@@ -54,6 +54,14 @@ const operationOf = (mutation: AnyMutation): string | undefined => {
 
 const whenSettled = (queryClient: QueryClient, mutation: AnyMutation) =>
   new Promise<void>((resolve) => {
+    // Callers filter for "pending" in the same tick, so this is a guard
+    // against a future caller that does not: a mutation that already settled
+    // emits no further cache event of its own, and subscribing for one would
+    // wait on the next unrelated write or never resolve at all.
+    if (mutation.state.status !== "pending") {
+      resolve();
+      return;
+    }
     const cache = queryClient.getMutationCache();
     const unsubscribe = cache.subscribe(() => {
       if (mutation.state.status === "pending") return;
@@ -70,6 +78,17 @@ const findOwnMutation = (
   ownVariables: unknown,
 ): AnyMutation | undefined =>
   mutations.find((mutation) => mutation.state.variables === ownVariables);
+
+// A registered event mutation (any operation) that has not settled. Entries
+// the mutation cache holds for other features have no event operation key and
+// never count.
+const isPendingEventWrite = (mutation: AnyMutation): boolean =>
+  mutation.state.status === "pending" && operationOf(mutation) !== undefined;
+
+// ...and serializing against the same document, which the variables' explicit
+// `writeKey` names.
+const isPendingWriteForKey = (mutation: AnyMutation, writeKey: string) =>
+  isPendingEventWrite(mutation) && variablesEventId(mutation) === writeKey;
 
 /**
  * Serializes repository writes per event: resolves once every event mutation
@@ -107,10 +126,8 @@ export async function waitForPrecedingEventWrites(
   }
   const preceding = mutations.filter(
     (mutation) =>
-      mutation.state.status === "pending" &&
       mutation.mutationId < self.mutationId &&
-      operationOf(mutation) !== undefined &&
-      variablesEventId(mutation) === eventId,
+      isPendingWriteForKey(mutation, eventId),
   );
 
   await Promise.all(
@@ -153,10 +170,9 @@ export function isSupersededByLaterEditWrite(
   if (!self) return false;
   return mutations.some(
     (mutation) =>
-      mutation.state.status === "pending" &&
       mutation.mutationId > self.mutationId &&
       operationOf(mutation) === "replace" &&
-      variablesEventId(mutation) === eventId,
+      isPendingWriteForKey(mutation, eventId),
   );
 }
 
@@ -174,11 +190,7 @@ export function hasOtherPendingWriteForKey(
   const self = findOwnMutation(mutations, ownVariables);
   if (!self) return false;
   return mutations.some(
-    (mutation) =>
-      mutation !== self &&
-      mutation.state.status === "pending" &&
-      operationOf(mutation) !== undefined &&
-      variablesEventId(mutation) === eventId,
+    (mutation) => mutation !== self && isPendingWriteForKey(mutation, eventId),
   );
 }
 
@@ -192,7 +204,7 @@ export function isSkippedEventWrite(data: unknown): boolean {
     typeof data === "object" &&
     data !== null &&
     "wrote" in data &&
-    (data as { wrote: unknown }).wrote === false
+    data.wrote === false
   );
 }
 
@@ -217,5 +229,48 @@ export function releaseCoalescedReplaceSignal(
   const current = inFlightReplaceByWriteKey.get(writeKey);
   if (current?.signal === signal) {
     inFlightReplaceByWriteKey.delete(writeKey);
+  }
+}
+
+const pendingEventMutations = (queryClient: QueryClient): AnyMutation[] =>
+  listEventMutations(queryClient).filter(isPendingEventWrite);
+
+/**
+ * Lets in-flight event writes finish before auth teardown. Logout clears
+ * account-scoped caches and can abort coalesced replaces; without this,
+ * a save followed immediately by logout can leave the server on the pre-edit
+ * document while the UI already showed the optimistic title.
+ */
+export async function waitForPendingEventMutations(
+  queryClient: QueryClient,
+  timeoutMs = 15_000,
+): Promise<void> {
+  // One timer for the whole budget: a settled batch can enqueue follow-up
+  // writes, so the pending set is re-read until it empties or time runs out.
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<"timeout">((resolve) => {
+    timeoutId = setTimeout(() => resolve("timeout"), timeoutMs);
+  });
+
+  try {
+    let pending = pendingEventMutations(queryClient);
+    while (pending.length > 0) {
+      const settled = Promise.all(
+        pending.map((mutation) => whenSettled(queryClient, mutation)),
+      ).then(() => "settled" as const);
+      if ((await Promise.race([settled, timedOut])) === "timeout") {
+        break;
+      }
+      pending = pendingEventMutations(queryClient);
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const remaining = pendingEventMutations(queryClient).length;
+  if (remaining > 0) {
+    console.warn(
+      `[waitForPendingEventMutations] ${remaining} event mutation(s) still pending after ${timeoutMs}ms; proceeding with logout`,
+    );
   }
 }

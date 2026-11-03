@@ -155,6 +155,26 @@ export const buildBookingSlotsFixtures = () => ({
         durationMinutes: 30,
       }),
     ),
+    // One case per meeting type length. The server hands confirmed
+    // reservations to the engine as busy intervals of their own length, so a
+    // 60 min meeting blocks a 15 min type for the whole hour.
+    ...([15, 30, 45, 60] as const).map((durationMinutes) =>
+      buildCase(
+        `meeting-type-${durationMinutes}-around-60-min-reservation`,
+        baseInput({
+          durationMinutes,
+          busyIntervals: [
+            {
+              start: new Date("2026-09-07T16:00:00.000Z"),
+              end: new Date("2026-09-07T17:00:00.000Z"),
+            },
+          ],
+          windowStart: new Date("2026-09-07T06:00:00.000Z"),
+          windowEnd: new Date("2026-09-08T06:00:00.000Z"),
+          weeklyAvailability: [{ weekday: 1, start: "09:00", end: "12:00" }],
+        }),
+      ),
+    ),
   ],
 });
 

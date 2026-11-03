@@ -12,7 +12,7 @@ import { viewFromPathname } from "@web/shortcuts/tips/shortcut-telemetry";
 let contextMenuPointerHintShownThisSession = false;
 let skipPointerHintForNextContextMenu = false;
 
-/** Set before the `m` shortcut dispatches a synthetic contextmenu. */
+/** Set before the event-menu shortcut dispatches a synthetic contextmenu. */
 export const markKeyboardContextMenuDispatch = (): void => {
   skipPointerHintForNextContextMenu = true;
 };
@@ -28,7 +28,7 @@ export const resetContextMenuPointerHintForTests = (): void => {
   skipPointerHintForNextContextMenu = false;
 };
 
-/** Teach `m` once per session when the menu opens from a pointer right-click. */
+/** Teach the event-menu key once per session on pointer right-click. */
 export function maybePulseContextMenuOpenedByPointer(
   pathname = globalThis.location?.pathname ?? "/",
 ): void {

@@ -5,8 +5,8 @@ import { type BookingReservationRecord } from "@backend/booking/booking-reservat
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { getBackendPostHogClient } from "@backend/common/helpers/backend-posthog-client";
 import {
-  type BookingHostEmailKind,
   buildBookingHostEmailLedgerId,
+  isBookingHostEmailKind,
 } from "@backend/email/booking-host-email.id";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
@@ -27,20 +27,15 @@ export async function enqueueBookingHostEmail(
 
   const kind = reservation.lastGuestAction;
   const lastGuestActionAt = reservation.lastGuestActionAt;
-  if (
-    !kind ||
-    !lastGuestActionAt ||
-    (kind !== "booked" && kind !== "cancelled" && kind !== "rescheduled")
-  ) {
+  if (!isBookingHostEmailKind(kind) || !lastGuestActionAt) {
     return;
   }
 
-  const typedKind = kind as BookingHostEmailKind;
   const now = new Date();
   const rowId = buildBookingHostEmailLedgerId({
     reservationId: reservation._id.toHexString(),
     lastGuestActionAt,
-    kind: typedKind,
+    kind,
   });
 
   try {
@@ -49,7 +44,7 @@ export async function enqueueBookingHostEmail(
         _id: rowId,
         userId: page.userId,
         sequence: "booking-host",
-        stepKey: typedKind,
+        stepKey: kind,
         reservationId: reservation._id,
         status: "queued",
         sendAt: now,
@@ -60,7 +55,7 @@ export async function enqueueBookingHostEmail(
     logger.error("Failed to enqueue booking host email", {
       rowId,
       reservationId: reservation._id.toHexString(),
-      kind: typedKind,
+      kind,
       message: error instanceof Error ? error.message : String(error),
     });
     void captureSafely(getBackendPostHogClient(), {
@@ -68,7 +63,7 @@ export async function enqueueBookingHostEmail(
       distinctId: page.userId.toHexString(),
       properties: {
         environment: CONFIG.NODE_ENV,
-        kind: typedKind,
+        kind,
         reservation_id: reservation._id.toHexString(),
       },
     });

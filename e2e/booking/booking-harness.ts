@@ -334,6 +334,21 @@ export interface PublicBookingStubOptions {
   notes?: string | null;
   conference?: "meet" | "teams" | "none";
   createsGoogleMeet?: boolean;
+  /** Owner inbox GET /owner/upcoming. Defaults to unauthorized (guest view). */
+  ownerUpcomingMode?: "unauthorized" | "empty" | "list";
+  /** Page `meetingTypes`. Omitted, the page looks like it did before types. */
+  meetingTypes?: Array<{ id: string; label: string; durationMinutes: number }>;
+  /** Query string for the first visit, e.g. `?type=type-deep`. */
+  search?: string;
+  ownerUpcomingReservations?: Array<{
+    reservationId: string;
+    guestName: string;
+    guestEmail: string;
+    slotStart: string;
+    slotEnd: string;
+    durationMinutes: number;
+    meetLink: string | null;
+  }>;
 }
 
 export interface CapturedBookingRequests {
@@ -342,7 +357,12 @@ export interface CapturedBookingRequests {
   reschedulePosts: Array<Record<string, unknown>>;
   slotGets: number;
   reservationSlotGets: number;
-  slotQueries: Array<{ start: string | null; end: string | null }>;
+  slotQueries: Array<{
+    start: string | null;
+    end: string | null;
+    /** Present only when the page asked for a meeting type other than #1. */
+    meetingTypeId?: string;
+  }>;
 }
 
 function reservationPayload(input: {
@@ -435,8 +455,67 @@ export async function preparePublicBookingPage(
           maxHorizonDays: 60,
           conference,
           createsGoogleMeet,
+          ...(options.meetingTypes
+            ? { meetingTypes: options.meetingTypes }
+            : {}),
         }),
       );
+    }
+
+    if (
+      path === `/api/booking/pages/${slug}/owner/upcoming` &&
+      request.method() === "GET"
+    ) {
+      const mode = options.ownerUpcomingMode ?? "unauthorized";
+      if (mode === "unauthorized") {
+        return route.fulfill(jsonResponse({}, 401));
+      }
+      if (mode === "empty") {
+        return route.fulfill(jsonResponse({ reservations: [] }));
+      }
+      const defaults = [
+        {
+          reservationId: "507f1f77bcf86cd799439011",
+          guestName: "Ada Lovelace",
+          guestEmail: "ada@example.com",
+          slotStart: "2026-10-31T13:00:00.000Z",
+          slotEnd: "2026-10-31T13:30:00.000Z",
+          durationMinutes: 30,
+          meetLink: "https://meet.google.com/abc-defg-hij",
+        },
+        {
+          reservationId: "507f1f77bcf86cd799439012",
+          guestName: "Grace Hopper",
+          guestEmail: "grace@example.com",
+          slotStart: "2026-11-01T20:00:00.000Z",
+          slotEnd: "2026-11-01T20:45:00.000Z",
+          durationMinutes: 45,
+          meetLink: null,
+        },
+        {
+          reservationId: "507f1f77bcf86cd799439013",
+          guestName: "Alan Turing",
+          guestEmail: "alan@example.com",
+          slotStart: "2026-11-03T16:00:00.000Z",
+          slotEnd: "2026-11-03T17:00:00.000Z",
+          durationMinutes: 60,
+          meetLink: "https://meet.google.com/xyz-uvwx-rst",
+        },
+      ];
+      return route.fulfill(
+        jsonResponse({
+          reservations: options.ownerUpcomingReservations ?? defaults,
+        }),
+      );
+    }
+
+    if (
+      /^\/api\/booking\/pages\/[^/]+\/owner\/reservations\/[^/]+\/cancel$/.test(
+        path,
+      ) &&
+      request.method() === "POST"
+    ) {
+      return route.fulfill(jsonResponse({ ok: true }));
     }
 
     if (
@@ -446,9 +525,11 @@ export async function preparePublicBookingPage(
       captured.slotGets += 1;
       const windowStart = url.searchParams.get("start");
       const windowEnd = url.searchParams.get("end");
+      const meetingTypeId = url.searchParams.get("meetingTypeId");
       captured.slotQueries.push({
         start: windowStart,
         end: windowEnd,
+        ...(meetingTypeId ? { meetingTypeId } : {}),
       });
       if (options.holdFirstSlots && captured.slotGets === 1) {
         await options.holdFirstSlots;
@@ -621,7 +702,7 @@ export async function preparePublicBookingPage(
     return route.fulfill(jsonResponse({}));
   });
 
-  await page.goto(publicBookingAppUrl(`/meet/${slug}`), {
+  await page.goto(publicBookingAppUrl(`/meet/${slug}${options.search ?? ""}`), {
     waitUntil: "domcontentloaded",
   });
   if (options.notFound || options.enabled === false) {
@@ -1055,6 +1136,8 @@ export interface HostBookingSettingsStubOptions {
   noWritableCalendars?: boolean;
   /** When false, stay on week view instead of opening Settings. */
   openSettings?: boolean;
+  /** Saved `meetingTypes`. Omitted, the page has only type #1. */
+  meetingTypes?: Array<{ id: string; label: string; durationMinutes: number }>;
   /** Mark welcome, showcase, and first-event as done so sidebar nudges can show. */
   completeOnboarding?: boolean;
 }
@@ -1120,6 +1203,7 @@ export async function prepareSignedInBookingSettingsPage(
     weeklyAvailability,
     minNoticeHours: 4,
     maxHorizonDays: 60,
+    ...(options.meetingTypes ? { meetingTypes: options.meetingTypes } : {}),
   };
 
   const savedPageFields = {

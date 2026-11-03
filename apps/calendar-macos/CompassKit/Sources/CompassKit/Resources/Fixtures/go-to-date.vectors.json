@@ -13,6 +13,17 @@
       }
     },
     {
+      "id": "parse-2026-10-29",
+      "input": {
+        "text": "2026-10-29",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
       "id": "parse-2026/10/29",
       "input": {
         "text": "2026/10/29",
@@ -21,6 +32,39 @@
       "output": {
         "expected": "2026-10-29",
         "parsed": "2026-10-29"
+      }
+    },
+    {
+      "id": "parse-2026/10/03",
+      "input": {
+        "text": "2026/10/03",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-2026.10.29",
+      "input": {
+        "text": "2026.10.29",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
+      "id": "parse-10/3",
+      "input": {
+        "text": "10/3",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
       }
     },
     {
@@ -57,9 +101,141 @@
       }
     },
     {
+      "id": "parse-10/3/2026",
+      "input": {
+        "text": "10/3/2026",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-10/29/2026",
+      "input": {
+        "text": "10/29/2026",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
+      "id": "parse-10/3/26",
+      "input": {
+        "text": "10/3/26",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-10/29/26",
+      "input": {
+        "text": "10/29/26",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
       "id": "parse-29/10",
       "input": {
         "text": "29/10",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
+      "id": "parse-29/10/2026",
+      "input": {
+        "text": "29/10/2026",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
+      "id": "parse-oct-3",
+      "input": {
+        "text": "oct 3",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-Oct-29",
+      "input": {
+        "text": "Oct 29",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
+      "id": "parse-october-29",
+      "input": {
+        "text": "october 29",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
+      "id": "parse-3-oct",
+      "input": {
+        "text": "3 oct",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-29-Oct",
+      "input": {
+        "text": "29 Oct",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-29",
+        "parsed": "2026-10-29"
+      }
+    },
+    {
+      "id": "parse-october-3-2026",
+      "input": {
+        "text": "october 3 2026",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-Oct-29-2026",
+      "input": {
+        "text": "Oct 29 2026",
         "now": "2026-09-15T12:00:00.000Z"
       },
       "output": {
@@ -79,6 +255,17 @@
       }
     },
     {
+      "id": "parse-2026/10",
+      "input": {
+        "text": "2026/10",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-01",
+        "parsed": "2026-10-01"
+      }
+    },
+    {
       "id": "parse-october-2026",
       "input": {
         "text": "october 2026",
@@ -90,42 +277,53 @@
       }
     },
     {
-      "id": "parse-oct-3",
+      "id": "parse-oct-2026",
       "input": {
-        "text": "oct 3",
+        "text": "oct 2026",
         "now": "2026-09-15T12:00:00.000Z"
       },
       "output": {
-        "expected": "2026-10-03",
-        "parsed": "2026-10-03"
+        "expected": "2026-10-01",
+        "parsed": "2026-10-01"
       }
     },
     {
-      "id": "parse-october-29",
+      "id": "parse-2026-october",
       "input": {
-        "text": "october 29",
+        "text": "2026 october",
         "now": "2026-09-15T12:00:00.000Z"
       },
       "output": {
-        "expected": "2026-10-29",
-        "parsed": "2026-10-29"
-      }
-    },
-    {
-      "id": "parse-jan-3",
-      "input": {
-        "text": "jan 3",
-        "now": "2026-09-15T12:00:00.000Z"
-      },
-      "output": {
-        "expected": "2027-01-03",
-        "parsed": "2027-01-03"
+        "expected": "2026-10-01",
+        "parsed": "2026-10-01"
       }
     },
     {
       "id": "parse-2/30",
       "input": {
         "text": "2/30",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": null,
+        "parsed": null
+      }
+    },
+    {
+      "id": "parse-32/1",
+      "input": {
+        "text": "32/1",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": null,
+        "parsed": null
+      }
+    },
+    {
+      "id": "parse-oct",
+      "input": {
+        "text": "oct",
         "now": "2026-09-15T12:00:00.000Z"
       },
       "output": {

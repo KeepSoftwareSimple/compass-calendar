@@ -154,6 +154,25 @@ describe("WelcomeGuideBody", () => {
     );
   });
 
+  it("keeps each footer text link on one line so the footer wraps instead of scrolling", () => {
+    renderWelcomeGuide();
+
+    for (const name of [
+      "Shortcuts",
+      "Practice the shortcuts",
+      "Pricing",
+      "Privacy",
+      "Terms",
+    ]) {
+      expect(screen.getByRole("link", { name }).className).toMatch(
+        /whitespace-nowrap/,
+      );
+    }
+    expect(
+      screen.getByRole("link", { name: "Shortcuts" }).parentElement?.className,
+    ).toMatch(/flex-wrap/);
+  });
+
   it("flashes the matching FAQ key after a click, then clears", async () => {
     renderWelcomeGuide();
 

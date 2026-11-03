@@ -7,7 +7,6 @@ import { mergeHintShortcutCelebrationFromMetadata } from "@web/shortcuts/tips/hi
 import {
   hintShortcutCelebrationActions,
   resetHintShortcutCelebrationTimerForTests,
-  selectHintShortcutCelebrationPulse,
   useHintShortcutCelebrationStore,
 } from "@web/shortcuts/tips/hint-shortcut-celebration.store";
 import { SHORTCUT_HINTS } from "@web/shortcuts/tips/shortcut-tips.data";
@@ -55,19 +54,21 @@ describe("tryCelebrateHintShortcutUse", () => {
 
   it("persists before pulsing and tracks only the first use in a session", () => {
     const track = spyOn(Track, "track");
-    activeSpies.push(track);
+    const pulse = spyOn(hintShortcutCelebrationActions, "pulse");
+    activeSpies.push(track, pulse);
     armVisibleGridScrollTip();
 
     tryCelebrateHintShortcutUse(KEY);
     expect(
       persistentBrowserStore.get(STORAGE_KEYS.SHORTCUT_HINT_FIRST_USED),
     ).toContain(KEY);
-    expect(useHintShortcutCelebrationStore.getState().pulse).toBe(1);
+    expect(useHintShortcutCelebrationStore.getState().activeKey).toBe(KEY);
 
     tryCelebrateHintShortcutUse(KEY);
 
     expect(track).toHaveBeenCalledTimes(1);
-    expect(useHintShortcutCelebrationStore.getState().pulse).toBe(1);
+    expect(pulse).toHaveBeenCalledTimes(1);
+    expect(useHintShortcutCelebrationStore.getState().activeKey).toBe(KEY);
   });
 
   it("does not animate again after a new session when local storage retained", () => {
@@ -78,11 +79,7 @@ describe("tryCelebrateHintShortcutUse", () => {
     armVisibleGridScrollTip();
 
     tryCelebrateHintShortcutUse(KEY);
-    expect(
-      selectHintShortcutCelebrationPulse(
-        useHintShortcutCelebrationStore.getState(),
-      ),
-    ).toBe(0);
+    expect(useHintShortcutCelebrationStore.getState().activeKey).toBeNull();
   });
 
   it("does not animate on a fresh device when the account already marked the shortcut seen", () => {
@@ -101,6 +98,6 @@ describe("tryCelebrateHintShortcutUse", () => {
     expect(
       track.mock.calls.some(([name]) => name === "hint_shortcut_first_used"),
     ).toBe(false);
-    expect(useHintShortcutCelebrationStore.getState().pulse).toBe(0);
+    expect(useHintShortcutCelebrationStore.getState().activeKey).toBeNull();
   });
 });

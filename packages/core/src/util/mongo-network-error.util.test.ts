@@ -120,6 +120,26 @@ describe("isTransientMongoNetworkError", () => {
     ).toBe(true);
   });
 
+  it("matches server monitor and socket connect timeouts", () => {
+    expect(
+      isTransientMongoNetworkError(
+        new Error("connection <monitor> to 34.56.108.77:27017 timed out"),
+      ),
+    ).toBe(true);
+    expect(
+      isTransientMongoNetworkError(
+        new Error("connection 7 to 35.193.60.195:27017 timed out"),
+      ),
+    ).toBe(true);
+    expect(
+      isTransientMongoNetworkError(
+        new Error(
+          "Socket 'secureConnect' timed out after 30006ms (connectTimeoutMS: 30000)",
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("logs transient blips at warn and durable failures at error", () => {
     const logger = { error: mock(), warn: mock() };
     const transient = namedError("MongoNetworkError", "socket hang up");
@@ -132,6 +152,19 @@ describe("isTransientMongoNetworkError", () => {
     expect(logger.warn).toHaveBeenCalledWith("mongo failed", transient);
     expect(logger.error).toHaveBeenCalledTimes(1);
     expect(logger.error).toHaveBeenCalledWith("mongo failed", durable);
+  });
+
+  it("classifies the error but logs the caller's meta when given", () => {
+    const logger = { error: mock(), warn: mock() };
+    const transient = new Error(
+      "connection <monitor> to 34.56.108.77:27017 timed out",
+    );
+    const meta = { message: transient.message };
+
+    logMongoNetworkError(logger, "cycle failed", transient, meta);
+
+    expect(logger.warn).toHaveBeenCalledWith("cycle failed", meta);
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it("rejects unrelated failures", () => {

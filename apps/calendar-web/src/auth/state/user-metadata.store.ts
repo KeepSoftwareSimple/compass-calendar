@@ -5,6 +5,8 @@ import {
   type SyncConnectionSummary,
   type UserMetadata,
 } from "@core/types/user.types";
+import { offersContactsFeature } from "@web/auth/providers/provider-connect-flow.util";
+import { connectionProvider } from "@web/auth/providers/provider-copy.util";
 import { IS_DEV } from "@web/common/constants/env.constants";
 
 export type UserMetadataStatus = "idle" | "loading" | "loaded";
@@ -144,15 +146,19 @@ export const selectSyncConnections = (
 ): SyncConnectionSummary[] => state.current?.connections ?? NO_CONNECTIONS;
 
 /**
- * True when ANY connected account granted the optional contacts scopes, so
- * the attendee field can query live suggestions (the backend proxy fans out
- * across every capable connection). `=== true` keeps a payload from an older
- * backend (field absent) reading as "not granted" rather than crashing.
+ * The first connected account that could add contacts but has not, so the
+ * guest field can offer contacts for that exact account when a search comes
+ * up short. Null when every account that can has them. `=== true` keeps a
+ * payload from an older backend (field absent) reading as "not granted".
  */
-export const selectCanSuggestContacts = (state: UserMetadataState): boolean =>
-  selectSyncConnections(state).some(
-    (connection) => connection.canSuggestContacts === true,
-  );
+export const selectContactsOfferConnection = (
+  state: UserMetadataState,
+): SyncConnectionSummary | null =>
+  selectSyncConnections(state).find(
+    (connection) =>
+      connection.canSuggestContacts !== true &&
+      offersContactsFeature(connectionProvider(connection)),
+  ) ?? null;
 
 function findPrimaryGoogleSyncConnection(
   connections: readonly SyncConnectionSummary[],

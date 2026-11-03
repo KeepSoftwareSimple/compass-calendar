@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { type PropsWithChildren } from "react";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import {
@@ -25,8 +26,32 @@ mockModuleForFile(
   {
     useVersionCheck: () =>
       isVersionCheckMocked
-        ? { isUpdateAvailable: false }
+        ? {
+            isUpdateAvailable: false,
+            availableVersion: null,
+            currentVersion: "test",
+          }
         : actualUseVersionCheck(),
+  },
+);
+
+const appVersionCheckStub = {
+  useSharedAppVersionCheck: () => ({
+    isUpdateAvailable: false,
+    availableVersion: null,
+    currentVersion: "test",
+  }),
+  AppVersionCheckProvider: ({ children }: PropsWithChildren) => children,
+};
+mockModuleForFile(
+  "@web/components/Sidebar/SidebarActions/AppVersionCheckProvider",
+  appVersionCheckStub,
+  {
+    useSharedAppVersionCheck: () => ({
+      isUpdateAvailable: false,
+      availableVersion: null,
+      currentVersion: "test",
+    }),
   },
 );
 
@@ -97,8 +122,10 @@ describe("SidebarActions", () => {
     const { container } = render(<SidebarActions sections={[]} />, { wrapper });
 
     const footer = container.firstElementChild;
-    expect(footer?.childElementCount).toBe(5);
-    expect(footer?.className).not.toContain("justify-between");
+    const group = footer?.firstElementChild;
+    expect(group?.childElementCount).toBe(5);
+    expect(group?.className).not.toContain("justify-between");
+    expect(group?.className).not.toContain("flex-1");
 
     const labels = screen
       .getAllByRole("button")

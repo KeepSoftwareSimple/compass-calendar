@@ -36,6 +36,7 @@ import {
   type ActiveShiftHint,
   useShiftHoldEventHints,
 } from "@web/shortcuts/shift-hint/useShiftHoldEventHints";
+import { useCalendarUiFocusLeftShortcut } from "@web/shortcuts/ui-focus/useUiFocusShortcuts";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { type Util_Scroll } from "@web/views/Week/hooks/grid/useScroll";
 import { goToTodayInWeek } from "@web/views/Week/hooks/shortcuts/weekShortcuts.util";
@@ -227,6 +228,8 @@ export const useWeekShortcutOwner = ({
     weekEventTargeting.focusGridEventTarget(target);
   }, []);
 
+  useCalendarUiFocusLeftShortcut(focusFirstCalendarEvent);
+
   // getFocused is registry-backed and gates everything that mutates an event.
   // The navigable pair also covers read-only cards, which can be focused and
   // navigated but never edited.
@@ -308,7 +311,6 @@ export const useWeekShortcutOwner = ({
     onGoToToday: toToday,
     onCreateAllDayEvent: createAllDayDraftEvent,
     onCreateTimedEvent: createTimedDraftEvent,
-    onFocusCalendar: focusFirstCalendarEvent,
   });
 
   // Typed-time create. Same guards and same form-closed/card-focused landing

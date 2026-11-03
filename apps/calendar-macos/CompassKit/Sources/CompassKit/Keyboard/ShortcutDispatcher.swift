@@ -95,6 +95,8 @@ public final class ShortcutDispatcher: @unchecked Sendable {
         if case .resolved(let field) = leaderEngine.phase {
             lastResolvedLeaderField = field
             leaderEngine.disarm()
+            // The resolved key belongs to the field jump, not its standalone shortcut.
+            return nil
         } else {
             lastResolvedLeaderField = nil
         }

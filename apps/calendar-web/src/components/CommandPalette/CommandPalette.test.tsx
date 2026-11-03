@@ -96,11 +96,15 @@ mock.module("@web/auth/compass/session/useSession", () => ({
 
 let access: AppAccess = { kind: "open" };
 let isAppAccessMocked = true;
-const actualUseAppAccess = (await import("@web/billing/useAppAccess"))
-  .useAppAccess;
+const actualAppAccessModule = await import("@web/billing/useAppAccess");
+const actualUseAppAccess = actualAppAccessModule.useAppAccess;
+const actualUseIsAppAccessPending = actualAppAccessModule.useIsAppAccessPending;
+const isAccessPending = false;
 mock.module("@web/billing/useAppAccess", () => ({
   useAppAccess: (...args: Parameters<typeof actualUseAppAccess>) =>
     isAppAccessMocked ? access : actualUseAppAccess(...args),
+  useIsAppAccessPending: () =>
+    isAppAccessMocked ? isAccessPending : actualUseIsAppAccessPending(),
 }));
 
 afterAll(() => {
@@ -361,8 +365,8 @@ describe("CommandPalette", () => {
     expect(activeRowText(container)).toBe("Go to Today");
 
     // Walk down through Navigation (including legend rows) into Create.
-    // The ArrowDown after Create all-day event skips the disabled Undo row
-    // and lands on Appearance.
+    // Expand/collapse all-day sits after Create all-day event; the next
+    // ArrowDown skips the disabled Undo row and lands on Appearance.
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Day
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Life
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Show shortcuts
@@ -374,6 +378,8 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Up Next + Join
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Create all-day event
     expect(activeRowText(container)).toBe("Create all-day event");
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Expand or collapse all-day
+    expect(activeRowText(container)).toBe("Expand or collapse all-day events");
     fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Undo last change
     expect(activeRowText(container)).toBe("Switch to dark theme");
   });
@@ -481,7 +487,12 @@ describe("CommandPalette", () => {
         // The write contract's guest-edit field never round-trips into the
         // read-side Event content this stub returns.
         const { attendees: _guestEdit, ...content } = input.content;
-        return { ...before, id, content, schedule: input.schedule };
+        return {
+          ...before,
+          id,
+          content,
+          schedule: input.schedule ?? before.schedule,
+        };
       },
       delete: async () => {},
     };
@@ -527,7 +538,12 @@ describe("CommandPalette", () => {
         // The write contract's guest-edit field never round-trips into the
         // read-side Event content this stub returns.
         const { attendees: _guestEdit, ...content } = input.content;
-        return { ...before, id, content, schedule: input.schedule };
+        return {
+          ...before,
+          id,
+          content,
+          schedule: input.schedule ?? before.schedule,
+        };
       },
       delete: async () => {},
     };

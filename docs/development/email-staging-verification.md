@@ -8,9 +8,14 @@ Founder-only: sign in on staging. Unattended agents never enter credentials.
 
 ## Founder preview loop (optional)
 
-The welcome drip can loop forever for explicit staging recipients so the
-founder receives every template on the real poller path without signing up
-again. Off by default.
+The welcome drip can replay on a fixed monthly cadence for explicit staging
+recipients so the founder receives every template on the real poller path
+without signing up again. Off by default.
+
+Each run starts on the **1st of the month at about 8:00 AM America/Denver**
+(the next such instant when none exists yet, or the 1st of the month after the
+previous run finishes). Only one preview generation may have queued rows at a
+time; duplicate generations are skipped automatically.
 
 Enable on the **staging-cloud** GitHub Environment (unset every variable to
 disable):
@@ -19,7 +24,7 @@ disable):
 | --- | --- | --- |
 | `EMAIL_PREVIEW_LOOP_RECIPIENTS` | Comma-separated addresses | Must also appear on `EMAIL_ALLOWLIST` so sends are not skipped |
 | `EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE` | `real` or `fast` | Optional. Loop-only cadence override; omit to follow `EMAIL_SCHEDULE_PROFILE` (staging is usually `fast`, about two minutes between welcome and shortcuts) |
-| `EMAIL_PREVIEW_LOOP_GAP_DAYS` | Integer days | Optional, default `1`. Pause between loop restarts |
+| `EMAIL_PREVIEW_LOOP_GAP_DAYS` | Integer days | Legacy deploy var; **ignored** for scheduling (monthly 1st-at-8-Denver replaces it) |
 | `EMAIL_PREVIEW_LOOP_MAX_PER_DAY` | Integer, max `50` | Optional, default `10`. Hard cap per recipient per rolling day |
 
 After deploy, restart the backend on the host (`./compass restart`) and confirm

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
+import { HIDE_EVENT_LETTER } from "@core/shortcuts/binding-keycaps.constants";
 import { KEYMAP } from "@core/shortcuts/keymap";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
@@ -20,6 +21,7 @@ import {
   keyboardKey,
   normalizedKeyboardKey,
 } from "@web/shortcuts/is-bare-letter-key";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import {
   POINTER_EVENT_JUMP_REQUEST,
   POINTER_GRID_CREATE_REQUEST,
@@ -90,17 +92,11 @@ const focusedColumnDay = (): Dayjs | null => {
 
 /**
  * Day columns are entered with Shift so they never race the bare-letter
- * commands they used to lose to (`t` today, `p` notice focus, `m` event menu).
+ * commands they used to lose to (`t` today, `p` notice focus, `.` event menu).
  */
 const isShiftedSingleChar = (event: KeyboardEvent) => {
   const key = keyboardKey(event);
-  return (
-    key.length === 1 &&
-    event.shiftKey &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    !event.altKey
-  );
+  return key.length === 1 && event.shiftKey && !hasCommandModifier(event);
 };
 
 const FALLBACK_SCHEDULE = {
@@ -552,10 +548,7 @@ export function useShiftHoldEventHints({
         if (useEventJumpStore.getState().pointerDraftDateKey) {
           const inputKey = normalizedKeyboardKey(event);
           const isViewNavigation =
-            !event.metaKey &&
-            !event.ctrlKey &&
-            !event.altKey &&
-            ["j", "k", "t"].includes(inputKey);
+            !hasCommandModifier(event) && ["j", "k", "t"].includes(inputKey);
           if (event.key === "Escape" || isViewNavigation) {
             eventJumpActions.setPointerDraftIntent(null);
           }
@@ -648,7 +641,7 @@ export function useShiftHoldEventHints({
         return;
       }
 
-      if (event.metaKey || event.ctrlKey || event.altKey) {
+      if (hasCommandModifier(event)) {
         return;
       }
 
@@ -703,7 +696,8 @@ export function useShiftHoldEventHints({
         // stay swallowed so j/k cannot fire.
         if (
           key === KEYMAP.editTitle.sequence.leader ||
-          key === KEYMAP.createEvent.hotkey.toLowerCase()
+          key === KEYMAP.createEvent.hotkey.toLowerCase() ||
+          key === HIDE_EVENT_LETTER
         ) {
           return;
         }

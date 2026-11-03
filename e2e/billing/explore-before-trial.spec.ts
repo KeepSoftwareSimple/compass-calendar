@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import {
-  dispatchDocumentKey,
   getViewSwitcherButton,
+  openTimedEventFormWithKeyboard,
+  waitForWritableCalendarsReady,
 } from "../utils/event-test-utils";
 import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
@@ -64,7 +65,7 @@ const awaitingCheckoutRoutes = async (
           currentPeriodEnd: null,
           cancelAtPeriodEnd: false,
           trialEndsAt: null,
-          price: { amount: 1200, currency: "usd", interval: "month" },
+          price: { amount: 799, currency: "usd", interval: "month" },
           paymentMethod: null,
           invoices: [],
         }),
@@ -137,6 +138,9 @@ const awaitingCheckoutRoutes = async (
 const signInAwaitingCheckout = async (
   page: import("@playwright/test").Page,
 ) => {
+  const calendarsLoaded = page.waitForResponse(
+    (response) => response.url().includes("/api/calendars") && response.ok(),
+  );
   await page.addInitScript(() => {
     (
       window as Window & { __COMPASS_E2E_TEST__?: boolean }
@@ -172,6 +176,8 @@ const signInAwaitingCheckout = async (
       }
     ).__COMPASS_E2E_HOOKS__?.setAuthenticated(true);
   });
+  await calendarsLoaded;
+  await waitForWritableCalendarsReady(page);
 };
 
 test("explore banner dismiss hides until the next session", async ({
@@ -183,14 +189,14 @@ test("explore banner dismiss hides until the next session", async ({
   const bannerText = "Start your 7-day free trial to plan your week.";
   await expect(page.getByText(bannerText)).toBeVisible({ timeout: 15000 });
   await page.screenshot({
-    path: "/opt/cursor/artifacts/before-explore-calendar-banner.png",
+    path: test.info().outputPath("before-explore-calendar-banner.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Dismiss" }).click();
   await expect(page.getByText(bannerText)).toHaveCount(0);
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/after-explore-banner-dismissed.png",
+    path: test.info().outputPath("after-explore-banner-dismissed.png"),
     fullPage: true,
   });
 
@@ -254,16 +260,15 @@ test("event create opens the draft without the trial step", async ({
     ).__COMPASS_E2E_BILLING_WRITE_LOCK__;
     return lock?.locked === true && lock.status === "awaiting_checkout";
   });
-  await dispatchDocumentKey(page, "c");
+  await openTimedEventFormWithKeyboard(page);
   const titleInput = page.getByRole("form").getByPlaceholder("Title");
-  await expect(titleInput).toBeVisible({ timeout: 15000 });
   await expect(
     page.getByRole("dialog", { name: "Start your 7-day free trial" }),
   ).toHaveCount(0);
   expect(page.url()).not.toContain("auth=trial");
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/explore-draft-open-before-save.png",
+    path: test.info().outputPath("explore-draft-open-before-save.png"),
     fullPage: true,
   });
   await page.keyboard.press("Escape");
@@ -274,19 +279,14 @@ test("save opens the trial step and closing keeps the draft without a ghost even
   page,
 }) => {
   await awaitingCheckoutRoutes(page);
-  const calendarsLoaded = page.waitForResponse(
-    (response) => response.url().includes("/api/calendars") && response.ok(),
-  );
   await signInAwaitingCheckout(page);
 
   await expect(
     page.getByText("Start your 7-day free trial to plan your week."),
   ).toBeVisible({ timeout: 15000 });
-  await calendarsLoaded;
-  await dispatchDocumentKey(page, "c");
+  await openTimedEventFormWithKeyboard(page);
   const draftTitle = "Explore gate on save";
   const titleInput = page.getByRole("form").getByPlaceholder("Title");
-  await expect(titleInput).toBeVisible({ timeout: 15000 });
   await titleInput.fill(draftTitle);
   await page.waitForFunction(() => {
     const lock = (
@@ -313,7 +313,7 @@ test("save opens the trial step and closing keeps the draft without a ghost even
   await expect(trialDialog).toBeVisible({ timeout: 15000 });
   expect(page.url()).toContain("auth=trial");
   await trialDialog.screenshot({
-    path: "/opt/cursor/artifacts/explore-trial-step-on-save.png",
+    path: test.info().outputPath("explore-trial-step-on-save.png"),
   });
 
   await page.keyboard.press("Escape");

@@ -15,6 +15,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@web/__tests__/__mocks__/mock.render";
 import { seedEventQueries } from "@web/__tests__/utils/event-query-test-data";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
@@ -28,6 +29,7 @@ import {
   weekEventRegistry,
   weekEventTargeting,
 } from "@web/grid/interaction/view-event-registry";
+import { useHideEventShortcut } from "@web/shortcuts/hide-event/useHideEventShortcut";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { AllDayEvents } from "../AllDayRow/AllDayEvents";
 import { MainGridEvents } from "./MainGridEvents";
@@ -369,6 +371,53 @@ describe("Week grid read-only interaction gate", () => {
     const card = screen.getByRole("button", { name: /timed event: busy/i });
     expect(card).toHaveAttribute(WEEK_INTERACTION_EVENT_ID_ATTRIBUTE, event.id);
     expect(weekEventRegistry.resolve(event.id, "timed")).toBeNull();
+  });
+
+  it("hides a focused read-only all-day event with x", async () => {
+    const readOnlyCalendar = makeCalendar();
+    seededCalendars = [readOnlyCalendar];
+    const event = createAllDayEvent(readOnlyCalendar.id, {
+      content: { kind: "details", title: "Birthday", description: "" },
+    });
+    seededEvents = [event];
+
+    const HiddenProbe = () => {
+      useHideEventShortcut();
+      return null;
+    };
+
+    render(
+      <Provider>
+        <HiddenProbe />
+        <AllDayEvents
+          measurements={measurements}
+          queryEndOfView={startOfView.add(6, "day").endOf("day")}
+          queryStartOfView={startOfView}
+          weekDays={weekDaysInView}
+        />
+      </Provider>,
+    );
+
+    const card = screen.getByRole("button", {
+      name: /all-day event: birthday/i,
+    });
+    Object.defineProperty(card, "offsetParent", {
+      configurable: true,
+      get: () => document.body,
+    });
+
+    act(() => {
+      card.focus();
+      fireEvent.keyDown(card, { key: "x", bubbles: true, cancelable: true });
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: /^Hidden All-day event: Birthday/i,
+        }),
+      ).toBeInTheDocument();
+    });
   });
 
   it("marks a provider-managed timed event read-only for drag/resize while keeping it navigable", () => {

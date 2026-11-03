@@ -6,6 +6,4 @@
 // mutation from following the live re-export binding into the view module.
 import { RecurrenceSection as RecurrenceSectionImplementation } from "@web/views/Forms/EventForm/DateControlsSection/RecurrenceSection/RecurrenceSectionView";
 
-export type { RecurrenceSectionProps } from "@web/views/Forms/EventForm/DateControlsSection/RecurrenceSection/RecurrenceSectionView";
-
 export const RecurrenceSection = RecurrenceSectionImplementation;

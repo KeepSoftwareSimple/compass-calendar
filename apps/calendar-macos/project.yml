@@ -36,11 +36,16 @@ targets:
     platform: macOS
     sources:
       - Compass
-    resources:
-      - path: Resources/icon.icns
-        optional: true
       - path: Resources/Fonts
         type: folder
+        buildPhase: resources
+      - path: Resources/icon.png
+        buildPhase: resources
+      - path: Resources/icon-dark.png
+        buildPhase: resources
+      - path: Resources/icon.icns
+        buildPhase: resources
+        optional: true
     settings:
       base:
         PRODUCT_NAME: Compass

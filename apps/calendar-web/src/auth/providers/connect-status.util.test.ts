@@ -7,6 +7,7 @@ import {
   useMissingPermissionsStore,
 } from "@web/auth/providers/missing-permissions.store";
 import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
+import { flushPendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   applyConnectRedirect,
@@ -48,6 +49,7 @@ describe("connect-status.util", () => {
     const second = [...rafCallbacks];
     rafCallbacks = [];
     for (const callback of second) callback(0);
+    flushPendingShellToast();
   };
 
   describe("readConnectStatus", () => {
@@ -196,6 +198,7 @@ describe("connect-status.util", () => {
 
       refreshSpy.mockClear();
       await applyConnectRedirect({ provider: "microsoft", status: "error" });
+      flushPendingShellToast();
       expect(refreshSpy).toHaveBeenCalledWith({ force: true });
 
       refreshSpy.mockRestore();

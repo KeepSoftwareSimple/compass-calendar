@@ -16,7 +16,6 @@ import {
   getTimedEventPosition,
 } from "@web/grid/layout/event.position";
 import {
-  applyTimedDeckPosition,
   applyTimedEventDisplayPosition,
   createTimedEventLayout,
 } from "@web/grid/layout/timed-deck.layout";
@@ -91,11 +90,49 @@ export const buildTimedDeckFixtures = () => {
   ];
 
   const deckLayout = createTimedEventLayout(overlapEvents);
-  const basePosition = { height: 60, left: 20, top: 30, width: 180 };
-  const deckPosition = applyTimedDeckPosition(basePosition, {
-    order: 1,
-    groupSize: 2,
-  });
+
+  const invertedEndEvents = [
+    createTimedEvent({
+      _id: "unwind",
+      startDate: "2026-10-31T19:00:00.000Z",
+      endDate: "2026-10-31T20:00:00.000Z",
+    }),
+    createTimedEvent({
+      _id: "ritual",
+      startDate: "2026-10-31T19:30:00.000Z",
+      endDate: "2026-10-31T19:00:00.000",
+    }),
+  ];
+  const invertedEndLayout = createTimedEventLayout(invertedEndEvents);
+
+  const chainEvents = [
+    createTimedEvent({
+      _id: "a",
+      startDate: "2026-05-20T10:00:00",
+      endDate: "2026-05-20T11:00:00",
+    }),
+    createTimedEvent({
+      _id: "b",
+      startDate: "2026-05-20T10:20:00",
+      endDate: "2026-05-20T11:00:00",
+    }),
+    createTimedEvent({
+      _id: "c",
+      startDate: "2026-05-20T11:00:00",
+      endDate: "2026-05-20T12:00:00",
+    }),
+    createTimedEvent({
+      _id: "d",
+      startDate: "2026-05-20T11:40:00",
+      endDate: "2026-05-20T12:30:00",
+    }),
+    createTimedEvent({
+      _id: "e",
+      startDate: "2026-05-20T12:00:00",
+      endDate: "2026-05-20T13:00:00",
+    }),
+  ];
+  const chainLayout = createTimedEventLayout(chainEvents);
 
   const timedPosition = getTimedEventPosition(
     {
@@ -135,9 +172,10 @@ export const buildTimedDeckFixtures = () => {
     },
   );
 
+  const displayDeckLayout = { groupSize: 2, left: 0.5, width: 0.5, zIndex: 2 };
   const displayPosition = applyTimedEventDisplayPosition(
     timedPosition,
-    { order: 0, groupSize: 2 },
+    displayDeckLayout,
     false,
   );
   const parityTimedPosition = eventPositionInParityGridFrame(timedPosition);
@@ -163,12 +201,36 @@ export const buildTimedDeckFixtures = () => {
         })),
       },
       {
-        id: "applyTimedDeckPosition",
+        id: "createTimedEventLayout-inverted-end-overlap",
         input: {
-          position: basePosition,
-          deckLayout: { order: 1, groupSize: 2 },
+          events: invertedEndEvents.map(({ _id, startDate, endDate }) => ({
+            _id,
+            startDate,
+            endDate,
+          })),
+          hiddenEventIds: [],
         },
-        output: deckPosition,
+        output: invertedEndLayout.map((item) => ({
+          eventId: item.event._id,
+          deckLayout: item.deckLayout,
+          isHidden: item.isHidden,
+        })),
+      },
+      {
+        id: "createTimedEventLayout-near-and-far-starts",
+        input: {
+          events: chainEvents.map(({ _id, startDate, endDate }) => ({
+            _id,
+            startDate,
+            endDate,
+          })),
+          hiddenEventIds: [],
+        },
+        output: chainLayout.map((item) => ({
+          eventId: item.event._id,
+          deckLayout: item.deckLayout,
+          isHidden: item.isHidden,
+        })),
       },
       {
         id: "getTimedEventPosition",
@@ -204,7 +266,7 @@ export const buildTimedDeckFixtures = () => {
         id: "applyTimedEventDisplayPosition",
         input: {
           position: parityTimedPosition,
-          deckLayout: { order: 0, groupSize: 2 },
+          deckLayout: displayDeckLayout,
           isHidden: false,
         },
         output: parityDisplayPosition,

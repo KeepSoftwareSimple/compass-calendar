@@ -10,7 +10,7 @@ import { resolveStaleProviderOAuthReplay } from "@web/auth/callback/resolve-stal
 import { stripOAuthCallbackQueryFromHistory } from "@web/auth/callback/strip-oauth-callback-url";
 import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
-import { trackSignupCompleted } from "@web/auth/posthog/signup-funnel";
+import { scheduleSignupCompleted } from "@web/auth/posthog/signup-completed-coordinator";
 import { track } from "@web/auth/posthog/track";
 import {
   clearProviderAuthorizationIntent,
@@ -88,7 +88,7 @@ export async function completeAppleAuthCallback({
     });
 
     if (result.createdNewRecipeUser) {
-      trackSignupCompleted("apple");
+      scheduleSignupCompleted("apple");
     } else {
       track("login_completed", { method: "apple" });
     }

@@ -3,6 +3,7 @@ import {
   BOOKING_MAX_HORIZON_DAYS,
   BOOKING_MAX_MIN_NOTICE_HOURS,
   BookingDurationMinutesSchema,
+  BookingMeetingTypesSchema,
   BookingSlugSchema,
   WeeklyAvailabilitySchema,
 } from "@core/types/booking.contracts";
@@ -23,7 +24,11 @@ export const BookingPageRecordSchema = z.object({
   userId: ObjectIdSchema,
   bookingSlug: BookingSlugSchema.optional(),
   enabled: z.boolean(),
+  // Mirrors meetingTypes[0] so clients that predate meeting types keep
+  // working. Pages saved before meeting types have no `meetingTypes`; read
+  // them through `resolveBookingMeetingTypes`.
   durationMinutes: BookingDurationMinutesSchema,
+  meetingTypes: BookingMeetingTypesSchema.optional(),
   destinationCalendarId: CalendarIdSchema,
   blockingCalendarIds: z.array(CalendarIdSchema).min(1).readonly(),
   // Calendars the host explicitly removed from blockers. Discovery will not

@@ -40,6 +40,7 @@ import {
   TRIAL_START_PRIMARY_LABEL,
   TrialStartAsk,
 } from "@web/billing/TrialStartAsk";
+import { trackSubscriptionCancelReasonSubmitted } from "@web/billing/track-subscription-cancel-reason";
 import {
   formatTrialStartPriceLine,
   resolveBillingDisplayPrice,
@@ -160,11 +161,18 @@ export const PlanSection: FC<PlanSectionProps> = ({
     setConfirmOpen(false);
   };
 
-  const handleCancelConfirm = () => {
+  const handleCancelConfirm = (
+    reasonSubmission?: Parameters<
+      typeof trackSubscriptionCancelReasonSubmitted
+    >[0],
+  ) => {
     if (isSubmitting || !periodEndLabel) return;
     setIsSubmitting(true);
     void (async () => {
       try {
+        if (reasonSubmission) {
+          trackSubscriptionCancelReasonSubmitted(reasonSubmission);
+        }
         await BillingApi.cancelSubscription();
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: billingQueryKeys.status }),
@@ -398,7 +406,6 @@ export const PlanSection: FC<PlanSectionProps> = ({
           <TrialStartAsk
             checkoutSource={{ kind: "settings_trial_ask" }}
             onCheckoutComplete={closeTrialAsk}
-            priceLineContext="settings"
             showTitle
             title="Start your free trial"
           />

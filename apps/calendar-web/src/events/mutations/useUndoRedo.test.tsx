@@ -615,6 +615,66 @@ describe("useUndoRedo", () => {
   // mutation's optimistic merge. Comparing the two shapes directly used to
   // read as "the event changed since this entry was recorded" and silently
   // decline the redo — even though nothing about the event actually changed.
+  test("undoes a color-only change after provider colorHex settles on the cache", async () => {
+    const context = setup();
+    const original = event({
+      content: {
+        kind: "details",
+        title: "Original",
+        description: "",
+        color: "blue",
+      },
+    });
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.mutations.replace({
+        id: original.id,
+        input: {
+          content: {
+            kind: "details",
+            title: "Original",
+            description: "",
+            location: "",
+            color: "coral",
+          },
+          recurrence: { kind: "preserve" },
+          scope: "this",
+        },
+      }),
+    );
+    await waitFor(() => {
+      expect(context.hook.result.current.undoRedo.canUndo).toBe(true);
+    });
+
+    const afterEdit =
+      context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+        ?.entities[original.id];
+    context.queryClient.setQueryData(
+      calendarKey,
+      normalized({
+        ...(afterEdit as Event),
+        content: {
+          kind: "details",
+          title: "Original",
+          description: "",
+          color: "coral",
+          colorHex: "#009688",
+        },
+      }),
+    );
+
+    act(() => context.hook.result.current.undoRedo.undo());
+
+    await waitFor(() => {
+      const content =
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+          ?.entities[original.id]?.content;
+      expect(content).toMatchObject({ color: "blue" });
+    });
+    expect(context.hook.result.current.undoRedo.canRedo).toBe(true);
+  });
+
   test("does not decline a redo when only the presence of a null `color` key differs", async () => {
     const context = setup();
     const original = event(); // content has no `color` key, like a demo seed.

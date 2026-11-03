@@ -88,12 +88,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: desktop-parity-web
           path: build/desktop-parity/web
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: desktop-parity-macos
           path: build/desktop-parity/macos

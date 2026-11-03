@@ -22,11 +22,13 @@ import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { createCompassQueryClient } from "@web/api/query-client";
 import { ZIndex } from "@web/common/constants/web.constants";
+import { getTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import {
   allDayGridSchedule,
   createGridEventDraft,
   editGridEventDraft,
+  replaceGridDraftSchedule,
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import { hiddenEventsQueryKeys } from "@web/events/hidden/hidden-events.query";
@@ -35,7 +37,7 @@ import {
   useDraftStore,
 } from "@web/events/stores/draft.store";
 import {
-  DECK_INDENT,
+  DECK_CASCADE_INDENT_RATIO,
   HIDDEN_EVENT_STRIP_WIDTH,
 } from "@web/grid/grid.constants";
 import {
@@ -426,7 +428,66 @@ describe("Week calendar accessibility", () => {
 });
 
 describe("saved Week event ownership", () => {
-  it("lays overlapping saved timed events out as a left-anchored deck", () => {
+  it("lays a duplicated event at full width after the draft moves it to another day", () => {
+    const thursdayStart = "2024-01-18T22:00:00.000Z";
+    const thursdayEnd = "2024-01-18T23:00:00.000Z";
+    const fridayStart = "2024-01-19T22:00:00.000Z";
+    const fridayEnd = "2024-01-19T23:00:00.000Z";
+
+    const original = createSavedEvent({
+      endDate: thursdayEnd,
+      startDate: thursdayStart,
+      title: "Hang art original",
+    });
+    const copy = createSavedEvent({
+      endDate: thursdayEnd,
+      startDate: thursdayStart,
+      title: "Hang art copy",
+    });
+    seedGrid([original, copy]);
+    seedEditDraft(copy);
+
+    const { gridDraft } = useDraftStore.getState();
+    if (!gridDraft) {
+      throw new Error("expected an edit draft");
+    }
+    useDraftStore.setState({
+      gridDraft: replaceGridDraftSchedule(
+        gridDraft,
+        timedGridSchedule(new Date(fridayStart), new Date(fridayEnd)),
+      ),
+    });
+
+    render(
+      <Provider>
+        <MainGridEvents
+          measurements={measurements}
+          weekProps={createWeekProps()}
+        />
+      </Provider>,
+    );
+
+    const copyCard = screen.getByRole("button", { name: /hang art copy/i });
+    const originalCard = screen.getByRole("button", {
+      name: /hang art original/i,
+    });
+
+    expect(parseFloat(copyCard.style.width)).toBeGreaterThan(
+      parseFloat(originalCard.style.width) * 0.95,
+    );
+
+    const draftTimeLabel = getTimesLabel(fridayStart, fridayEnd, "UTC");
+    expect(copyCard).toHaveAccessibleName(
+      expect.stringMatching(
+        new RegExp(
+          `hang art copy, ${draftTimeLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+          "i",
+        ),
+      ),
+    );
+  });
+
+  it("cascades a later overlapping saved timed event over the earlier one", () => {
     seedGrid([
       createSavedEvent({
         _id: "early-overlap",
@@ -461,16 +522,15 @@ describe("saved Week event ownership", () => {
     const late = screen.getByRole("button", { name: /late overlap/i });
     const solo = screen.getByRole("button", { name: /timed event: solo/i });
 
-    expect(parseFloat(early.style.width)).toBe(parseFloat(late.style.width));
-    const overlapOffset =
-      parseFloat(late.style.left) - parseFloat(early.style.left);
-    expect(overlapOffset).toBeGreaterThan(DECK_INDENT);
+    const earlyWidth = parseFloat(early.style.width);
+    const indent = earlyWidth * DECK_CASCADE_INDENT_RATIO;
+    expect(parseFloat(late.style.left)).toBeCloseTo(
+      parseFloat(early.style.left) + indent,
+    );
+    expect(parseFloat(late.style.width)).toBeCloseTo(earlyWidth - indent);
 
     expect(Number(early.style.zIndex)).toBeLessThan(Number(late.style.zIndex));
 
-    expect(parseFloat(solo.style.width)).toBeGreaterThan(
-      parseFloat(early.style.width),
-    );
     expect(Number(solo.style.zIndex)).toBe(ZIndex.LAYER_1);
   });
 

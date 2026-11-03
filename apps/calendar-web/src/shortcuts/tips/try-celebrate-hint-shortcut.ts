@@ -8,7 +8,6 @@ import { hintShortcutCelebrationActions } from "@web/shortcuts/tips/hint-shortcu
 import {
   getShortcutHint,
   type ShortcutHintId,
-  type ShortcutTipPart,
 } from "@web/shortcuts/tips/shortcut-tips.data";
 import { readVisibleHintCelebrationKeys } from "@web/shortcuts/tips/visible-shortcut-hint.store";
 
@@ -25,10 +24,11 @@ export function tryCelebrateHintShortcutUse(
 
 export function tryCelebrateHintShortcutForHintId(
   hintId: ShortcutHintId,
-  parts?: readonly ShortcutTipPart[],
 ): void {
-  const hintParts = parts ?? getShortcutHint(hintId).parts;
-  const key = firstHintShortcutCelebrationKey(hintId, hintParts);
+  const key = firstHintShortcutCelebrationKey(
+    hintId,
+    getShortcutHint(hintId).parts,
+  );
   if (!key) return;
   tryCelebrateHintShortcutUse(key);
 }

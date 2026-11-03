@@ -34,6 +34,13 @@ export default class CompassCLI {
         await runPurgeUser();
         break;
       }
+      case cmd === "journey-synthetic-cleanup": {
+        const { runJourneySyntheticCleanup } = await import(
+          "@scripts/commands/journey-synthetic-cleanup"
+        );
+        await runJourneySyntheticCleanup();
+        break;
+      }
       case cmd === "backfill-billing": {
         const { runBackfillBilling } = await import(
           "@scripts/commands/backfill-billing"
@@ -46,6 +53,13 @@ export default class CompassCLI {
           "@scripts/commands/backfill-expired-local-trials"
         );
         await runBackfillExpiredLocalTrials();
+        break;
+      }
+      case cmd === "backfill-meeting-types": {
+        const { runBackfillMeetingTypes } = await import(
+          "@scripts/commands/backfill-meeting-types"
+        );
+        await runBackfillMeetingTypes();
         break;
       }
       case cmd === "backfill-identities": {
@@ -74,6 +88,13 @@ export default class CompassCLI {
           "@scripts/commands/connection-report"
         );
         await runConnectionReport();
+        break;
+      }
+      case cmd === "prod-overlap-export": {
+        const { runProdOverlapExportCommand } = await import(
+          "@scripts/commands/prod-overlap-export"
+        );
+        await runProdOverlapExportCommand(process.argv.slice(3));
         break;
       }
       case cmd === "apple-poll-throttle": {
@@ -130,6 +151,14 @@ export default class CompassCLI {
       );
 
     program
+      .command("journey-synthetic-cleanup")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "delete Tyler-approved synthetic journey accounts (UI via Playwright + Stripe; default dry-run)",
+      );
+
+    program
       .command("backfill-billing")
       .helpOption(false)
       .allowUnknownOption(true)
@@ -143,6 +172,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "expire stale card-less local trials still stored as trialing (--apply to write)",
+      );
+
+    program
+      .command("backfill-meeting-types")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "store the default meeting type on booking pages that have none (--apply to write)",
       );
 
     program
@@ -175,6 +212,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "Read-only report of Sync connections by provider, state, reason, and last activity",
+      );
+
+    program
+      .command("prod-overlap-export")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "Read-only scrubbed export of one prod calendar day via Sync /internal/events/full",
       );
 
     program

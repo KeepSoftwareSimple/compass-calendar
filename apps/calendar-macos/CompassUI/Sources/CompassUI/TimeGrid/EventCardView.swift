@@ -8,9 +8,13 @@ protocol EventCardViewDelegate: AnyObject {
 }
 
 final class EventCardView: NSView {
+    private let textContainer = EventCardTextContainerView()
+    private var visibleContentRect: NSRect?
     private let titleField = NSTextField(labelWithString: "")
     private let timeField = NSTextField(labelWithString: "")
     private let accentLayer = CALayer()
+    private let deckEdgeLayer = CAShapeLayer()
+    private var shadowSpreadInset: CGFloat = 0
     private let focusRingLayer = CALayer()
     /// Web `outline-dashed outline-1 outline-text-muted/50` for unsettled cards.
     private let unsettledOutlineLayer = CAShapeLayer()
@@ -35,6 +39,10 @@ final class EventCardView: NSView {
         accentLayer.cornerRadius = 4
         accentLayer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
         layer?.addSublayer(accentLayer)
+        deckEdgeLayer.name = "deck-separation-edge"
+        deckEdgeLayer.fillColor = nil
+        deckEdgeLayer.lineWidth = 0.75
+        layer?.addSublayer(deckEdgeLayer)
 
         unsettledOutlineLayer.fillColor = nil
         unsettledOutlineLayer.lineWidth = 1
@@ -48,6 +56,10 @@ final class EventCardView: NSView {
         focusRingLayer.isHidden = true
         layer?.addSublayer(focusRingLayer)
 
+        textContainer.wantsLayer = true
+        textContainer.clipsToBounds = true
+        textContainer.layer?.masksToBounds = true
+        addSubview(textContainer)
         titleField.font = CompassFont.nsFont(size: 13)
         titleField.lineBreakMode = .byTruncatingTail
         titleField.maximumNumberOfLines = 2
@@ -55,7 +67,7 @@ final class EventCardView: NSView {
         titleField.isBordered = false
         titleField.drawsBackground = false
         titleField.delegate = self
-        addSubview(titleField)
+        textContainer.addSubview(titleField)
         titleField.setAccessibilityElement(false)
         titleField.refusesFirstResponder = true
         timeField.font = CompassFont.nsFont(size: 11)
@@ -64,7 +76,7 @@ final class EventCardView: NSView {
         timeField.alphaValue = 0.82
         timeField.isHidden = true
         timeField.setAccessibilityElement(false)
-        addSubview(timeField)
+        textContainer.addSubview(timeField)
 
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
@@ -81,6 +93,7 @@ final class EventCardView: NSView {
         isFocused: Bool,
         isSidebarEditing: Bool = false,
         isUnsettled: Bool = false,
+        isPast: Bool = false,
         timeLabel: String? = nil
     ) {
         eventId = card.eventId
@@ -90,6 +103,7 @@ final class EventCardView: NSView {
             width: card.frame.width,
             height: card.frame.height
         )
+        visibleContentRect = nil
         frame = layoutRectInParent
         showsInlineTitleEditor = card.showsInlineTitleEditor
         // Web prints the raw title, so an untitled draft shows only its time;
@@ -109,10 +123,19 @@ final class EventCardView: NSView {
         setAccessibilityValue(card.isHiddenStrip ? "hidden" : "visible")
         syncFocusAccessibilityAnchor(isFocused: isFocused, label: card.label)
 
-        let fill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? defaultEventFill(for: theme)
+        let baseFill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? defaultEventFill(for: theme)
+        let fill = isPast && !card.isDraft ? EventCardPastFill.color(baseFill) : baseFill
         layer?.backgroundColor = fill.cgColor
         layer?.opacity = card.isHiddenStrip ? 0.6 : 1
-        if card.isDraft {
+        deckEdgeLayer.isHidden = !card.isDeck
+        deckEdgeLayer.strokeColor = NSColor(theme.backgroundColor).cgColor
+        shadowSpreadInset = card.isDeck ? (isFocused ? 3 : 2) : 0
+        if card.isDeck {
+            layer?.shadowColor = NSColor.black.cgColor
+            layer?.shadowOffset = CGSize(width: 0, height: isFocused ? -6 : -3)
+            layer?.shadowRadius = isFocused ? 7 : 3
+            layer?.shadowOpacity = isFocused ? 0.55 : 0.4
+        } else if card.isDraft {
             layer?.shadowColor = NSColor.black.withAlphaComponent(0.28).cgColor
             layer?.shadowOffset = CGSize(width: 0, height: -1)
             layer?.shadowRadius = 2
@@ -154,13 +177,24 @@ final class EventCardView: NSView {
         syncAccessibilityFrame()
     }
 
+    func updateVisibleContentRect(_ rect: NSRect) {
+        guard visibleContentRect != rect else { return }
+        visibleContentRect = rect
+        needsLayout = true
+        layoutSubtreeIfNeeded()
+    }
+
     override func layout() {
         super.layout()
         // Short cards (all-day rows are 20pt) trim the vertical inset so the
         // title line is not clipped.
         let titleLineHeight = 16.0
         let verticalInset = max(0, min(4, (bounds.height - titleLineHeight) / 2))
-        let titleBounds = bounds.insetBy(dx: 6, dy: verticalInset)
+        textContainer.frame = bounds
+        let visibleBounds = visibleContentRect.map { bounds.intersection($0) } ?? bounds
+        let labelBounds = visibleBounds.isEmpty ? bounds : NSRect(
+            x: bounds.minX, y: visibleBounds.minY, width: bounds.width, height: visibleBounds.height)
+        let titleBounds = labelBounds.insetBy(dx: 6, dy: verticalInset)
         let timeHeight: CGFloat = timeField.isHidden ? 0 : 13
         let titleFont = CompassFont.nsFont(size: bounds.height <= 15 ? 10 : 13)
         titleField.font = titleFont
@@ -176,6 +210,11 @@ final class EventCardView: NSView {
         timeField.frame = NSRect(x: titleBounds.minX, y: titleField.frame.maxY,
             width: titleBounds.width, height: timeHeight)
         accentLayer.frame = CGRect(x: 0, y: 0, width: 3, height: bounds.height)
+        layer?.shadowPath = CGPath(roundedRect: bounds.insetBy(dx: shadowSpreadInset, dy: shadowSpreadInset),
+            cornerWidth: max(0, 4 - shadowSpreadInset), cornerHeight: max(0, 4 - shadowSpreadInset), transform: nil)
+        deckEdgeLayer.frame = bounds
+        deckEdgeLayer.path = CGPath(roundedRect: bounds.insetBy(dx: -0.375, dy: -0.375),
+            cornerWidth: 4.375, cornerHeight: 4.375, transform: nil)
         focusRingLayer.frame = bounds.insetBy(dx: -4, dy: -4)
         // A CSS outline sits just outside the border box.
         let outlineRect = bounds.insetBy(dx: -0.5, dy: -0.5)
@@ -396,4 +435,9 @@ extension EventCardView: NSTextFieldDelegate {
         guard showsInlineTitleEditor, obj.object as? NSTextField === titleField else { return }
         cardDelegate?.eventCardView(self, didEditDraftTitle: titleField.stringValue, eventId: eventId)
     }
+}
+
+/// Text clips independently so the card's external focus outline stays visible.
+private final class EventCardTextContainerView: NSView {
+    override var isFlipped: Bool { true }
 }

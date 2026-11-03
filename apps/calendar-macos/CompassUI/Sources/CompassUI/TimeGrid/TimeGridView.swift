@@ -317,6 +317,13 @@ public final class TimeGridView: NSView {
     @objc private func clipViewBoundsDidChange(_ notification: Notification) {
         clampWeekHorizontalScrollOrigin()
         syncPinnedHeaderScrollX()
+        updateVisibleCardContent()
+    }
+
+    private func updateVisibleCardContent() {
+        for view in timedContentView.subviews.compactMap({ $0 as? EventCardView }) {
+            view.updateVisibleContentRect(view.convert(scrollView.contentView.bounds, from: scrollView.contentView))
+        }
     }
 
     private func syncPinnedHeaderScrollX() {
@@ -724,6 +731,7 @@ public final class TimeGridView: NSView {
                 isFocused: isFocused,
                 isSidebarEditing: isSidebarEditing,
                 isUnsettled: state.unsettledEventIds.contains(card.eventId),
+                isPast: EventCardPastFill.isPast(card, state: state),
                 timeLabel: EventCardTimeLabel.text(for: card, state: state)
             )
             view.cardDelegate = self
@@ -736,6 +744,7 @@ public final class TimeGridView: NSView {
             }
         }
 
+        updateVisibleCardContent()
         for (eventId, view) in cardPool where !seen.contains(eventId) {
             if let card = view as? EventCardView {
                 card.teardownAccessibilityForRemoval()

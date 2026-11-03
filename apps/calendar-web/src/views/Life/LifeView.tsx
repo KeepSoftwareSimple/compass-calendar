@@ -32,6 +32,7 @@ import {
 } from "@web/shortcuts/page-jump/page-jump.targets";
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
+import { useLifeUiFocusShortcuts } from "@web/shortcuts/ui-focus/useUiFocusShortcuts";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { useLifePreferences } from "@web/views/Life/useLifePreferences";
 import { LifeGrid } from "./LifeGrid";
@@ -117,6 +118,7 @@ export function LifeView({ today }: LifeViewProps) {
   ]);
 
   useSidebarShortcuts();
+  useLifeUiFocusShortcuts();
   const isTrialing = useIsTrialing();
   const shortcutSections = useMemo(
     () =>
@@ -198,7 +200,7 @@ export function LifeView({ today }: LifeViewProps) {
       <PageJumpHints targets={LIFE_PAGE_JUMP_TARGETS} />
 
       <main
-        className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-background pt-5 pl-8 transition-[width] duration-200 ease-out motion-reduce:transition-none"
+        className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden bg-background pt-5 pl-4 transition-[width] duration-200 ease-out motion-reduce:transition-none xl:pl-8"
         id={ID_MAIN}
       >
         <CalendarHeader

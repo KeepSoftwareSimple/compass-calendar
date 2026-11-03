@@ -85,6 +85,17 @@ describe("requestTrialStep", () => {
     expect(opened).toBe(false);
     expect(openStartTrialStepModal).not.toHaveBeenCalled();
   });
+
+  it("opens when the server refused a write before the write lock synced", async () => {
+    const opened = await requestTrialStep({
+      trigger: "write",
+      eventAction: "create",
+      serverBillingRequired: true,
+    });
+
+    expect(opened).toBe(true);
+    expect(openStartTrialStepModal).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("blockAwaitingCheckoutEventWrite", () => {

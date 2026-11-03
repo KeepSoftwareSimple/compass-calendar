@@ -34,7 +34,6 @@ export const CalendarSourceRecordSchema = z.discriminatedUnion("provider", [
   MicrosoftCalendarSourceRecordSchema,
   AppleCalendarSourceRecordSchema,
 ]);
-export type CalendarSourceRecord = z.infer<typeof CalendarSourceRecordSchema>;
 
 export const CalendarRecordSchema = z
   .strictObject({

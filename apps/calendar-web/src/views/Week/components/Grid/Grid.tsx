@@ -8,9 +8,11 @@ import { EventGrid, isEventGridLoading } from "@web/grid/components/EventGrid";
 import { eventGridFirstImportFlags } from "@web/grid/event-grid-import-overlay";
 import { positionAllDayDraftEvent } from "@web/grid/layout/all-day-draft.position";
 import { withAllDayColumnTints } from "@web/grid/utils/allDayColumnTint.util";
+import { isAllDayEventOnDay } from "@web/grid/utils/allDayEventOnDay.util";
 import {
+  allDayHiddenCountsByColumn,
   allDayLaneCountFromEvents,
-  isCompactAllDayRowHeightEnabled,
+  isAllDayLaneFolded,
 } from "@web/grid/utils/allDayRowHeight.util";
 import { AllDayEvents } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvents";
 import { MainGridTimedEventsLayer } from "@web/views/Week/components/Grid/MainGrid/MainGridTimedEventsLayer";
@@ -20,7 +22,6 @@ import {
 } from "@web/views/Week/hooks/grid/useGridLayout";
 import { useWeekVisibleDates } from "@web/views/Week/hooks/grid/useWeekVisibleDates";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
-import { GRID_Y_START } from "@web/views/Week/layout.constants";
 
 interface Props {
   gridRefs: Refs_Grid;
@@ -40,19 +41,19 @@ export const Grid: FC<Props> = ({
   const {
     allDayEvents,
     error: eventsError,
+    isAwaitingSignIn,
     isPending,
     isFetching,
     isError: isErrorEvents,
     isSuccess,
     data,
     refetch,
-    rowCount: savedAllDayRowsCount,
   } = useWeekEventViewModel({
     startOfView: weekProps.query.startOfView,
     endOfView: weekProps.query.endOfView,
   });
   const { connection, refresh, state: googleState } = useConnectGoogle();
-  // Session expiry already surfaces SessionExpiredToast — don't also show
+  // Session expiry already opens the login modal — don't also show
   // "Couldn't load events" / Retry for the same failure.
   const showEventsLoadError = shouldShowContextualLoadError(
     isErrorEvents,
@@ -62,6 +63,7 @@ export const Grid: FC<Props> = ({
     isPending,
     showEventsLoadError,
     isFetching,
+    isAwaitingSignIn,
   );
   const { isImportingEmpty, isImportFailed } = eventGridFirstImportFlags({
     connection,
@@ -72,21 +74,31 @@ export const Grid: FC<Props> = ({
 
   const gridDraft = useDraftStore(selectGridDraft);
   // Include the live all-day draft so create/edit chips tint columns before save.
-  const allDayEventsForTint = useMemo(
-    () =>
-      positionAllDayDraftEvent({ draft: gridDraft, events: allDayEvents })
-        .events,
-    [allDayEvents, gridDraft],
+  const { events: allDayEventsForTint, activeDraftEvent: allDayDraftEvent } =
+    useMemo(
+      () =>
+        positionAllDayDraftEvent({ draft: gridDraft, events: allDayEvents }),
+      [allDayEvents, gridDraft],
+    );
+  const allDayRowsCount = useMemo(
+    () => allDayLaneCountFromEvents(allDayEventsForTint),
+    [allDayEventsForTint],
   );
-  const allDayRowsCount = useMemo(() => {
-    if (!isCompactAllDayRowHeightEnabled()) {
-      return savedAllDayRowsCount;
-    }
-    return allDayLaneCountFromEvents(allDayEventsForTint);
-  }, [allDayEventsForTint, savedAllDayRowsCount]);
 
   const weekDays = weekProps.component.weekDays;
   const visibleDates = useWeekVisibleDates(weekDays);
+  const allDayHiddenCounts = useMemo(
+    () =>
+      allDayHiddenCountsByColumn(
+        visibleDates.length,
+        allDayEventsForTint,
+        (event) =>
+          visibleDates.flatMap(({ date }, index) =>
+            isAllDayEventOnDay(event, date) ? [index] : [],
+          ),
+      ),
+    [allDayEventsForTint, visibleDates],
+  );
   const tintedVisibleDates = useMemo(
     () => withAllDayColumnTints(visibleDates, allDayEventsForTint, "date"),
     [allDayEventsForTint, visibleDates],
@@ -102,7 +114,8 @@ export const Grid: FC<Props> = ({
           weekDays={weekDays}
         />
       }
-      allDayGridOffsetTopPx={GRID_Y_START}
+      allDayForceExpanded={isAllDayLaneFolded(allDayDraftEvent)}
+      allDayHiddenCounts={allDayHiddenCounts}
       allDayRowsCount={allDayRowsCount}
       gridRefs={gridRefs}
       isErrorEvents={showEventsLoadError}

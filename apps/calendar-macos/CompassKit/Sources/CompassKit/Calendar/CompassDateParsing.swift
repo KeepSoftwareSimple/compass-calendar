@@ -34,6 +34,11 @@ public enum CompassDateParsing {
     }()
 
     public static func parseInEffectiveTimeZone(_ value: String) -> Date? {
+        parseGridDateTime(value, timeZoneIdentifier: EffectiveTimeZone.identifier)
+    }
+
+    /// Parse a grid schedule string in `timeZoneIdentifier`, matching web `parseGridDateTime`.
+    public static func parseGridDateTime(_ value: String, timeZoneIdentifier: String) -> Date? {
         if value.contains("Z") || hasExplicitOffset(value) {
             if let date = iso8601WithFractional.date(from: value) {
                 return date
@@ -43,14 +48,51 @@ public enum CompassDateParsing {
             }
         }
 
-        for formatter in wallTimeFormatters {
+        guard let zone = TimeZone(identifier: timeZoneIdentifier) else {
+            return nil
+        }
+
+        let wallFormatters: [DateFormatter] = {
+            let formats = [
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "yyyy-MM-dd HH:mm:ss",
+            ]
+            return formats.map { format in
+                let formatter = DateFormatter()
+                formatter.locale = Locale(identifier: "en_US_POSIX")
+                formatter.calendar = Calendar(identifier: .gregorian)
+                formatter.timeZone = zone
+                formatter.dateFormat = format
+                return formatter
+            }
+        }()
+
+        for formatter in wallFormatters {
             if let date = formatter.date(from: value) {
                 return date
             }
         }
 
         if value.count == 10, value.contains("-") {
-            return calendarDateInEffectiveTimeZone(value)
+            let parts = value.split(separator: "-")
+            guard parts.count == 3,
+                  let year = Int(parts[0]),
+                  let month = Int(parts[1]),
+                  let day = Int(parts[2])
+            else {
+                return nil
+            }
+            var components = DateComponents()
+            components.year = year
+            components.month = month
+            components.day = day
+            components.hour = 0
+            components.minute = 0
+            components.second = 0
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = zone
+            return calendar.date(from: components)
         }
 
         return nil

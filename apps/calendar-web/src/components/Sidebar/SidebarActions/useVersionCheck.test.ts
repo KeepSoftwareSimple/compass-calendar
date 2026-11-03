@@ -149,6 +149,7 @@ describe("useVersionCheck", () => {
 
     await waitFor(() => {
       expect(result.current.isUpdateAvailable).toBe(true);
+      expect(result.current.availableVersion).toBe("1.0.0");
     });
   });
 

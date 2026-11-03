@@ -1,5 +1,9 @@
 import {
   clearProviderAuthorizationIntent,
+  consumeGoogleAuthNeedsConsentRetry,
+  consumeGoogleOAuthScopesRecoveryPending,
+  markGoogleAuthNeedsConsentRetry,
+  markGoogleOAuthScopesRecoveryPending,
   readProviderAuthorizationIntent,
   writeProviderAuthorizationIntent,
 } from "./provider-authorization.storage";
@@ -63,6 +67,19 @@ describe("provider-authorization.storage", () => {
     );
 
     expect(readProviderAuthorizationIntent("google", "state-1")).toBeNull();
+  });
+
+  it("consumes one-shot Google session flags once", () => {
+    expect(consumeGoogleAuthNeedsConsentRetry()).toBe(false);
+    expect(consumeGoogleOAuthScopesRecoveryPending()).toBe(false);
+
+    markGoogleAuthNeedsConsentRetry();
+    markGoogleOAuthScopesRecoveryPending();
+
+    expect(consumeGoogleAuthNeedsConsentRetry()).toBe(true);
+    expect(consumeGoogleOAuthScopesRecoveryPending()).toBe(true);
+    expect(consumeGoogleAuthNeedsConsentRetry()).toBe(false);
+    expect(consumeGoogleOAuthScopesRecoveryPending()).toBe(false);
   });
 
   it("clears a consumed intent", () => {

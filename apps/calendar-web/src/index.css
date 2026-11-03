@@ -737,7 +737,7 @@
  * floating-ui's positioning plus Z_INDEX_FLOATING_MENU, so it carries no
  * position or z-index of its own. */
 @utility c-context-menu {
-  @apply min-w-40 list-none rounded border border-border bg-surface-raised py-[5px] shadow-[0_4px_6px_var(--color-shadow-default)];
+  @apply min-w-40 list-none rounded border border-border bg-surface-raised p-1 shadow-[0_4px_6px_var(--color-shadow-default)];
 }
 
 @utility c-tooltip {
@@ -853,7 +853,7 @@
 }
 
 @utility c-context-menu-item {
-  @apply c-focus-ring flex w-full cursor-pointer appearance-none items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 py-2.5 text-left text-[14px] text-text select-none hover:bg-surface-overlay focus-visible:bg-surface-overlay disabled:cursor-wait disabled:opacity-50;
+  @apply flex w-full cursor-pointer appearance-none items-center gap-2 whitespace-nowrap rounded-sm border-0 bg-transparent px-2 py-2 text-left text-[14px] text-text select-none hover:bg-surface-overlay focus-visible:bg-surface-overlay focus-visible:outline-none disabled:cursor-wait disabled:opacity-50;
 }
 
 /* The event description editor (DescriptionEditor.tsx). TipTap renders its
@@ -907,13 +907,6 @@
   & p.is-editor-empty:first-child::before {
     @apply pointer-events-none float-left h-0 text-text-muted;
     content: attr(data-placeholder);
-  }
-}
-
-@utility c-description-link-hints {
-  & .tiptap a {
-    box-decoration-break: clone;
-    padding-inline-end: 1.75rem;
   }
 }
 
@@ -1056,6 +1049,12 @@
     outline-offset: 1px;
   }
 
+  /* Playwright and programmatic .focus() do not set :focus-visible. */
+  &[data-view="sidebar"] .react-datepicker__day:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
   /* Sidebar days are keyboard targets, not click targets: no hover
      affordance. Use --text (not inherit): react-datepicker sets `color: #000`
      on .react-datepicker, so inherit painted black numbers on Dark Abyss. */
@@ -1185,6 +1184,12 @@
 .c-number-input {
   background-color: var(--surface);
   color: var(--text);
+}
+
+.c-life-input:focus,
+.c-life-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .c-number-input {
@@ -1568,14 +1573,35 @@
     z-index: 1;
     outline: none;
   }
-  & .react-datepicker__week:has(.react-datepicker__day:focus-visible)::after {
+  & .react-datepicker__week:has(.react-datepicker__day:focus-visible)::after,
+  & .react-datepicker__week:has(.react-datepicker__day:focus)::after {
     position: absolute;
     inset: 0 -3px;
     z-index: 20;
     border-radius: var(--radius-default);
-    box-shadow: inset 0 0 0 2px var(--accent);
+    box-shadow:
+      inset 0 0 0 2px var(--accent),
+      0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
     content: "";
     pointer-events: none;
+  }
+
+  & .react-datepicker__week:has(.react-datepicker__day:focus) {
+    position: relative;
+    z-index: 1;
+    outline: none;
+  }
+}
+
+@container month-picker (max-width: 280px) {
+  .c-month-picker .c-date-picker[data-view="sidebar"] .react-datepicker__day,
+  .c-month-picker
+    .c-date-picker[data-view="sidebar"]
+    .react-datepicker__day-name {
+    width: 1.2rem;
+    height: 1.2rem;
+    line-height: 1.2rem;
+    font-size: 0.6875rem;
   }
 }
 

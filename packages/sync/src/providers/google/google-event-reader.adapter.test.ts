@@ -245,6 +245,34 @@ describe("GoogleEventReaderAdapter", () => {
     expect(warnings[0]).not.toContain("Secret title");
   });
 
+  it("logs which schedule rule an unmappable event broke", async () => {
+    const warnings: string[] = [];
+    const api = new FakeEventListApi([
+      page({
+        items: [
+          gEvent({
+            id: "backwards",
+            start: { dateTime: "2026-10-28T10:00:00Z", timeZone: "UTC" },
+            end: { dateTime: "2026-10-28T09:00:00Z", timeZone: "UTC" },
+          }),
+        ],
+      }),
+    ]);
+    const { adapter } = adapterWith(api, {
+      warn: (message) => warnings.push(message),
+    });
+
+    const result = await adapter.listEventPage({
+      accessToken: "tok",
+      calendarId: "primary@google.com",
+    });
+
+    expect(result.skipped).toBe(1);
+    expect(warnings[0]).toContain("(unmappableSchedule)");
+    expect(warnings[0]).toContain("schemaPath=end");
+    expect(warnings[0]).toMatch(/schemaIssue=\S/);
+  });
+
   it("skips a content-oversized event instead of failing the whole page", async () => {
     const api = new FakeEventListApi([
       page({

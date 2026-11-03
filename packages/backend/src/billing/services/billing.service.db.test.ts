@@ -36,6 +36,79 @@ describe("BillingService (db)", () => {
     ).rejects.toThrow("User not found");
   });
 
+  it("reports compasscaltest.invalid signups as awaiting_checkout when not journey-tagged", async () => {
+    using _env = mockEnv(stripeEnforcing);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: `agent.trial.${Date.now()}@compasscaltest.invalid`,
+      name: "Staging Trial",
+      firstName: "Staging",
+      lastName: "Trial",
+      locale: "en",
+    });
+
+    const status = await billingService.getStatus(userId.toString());
+
+    expect(status.subscriptionStatus).toBe("awaiting_checkout");
+    expect(status.isReadOnly).toBe(true);
+  });
+
+  it("reports synthetic journey accounts as awaiting_checkout when journey discount is configured", async () => {
+    using _env = mockEnv({
+      ...stripeEnforcing,
+      SYNTHETIC_JOURNEY_EMAILS: ["runner@example.com"],
+      STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: "coupon_synthetic_100",
+    });
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "runner+journey1@example.com",
+      name: "Journey Bot",
+      firstName: "Journey",
+      lastName: "Bot",
+      locale: "en",
+      isSynthetic: true,
+      billing: { subscriptionStatus: "awaiting_checkout" },
+    });
+
+    const status = await billingService.getStatus(userId.toString());
+
+    expect(status).toEqual({
+      subscriptionStatus: "awaiting_checkout",
+      trialEndsAt: null,
+      isReadOnly: true,
+      cancelAtPeriodEnd: false,
+    });
+  });
+
+  it("reports synthetic journey accounts as active without touching stored billing", async () => {
+    using _env = mockEnv({
+      ...stripeEnforcing,
+      SYNTHETIC_JOURNEY_EMAILS: ["runner@example.com"],
+    });
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "runner+journey1@example.com",
+      name: "Journey Bot",
+      firstName: "Journey",
+      lastName: "Bot",
+      locale: "en",
+      isSynthetic: true,
+      billing: { subscriptionStatus: "awaiting_checkout" },
+    });
+
+    const status = await billingService.getStatus(userId.toString());
+
+    expect(status).toEqual({
+      subscriptionStatus: "active",
+      trialEndsAt: null,
+      isReadOnly: false,
+      cancelAtPeriodEnd: false,
+    });
+  });
+
   it("reports a bypassed account as active without touching stored billing", async () => {
     using _env = mockEnv({
       ...stripeEnforcing,

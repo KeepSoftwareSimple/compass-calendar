@@ -11,16 +11,21 @@ enum EventCardTimeLabel {
             start = draft.schedule.start
             end = draft.schedule.end
         } else {
-            guard let event = state.scenario.timedEvents.first(where: { $0.eventId == card.eventId }),
-                let eventStart = CompassDateParsing.parseInEffectiveTimeZone(event.startDate),
-                let eventEnd = CompassDateParsing.parseInEffectiveTimeZone(event.endDate)
+            guard let event = state.scenario.timedEvents.first(where: { $0.eventId == card.eventId })
+            else { return nil }
+            let eventZone = event.timeZone ?? state.effectiveTimeZone
+            guard let eventStart = CompassDateParsing.parseGridDateTime(
+                event.startDate, timeZoneIdentifier: eventZone),
+                let eventEnd = CompassDateParsing.parseGridDateTime(
+                    event.endDate, timeZoneIdentifier: eventZone)
             else { return nil }
             start = eventStart
             end = eventEnd
         }
         guard card.isDraft || end >= state.referenceNow else { return nil }
+        let gridZone = TimeZone(identifier: state.effectiveTimeZone) ?? EffectiveTimeZone.timeZone
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: state.effectiveTimeZone) ?? EffectiveTimeZone.timeZone
+        calendar.timeZone = gridZone
         let startHalf = calendar.component(.hour, from: start) < 12 ? "AM" : "PM"
         let endHalf = calendar.component(.hour, from: end) < 12 ? "AM" : "PM"
         func clock(_ date: Date) -> String {

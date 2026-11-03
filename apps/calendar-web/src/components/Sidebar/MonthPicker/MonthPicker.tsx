@@ -12,6 +12,7 @@ import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { TrialBadge } from "@web/billing/TrialBadge";
 import { ID_DATEPICKER_SIDEBAR } from "@web/common/constants/web.constants";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
+import { restoreSidebarPickerReturnFocus } from "@web/components/Sidebar/util/sidebarFocus.util";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { MonthPickerHint } from "./MonthPickerHint";
@@ -38,7 +39,7 @@ interface Props {
 }
 
 const monthPickerClassName =
-  "[&_.calendar]:!block [&_.calendar]:!w-full [&_.calendar]:!max-w-80 [&_.calendar]:!mx-auto [&_.calendar]:!bg-transparent [&_.calendar]:!shadow-none [&_.react-datepicker]:!border-0 [&_.react-datepicker]:!bg-transparent [&_.react-datepicker]:!shadow-none [&_.react-datepicker\\_\\_day-names]:!mb-0 [&_.react-datepicker\\_\\_header.react-datepicker\\_\\_header]:!px-0 [&_.react-datepicker\\_\\_month-container.react-datepicker\\_\\_month-container]:!bg-transparent [&_.react-datepicker\\_\\_month-container.react-datepicker\\_\\_month-container]:!px-0";
+  "[container-type:inline-size] [container-name:month-picker] [&_.calendar]:!block [&_.calendar]:!w-full [&_.calendar]:!max-w-full [&_.calendar]:!mx-auto [&_.calendar]:!bg-transparent [&_.calendar]:!shadow-none [&_.react-datepicker]:!border-0 [&_.react-datepicker]:!bg-transparent [&_.react-datepicker]:!shadow-none [&_.react-datepicker\\_\\_day-names]:!mb-0 [&_.react-datepicker\\_\\_header.react-datepicker\\_\\_header]:!px-0 [&_.react-datepicker\\_\\_month-container.react-datepicker\\_\\_month-container]:!bg-transparent [&_.react-datepicker\\_\\_month-container.react-datepicker\\_\\_month-container]:!px-0";
 
 const headerActionsClassName = "!ml-2.5";
 
@@ -55,7 +56,15 @@ const swallowDayPointer = (event: MouseEvent<HTMLElement>) => {
 
 /** react-datepicker moves its own cursor on Arrow keys; there is no app
  * handler to hang a shortcutId off, so the legend row records here instead. */
-const recordPickerStep = (event: KeyboardEvent<HTMLElement>) => {
+const handlePickerKeyDownCapture = (event: KeyboardEvent<HTMLElement>) => {
+  if (event.key === "Escape" || event.key === "u" || event.key === "U") {
+    if (event.key === "u" || event.key === "U") {
+      recordHandledShortcutInvocation("focus-event");
+    }
+    restoreSidebarPickerReturnFocus();
+    event.preventDefault();
+    return;
+  }
   if (event.key.startsWith("Arrow")) {
     recordHandledShortcutInvocation("nav-picker-step");
   }
@@ -176,7 +185,7 @@ export const MonthPicker: FC<Props> = ({
       aria-label="Date navigation"
       onClickCapture={swallowDayPointer}
       onMouseDownCapture={swallowDayPointer}
-      onKeyDown={recordPickerStep}
+      onKeyDownCapture={handlePickerKeyDownCapture}
       {...pageJumpAttrs("month-picker")}
     >
       <MonthPickerHint unit={unit}>

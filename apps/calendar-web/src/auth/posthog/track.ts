@@ -7,8 +7,11 @@ import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
  * - `signup_started`: `source`, `anon_events_created`
  * - `local_mode_selected`: `source` (anonymous local-only choice, not a login)
  * - `signup_completed`: `method`
- * - `signup_step_viewed`: `step_name`, optional `source`, `method` (includes
- *   `trial_step_viewed`, `trial_step_completed`, `trial_step_abandoned`)
+ * - `signup_step_viewed`: `step_name`, `step` (same value), optional `source`,
+ *   `method` (includes trial and Google OAuth scopes recovery steps)
+ * - `google_oauth_scopes_recovery_viewed`: `provider`
+ * - `google_oauth_scopes_recovery_retry_clicked`: `provider`, `missing_scope_count`
+ * - `google_oauth_scopes_recovery_succeeded`: `provider`
  * - `signup_failed`: `reason_code`, optional `method`, `step`, `error`
  *
  * OAuth signup drop-off (server + client; `packages/core/src/analytics/oauth-signup.events.ts`):
@@ -18,6 +21,8 @@ import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
  *
  * Billing:
  * - `trial_converted`: `source`, optional `feature_area`, `action_id`, `trial`
+ * - `checkout_opened`: `source` (embedded Checkout mounted)
+ * - `checkout_back`: `source` (Back or Esc from embedded Checkout)
  */
 export type ProductEvent =
   | "welcome_modal_shown"
@@ -31,6 +36,9 @@ export type ProductEvent =
   | "oauth_failed"
   | "oauth_return"
   | "signup_step_viewed"
+  | "google_oauth_scopes_recovery_viewed"
+  | "google_oauth_scopes_recovery_retry_clicked"
+  | "google_oauth_scopes_recovery_succeeded"
   | "signup_failed"
   | "login_completed"
   | "logout_completed"
@@ -63,11 +71,14 @@ export type ProductEvent =
   | "connect_prompt_dismissed"
   | "trial_converted"
   | "trial_celebration_shown"
+  | "checkout_opened"
+  | "checkout_back"
   | "billing_gate_shown"
   | "billing_gate_cta_clicked"
   | "billing_gate_shortcut_converted"
   | "trial_gate_triggered"
   | "billing_cancel_scheduled"
+  | "subscription_cancel_reason_submitted"
   | "billing_resumed"
   | "billing_card_update_completed"
   | "shortcut_upgrade_prompted"
@@ -115,11 +126,17 @@ export type ProductEvent =
 
 export type ProductEventProperties = Record<string, boolean | number | string>;
 
+/** Events that must use a typed funnel helper instead of a bare `track` call. */
+export type DirectTrackProductEvent = Exclude<
+  ProductEvent,
+  "signup_step_viewed"
+>;
+
 /**
- * Fire-and-forget capture for the small set of product-activation events.
- * No-ops when PostHog isn't initialized (disabled, or not yet booted).
+ * Low-level capture for funnel modules that attach required properties.
+ * Do not call this for `signup_step_viewed` outside `signup-funnel.ts`.
  */
-export function track(
+export function captureProductEvent(
   event: ProductEvent,
   properties?: ProductEventProperties,
 ): void {
@@ -129,4 +146,18 @@ export function track(
     // Analytics must never interrupt the product action it observes. The SDK
     // owns transport retries and unload flushing for successfully queued data.
   }
+}
+
+/**
+ * Fire-and-forget capture for the small set of product-activation events.
+ * No-ops when PostHog isn't initialized (disabled, or not yet booted).
+ *
+ * `signup_step_viewed` is excluded: use {@link trackSignupStep} so `step` is
+ * always present for funnel insights.
+ */
+export function track(
+  event: DirectTrackProductEvent,
+  properties?: ProductEventProperties,
+): void {
+  captureProductEvent(event, properties);
 }

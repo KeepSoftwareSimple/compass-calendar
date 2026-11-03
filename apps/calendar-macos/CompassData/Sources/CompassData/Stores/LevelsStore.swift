@@ -82,6 +82,7 @@ public final class LevelsStore {
 
     public func recordShortcutInvocation(_ id: ShortcutId, section: String) {
         let raw = id.rawValue
+        let usedDisplayedTip = currentTip?.shortcutId == raw
         var profile = ShortcutUsagePersistence.readProfile(from: defaults)
         var usage = profile.shortcuts[raw] ?? ShortcutUsageCounter(invocations: 0)
         usage.invocations += 1
@@ -106,7 +107,7 @@ public final class LevelsStore {
         if !badgeHidden, levelSnapshot.level > previousLevel {
             celebrateLevelUp()
         }
-        advanceTipRotation()
+        if usedDisplayedTip { advanceTipRotation() }
     }
 
     public func setTipsMuted(_ muted: Bool) {

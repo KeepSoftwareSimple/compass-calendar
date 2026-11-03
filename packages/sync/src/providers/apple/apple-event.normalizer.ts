@@ -1,5 +1,4 @@
 import ICAL from "ical.js";
-import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   type Attendee,
   type Conference,
@@ -7,7 +6,6 @@ import {
   type Organizer,
 } from "@core/types/event-attendance.contracts";
 import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
-import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
 import { appleInstanceEventId } from "@sync/providers/apple/apple-instance-id";
 import {
@@ -15,6 +13,8 @@ import {
   type ProviderEventRead,
   type ProviderEventRecurrence,
 } from "@sync/providers/provider-event.port";
+import { parseProviderSchedule } from "@sync/providers/provider-schedule.util";
+import { toIanaTimeZoneOrUtc } from "@sync/providers/provider-timezone.util";
 
 const RFC3339_OFFSET = dayjs.DateFormat.RFC3339_OFFSET;
 const COMPACT_DATE = dayjs.DateFormat.YEAR_MONTH_DAY_COMPACT_FORMAT;
@@ -281,7 +281,7 @@ function mapSchedule(event: ICAL.Event, connectionTimeZone: string) {
   }
 
   if (start.isDate && end.isDate) {
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "allDay",
       start: compactDateToDateOnly(start.toICALString()),
       end: compactDateToDateOnly(end.toICALString()),
@@ -290,7 +290,7 @@ function mapSchedule(event: ICAL.Event, connectionTimeZone: string) {
 
   if (!start.isDate && !end.isDate) {
     const timeZone = resolveTimeZone(start, connectionTimeZone);
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "timed",
       start: toOffsetIso(start, timeZone, connectionTimeZone),
       end: toOffsetIso(end, timeZone, connectionTimeZone),
@@ -360,13 +360,9 @@ function compactDateToDateOnly(compact: string): string {
 function resolveTimeZone(time: ICAL.Time, connectionTimeZone: string): string {
   const tzid = time.zone?.tzid;
   if (!tzid || tzid === "floating") {
-    return toIanaTimeZone(connectionTimeZone);
+    return toIanaTimeZoneOrUtc(connectionTimeZone);
   }
-  return toIanaTimeZone(tzid);
-}
-
-function toIanaTimeZone(timeZone: string): string {
-  return TimezoneSchema.safeParse(timeZone).success ? timeZone : "UTC";
+  return toIanaTimeZoneOrUtc(tzid);
 }
 
 function toOffsetIso(
@@ -427,16 +423,4 @@ function stringParam(
 ): string | undefined {
   const value = property.getParameter(name);
   return typeof value === "string" ? value : undefined;
-}
-
-function parseSchedule(candidate: unknown) {
-  const parsed = EventScheduleSchema.safeParse(candidate);
-  if (!parsed.success) {
-    throw new ProviderEventError(
-      "unmappableSchedule",
-      "Event start/end could not be resolved to a schedule",
-      { cause: parsed.error },
-    );
-  }
-  return parsed.data;
 }

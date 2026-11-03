@@ -2,6 +2,7 @@ import {
   findNextAvailableBookingDate,
   formatBookingMonthKey,
   formatDurationMinutes,
+  formatOwnerInboxScheduleLine,
   getPublicBookingMonthWindow,
   isBookingMonthAvailable,
   listBookingAvailableDateKeysInMonth,
@@ -235,6 +236,18 @@ describe("formatDurationMinutes", () => {
     expect(formatDurationMinutes(60)).toBe("1 hour");
     expect(formatDurationMinutes(90)).toBe("1 hour 30 minutes");
     expect(formatDurationMinutes(120)).toBe("2 hours");
+  });
+});
+
+describe("formatOwnerInboxScheduleLine", () => {
+  it("joins date, time, and compact duration for the owner inbox row", () => {
+    expect(
+      formatOwnerInboxScheduleLine(
+        "2026-10-31T13:00:00.000Z",
+        30,
+        "America/Chicago",
+      ),
+    ).toMatch(/Oct 31.*8:00 AM.*30 min/);
   });
 });
 

@@ -165,6 +165,11 @@ export function usePublicBookingRescheduleFlow() {
 
     submitInFlightRef.current = true;
     setAlertMessage(null);
+    // A moved meeting keeps its own length, whichever meeting type it was.
+    const durationMinutes =
+      reservationQuery.data?.status === "confirmed"
+        ? reservationQuery.data.durationMinutes
+        : pageQuery.data.durationMinutes;
 
     try {
       await rescheduleReservation.mutateAsync(
@@ -172,11 +177,11 @@ export function usePublicBookingRescheduleFlow() {
           token,
           slotStart: selectedSlotStart,
           guestTimeZone,
-          durationMinutes: pageQuery.data.durationMinutes,
+          durationMinutes,
         }),
       );
       track("booking_reservation_rescheduled", {
-        duration_minutes: pageQuery.data.durationMinutes,
+        duration_minutes: durationMinutes,
       });
       await navigate({
         to: ROOT_ROUTES.BOOK_CONFIRMED,

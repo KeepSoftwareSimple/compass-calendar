@@ -295,6 +295,40 @@ describe("normalizeGoogleEvent", () => {
     expect(read.content.conference).toBeNull();
   });
 
+  it("keeps a zero-length all-day event as a one-day event", () => {
+    // Some clients write end.date equal to start.date. Google shows these as a
+    // one-day event; they used to be skipped as unmappableSchedule.
+    const read = asProviderEvent(
+      normalizeGoogleEvent(
+        gEvent({
+          start: { date: "2026-10-28" },
+          end: { date: "2026-10-28" },
+        }),
+      ),
+    );
+    expect(read.schedule).toEqual({
+      kind: "allDay",
+      start: "2026-10-28" as DateOnly,
+      end: "2026-10-29" as DateOnly,
+    });
+  });
+
+  it("rolls a zero-length all-day event over a month end", () => {
+    const read = asProviderEvent(
+      normalizeGoogleEvent(
+        gEvent({
+          start: { date: "2026-10-31" },
+          end: { date: "2026-10-31" },
+        }),
+      ),
+    );
+    expect(read.schedule).toEqual({
+      kind: "allDay",
+      start: "2026-10-31" as DateOnly,
+      end: "2026-11-01" as DateOnly,
+    });
+  });
+
   it("throws when a non-cancelled event has no id or etag", () => {
     expect(() => normalizeGoogleEvent(gEvent({ id: undefined }))).toThrow(
       ProviderEventError,

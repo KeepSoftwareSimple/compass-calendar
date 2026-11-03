@@ -8,6 +8,8 @@ import { useWeekEventsQuery } from "@web/events/queries/useWeekEventsQuery";
 import { viewActions } from "@web/events/stores/view.store";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import {
+  computeVisibleWindowOffset,
+  currentWeekWindowStart,
   WEEK_DAY_COUNT,
   weekEventQueryRange,
   weekEventsQueryWindow,
@@ -35,7 +37,9 @@ export const useWeek = (
   // dateString, that drives the anchor at every width.
   const timeZone = useEffectiveTimeZone();
   const defaultAnchorDate =
-    visibleDayCount === 1 ? today : today.startOf("week");
+    visibleDayCount === 1
+      ? today
+      : currentWeekWindowStart(today, visibleDayCount);
   const anchorDateString =
     params?.dateString ?? defaultAnchorDate.format(DATE_FORMAT);
   const anchor = useMemo(
@@ -158,14 +162,17 @@ export const useWeek = (
     const navigationSource = navigationSourceRef.current;
     navigationSourceRef.current = "manual";
     if (!isCurrentWeek) {
-      const todayWindowStart = today.startOf("week");
+      const weekStart = today.startOf("week");
       const shiftedWindowOffset =
         navigationSource === "day-shift"
           ? start.diff(start.startOf("week"), "day")
-          : 0;
-      setAnchor(todayWindowStart.add(shiftedWindowOffset, "day"));
+          : computeVisibleWindowOffset({
+              anchorIndex: today.startOf("day").diff(weekStart, "day"),
+              visibleDayCount,
+            });
+      setAnchor(weekStart.add(shiftedWindowOffset, "day"));
     }
-  }, [isCurrentWeek, setAnchor, start, today]);
+  }, [isCurrentWeek, setAnchor, start, today, visibleDayCount]);
 
   const getLastNavigationSource = useCallback(
     () => navigationSourceRef.current,

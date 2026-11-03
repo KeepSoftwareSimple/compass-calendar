@@ -12,10 +12,11 @@ import { type SyncEventContent } from "@core/types/sync/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { googleColorIdFields } from "@sync/providers/google/google-color.map";
 import {
+  describeGoogleRequestBodyForLog,
+  describeGoogleWriteTargetForLog,
   formatGoogleErrorEntriesForLog,
   googleErrorReasons,
   googleFailureCause,
-  googleRequestBodyKeys,
   googleStatus,
   hasGoogleRateLimitReason,
 } from "@sync/providers/google/google-error";
@@ -232,9 +233,7 @@ export class GoogleEventWriter implements ProviderEventWriter {
         "Google declined to change this event",
         {
           operation: "events.insert",
-          requestBodyKeys: googleRequestBodyKeys(
-            requestBody as Record<string, unknown>,
-          ),
+          requestBody,
         },
       );
     }
@@ -254,11 +253,12 @@ export class GoogleEventWriter implements ProviderEventWriter {
         typeof input.content.color === "string" &&
         input.usesEventLabelColor === true
       ) {
+        const clearBody = { eventLabelId: "" };
         try {
           const cleared = await api.patch({
             calendarId: input.calendarId,
             eventId: input.providerEventId,
-            requestBody: { eventLabelId: "" },
+            requestBody: clearBody,
             sendUpdates: "none",
             ifMatch,
             eventLabelVersion: 1,
@@ -270,7 +270,8 @@ export class GoogleEventWriter implements ProviderEventWriter {
             "Google declined to clear the event label",
             {
               operation: "events.patch(clearEventLabel)",
-              requestBodyKeys: ["eventLabelId"],
+              requestBody: clearBody,
+              target: { eventId: input.providerEventId, ifMatch },
             },
           );
         }
@@ -280,14 +281,20 @@ export class GoogleEventWriter implements ProviderEventWriter {
         input.schedule,
         input.recurrence,
         input.attendees,
-        input.providerManaged,
+        {
+          providerManaged: input.providerManaged,
+          writeSchedule: input.writeSchedule,
+          colorOnly: input.colorOnly,
+        },
       );
       try {
         const patched = await api.patch({
           calendarId: input.calendarId,
           eventId: input.providerEventId,
           requestBody: mainBody,
-          sendUpdates: toSendUpdates(input.invitation),
+          sendUpdates: input.colorOnly
+            ? "none"
+            : toSendUpdates(input.invitation),
           ifMatch,
         });
         return toResult(patched);
@@ -297,9 +304,8 @@ export class GoogleEventWriter implements ProviderEventWriter {
           "Google declined to change this event",
           {
             operation: "events.patch",
-            requestBodyKeys: googleRequestBodyKeys(
-              mainBody as Record<string, unknown>,
-            ),
+            requestBody: mainBody,
+            target: { eventId: input.providerEventId, ifMatch },
           },
         );
       }
@@ -335,7 +341,10 @@ export class GoogleEventWriter implements ProviderEventWriter {
         "Google declined to delete this event",
         {
           operation: "events.delete",
-          requestBodyKeys: [],
+          target: {
+            eventId: input.providerEventId,
+            ifMatch: input.expectedVersion,
+          },
         },
       );
     }
@@ -409,14 +418,23 @@ function toResult(event: gSchema$Event): ProviderWriteResult {
 // untouched, exactly as before. content.attendees itself is read-reflected
 // state and never reaches the body. sendUpdates still notifies existing
 // attendees of the changes we do write.
+type GoogleWriteBodyOptions = {
+  providerManaged?: true;
+  writeSchedule?: boolean;
+  colorOnly?: true;
+};
+
 function toGoogleBody(
   content: SyncEventContent,
   schedule: EventSchedule,
   recurrence: ProviderWriteRecurrence,
   attendees?: readonly Attendee[],
-  providerManaged?: true,
+  options?: GoogleWriteBodyOptions,
 ): gSchema$Event {
-  if (providerManaged) {
+  if (options?.colorOnly) {
+    return { ...googleColorIdFields(content.color) };
+  }
+  if (options?.providerManaged) {
     return {
       ...googleColorIdFields(content.color),
       ...attendeesField(attendees),
@@ -427,7 +445,7 @@ function toGoogleBody(
     description: content.description,
     location: content.location,
     ...googleColorIdFields(content.color),
-    ...scheduleFields(schedule),
+    ...(options?.writeSchedule !== false ? scheduleFields(schedule) : {}),
     ...recurrenceField(recurrence),
     ...attendeesField(attendees),
   };
@@ -648,13 +666,22 @@ function googleUnsupportedCapability(
   });
 }
 
+type GoogleWriteContext = {
+  operation: string;
+  requestBody?: gSchema$Event;
+  target?: { eventId: string; ifMatch: string | null };
+};
+
 function classifyGoogle400(
   error: unknown,
   message: string,
-  context: { operation: string; requestBodyKeys: readonly string[] },
+  context: GoogleWriteContext,
 ): ProviderWriteError {
+  const target = context.target
+    ? `; ${describeGoogleWriteTargetForLog(context.target)}`
+    : "";
   googleWriteLog.warn(
-    `Google ${context.operation} HTTP 400: ${formatGoogleErrorEntriesForLog(error)}; bodyKeys=[${context.requestBodyKeys.join(",")}]`,
+    `Google ${context.operation} HTTP 400: ${formatGoogleErrorEntriesForLog(error)}${target}; ${describeGoogleRequestBodyForLog(context.requestBody)}`,
   );
   if (
     googleErrorReasons(error).some((reason) =>
@@ -669,14 +696,14 @@ function classifyGoogle400(
 }
 
 // Every Google write catch triages the same way: a 400 is Google declining
-// this particular change (logged with its `errors[]` entries and the request's
-// top-level body keys), anything else falls through to the shared table. One
+// this particular change (logged with its `errors[]` entries and the request
+// body's shape), anything else falls through to the shared table. One
 // funnel keeps the four call sites from drifting on which statuses get the 400
 // treatment.
 function classifyWriteFailure(
   error: unknown,
   declinedMessage: string,
-  context: { operation: string; requestBodyKeys: readonly string[] },
+  context: GoogleWriteContext,
 ): ProviderWriteError {
   if (googleStatus(error) === 400) {
     return classifyGoogle400(error, declinedMessage, context);

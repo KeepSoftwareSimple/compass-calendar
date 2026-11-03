@@ -15,6 +15,8 @@ import {
   CreateBookingReservationInputSchema,
   type CreateBookingReservationResponse,
   CreateBookingReservationResponseSchema,
+  type HostUpcomingBookingReservationsResponse,
+  HostUpcomingBookingReservationsResponseSchema,
   type PatchBookingReservationInput,
   PatchBookingReservationInputSchema,
   type PublicGetBookingPageResponse,
@@ -66,11 +68,32 @@ const PublicBookingApi = {
       end: parsed.end,
       timeZone: parsed.timeZone,
     });
+    if (parsed.meetingTypeId) {
+      params.set("meetingTypeId", parsed.meetingTypeId);
+    }
     const data = await publicBookingHttp.get<unknown>(
       `/booking/pages/${encodeURIComponent(slug)}/slots?${params.toString()}`,
       signal,
     );
     return BookingSlotsResponseSchema.parse(data);
+  },
+
+  async getOwnerUpcoming(
+    slug: string,
+  ): Promise<HostUpcomingBookingReservationsResponse> {
+    const data = await publicBookingHttp.get<unknown>(
+      `/booking/pages/${encodeURIComponent(slug)}/owner/upcoming`,
+    );
+    return HostUpcomingBookingReservationsResponseSchema.parse(data);
+  },
+
+  async cancelOwnerReservation(
+    slug: string,
+    reservationId: string,
+  ): Promise<void> {
+    await publicBookingHttp.post(
+      `/booking/pages/${encodeURIComponent(slug)}/owner/reservations/${encodeURIComponent(reservationId)}/cancel`,
+    );
   },
 
   async createReservation(

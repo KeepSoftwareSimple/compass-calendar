@@ -117,6 +117,7 @@ extension NativeCalendarRootModel {
                     from: draft,
                     originalCalendarId: originalCalendarId,
                     scope: scope,
+                    baseline: baseline,
                     invitation: invitation
                 ),
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)

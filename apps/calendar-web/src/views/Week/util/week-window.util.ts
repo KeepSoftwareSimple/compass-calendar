@@ -67,6 +67,23 @@ export const computeVisibleWindowOffset = ({
   return Math.min(Math.max(centered, 0), maxOffset);
 };
 
+/** Sunday 00:00 for the calendar week containing `day` (matches Day.js `startOf("week")`). */
+export const sundayWeekViewStart = (day: Dayjs) => day.startOf("week");
+
+/**
+ * First visible day for a partial-week window that still includes `day`.
+ * Matches macOS `NativeCalendarRootModel.currentWeekWindowStart()`.
+ */
+export const currentWeekWindowStart = (
+  day: Dayjs,
+  visibleDayCount: number,
+): Dayjs => {
+  const weekStart = sundayWeekViewStart(day.startOf("day"));
+  const anchorIndex = day.startOf("day").diff(weekStart, "day");
+  const offset = computeVisibleWindowOffset({ anchorIndex, visibleDayCount });
+  return weekStart.add(offset, "day");
+};
+
 /**
  * The anchor day that makes {@link computeVisibleWindowOffset} produce the
  * given offset (the center day of that window). Used by paging navigation to

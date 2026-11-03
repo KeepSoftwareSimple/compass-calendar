@@ -18,12 +18,9 @@ import {
   selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
-import {
-  GOOGLE_CONNECT_FAILED_TOAST_ID,
-  getToastDefaultOptions,
-} from "@web/common/constants/toast.constants";
+import { GOOGLE_CONNECT_FAILED_TOAST_ID } from "@web/common/constants/toast.constants";
 import { dismissGoogleReconnectToastIfRecovered } from "@web/common/utils/toast/google-reconnect.toast";
-import { getToast } from "@web/common/utils/toast/toast.port";
+import { queuePendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
 
 /**
  * Must stay in step with every status the sync callback can redirect with
@@ -160,7 +157,6 @@ function errorCopy(provider: ProviderKind): string {
 }
 
 function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
-  const toast = getToast();
   if (status !== "connected") {
     trackSignupFailed(FAILURE_REASON[status], {
       method: provider,
@@ -171,10 +167,12 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
     case "connected":
       return;
     case "declined":
-      toast.info(
-        "No problem - nothing was connected. You can add the account anytime from Settings.",
-        { ...getToastDefaultOptions(), toastId: DECLINED_TOAST_ID[provider] },
-      );
+      queuePendingShellToast({
+        variant: "info",
+        message:
+          "No problem - nothing was connected. You can add the account anytime from Settings.",
+        toastId: DECLINED_TOAST_ID[provider],
+      });
       return;
     case "missingScopes":
       // Unchecking a permission on the consent screen deserves an
@@ -182,35 +180,34 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
       missingPermissionsActions.open(provider);
       return;
     case "stateMismatch":
-      toast.error(
-        "That connection link expired. Please try connecting again.",
-        {
-          ...getToastDefaultOptions(),
-          autoClose: false,
-          toastId: STATE_MISMATCH_TOAST_ID,
-        },
-      );
+      queuePendingShellToast({
+        variant: "error",
+        message: "That connection link expired. Please try connecting again.",
+        autoClose: false,
+        toastId: STATE_MISMATCH_TOAST_ID,
+      });
       return;
     case "consentRequired":
-      toast.error(CONSENT_REQUIRED_COPY, {
-        ...getToastDefaultOptions(),
+      queuePendingShellToast({
+        variant: "error",
+        message: CONSENT_REQUIRED_COPY,
         autoClose: false,
         toastId: CONSENT_REQUIRED_TOAST_ID,
       });
       return;
     case "accountMismatch":
-      toast.error(
-        "That wasn't the same account. Reconnect again and pick the account Compass already has.",
-        {
-          ...getToastDefaultOptions(),
-          autoClose: false,
-          toastId: ACCOUNT_MISMATCH_TOAST_ID,
-        },
-      );
+      queuePendingShellToast({
+        variant: "error",
+        message:
+          "That wasn't the same account. Reconnect again and pick the account Compass already has.",
+        autoClose: false,
+        toastId: ACCOUNT_MISMATCH_TOAST_ID,
+      });
       return;
     case "error":
-      toast.error(errorCopy(provider), {
-        ...getToastDefaultOptions(),
+      queuePendingShellToast({
+        variant: "error",
+        message: errorCopy(provider),
         autoClose: false,
         toastId: GOOGLE_CONNECT_FAILED_TOAST_ID,
       });

@@ -40,7 +40,6 @@ export const EventScheduleRecordSchema = z.discriminatedUnion("kind", [
   TimedScheduleRecordSchema,
   AllDayScheduleRecordSchema,
 ]);
-export type EventScheduleRecord = z.infer<typeof EventScheduleRecordSchema>;
 
 export const EventRecurrenceRecordSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("single") }),
@@ -50,39 +49,30 @@ export const EventRecurrenceRecordSchema = z.discriminatedUnion("kind", [
     seriesId: ObjectIdSchema,
   }),
 ]);
-export type EventRecurrenceRecord = z.infer<typeof EventRecurrenceRecordSchema>;
 
 export const GoogleEventReferenceSchema = z.strictObject({
   provider: z.literal("google"),
   eventId: z.string().min(1),
   recurringEventId: z.string().min(1).nullable(),
 });
-export type GoogleEventReference = z.infer<typeof GoogleEventReferenceSchema>;
 
 export const MicrosoftEventReferenceSchema = z.strictObject({
   provider: z.literal("microsoft"),
   eventId: z.string().min(1),
   recurringEventId: z.string().min(1).nullable(),
 });
-export type MicrosoftEventReference = z.infer<
-  typeof MicrosoftEventReferenceSchema
->;
 
 export const AppleEventReferenceSchema = z.strictObject({
   provider: z.literal("apple"),
   eventId: z.string().min(1),
   recurringEventId: z.string().min(1).nullable(),
 });
-export type AppleEventReference = z.infer<typeof AppleEventReferenceSchema>;
 
 export const ExternalEventReferenceSchema = z.discriminatedUnion("provider", [
   GoogleEventReferenceSchema,
   MicrosoftEventReferenceSchema,
   AppleEventReferenceSchema,
 ]);
-export type ExternalEventReference = z.infer<
-  typeof ExternalEventReferenceSchema
->;
 
 export const EventRecordSchema = z.strictObject({
   _id: ObjectIdSchema,

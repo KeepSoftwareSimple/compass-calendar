@@ -11,6 +11,7 @@ import {
   digitPickIndex,
   PICK_KEY_LABELS,
 } from "@web/shortcuts/digit-pick.util";
+import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { EventFormHintKeys } from "@web/views/Forms/EventForm/EventFormFocusedHint";
 
@@ -122,7 +123,7 @@ export const EventColorPicker = ({
         break;
       }
       case "Enter": {
-        if (event.metaKey || event.ctrlKey) return;
+        if (isModKeyHeld(event)) return;
         event.preventDefault();
         target.click();
         break;

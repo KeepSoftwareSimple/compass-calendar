@@ -1,4 +1,5 @@
 import { queryClient } from "@web/api/query-client";
+import { waitForAuthSession } from "@web/auth/compass/session/session.util";
 import { useSession } from "@web/auth/compass/session/useSession";
 import {
   clearAnonymousCalendarChangeSignUpPrompt,
@@ -23,5 +24,6 @@ export const useCompleteAuthenticationImpl = createUseCompleteAuthentication({
   refreshUserMetadata,
   resolveShouldSyncPendingLocalEvents,
   syncPendingLocalEvents,
+  waitForAuthSession,
   useSession,
 });

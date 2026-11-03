@@ -4,6 +4,16 @@ import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEven
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
+const pressEventMenuKey = () => {
+  (document.activeElement ?? document).dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: ".",
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+};
+
 const pressM = () => {
   (document.activeElement ?? document).dispatchEvent(
     new KeyboardEvent("keydown", {
@@ -50,8 +60,22 @@ describe("useEventContextMenuShortcut", () => {
       { once: true },
     );
 
-    pressM();
+    pressEventMenuKey();
     expect(contextMenuTargets).toEqual([card]);
+  });
+
+  it("does not open the menu from bare m", () => {
+    renderHook(() => useEventContextMenuShortcut());
+    const card = addEventCard("event-1");
+    card.focus();
+
+    let fired = false;
+    document.addEventListener("contextmenu", () => {
+      fired = true;
+    });
+
+    pressM();
+    expect(fired).toBe(false);
   });
 
   it("does nothing when focus is not on an event card", () => {
@@ -65,7 +89,7 @@ describe("useEventContextMenuShortcut", () => {
       fired = true;
     });
 
-    pressM();
+    pressEventMenuKey();
     expect(fired).toBe(false);
   });
 
@@ -80,12 +104,12 @@ describe("useEventContextMenuShortcut", () => {
     });
 
     setAppLockReason("commandPalette", true);
-    pressM();
+    pressEventMenuKey();
     expect(fired).toBe(false);
     clearAppLockReasons();
 
     eventJumpActions.setActive(true);
-    pressM();
+    pressEventMenuKey();
     expect(fired).toBe(false);
   });
 });

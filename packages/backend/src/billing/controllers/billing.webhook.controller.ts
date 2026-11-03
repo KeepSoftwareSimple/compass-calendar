@@ -1,4 +1,5 @@
 import { type Request, type Response } from "express";
+import type Stripe from "stripe";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import { processStripeEvent } from "@backend/billing/services/billing.webhook.service";
@@ -38,22 +39,38 @@ export class BillingWebhookController {
       return;
     }
 
+    let event: Stripe.Event;
     try {
       // Must be the async variant: under Bun the SDK selects
       // SubtleCryptoProvider, whose synchronous HMAC path throws
       // unconditionally, so constructEvent() rejects every signature.
-      const event = await this.stripe.constructWebhookEvent(
+      event = await this.stripe.constructWebhookEvent(
         req.body,
         signature,
         CONFIG.STRIPE_WEBHOOK_SECRET,
       );
-      await processStripeEvent(event, this.stripe);
-      res.status(Status.OK).json({ received: true });
     } catch (e) {
       logger.error("Stripe webhook signature verification failed", e);
       res
         .status(Status.BAD_REQUEST)
         .json({ error: "Invalid Stripe webhook signature" });
+      return;
+    }
+
+    try {
+      await processStripeEvent(event, this.stripe);
+      res.status(Status.OK).json({ received: true });
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      logger.error("Stripe webhook processing failed", {
+        eventId: event.id,
+        eventType: event.type,
+        stack: err.stack,
+        cause: err,
+      });
+      res
+        .status(Status.INTERNAL_SERVER)
+        .json({ error: "Stripe webhook processing failed" });
     }
   };
 }

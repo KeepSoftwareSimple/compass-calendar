@@ -10,6 +10,7 @@ import {
   type ConnectionId,
   type ProviderEventId,
 } from "@core/types/sync/identity.contracts";
+import { providerColorOnlyPatchFlags } from "@sync/domain/color-only-update";
 import {
   mergeAttendees,
   resolveUpdateContent,
@@ -406,6 +407,12 @@ export async function applyLinkedProviderUpdate(
       schedule,
       recurrence: intendedRecurrence,
       invitation: input.invitation,
+      ...providerColorOnlyPatchFlags(
+        command,
+        event.content,
+        content,
+        intendedAttendees,
+      ),
       ...(intendedAttendees ? { attendees: intendedAttendees } : {}),
     }),
   );

@@ -2,8 +2,8 @@ import { mockEnv } from "@backend/__tests__/helpers/mock.setup";
 import { billingAnalytics } from "@backend/billing/billing.analytics";
 import { afterEach, describe, expect, it, mock } from "bun:test";
 
-mock.module("@backend/user/synthetic-account.service", () => ({
-  isSyntheticCompassUserId: mock(async () => false),
+mock.module("@backend/user/posthog-synthetic-account.util", () => ({
+  posthogSyntheticFlagsForCompassUserId: mock(async () => ({})),
 }));
 
 describe("billingAnalytics.capture", () => {
@@ -65,24 +65,40 @@ describe("billingAnalytics.capture", () => {
     ]);
   });
 
-  it("skips billing funnel events for synthetic users", async () => {
-    using _env = mockEnv({ POSTHOG_KEY: "phc_test" });
-    const { isSyntheticCompassUserId } = await import(
-      "@backend/user/synthetic-account.service"
+  it("tags billing funnel events for synthetic users", async () => {
+    using _env = mockEnv({
+      POSTHOG_KEY: "phc_test",
+      POSTHOG_HOST: "https://ph.example.test",
+    });
+    const { posthogSyntheticFlagsForCompassUserId } = await import(
+      "@backend/user/posthog-synthetic-account.util"
     );
-    (isSyntheticCompassUserId as ReturnType<typeof mock>).mockImplementation(
-      async () => true,
-    );
-    let calls = 0;
-    globalThis.fetch = (async () => {
-      calls += 1;
+    (
+      posthogSyntheticFlagsForCompassUserId as ReturnType<typeof mock>
+    ).mockImplementation(async () => ({
+      $internal_or_test_user: true,
+      is_synthetic: true,
+    }));
+    const bodies: unknown[] = [];
+    globalThis.fetch = (async (
+      _input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      bodies.push(JSON.parse(String(init?.body)));
       return { ok: true, status: 200 } as Response;
     }) as unknown as typeof fetch;
 
     await expect(
       billingAnalytics.capture({ event: "checkout_completed", userId: "u1" }),
-    ).resolves.toBe(false);
-    expect(calls).toBe(0);
+    ).resolves.toBe(true);
+
+    expect(bodies[0]).toMatchObject({
+      event: "checkout_completed",
+      properties: {
+        $internal_or_test_user: true,
+        is_synthetic: true,
+      },
+    });
   });
 
   it("never throws when PostHog rejects the capture", async () => {

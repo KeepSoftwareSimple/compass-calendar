@@ -1,30 +1,40 @@
-import {
-  autoUpdate,
-  flip,
-  offset,
-  shift,
-  useFloating,
-} from "@floating-ui/react";
+import { autoUpdate, useFloating } from "@floating-ui/react";
 import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
+import { type Editor } from "@tiptap/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KEYMAP } from "@core/shortcuts/keymap";
 import {
+  applyDescriptionLinkAccessibleLabel,
   copyDescriptionLinkUrl,
   findLinkElement,
   listDescriptionLinks,
+  withEditorDomObserverPaused,
 } from "@web/components/DescriptionEditor/description-link.util";
+import {
+  DESCRIPTION_LINK_CHROME_PLACEMENT,
+  descriptionLinkChromeMiddleware,
+} from "@web/components/DescriptionEditor/description-link-chrome-floating";
+import { setDescriptionLinkInteraction } from "@web/components/DescriptionEditor/description-link-interaction.ref";
 import IconButton from "@web/components/IconButton/IconButton";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 
 const COPY_ICON_SIZE = 14;
 const HOVER_CLOSE_DELAY_MS = 150;
 
+const descriptionLinkNeedsDomSync = (link: HTMLAnchorElement): boolean =>
+  link.getAttribute("tabindex") !== "0" ||
+  !link.hasAttribute("aria-label") ||
+  link.hasAttribute("title") ||
+  !link.classList.contains("c-focus-ring") ||
+  !link.classList.contains("rounded-xs");
+
 interface DescriptionEditorLinkChromeProps {
+  editor: Editor;
   editorRoot: HTMLElement | null;
 }
 
 export const DescriptionEditorLinkChrome = ({
+  editor,
   editorRoot,
 }: DescriptionEditorLinkChromeProps) => {
   const [activeLink, setActiveLink] = useState<HTMLAnchorElement | null>(null);
@@ -51,12 +61,29 @@ export const DescriptionEditorLinkChrome = ({
   useEffect(() => {
     if (!editorRoot) return;
 
+    // Write only what is missing, with ProseMirror's observer paused: an
+    // unconditional write that ProseMirror sees makes it redraw the links,
+    // which fires this observer again (an endless loop with two or more
+    // links in one paragraph, e.g. a booking's "Cancel | Reschedule").
     const syncTabIndex = () => {
-      for (const link of listDescriptionLinks(editorRoot)) {
-        link.tabIndex = 0;
-        link.title = link.href;
-        link.classList.add("c-focus-ring", "rounded-xs");
-      }
+      const links = listDescriptionLinks(editorRoot).filter(
+        descriptionLinkNeedsDomSync,
+      );
+      if (links.length === 0) return;
+      withEditorDomObserverPaused(editor, () => {
+        for (const link of links) {
+          if (link.getAttribute("tabindex") !== "0") {
+            link.setAttribute("tabindex", "0");
+          }
+          applyDescriptionLinkAccessibleLabel(link);
+          if (!link.classList.contains("c-focus-ring")) {
+            link.classList.add("c-focus-ring");
+          }
+          if (!link.classList.contains("rounded-xs")) {
+            link.classList.add("rounded-xs");
+          }
+        }
+      });
     };
 
     syncTabIndex();
@@ -120,12 +147,12 @@ export const DescriptionEditorLinkChrome = ({
       observer.disconnect();
       cancelClearHover();
     };
-  }, [cancelClearHover, editorRoot, scheduleClearHover]);
+  }, [cancelClearHover, editor, editorRoot, scheduleClearHover]);
 
   const { refs, floatingStyles } = useFloating({
     open: Boolean(chromeLink),
-    placement: "right-start",
-    middleware: [offset(4), flip(), shift({ padding: 4 })],
+    placement: DESCRIPTION_LINK_CHROME_PLACEMENT,
+    middleware: editorRoot ? descriptionLinkChromeMiddleware(editorRoot) : [],
     whileElementsMounted: autoUpdate,
   });
 
@@ -134,6 +161,11 @@ export const DescriptionEditorLinkChrome = ({
       refs.setReference(chromeLink);
     }
   }, [chromeLink, refs]);
+
+  useEffect(() => {
+    setDescriptionLinkInteraction(chromeLink);
+    return () => setDescriptionLinkInteraction(null);
+  }, [chromeLink]);
 
   if (!chromeLink) return null;
 
@@ -155,24 +187,20 @@ export const DescriptionEditorLinkChrome = ({
       onPointerEnter={cancelClearHover}
       onPointerLeave={scheduleClearHover}
     >
-      <TooltipWrapper
-        description="Link"
-        shortcut={
-          <div className="flex flex-col items-end gap-0.5">
-            <div className="flex items-center gap-1">
-              <span className="text-xs">Copy</span>
-              <ShortcutKeys keys={[...KEYMAP.copyDescriptionLink.keycaps]} />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs">Open</span>
-              <ShortcutKeys
-                keys={[...KEYMAP.openDescriptionLinkAtCaret.keycaps]}
-              />
-            </div>
-          </div>
-        }
-        shortcutId="edit-copy-description-link"
+      <fieldset
+        aria-label="Link shortcut and copy"
+        className="flex max-w-[min(100%,18rem)] items-center gap-1.5 rounded-xs border-0 bg-surface-panel p-0 px-2 py-1 text-xs shadow-sm"
       >
+        <span className="min-w-0 truncate text-text-muted">
+          {chromeLink.href}
+        </span>
+        <span className="shrink-0 text-text-muted" aria-hidden="true">
+          ·
+        </span>
+        <ShortcutKeys
+          keys={[...KEYMAP.openDescriptionLinkAtCaret.keycaps]}
+          className="pointer-coarse:inline-flex shrink-0"
+        />
         <IconButton
           aria-label="Copy link"
           size="small"
@@ -183,7 +211,7 @@ export const DescriptionEditorLinkChrome = ({
         >
           <Copy size={COPY_ICON_SIZE} />
         </IconButton>
-      </TooltipWrapper>
+      </fieldset>
     </div>
   );
 };

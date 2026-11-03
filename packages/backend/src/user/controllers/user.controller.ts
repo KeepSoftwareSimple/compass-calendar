@@ -36,10 +36,10 @@ const sendUserError = (res: Response, e: unknown) => {
     res.status(e.statusCode).json(toClientErrorPayload(e));
     return;
   }
-  const message = e instanceof Error ? e.message : "Unexpected error";
+  logger.error("Unexpected user API error", e);
   res.status(Status.INTERNAL_SERVER).json({
     code: "INTERNAL_ERROR",
-    message,
+    message: "Something went wrong. Please try again.",
   });
 };
 

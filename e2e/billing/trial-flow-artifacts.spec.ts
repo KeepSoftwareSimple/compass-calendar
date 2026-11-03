@@ -3,9 +3,8 @@ import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
-const TRIAL_ASK_PRICE_LINE =
-  "$12.00/mo after 7 days. Cancel anytime in Settings.";
-const SETTINGS_BILLING_PRICE_LINE = "$12.00/mo after 7 days. Cancel anytime.";
+const TRIAL_ASK_CHARGE_LINE = /No charge until .+\. Cancel anytime\./;
+const SETTINGS_BILLING_PRICE_LINE = "$7.99/mo after 7 days. Cancel anytime.";
 
 const jsonResponse = (body: unknown) => ({
   status: 200,
@@ -128,9 +127,9 @@ test("capture trial flow screenshots", async ({ page }) => {
     name: "Start your 7-day free trial",
   });
   await expect(signupDialog).toBeVisible({ timeout: 15000 });
-  await expect(signupDialog.getByText(TRIAL_ASK_PRICE_LINE)).toBeVisible();
+  await expect(signupDialog.getByText(TRIAL_ASK_CHARGE_LINE)).toBeVisible();
   await signupDialog.screenshot({
-    path: "/opt/cursor/artifacts/trial-step-ask.png",
+    path: test.info().outputPath("trial-step-ask.png"),
   });
 
   await signupDialog.getByRole("button", { name: "Start free trial" }).click();
@@ -138,7 +137,7 @@ test("capture trial flow screenshots", async ({ page }) => {
     signupDialog.getByRole("button", { name: "Back" }),
   ).toBeVisible();
   await signupDialog.screenshot({
-    path: "/opt/cursor/artifacts/trial-step-stripe.png",
+    path: test.info().outputPath("trial-step-stripe.png"),
   });
 
   await signupDialog.getByRole("button", { name: "Back" }).click();
@@ -146,7 +145,7 @@ test("capture trial flow screenshots", async ({ page }) => {
     signupDialog.getByRole("button", { name: "Start free trial" }),
   ).toBeVisible();
   await signupDialog.screenshot({
-    path: "/opt/cursor/artifacts/trial-step-back-to-ask.png",
+    path: test.info().outputPath("trial-step-back-to-ask.png"),
   });
 
   await signupDialog.getByRole("button", { name: "Back" }).click();
@@ -182,7 +181,7 @@ test("capture trial flow screenshots", async ({ page }) => {
     settingsDialog.getByRole("button", { name: "Start free trial" }),
   ).toContainText("S");
   await settingsDialog.screenshot({
-    path: "/opt/cursor/artifacts/billing-settings-trial-not-started.png",
+    path: test.info().outputPath("billing-settings-trial-not-started.png"),
   });
 
   await settingsDialog
@@ -191,10 +190,8 @@ test("capture trial flow screenshots", async ({ page }) => {
   const settingsTrialAsk = page.getByRole("dialog", {
     name: "Start your free trial",
   });
-  await expect(
-    settingsTrialAsk.getByText(SETTINGS_BILLING_PRICE_LINE),
-  ).toBeVisible();
+  await expect(settingsTrialAsk.getByText(TRIAL_ASK_CHARGE_LINE)).toBeVisible();
   await settingsTrialAsk.screenshot({
-    path: "/opt/cursor/artifacts/trial-follow-up-settings-ask.png",
+    path: test.info().outputPath("trial-follow-up-settings-ask.png"),
   });
 });

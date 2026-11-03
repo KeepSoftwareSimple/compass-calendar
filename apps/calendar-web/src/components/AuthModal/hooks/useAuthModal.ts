@@ -12,6 +12,7 @@ import {
   type SearchFlag,
   searchFlagValue,
 } from "@web/common/utils/parse/search-flag.util";
+import { type OpenStartTrialStepOptions } from "@web/components/AuthModal/auth-modal-runtime";
 import { settingsPageFromSearch } from "@web/settings/settings.search";
 import { type SettingsPage } from "@web/settings/settings.store";
 
@@ -68,10 +69,6 @@ export function validateAuthSearch(
     quickAdd: searchFlagValue(search[DESKTOP_QUICK_ADD_SEARCH_PARAM]),
   };
 }
-
-type OpenStartTrialStepOptions = {
-  replace?: boolean;
-};
 
 interface AuthModalContextValue {
   isOpen: boolean;

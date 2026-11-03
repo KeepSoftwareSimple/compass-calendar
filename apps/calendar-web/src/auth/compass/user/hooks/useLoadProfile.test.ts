@@ -5,7 +5,7 @@ import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as realAuthStateUtil from "@web/auth/compass/state/auth.state.util";
 import { type UseLoadProfileResult } from "@web/auth/compass/user/hooks/useLoadProfile";
 import * as errorToast from "@web/common/utils/toast/error-toast.util";
-import * as sessionExpiredToast from "@web/common/utils/toast/session-expired.toast";
+import * as openAuthModalUtil from "@web/components/AuthModal/open-auth-modal.util";
 import {
   afterAll,
   afterEach,
@@ -163,12 +163,11 @@ describe("useLoadProfile", () => {
       response: { status: Status.UNAUTHORIZED },
     });
     getProfile.mockRejectedValue(error);
-    const showSessionExpiredToast = spyOn(
-      errorToast,
-      "showSessionExpiredToast",
-    ).mockReturnValue("toast-id");
+    const showErrorToast = spyOn(errorToast, "showErrorToast").mockReturnValue(
+      "toast-id",
+    );
     const openAuthModal = spyOn(
-      sessionExpiredToast,
+      openAuthModalUtil,
       "openAuthModalFromOutsideRouter",
     ).mockResolvedValue(undefined);
     const { useLoadProfile } = await importHook();
@@ -178,24 +177,23 @@ describe("useLoadProfile", () => {
     await waitFor(() => {
       expect(getProfile).toHaveBeenCalledTimes(1);
     });
-    expect(showSessionExpiredToast).not.toHaveBeenCalled();
+    expect(showErrorToast).not.toHaveBeenCalled();
     expect(openAuthModal).not.toHaveBeenCalled();
-    showSessionExpiredToast.mockRestore();
+    showErrorToast.mockRestore();
     openAuthModal.mockRestore();
   });
 
-  it("shows a signed-out toast and opens the login modal when a returning visitor's profile request is unauthorized", async () => {
+  it("opens the login modal with no signed-out toast when a returning visitor's profile request is unauthorized", async () => {
     hasUserEverAuthenticated.mockReturnValue(true);
     const error = Object.assign(new Error("Request failed with status 401"), {
       response: { status: Status.UNAUTHORIZED },
     });
     getProfile.mockRejectedValue(error);
-    const showSessionExpiredToast = spyOn(
-      errorToast,
-      "showSessionExpiredToast",
-    ).mockReturnValue("toast-id");
+    const showErrorToast = spyOn(errorToast, "showErrorToast").mockReturnValue(
+      "toast-id",
+    );
     const openAuthModal = spyOn(
-      sessionExpiredToast,
+      openAuthModalUtil,
       "openAuthModalFromOutsideRouter",
     ).mockResolvedValue(undefined);
     const { useLoadProfile } = await importHook();
@@ -203,10 +201,13 @@ describe("useLoadProfile", () => {
     renderHook(() => useLoadProfile(true));
 
     await waitFor(() => {
-      expect(showSessionExpiredToast).toHaveBeenCalledTimes(1);
+      expect(openAuthModal).toHaveBeenCalledWith("login");
     });
-    expect(openAuthModal).toHaveBeenCalledWith("login");
-    showSessionExpiredToast.mockRestore();
+    expect(openAuthModal).toHaveBeenCalledTimes(1);
+    // Notices are hidden while the modal is open, so a toast here would queue
+    // and surface after sign-in (#5033).
+    expect(showErrorToast).not.toHaveBeenCalled();
+    showErrorToast.mockRestore();
     openAuthModal.mockRestore();
   });
 });

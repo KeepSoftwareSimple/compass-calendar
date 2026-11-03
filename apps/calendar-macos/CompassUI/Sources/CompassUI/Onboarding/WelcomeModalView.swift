@@ -3,7 +3,7 @@ import CompassData
 import CompassKit
 import SwiftUI
 
-/// Mirrors web `WelcomeModal`: commit (1), learn (2), choose how to start (3).
+/// Mirrors web `WelcomeModal`: commit (1), learn (2), choose how to start (3), shortcuts (4).
 /// Keys (Enter, Esc, I, S, U, provider letters, FAQ digits) are routed by
 /// `NativeGridKeyboardRouter` through the same model actions as the buttons.
 struct WelcomeModalView: View {
@@ -103,6 +103,14 @@ struct WelcomeModalView: View {
                 model.onboardingStore.toggleWelcomeFaq(index)
             }
             primaryButton(title: "Next", hint: "Enter") { model.welcomePrimaryAction() }
+        case 4:
+            WelcomeKeyboardShortcutsStepView()
+            primaryButton(
+                title: WelcomeKeyboardShortcutsCopy.continueLabel,
+                hint: "Enter"
+            ) {
+                model.welcomeFinishLocalExplore()
+            }
         default:
             VStack(alignment: .leading, spacing: 8) {
                 heading("Let's get started")
@@ -151,7 +159,7 @@ struct WelcomeModalView: View {
 
     private var stepDots: some View {
         HStack(spacing: 8) {
-            ForEach(1 ... 3, id: \.self) { dot in
+            ForEach(1 ... 4, id: \.self) { dot in
                 Circle()
                     .fill(dot == step ? theme.textColor : theme.borderColor)
                     .frame(width: 6, height: 6)
@@ -159,7 +167,7 @@ struct WelcomeModalView: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement()
-        .accessibilityLabel("Step \(step) of 3")
+        .accessibilityLabel("Step \(step) of 4")
     }
 
     private func heading(_ title: String) -> some View {

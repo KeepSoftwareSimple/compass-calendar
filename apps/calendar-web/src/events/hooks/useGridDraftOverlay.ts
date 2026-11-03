@@ -21,3 +21,12 @@ export function mergeGridEventWithDraftOverlay(
 
   return { ...event, ...draft };
 }
+
+/** Apply the live draft schedule to saved events before overlap layout. */
+export function timedEventsForDeckLayout(
+  events: GridEvent[],
+  draft: GridEvent | null,
+): GridEvent[] {
+  if (!draft) return events;
+  return events.map((event) => mergeGridEventWithDraftOverlay(event, draft));
+}

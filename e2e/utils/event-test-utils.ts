@@ -5,6 +5,20 @@ const LOCAL_DB_NAME = "compass-local";
 /** Mid-morning UTC anchor for timed specs that type ambiguous clock times. */
 export const DETERMINISTIC_E2E_CLOCK = new Date("2026-04-24T10:00:00.000Z");
 
+/**
+ * Evening UTC anchor for specs whose layout must not see a sample event in
+ * progress. The demo seed builds its events from the real clock
+ * (`generateDemoData`'s `referenceNow` defaults to `dayjs()`) at 09:00, 10:00,
+ * 12:00, 14:00, 15:00 and 17:00 browser-local, and the browser is pinned to
+ * UTC here, so an unpinned spec renders the Up Next banner for roughly five
+ * hours a day and silently measures a different layout. 20:00 clears the last
+ * sample event. {@link DETERMINISTIC_E2E_CLOCK} does not: 10:00 is itself the
+ * start of one of those windows.
+ */
+export const DETERMINISTIC_E2E_CLOCK_NO_SAMPLE_EVENT = new Date(
+  "2026-04-24T20:00:00.000Z",
+);
+
 /** Pin the browser clock before navigation so draft defaults and AM/PM inference stay stable. */
 export const installDeterministicBrowserClock = async (page: Page) => {
   await page.clock.install({ time: DETERMINISTIC_E2E_CLOCK });
@@ -72,7 +86,11 @@ export const getVisibleDayDates = (page: Page) =>
   );
 
 // Shared timeout for form operations - use a single reasonable timeout instead of short retries
-const FORM_TIMEOUT = 10000;
+const FORM_TIMEOUT =
+  process.env.STAGING_JOURNEY_ENABLED === "1" ||
+  process.env.PROD_JOURNEY_ENABLED === "1"
+    ? 30_000
+    : 10_000;
 
 /**
  * Dispatch a keyboard shortcut on `document`. Playwright's Control+K is
@@ -250,6 +268,56 @@ export const createEventTitle = (prefix: string) =>
 export const updateEventTitle = (prefix: string) =>
   `${prefix} Updated ${Date.now()}`;
 
+/**
+ * Dismiss the onboarding surfaces that would otherwise cover the grid, and
+ * optionally pin the calendar zones, before the app boots. `storageState` in
+ * `playwright.config.ts` only covers the welcome modal and first-event prompt;
+ * specs that assert on grid chrome need the life-view intro and sidebar too.
+ */
+export const dismissOnboardingBeforeBoot = async (
+  page: Page,
+  options: { calendarTimeZone?: string; secondTimeZone?: string } = {},
+) => {
+  await page.addInitScript((zones) => {
+    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
+    localStorage.setItem("compass.onboarding.has-seen-life-view-intro", "true");
+    localStorage.setItem("compass.view.sidebar-open", "false");
+    if (zones.calendarTimeZone) {
+      localStorage.setItem("compass.timezone.default", zones.calendarTimeZone);
+    }
+    if (zones.secondTimeZone) {
+      localStorage.setItem(
+        "compass.timezone.time-travel",
+        zones.secondTimeZone,
+      );
+    }
+  }, options);
+};
+
+/**
+ * Make `Intl` report UTC however the device zone is emulated, for the specs
+ * that cover a browser whose resolved zone cannot be trusted.
+ */
+export const forceIntlTimeZoneToUtc = async (page: Page) => {
+  await page.addInitScript(() => {
+    const original = Intl.DateTimeFormat.prototype.resolvedOptions;
+    Intl.DateTimeFormat.prototype.resolvedOptions = function (
+      this: Intl.DateTimeFormat,
+    ) {
+      const options = original.call(this);
+      return { ...options, timeZone: "UTC" };
+    };
+  });
+};
+
+export const waitForWeekEventsLoaded = async (page: Page) => {
+  const loader = page.getByRole("status", { name: "Loading events" });
+  if (await loader.count()) {
+    await expect(loader).toBeHidden({ timeout: 120_000 });
+  }
+};
+
 export const prepareCalendarPage = async (page: Page) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
   await waitForCalendarShell(page);
@@ -261,6 +329,7 @@ export const prepareCalendarPage = async (page: Page) => {
 
   await ensureWeekView(page);
   await page.locator("#mainGrid").waitFor({ state: "visible", timeout: 15000 });
+  await waitForWeekEventsLoaded(page);
   await blurActiveElement(page);
   await page.locator("#mainGrid").focus();
 };
@@ -320,26 +389,30 @@ export const resetLocalEventDb = async (page: Page) => {
 // targets against a mid-transition column count.
 const waitForMainGridWidthToSettle = async (page: Page) => {
   const mainGrid = page.locator("#mainGrid");
-  const getWidth = () =>
-    mainGrid.evaluate((el) => el.getBoundingClientRect().width);
+  let lastWidth: number | null = null;
+  let stableSamples = 0;
 
-  let previousWidth = await getWidth();
-
-  for (let attempt = 0; attempt < 20; attempt++) {
-    await page.waitForTimeout(50);
-    const width = await getWidth();
-    if (width === previousWidth) {
-      return;
-    }
-    previousWidth = width;
-  }
-
-  throw new Error(
-    `#mainGrid width never settled after 1s (still moving at ${previousWidth}px). ` +
-      "A caller computed click/drag targets against this width right after " +
-      "this timeout previously gave up silently, so a genuine layout stall " +
-      "would show up as a confusing downstream failure instead of here.",
-  );
+  await expect
+    .poll(
+      async () => {
+        const width = await mainGrid.evaluate(
+          (el) => el.getBoundingClientRect().width,
+        );
+        if (width === lastWidth) {
+          stableSamples += 1;
+        } else {
+          lastWidth = width;
+          stableSamples = 0;
+        }
+        // ~200ms of unchanged width (4 × 50ms poll intervals).
+        return stableSamples >= 4 ? width : null;
+      },
+      {
+        timeout: 5_000,
+        intervals: [50, 50, 50, 50, 50],
+      },
+    )
+    .not.toBeNull();
 };
 
 export const ensureSidebarOpen = async (page: Page) => {
@@ -432,17 +505,82 @@ export const fillTitleAndSaveEventForm = async (page: Page, title: string) => {
   await titleInput.waitFor({ state: "hidden", timeout: FORM_TIMEOUT });
 };
 
+/** Dismisses the awaiting-checkout explore banner so it does not steal focus. */
+export const dismissExploreTrialBannerIfOpen = async (page: Page) => {
+  const exploreBanner = page.getByRole("status").filter({
+    hasText: /Start your .* free trial to plan your week/i,
+  });
+  if (!(await exploreBanner.isVisible().catch(() => false))) {
+    return;
+  }
+  await exploreBanner.getByRole("button", { name: "Dismiss" }).click();
+  await expect(exploreBanner).toHaveCount(0);
+};
+
+/** Dismisses the post-signup calendar connect overlay when it blocks the grid. */
+export const dismissBringYourEventsPromptIfOpen = async (page: Page) => {
+  const skipForNow = page.getByRole("button", { name: "Skip for now" });
+  const connectDialog = page.getByRole("dialog", {
+    name: "Bring your events",
+  });
+  try {
+    await skipForNow.click({ timeout: 45_000 });
+    await expect(connectDialog).toBeHidden({ timeout: 20_000 });
+  } catch {
+    if (await connectDialog.isVisible().catch(() => false)) {
+      throw new Error(
+        "Bring your events connect prompt is still open; keyboard shortcuts are blocked.",
+      );
+    }
+  }
+};
+
+/**
+ * Server-backed signed-in views ignore create (C) until the calendars query
+ * settles and a default target calendar exists. Wait for that before seeding
+ * drafts in billing and auth e2e flows.
+ */
+export const waitForWritableCalendarsReady = async (page: Page) => {
+  await page
+    .waitForResponse(
+      (response) => response.url().includes("/api/calendars") && response.ok(),
+      { timeout: FORM_TIMEOUT },
+    )
+    .catch(() => undefined);
+  await page
+    .getByRole("button", { name: /^(Show|Hide) primary calendar$/ })
+    .first()
+    .waitFor({ state: "visible", timeout: FORM_TIMEOUT })
+    .catch(() => undefined);
+};
+
 /** Opens a timed draft via the `c` shortcut (KEYMAP.createEvent). */
 export const openTimedEventFormWithKeyboard = async (page: Page) => {
   const titleInput = getFormTitleInput(page);
 
-  if (!(await titleInput.isVisible().catch(() => false))) {
-    await blurActiveElement(page);
-    await page.locator("#mainGrid").focus();
-    await page.keyboard.press("c");
+  if (await titleInput.isVisible().catch(() => false)) {
+    return;
   }
 
-  await titleInput.waitFor({ state: "visible", timeout: FORM_TIMEOUT });
+  const deadline = Date.now() + FORM_TIMEOUT;
+  while (Date.now() < deadline) {
+    await dispatchDocumentKey(page, "c");
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+    try {
+      await titleInput.waitFor({
+        state: "visible",
+        timeout: Math.min(2_000, remaining),
+      });
+      return;
+    } catch {
+      // Calendars or billing lock may still be settling; retry C within budget.
+    }
+  }
+
+  await titleInput.waitFor({ state: "visible", timeout: 0 });
 };
 
 /** Opens an all-day draft via the `Shift+C` shortcut. */
@@ -504,10 +642,14 @@ export const deleteEventWithKeyboard = async (page: Page) => {
   await page.keyboard.press("Enter");
 };
 
-export const expectTimedEventVisible = async (page: Page, title: string) => {
+export const expectTimedEventVisible = async (
+  page: Page,
+  title: string,
+  timeout = 8000,
+) => {
   await expect(
-    page.locator("#mainGrid").getByRole("button", { name: title }),
-  ).toBeVisible({ timeout: 8000 });
+    page.locator("#mainGrid").getByRole("button", { name: title }).last(),
+  ).toBeVisible({ timeout });
 };
 
 export const expectAllDayEventVisible = async (page: Page, title: string) => {

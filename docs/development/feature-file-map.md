@@ -42,6 +42,7 @@ Product overview: [Hidden Events](../features/hidden-events.md).
 - Shared contracts (`HiddenEventIdsResponseSchema`, `SetEventHiddenInputSchema`): `packages/core/src/types/event-visibility.contracts.ts`
 - Web query, optimistic toggle, localStorage fallback: `apps/calendar-web/src/events/hidden/hidden-events.query.ts`, `hidden-events.api.ts`, `hidden-events.storage.ts`
 - Timed-deck layout (hidden ids out of overlap grouping): `apps/calendar-web/src/grid/layout/timed-deck.layout.ts`
+- Overlap readability guard (scenario corpus, invariants, floors): `apps/calendar-web/src/grid/layout/overlap-scenarios/`
 - Strip width: `apps/calendar-web/src/grid/grid.constants.ts` (`HIDDEN_EVENT_STRIP_WIDTH`)
 - Cards (8px `rounded-full` strip, `Hidden ` accessible prefix): `apps/calendar-web/src/grid/components/TimedEventCard.tsx`, `AllDayEventCard.tsx`
 - Context menu Hide / Show event: `apps/calendar-web/src/components/ContextMenu/ContextMenuItems.tsx`
@@ -158,7 +159,7 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 - Sidebar next-shortcut selector: `apps/calendar-web/src/shortcuts/tips/selectShortcutHint.ts`
 - What counts as a hint impression: `apps/calendar-web/src/shortcuts/tips/shortcut-telemetry.ts`
 - Sidebar tip progress (demonstrated primitives): `apps/calendar-web/src/shortcuts/tips/shortcut-tips.progress.store.ts`
-- Sidebar tip mute (`compass.shortcuts.tips-muted`): `apps/calendar-web/src/shortcuts/tips/shortcut-tips-muted.store.ts`, `ShortcutTipIndicator.tsx`
+- Sidebar tip mute (`compass.shortcuts.tips-muted`): `apps/calendar-web/src/shortcuts/tips/shortcut-tips-muted.store.ts`, `useShortcutTipsCmdItems.ts`
 - Global shell shortcuts (sidebar `]`, palette, settings, navigation): `apps/calendar-web/src/shortcuts/useGlobalShortcuts.ts`
 - Event-jump chips (`F`): `apps/calendar-web/src/shortcuts/shift-hint/`
 - Hide/show focused event (`x`): `apps/calendar-web/src/shortcuts/hide-event/useHideEventShortcut.ts`

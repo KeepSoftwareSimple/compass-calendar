@@ -93,6 +93,7 @@ public enum OnboardingGating {
             !isSnoozed &&
             availableProviderCount > 0 &&
             storageAvailable &&
+            firstEventDoneReason() != nil &&
             !isAuthModalOpen &&
             !isSettingsOpen &&
             !isAboutOpen &&

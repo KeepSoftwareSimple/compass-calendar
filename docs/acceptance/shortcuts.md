@@ -307,7 +307,7 @@ After deleting or moving an event, pressing Cmd+Z (Mac) or Ctrl+Z (Windows/Linux
 
 ### UX
 
-Pressing `f` shows event-jump chips. Week view chips use day prefixes (`su`/`m`/`t`/`w`/`r`/`f`/`sa`) plus a per-day index (`w4`, `su1`). Day view uses numeric chips (`1`, `2`, …). Type the lowercase label on a chip to focus that event (`f4`, `w2`). Uppercase letters work the same. Pressing a day letter highlights that column and focuses its first event, if it has one; an empty column is still selected, so `c`, `Shift+c`, Shift+Arrow, and typed digits (`1400`) create on it. A following digit focuses that index. From idle, a column is entered with Shift and its day letter (`Shift+w`, `Shift+s` then `u`/`a` for the weekend), which always works: bare `t` stays “go to today”, bare `m` stays “open event menu”, and bare `p` focuses the latest notice. Day view keeps bare digits, since `Shift+1` is `!`. `Esc` exits jump mode. Holding Mod reveals the same day prefixes on week column headers, shown as `⇧w` while jump mode is off. Bare Shift and Shift+Tab do not show jump chips.
+Pressing `f` shows event-jump chips. Week view chips use day prefixes (`su`/`m`/`t`/`w`/`r`/`f`/`sa`) plus a per-day index (`w4`, `su1`). Day view uses numeric chips (`1`, `2`, …). Type the lowercase label on a chip to focus that event (`f4`, `w2`). Uppercase letters work the same. Pressing a day letter highlights that column and focuses its first event, if it has one; an empty column is still selected, so `c`, `Shift+c`, Shift+Arrow, and typed digits (`1400`) create on it. A following digit focuses that index. From idle, a column is entered with Shift and its day letter (`Shift+w`, `Shift+s` then `u`/`a` for the weekend), which always works: bare `t` stays “go to today”, bare `.` opens the event menu, and bare `p` focuses the latest notice. Day view keeps bare digits, since `Shift+1` is `!`. `Esc` exits jump mode. Holding Mod reveals the same day prefixes on week column headers, shown as `⇧w` while jump mode is off. Bare Shift and Shift+Tab do not show jump chips.
 
 ### Steps
 
@@ -323,7 +323,7 @@ Pressing `f` shows event-jump chips. Week view chips use day prefixes (`su`/`m`/
 - Chips appear on events currently visible in the grid when `f` is pressed and stay until Esc. Labels are lowercase and match the keys you type. Scrolled-off events keep their jump keys but hide their chips.
 - A day letter highlights that column and focuses the first event; digits refine to `wn`. On a column with no events the highlight still appears, nothing focuses, and `c` or a typed `HHMM` creates there.
 - Shift + the day letter enters a column from idle, including while an event is focused; `f` flashes every chip. While jump is on, `f` is also Friday's column letter (`f` then `4` focuses `f4`). Weekend columns use `Shift+s` then `a` / `u`.
-- Bare `t` still goes to today while jump is off. With an event focused, bare `m` still opens the event menu. With a visible notice, bare `p` still focuses that notice.
+- Bare `t` still goes to today while jump is off. With an event focused, bare `.` still opens the event menu. With a visible notice, bare `p` still focuses that notice.
 - Arrow keys keep jump mode on so letter-then-arrows works.
 - Shift alone / Shift+Tab / Shift+J do not toggle jump mode.
 - While a modal holds the app lock, or focus is in an editable field, `F` and leaderless jump tokens do not activate jump mode.

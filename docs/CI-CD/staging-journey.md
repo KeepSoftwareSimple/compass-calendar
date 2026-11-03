@@ -21,13 +21,15 @@ email/password secrets are missing.
 ## Synthetic accounts
 
 Journey signups are tagged server-side (`isSynthetic`, PostHog
-`$internal_or_test_user` and `is_synthetic`), excluded from welcome email and
-billing funnel analytics, and marked with the `X-Compass-Synthetic-Account:
-true` header from Playwright.
+`$internal_or_test_user` and `is_synthetic` on client and server events),
+excluded from welcome email, and marked with the `X-Compass-Synthetic-Account:
+true` header from Playwright. Filter PostHog funnels with `is_synthetic != true`.
 
-On staging/production backend config (`compass.yaml`), set
-`journeys.syntheticEmails` to the same base addresses as the GitHub secrets
-below (comma-separated via deploy env `SYNTHETIC_JOURNEY_EMAILS` when needed).
+On **staging-cloud**, set GitHub Environment variable
+`SYNTHETIC_JOURNEY_EMAILS` to the same base addresses as the journey secrets
+(comma-separated, e.g. `lance.essert@gmail.com`). Deploy writes
+`journeys.syntheticEmails` into `compass.yaml` so plus-tagged signups match
+the base. Production uses the same variable when prod journey is enabled.
 For prod journey checkout, set `stripe.syntheticJourneyDiscountId` to a 100%
 off Stripe coupon or promotion code id (`STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID`
 in deploy env).

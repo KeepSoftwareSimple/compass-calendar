@@ -7,6 +7,7 @@ import { APP_NAME } from "@core/constants/core.constants";
 import {
   readAuthenticated,
   setAuthSessionAuthenticated,
+  setSessionResolved,
   subscribeAuthenticated,
 } from "@web/auth/compass/session/auth-session.store";
 import { session } from "@web/auth/compass/session/Session";
@@ -51,6 +52,7 @@ let sessionEventVersion = 0;
 
 const handleAuthenticatedSession = () => {
   setAuthSessionAuthenticated(true);
+  setSessionResolved(true);
   markUserAsAuthenticated(getLastKnownEmail());
   void refreshUserMetadata();
 };
@@ -65,6 +67,7 @@ const handleSessionExists = () => {
 
 const handleSessionMissing = () => {
   setAuthSessionAuthenticated(false);
+  setSessionResolved(true);
   refreshEventRepositorySource(false);
   userMetadataActions.clear();
   clearGoogleSyncIndicatorOverride();
@@ -75,6 +78,7 @@ async function checkIfSessionExists(): Promise<boolean> {
   // e2e store bridge. Running SuperTokens session checks races against those
   // updates and resets state.
   if (typeof window !== "undefined" && window.__COMPASS_E2E_TEST__) {
+    setSessionResolved(true);
     return false;
   }
 
@@ -100,6 +104,7 @@ async function checkIfSessionExists(): Promise<boolean> {
   } catch (error) {
     console.error("Error checking auth status:", error);
     setAuthSessionAuthenticated(false);
+    setSessionResolved(true);
     return false;
   } finally {
     isCheckingSession = false;

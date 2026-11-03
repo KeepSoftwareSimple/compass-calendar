@@ -139,7 +139,7 @@ export function ShortcutLevelBadge({ sections }: Props) {
           aria-label={`Shortcut level ${level.level}, ${level.name}. ${level.used} of ${level.total} shortcuts used. Open shortcuts.`}
           className={classNames(
             FOOTER_ICON_BUTTON_CLASS,
-            "c-keycap min-w-9 px-1.5 font-normal tabular-nums",
+            "text-xs tabular-nums",
             pulsing && "c-level-pulse",
           )}
           onClick={viewActions.toggleShortcuts}

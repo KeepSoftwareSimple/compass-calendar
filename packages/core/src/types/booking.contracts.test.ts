@@ -17,6 +17,7 @@ import {
   CreateBookingReservationInputSchema,
   CreateBookingReservationResponseSchema,
   DEFAULT_WEEKLY_AVAILABILITY,
+  HostUpcomingBookingReservationsResponseSchema,
   isGuestEmail,
   PatchBookingReservationInputSchema,
   PublicBookingPageSchema,
@@ -204,6 +205,7 @@ describe("PublicBookingPageSchema", () => {
     expect(keys).toEqual([
       "hostDisplayName",
       "durationMinutes",
+      "meetingTypes",
       "timeZone",
       "enabled",
       "maxHorizonDays",
@@ -220,6 +222,9 @@ describe("PublicBookingPageSchema", () => {
     expect(pub).toEqual({
       hostDisplayName: "Tyler Dane",
       durationMinutes: 30,
+      meetingTypes: [
+        { id: "default", label: "30 min meeting", durationMinutes: 30 },
+      ],
       timeZone: "America/Denver" as TimeZone,
       enabled: true,
       maxHorizonDays: 60,
@@ -649,6 +654,24 @@ describe("HTTP booking contracts", () => {
         slug: "tylerdane",
       }).success,
     ).toBe(false);
+  });
+
+  it("parses host upcoming booking inbox rows", () => {
+    expect(
+      HostUpcomingBookingReservationsResponseSchema.safeParse({
+        reservations: [
+          {
+            reservationId: objectId(),
+            guestName: "Ada Lovelace",
+            guestEmail: "ada@example.com",
+            slotStart: dateTime(),
+            slotEnd: "2026-08-30T12:30:00.000Z",
+            durationMinutes: 30,
+            meetLink: null,
+          },
+        ],
+      }).success,
+    ).toBe(true);
   });
 
   it("keeps cancel input as token only", () => {

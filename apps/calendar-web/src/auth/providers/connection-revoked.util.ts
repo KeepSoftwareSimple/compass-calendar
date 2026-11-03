@@ -146,10 +146,6 @@ const {
   syncPendingLocalEvents,
 } = googleAuthUtil;
 
-export type {
-  ConnectionRevokedContext,
-  GoogleRevokedContext,
-} from "./connection-revoked.util.factory";
 export {
   handleGoogleRevoked as handleConnectionRevoked,
   handleGoogleRevoked,

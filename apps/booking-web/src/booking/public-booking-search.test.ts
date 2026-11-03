@@ -166,3 +166,18 @@ describe("guestActionUrlFromHistory", () => {
     ).toBeUndefined();
   });
 });
+
+describe("validatePublicBookingSearch meeting type", () => {
+  it("keeps a well-formed type id", () => {
+    expect(validatePublicBookingSearch({ type: "type-ab12" })).toMatchObject({
+      type: "type-ab12",
+    });
+  });
+
+  it("drops a malformed type id", () => {
+    expect(
+      validatePublicBookingSearch({ type: "Not A Type!" }),
+    ).not.toHaveProperty("type");
+    expect(validatePublicBookingSearch({ type: 3 })).not.toHaveProperty("type");
+  });
+});

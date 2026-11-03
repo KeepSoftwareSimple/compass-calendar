@@ -8,14 +8,19 @@ extension NativeCalendarRootModel {
         activeOnboardingSurface == .welcomeModal
     }
 
-    /// Enter: next screen on 1 and 2, trial sign-in on the last one when OAuth is available.
+    /// Enter: next screen on 1 and 2, trial sign-in on 3 when OAuth is available, calendar on 4.
     public func welcomePrimaryAction() {
-        if onboardingStore.welcomeStep < 3 {
+        switch onboardingStore.welcomeStep {
+        case 1, 2:
             onboardingStore.advanceWelcomeStep()
-        } else if let primary = authStore.welcomeTrialPrimaryProvider() {
-            welcomeSignIn(with: primary)
-        } else {
-            welcomeSignUp()
+        case 3:
+            if let primary = authStore.welcomeTrialPrimaryProvider() {
+                welcomeSignIn(with: primary)
+            } else {
+                welcomeSignUp()
+            }
+        default:
+            welcomeFinishLocalExplore()
         }
     }
 
@@ -25,6 +30,14 @@ extension NativeCalendarRootModel {
     }
 
     public func welcomeExplore() {
+        if onboardingStore.welcomeStep == 3 {
+            onboardingStore.advanceWelcomeStep()
+            return
+        }
+        welcomeFinishLocalExplore()
+    }
+
+    public func welcomeFinishLocalExplore() {
         exitWelcome(reason: "explore")
         authStore.closeModal()
     }

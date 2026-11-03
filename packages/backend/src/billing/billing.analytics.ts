@@ -1,7 +1,6 @@
 import { captureSafely } from "@core/logger/posthog-capture";
-import { CONFIG } from "@backend/common/constants/config.constants";
+import { serverPosthogEventProperties } from "@backend/common/analytics/server-posthog-capture.util";
 import { getBackendPostHogClient } from "@backend/common/helpers/backend-posthog-client";
-import { isSyntheticCompassUserId } from "@backend/user/synthetic-account.service";
 
 /**
  * Server-side billing events. The web app's `trial_converted` fires only when
@@ -27,16 +26,13 @@ export const billingAnalytics = {
     userId: string;
     properties?: Record<string, boolean | number | string>;
   }): Promise<boolean> {
-    if (await isSyntheticCompassUserId(input.userId)) {
-      return false;
-    }
     return captureSafely(getBackendPostHogClient(), {
       event: input.event,
       distinctId: input.userId,
-      properties: {
-        environment: CONFIG.NODE_ENV,
-        ...input.properties,
-      },
+      properties: await serverPosthogEventProperties(
+        input.userId,
+        input.properties,
+      ),
     });
   },
 };

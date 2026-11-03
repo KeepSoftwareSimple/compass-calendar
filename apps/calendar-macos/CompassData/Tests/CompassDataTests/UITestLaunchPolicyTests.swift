@@ -29,4 +29,13 @@ final class UITestLaunchPolicyTests: XCTestCase {
         XCTAssertTrue(
             UITestLaunchPolicy.attachesAccessibilityProbes(arguments: ["Compass", "-COMPASS_UI_TEST"]))
     }
+
+    func testUITestAndParityLaunchesDoNotCaptureProductAnalytics() {
+        XCTAssertTrue(UITestLaunchPolicy.capturesProductAnalytics(arguments: ["/Applications/Compass.app"]))
+        XCTAssertFalse(
+            UITestLaunchPolicy.capturesProductAnalytics(arguments: ["Compass", "-COMPASS_UI_TEST"]))
+        XCTAssertFalse(
+            UITestLaunchPolicy.capturesProductAnalytics(
+                arguments: ["Compass", "-COMPASS_UI_TEST_PARITY_CAPTURE"]))
+    }
 }

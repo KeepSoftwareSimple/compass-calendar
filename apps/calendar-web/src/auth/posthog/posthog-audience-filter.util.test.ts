@@ -27,6 +27,40 @@ describe("filterPosthogAudience", () => {
     }
   });
 
+  it("keeps headless events that carry the synthetic journey tag", () => {
+    const original = navigator.userAgent;
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/131.0.0.0 Safari/537.36",
+    });
+    try {
+      expect(
+        filterPosthogAudience({
+          event: "checkout_opened",
+          properties: { is_synthetic: true },
+        } as never),
+      ).not.toBeNull();
+      expect(
+        filterPosthogAudience({
+          event: "checkout_opened",
+          properties: { is_synthetic: "true" },
+        } as never),
+      ).toBeNull();
+      expect(
+        filterPosthogAudience({
+          event: "checkout_opened",
+          properties: {},
+        } as never),
+      ).toBeNull();
+    } finally {
+      Object.defineProperty(navigator, "userAgent", {
+        configurable: true,
+        value: original,
+      });
+    }
+  });
+
   it("passes events from normal browsers through", () => {
     expect(
       filterPosthogAudience({

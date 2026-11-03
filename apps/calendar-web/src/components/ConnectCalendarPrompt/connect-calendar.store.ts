@@ -6,6 +6,7 @@ import {
   isConnectCalendarPromptSnoozed,
   markConnectCalendarPromptSnoozed,
 } from "@web/components/ConnectCalendarPrompt/connect-calendar.storage";
+import { getFirstEventDone } from "@web/components/FirstEventPrompt/first-event.storage";
 
 export type ConnectCalendarPromptState = {
   isSnoozed: boolean;
@@ -84,6 +85,7 @@ export const selectConnectCalendarPromptSurfaceEligible = (
   !input.isSnoozed &&
   input.availableProviderCount > 0 &&
   input.storageAvailable &&
+  getFirstEventDone() !== null &&
   !input.isAuthModalOpen &&
   !input.isSettingsOpen &&
   !input.isAboutOpen &&

@@ -12,7 +12,7 @@ import {
 } from "@web/events/grid-event-draft.adapter";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
 import { GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW } from "@web/grid/components/calendar-accent.util";
-import { DECK_MIN_WIDTH } from "@web/grid/grid.constants";
+import { type TimedDeckLayout } from "@web/grid/layout/timed-deck.layout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import { GridDraft } from "./GridDraft";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -83,7 +83,7 @@ const renderGridDraft = ({
   recurringPreviews = [],
 }: {
   activeAllDayDraftEvent?: GridEvent | null;
-  deckLayout?: { groupSize: number; order: number } | null;
+  deckLayout?: TimedDeckLayout | null;
   draft?: GridEventDraft;
   recurringPreviews?: GridEvent[];
 } = {}) =>
@@ -154,8 +154,8 @@ describe("GridDraft", () => {
     });
   });
 
-  it("keeps an active overlapping saved draft at its stacked width and stack order", () => {
-    const deckLayout = { groupSize: 2, order: 0 };
+  it("keeps an active overlapping saved draft in its overlap column slot", () => {
+    const deckLayout = { groupSize: 2, left: 0, width: 0.5, zIndex: 1 };
 
     renderGridDraft({
       deckLayout,
@@ -165,8 +165,8 @@ describe("GridDraft", () => {
       name: /Timed event: Planning/,
     });
 
-    expect(draftBlock.style.width).toBe(`${DECK_MIN_WIDTH}px`);
-    expect(Number(draftBlock.style.zIndex)).toBe(deckLayout.order + 1);
+    expect(parseFloat(draftBlock.style.width)).toBe(45);
+    expect(Number(draftBlock.style.zIndex)).toBe(deckLayout.zIndex);
   });
 
   it("renders a read-only card for each recurring preview occurrence", () => {

@@ -11,7 +11,7 @@ import {
 } from "@web/timezone/effective-timezone.store";
 import {
   getTimezoneMismatchSnoozedBrowser,
-  isTimezoneMismatchBannerActive,
+  shouldShowTimezoneMismatch,
 } from "@web/timezone/timezone-mismatch";
 
 export { SHORTCUTS_REGISTRY, type ShortcutRegistryId };
@@ -65,7 +65,7 @@ export const filterShortcutsByContext = (
       shortcut.id === "other-timezone-mismatch-switch" ||
       shortcut.id === "other-timezone-mismatch-keep"
     ) {
-      return isTimezoneMismatchBannerActive(
+      return shouldShowTimezoneMismatch(
         getPinnedTimeZone(),
         getTrackedBrowserTimeZone(),
         getTimezoneMismatchSnoozedBrowser(),
@@ -160,8 +160,6 @@ export const getShortcutsBySection = (
       shortcuts: shortcuts.filter((shortcut) => shortcut.section === id),
     }))
     .filter((section) => section.shortcuts.length > 0);
-
-export type ShortcutMenuView = FilterOptions["view"];
 
 /**
  * Shortcut menu sections for the `?` legend overlay: the registry filtered

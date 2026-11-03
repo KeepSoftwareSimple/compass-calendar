@@ -17,10 +17,8 @@ import {
   type GraphWeekIndex,
   type MicrosoftRecurrenceWriteContext,
 } from "@sync/providers/microsoft/microsoft-recurrence.types";
-import {
-  ianaZoneToWindows,
-  windowsZoneToIana,
-} from "@sync/providers/microsoft/windows-zones";
+import { requireIanaTimeZone } from "@sync/providers/microsoft/microsoft-timezone";
+import { ianaZoneToWindows } from "@sync/providers/microsoft/windows-zones";
 
 const RRULE_PREFIX = /^RRULE:/i;
 
@@ -44,15 +42,24 @@ const GRAPH_TO_RRULE_DAY: Record<GraphDayOfWeek, string> = {
   saturday: "SA",
 };
 
-const RRULE_TO_GRAPH_DAY: Record<string, GraphDayOfWeek> = {
-  SU: "sunday",
-  MO: "monday",
-  TU: "tuesday",
-  WE: "wednesday",
-  TH: "thursday",
-  FR: "friday",
-  SA: "saturday",
-};
+/** Inverted rather than restated, so the two directions cannot drift apart. */
+const RRULE_TO_GRAPH_DAY: Record<string, GraphDayOfWeek> = Object.fromEntries(
+  Object.entries(GRAPH_TO_RRULE_DAY).map(([graphDay, token]) => [
+    token,
+    graphDay as GraphDayOfWeek,
+  ]),
+);
+
+/** rrule's own weekday indexes are Monday-based, unlike Graph's Sunday-first order. */
+const RRULE_WEEKDAY_TOKENS = [
+  "MO",
+  "TU",
+  "WE",
+  "TH",
+  "FR",
+  "SA",
+  "SU",
+] as const;
 
 const INDEX_TO_ORDINAL: Record<GraphWeekIndex, number> = {
   first: 1,
@@ -84,10 +91,47 @@ interface ParsedRRuleParts {
 export function toRRule(
   recurrence: GraphPatternedRecurrence,
 ): readonly [string] {
-  const patternParts = patternToParts(recurrence.pattern);
+  const pattern = normalizeGraphPattern(recurrence.pattern);
+  const patternParts = patternToParts(pattern);
   const rangeParts = rangeToParts(recurrence.range);
   const rule = serializeRRule({ ...patternParts, ...rangeParts });
   return [rule];
+}
+
+function normalizeGraphPattern(
+  pattern: GraphRecurrencePattern,
+): GraphRecurrencePattern {
+  const interval = pattern.interval ?? 1;
+  const daysOfWeek = pattern.daysOfWeek?.map(normalizeGraphDayOfWeek);
+  const firstDayOfWeek = pattern.firstDayOfWeek
+    ? normalizeGraphDayOfWeek(pattern.firstDayOfWeek)
+    : pattern.firstDayOfWeek;
+
+  let type = pattern.type;
+  if (
+    type === "daily" &&
+    daysOfWeek &&
+    daysOfWeek.length > 0 &&
+    interval === 1
+  ) {
+    type = "weekly";
+  }
+
+  return {
+    ...pattern,
+    type,
+    interval,
+    ...(daysOfWeek ? { daysOfWeek } : {}),
+    ...(firstDayOfWeek ? { firstDayOfWeek } : {}),
+  };
+}
+
+function normalizeGraphDayOfWeek(day: string): GraphDayOfWeek {
+  const normalized = day.toLowerCase() as GraphDayOfWeek;
+  if (!GRAPH_TO_RRULE_DAY[normalized]) {
+    throw new UnsupportedRecurrenceError(`Unknown weekday: ${day}`);
+  }
+  return normalized;
 }
 
 export function fromRRule(
@@ -103,7 +147,7 @@ export function fromRRule(
 function patternToParts(
   pattern: GraphRecurrencePattern,
 ): Omit<ParsedRRuleParts, "count" | "until"> {
-  const interval = pattern.interval;
+  const interval = pattern.interval ?? 1;
   switch (pattern.type) {
     case "daily":
       return {
@@ -131,7 +175,9 @@ function patternToParts(
         freq: "MONTHLY",
         interval,
         byday: [],
-        bymonthday: [requireDayOfMonth(pattern.dayOfMonth, pattern.type)],
+        bymonthday: [
+          requireField(pattern.dayOfMonth, pattern.type, "dayOfMonth"),
+        ],
         bymonth: [],
       };
     case "relativeMonthly":
@@ -147,8 +193,10 @@ function patternToParts(
         freq: "YEARLY",
         interval,
         byday: [],
-        bymonthday: [requireDayOfMonth(pattern.dayOfMonth, pattern.type)],
-        bymonth: [requireMonth(pattern.month, pattern.type)],
+        bymonthday: [
+          requireField(pattern.dayOfMonth, pattern.type, "dayOfMonth"),
+        ],
+        bymonth: [requireField(pattern.month, pattern.type, "month")],
       };
     case "relativeYearly":
       return {
@@ -156,7 +204,7 @@ function patternToParts(
         interval,
         byday: relativeByDay(pattern),
         bymonthday: [],
-        bymonth: [requireMonth(pattern.month, pattern.type)],
+        bymonth: [requireField(pattern.month, pattern.type, "month")],
       };
     default: {
       const _exhaustive: never = pattern.type;
@@ -175,12 +223,16 @@ function rangeToParts(
       return {};
     case "numbered":
       return {
-        count: requireCount(range.numberOfOccurrences, range.type),
+        count: requireField(
+          range.numberOfOccurrences,
+          range.type,
+          "numberOfOccurrences",
+        ),
       };
     case "endDate": {
-      const endDate = requireEndDate(range.endDate, range.type);
+      const endDate = requireField(range.endDate, range.type, "endDate");
       const zone = range.recurrenceTimeZone ?? "UTC";
-      const iana = resolveIanaZone(zone);
+      const iana = requireIanaTimeZone(zone);
       return {
         until: endDateToUntil(endDate, iana),
       };
@@ -390,12 +442,23 @@ function serializeRRule(parts: ParsedRRuleParts): string {
 
 function relativeByDay(pattern: GraphRecurrencePattern): string[] {
   const ordinal = INDEX_TO_ORDINAL[pattern.index ?? "first"];
-  return requireDays(pattern.daysOfWeek, pattern.type).map((day) => {
-    const code = graphDayToRrule(day);
-    if (ordinal < 0) return `${ordinal}${code}`;
-    if (ordinal === 1) return code;
-    return `${ordinal}${code}`;
-  });
+  return requireDays(pattern.daysOfWeek, pattern.type).map((day) =>
+    ordinalDayToken(ordinal, graphDayToRrule(day)),
+  );
+}
+
+/** Graph carries one `index` per relative pattern, so mixed BYDAY ordinals cannot map. */
+function assertSingleOrdinal(ordinals: readonly number[]): void {
+  if (new Set(ordinals).size > 1) {
+    throw new UnsupportedRecurrenceError(
+      "Multiple BYDAY ordinals are not supported by Microsoft Graph",
+    );
+  }
+}
+
+/** `1MO` is just `MO` in RRULE; every other ordinal, last included, prefixes. */
+function ordinalDayToken(ordinal: number, code: string): string {
+  return ordinal === 1 ? code : `${ordinal}${code}`;
 }
 
 function splitRelativeByDay(byday: readonly string[]): {
@@ -407,12 +470,7 @@ function splitRelativeByDay(byday: readonly string[]): {
   }
 
   const parsed = byday.map(parseOrdinalDay);
-  const ordinals = new Set(parsed.map((entry) => entry.ordinal));
-  if (ordinals.size > 1) {
-    throw new UnsupportedRecurrenceError(
-      "Multiple BYDAY ordinals are not supported by Microsoft Graph",
-    );
-  }
+  assertSingleOrdinal(parsed.map((entry) => entry.ordinal));
 
   const ordinal = ORDINAL_TO_INDEX[parsed[0]!.ordinal];
   if (!ordinal) {
@@ -451,34 +509,26 @@ function byweekdayToTokens(
     return weekdays.map((day) => weekdayToken(day));
   }
 
-  const ordinals = new Set(
-    weekdays.map((day) => (day.n === 0 ? 1 : (day.n ?? 1))),
-  );
-  if (ordinals.size > 1) {
-    throw new UnsupportedRecurrenceError(
-      "Multiple BYDAY ordinals are not supported by Microsoft Graph",
-    );
-  }
+  assertSingleOrdinal(weekdays.map(weekdayOrdinal));
 
-  return weekdays.map((day) => {
-    const ordinal = day.n === 0 ? 1 : (day.n ?? 1);
-    const code = weekdayToken(day);
-    if (ordinal < 0) return `${ordinal}${code}`;
-    if (ordinal === 1) return code;
-    return `${ordinal}${code}`;
-  });
+  return weekdays.map((day) =>
+    ordinalDayToken(weekdayOrdinal(day), weekdayToken(day)),
+  );
+}
+
+function weekdayOrdinal(day: WeekdayType): number {
+  return day.n === 0 ? 1 : (day.n ?? 1);
 }
 
 function weekdayToken(day: WeekdayType | number): string {
-  const tokens = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
   if (typeof day === "number") {
-    const token = tokens[day];
+    const token = RRULE_WEEKDAY_TOKENS[day];
     if (!token) {
       throw new UnsupportedRecurrenceError(`Invalid weekday index: ${day}`);
     }
     return token;
   }
-  return tokens[day.weekday]!;
+  return RRULE_WEEKDAY_TOKENS[day.weekday]!;
 }
 
 function frequencyName(freq: Frequency | undefined): string {
@@ -554,51 +604,18 @@ function requireDays(
   return sortGraphDays(days, weekStartsOn);
 }
 
-function requireDayOfMonth(
-  dayOfMonth: number | undefined,
-  type: GraphRecurrencePatternType,
-): number {
-  if (dayOfMonth === undefined) {
+/** Graph marks these fields optional on the shared shape; each pattern needs its own. */
+function requireField<T>(
+  value: T | undefined,
+  type: GraphRecurrencePatternType | GraphRecurrenceRange["type"],
+  field: string,
+): T {
+  if (value === undefined || value === "") {
     throw new UnsupportedRecurrenceError(
-      `${type} recurrence requires dayOfMonth`,
+      `${type} recurrence requires ${field}`,
     );
   }
-  return dayOfMonth;
-}
-
-function requireMonth(
-  month: number | undefined,
-  type: GraphRecurrencePatternType,
-): number {
-  if (month === undefined) {
-    throw new UnsupportedRecurrenceError(`${type} recurrence requires month`);
-  }
-  return month;
-}
-
-function requireCount(
-  count: number | undefined,
-  type: GraphRecurrenceRange["type"],
-): number {
-  if (count === undefined) {
-    throw new UnsupportedRecurrenceError(`${type} recurrence requires count`);
-  }
-  return count;
-}
-
-function requireEndDate(
-  endDate: string | undefined,
-  type: GraphRecurrenceRange["type"],
-): string {
-  if (!endDate) {
-    throw new UnsupportedRecurrenceError(`${type} recurrence requires endDate`);
-  }
-  return endDate;
-}
-
-function resolveIanaZone(zone: string): string {
-  if (zone.includes("/")) return zone;
-  return windowsZoneToIana(zone);
+  return value;
 }
 
 function endDateToUntil(endDate: string, ianaZone: string): string {

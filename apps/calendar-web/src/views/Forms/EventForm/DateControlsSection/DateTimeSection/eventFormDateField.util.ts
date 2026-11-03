@@ -41,6 +41,7 @@ export const timedScheduleFromDateChange = ({
   endTime,
   scheduleStart,
   scheduleEnd,
+  timedOutputTimeZone,
 }: {
   changed: "start" | "end";
   nextDate: Date;
@@ -49,6 +50,7 @@ export const timedScheduleFromDateChange = ({
   endTime: SelectOption<string>;
   scheduleStart: Date;
   scheduleEnd: Date;
+  timedOutputTimeZone?: string;
 }): MapToBackendResult => {
   if (changed === "start") {
     // A start date moves the whole span, so the end rides along. A same-day
@@ -61,21 +63,27 @@ export const timedScheduleFromDateChange = ({
       scheduleEnd,
       dayDelta,
     );
-    return tryMapToBackend({
-      startDate: shifted.start,
-      startTime,
-      endDate: shifted.end,
-      endTime,
-      isAllDay: false,
-    });
+    return tryMapToBackend(
+      {
+        startDate: shifted.start,
+        startTime,
+        endDate: shifted.end,
+        endTime,
+        isAllDay: false,
+      },
+      timedOutputTimeZone,
+    );
   }
 
   const nextEnd = mergeCalendarDayWithTime(nextDate, endTime).toDate();
-  return tryMapToBackend({
-    startDate: selectedStartDate,
-    startTime,
-    endDate: nextEnd,
-    endTime,
-    isAllDay: false,
-  });
+  return tryMapToBackend(
+    {
+      startDate: selectedStartDate,
+      startTime,
+      endDate: nextEnd,
+      endTime,
+      isAllDay: false,
+    },
+    timedOutputTimeZone,
+  );
 };

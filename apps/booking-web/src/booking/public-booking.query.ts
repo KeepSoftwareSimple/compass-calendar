@@ -31,8 +31,19 @@ export const publicBookingQueryKeys = {
   page: (slug: string) => ["public-booking", "page", slug] as const,
   /** Prefix covering every month and timezone of one host's slots. */
   slotsAll: (slug: string) => ["public-booking", "slots", slug] as const,
-  slots: (slug: string, monthKey: string, timeZone: string) =>
-    [...publicBookingQueryKeys.slotsAll(slug), monthKey, timeZone] as const,
+  /** Type #1 keeps the key it had before meeting types, so no id there. */
+  slots: (
+    slug: string,
+    monthKey: string,
+    timeZone: string,
+    meetingTypeId?: string,
+  ) =>
+    [
+      ...publicBookingQueryKeys.slotsAll(slug),
+      monthKey,
+      timeZone,
+      ...(meetingTypeId ? [meetingTypeId] : []),
+    ] as const,
   /** Prefix covering every token of one reservation. */
   reservationPrefix: (reservationId: string) =>
     ["public-booking", "reservation", reservationId] as const,
@@ -53,6 +64,8 @@ export const publicBookingQueryKeys = {
       monthKey,
       timeZone,
     ] as const,
+  ownerUpcoming: (slug: string) =>
+    ["public-booking", "owner-upcoming", slug] as const,
 };
 
 /** A page or reservation that is gone stays gone; retry once for anything else. */
@@ -146,13 +159,19 @@ export function publicBookingSlotsQueryOptions(
   monthKey: string,
   timeZone: string,
   maxHorizonDays: number,
+  meetingTypeId?: string,
 ) {
   return publicBookingMonthSlotsQueryOptions(
-    publicBookingQueryKeys.slots(slug, monthKey, timeZone),
+    publicBookingQueryKeys.slots(slug, monthKey, timeZone, meetingTypeId),
     monthKey,
     timeZone,
     maxHorizonDays,
-    (window, signal) => PublicBookingApi.getSlots(slug, window, signal),
+    (window, signal) =>
+      PublicBookingApi.getSlots(
+        slug,
+        meetingTypeId ? { ...window, meetingTypeId } : window,
+        signal,
+      ),
   );
 }
 
@@ -161,6 +180,7 @@ export function usePublicBookingSlotsQuery(
   monthKey: string,
   maxHorizonDays: number | undefined,
   timeZone: string,
+  meetingTypeId?: string,
 ) {
   // Start the first month in parallel with page meta. 60 is the schema max
   // and only used until `maxHorizonDays` is known; the query key is the month
@@ -173,7 +193,13 @@ export function usePublicBookingSlotsQuery(
   );
 
   return useQuery({
-    ...publicBookingSlotsQueryOptions(slug, monthKey, timeZone, horizon),
+    ...publicBookingSlotsQueryOptions(
+      slug,
+      monthKey,
+      timeZone,
+      horizon,
+      meetingTypeId,
+    ),
     enabled: Boolean(slug) && window != null,
   });
 }
@@ -184,6 +210,7 @@ export function prefetchPublicBookingMonth(
   monthKey: string,
   timeZone: string,
   maxHorizonDays: number,
+  meetingTypeId?: string,
 ) {
   if (!slug) return;
   return prefetchPublicBookingMonthIfInWindow(
@@ -191,7 +218,13 @@ export function prefetchPublicBookingMonth(
     monthKey,
     timeZone,
     maxHorizonDays,
-    publicBookingSlotsQueryOptions(slug, monthKey, timeZone, maxHorizonDays),
+    publicBookingSlotsQueryOptions(
+      slug,
+      monthKey,
+      timeZone,
+      maxHorizonDays,
+      meetingTypeId,
+    ),
   );
 }
 
@@ -225,12 +258,20 @@ export function usePrefetchAdjacentBookingMonths(
   timeZone: string,
   maxHorizonDays: number | undefined,
   enabled: boolean,
+  meetingTypeId?: string,
 ) {
   const queryClient = useQueryClient();
   const prefetchMonth = useCallback(
     (cursor: string, horizon: number) =>
-      prefetchPublicBookingMonth(queryClient, slug, cursor, timeZone, horizon),
-    [queryClient, slug, timeZone],
+      prefetchPublicBookingMonth(
+        queryClient,
+        slug,
+        cursor,
+        timeZone,
+        horizon,
+        meetingTypeId,
+      ),
+    [meetingTypeId, queryClient, slug, timeZone],
   );
 
   usePrefetchAdjacentPublicMonths(
@@ -287,6 +328,7 @@ export async function resolveNextAvailableBookingDate(
   timeZone: string,
   todayKey: string,
   maxHorizonDays: number,
+  meetingTypeId?: string,
 ): Promise<{ monthKey: string; dateKey: string } | null> {
   return resolveNextAvailableMonth({
     queryClient,
@@ -296,7 +338,7 @@ export async function resolveNextAvailableBookingDate(
     todayKey,
     maxHorizonDays,
     slotsQueryKey: (cursor) =>
-      publicBookingQueryKeys.slots(slug, cursor, timeZone),
+      publicBookingQueryKeys.slots(slug, cursor, timeZone, meetingTypeId),
     prefetchMonth: (cursor) =>
       prefetchPublicBookingMonth(
         queryClient,
@@ -304,6 +346,7 @@ export async function resolveNextAvailableBookingDate(
         cursor,
         timeZone,
         maxHorizonDays,
+        meetingTypeId,
       ),
   });
 }
@@ -393,6 +436,44 @@ export function useReschedulePublicBookingReservationMutation(
 
 export function isPublicBookingConflictError(error: unknown): boolean {
   return getErrorStatus(error) === 409;
+}
+
+const retryOwnerInboxUnlessUnauthorized = (
+  failureCount: number,
+  error: Error,
+): boolean => {
+  const status = getErrorStatus(error);
+  if (status === 401 || status === 404) {
+    return false;
+  }
+  return failureCount < 1;
+};
+
+export function usePublicBookingOwnerInboxQuery(slug: string) {
+  return useQuery({
+    queryKey: publicBookingQueryKeys.ownerUpcoming(slug),
+    queryFn: () => PublicBookingApi.getOwnerUpcoming(slug),
+    enabled: slug.length > 0,
+    retry: retryOwnerInboxUnlessUnauthorized,
+    staleTime: 30_000,
+  });
+}
+
+export function useCancelPublicBookingOwnerReservationMutation(slug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (reservationId: string) =>
+      PublicBookingApi.cancelOwnerReservation(slug, reservationId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: publicBookingQueryKeys.ownerUpcoming(slug),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: publicBookingQueryKeys.slotsAll(slug),
+      });
+    },
+  });
 }
 
 type BookingQueryClient = ReturnType<typeof useQueryClient>;

@@ -31,6 +31,10 @@ import {
   assertOauthCredentialStartupReady,
   PLAINTEXT_OAUTH_BOOT_MESSAGE,
 } from "@sync/credentials/oauth-credential-startup";
+import {
+  CALENDAR_LIST_REDISCOVERY_SWEEP_INTERVAL_MS,
+  CALENDAR_LIST_STALE_AFTER_MS,
+} from "@sync/domain/calendar-list-rediscovery.constants";
 import { rediscoverStaleCalendarLists } from "@sync/domain/calendar-list-rediscovery.service";
 import {
   CONNECTION_CACHE_RETENTION_MS,
@@ -45,6 +49,7 @@ import {
   FAILED_JOB_MAX_REQUEUES,
   requeueFailedJobs,
 } from "@sync/domain/failed-job-requeue.service";
+import { exhaustedFailedJobLogLevel } from "@sync/domain/failed-job-requeue-log.util";
 import {
   enqueuePushStampHeal,
   PUSH_STAMP_HEAL_SWEEP_LIMIT,
@@ -300,34 +305,26 @@ async function start(): Promise<void> {
     // Retention is local-only (no provider calls), so it runs in passive mode
     // too — soft-disconnected caches must still age out. Register before the
     // mongo drain so reverse-order teardown stops the sweep first.
-    const retention = buildRetentionSweep(mongo);
-    service.shutdown.register("retention", () => retention.stop());
-    retention.start();
-
-    const credentialUsableReconcile =
-      buildCredentialUsableReconcileSweep(mongo);
-    service.shutdown.register("credentialUsableReconcile", () =>
-      credentialUsableReconcile.stop(),
+    startSweep(service, "retention", buildRetentionSweep(mongo));
+    startSweep(
+      service,
+      "credentialUsableReconcile",
+      buildCredentialUsableReconcileSweep(mongo),
     );
-    credentialUsableReconcile.start();
-
-    const connectionStateRefresh = buildConnectionStateRefreshSweep(mongo);
-    service.shutdown.register("connectionStateRefresh", () =>
-      connectionStateRefresh.stop(),
+    startSweep(
+      service,
+      "connectionStateRefresh",
+      buildConnectionStateRefreshSweep(mongo),
     );
-    connectionStateRefresh.start();
 
     // Sanitized sync_health_snapshot every five minutes (S44). Runs in passive
     // mode too so the heartbeat stays alive before provider work is enabled.
     const registry = buildProviderRegistry(config);
-    const health = buildHealthSnapshotSweep(
-      service.identity,
-      mongo,
-      posthog,
-      registry,
+    startSweep(
+      service,
+      "health",
+      buildHealthSnapshotSweep(service.identity, mongo, posthog, registry),
     );
-    service.shutdown.register("health", () => health.stop());
-    health.start();
 
     // Active, provider-configured deployments also drain jobs and renew
     // channels. Those register AFTER the mongo drain so teardown stops them
@@ -387,14 +384,10 @@ const RETENTION_SWEEP_INTERVAL_MS = 60 * 60_000;
 // cheap at a few thousand rows and avoids a credentials-led full scan.
 const CREDENTIAL_USABLE_RECONCILE_INTERVAL_MS = 6 * 60 * 60_000;
 const CONNECTION_STATE_REFRESH_INTERVAL_MS = 10 * 60_000;
-// A connection whose calendar list has not been fully re-discovered within
-// this window is swept: a calendar deleted or unshared at the provider is
-// otherwise never retired, because calendarListSync only ever runs once, at
-// connect. Runs on the sweep's default ~10min interval (like reconcile and
-// bootstrapRecovery below, neither of which overrides it either) — cheap to
-// poll for, and the limit-bounded finder means the eligible population still
-// self-spreads across cycles rather than sweeping the whole fleet at once.
-const CALENDAR_LIST_STALE_AFTER_MS = 24 * 60 * 60_000;
+
+// Calendar-list rediscovery uses CALENDAR_LIST_STALE_AFTER_MS and
+// CALENDAR_LIST_REDISCOVERY_SWEEP_INTERVAL_MS from calendar-list-rediscovery.constants.
+
 // Architecture: one sync_health_snapshot every five minutes.
 const HEALTH_SNAPSHOT_INTERVAL_MS = 5 * 60_000;
 // Cap on how long each background sweep waits before its first tick after
@@ -418,6 +411,20 @@ function buildPostHogClient(config: SyncConfig): PostHogCaptureClient | null {
 // for nine days, and it keeps a diagnostic counter out of the storage schema.
 const PUSH_SILENCE_ALERT_AFTER_SAMPLES = 12;
 const pushSilenceStreaks = new Map<string, number>();
+
+/**
+ * Register a background sweep's stop before starting it, so a shutdown that
+ * lands mid-boot still tears the sweep down. Registration order is teardown
+ * order reversed, so callers stay in start order.
+ */
+function startSweep(
+  service: SyncService,
+  name: string,
+  sweep: SweepScheduler,
+): void {
+  service.shutdown.register(name, () => sweep.stop());
+  sweep.start();
+}
 
 function buildHealthSnapshotSweep(
   identity: ReturnType<typeof buildServiceIdentity>,
@@ -630,13 +637,9 @@ function buildSchedulers(
         resolveAdapters,
         commands: repos.commands,
         jobs,
-        custody: new CredentialCustody(
-          repos.credentials,
-          resolveAuth,
-          undefined,
-          undefined,
-          config.CREDENTIAL_ENCRYPTION_KEY,
-        ),
+        custody: new CredentialCustody(repos.credentials, resolveAuth, {
+          credentialEncryptionKey: config.CREDENTIAL_ENCRYPTION_KEY,
+        }),
         // Where the provider posts change notifications back; the callback route
         // verifies them against the stored subscription.
         callbackUrlFor: (kind) =>
@@ -866,21 +869,24 @@ function buildSchedulers(
           );
         }
         if (result.exhausted > 0) {
-          logger.error(
-            `Sync self-heal sweep: ${result.exhausted} failed job(s) exhausted their requeue budget and need operator attention`,
-            {
-              exhaustedJobs: result.exhaustedJobs.map((job) => ({
-                id: job.id,
-                coalescingKey: job.coalescingKey,
-                connectionId: job.connectionId,
-                tenantId: job.tenantId,
-                principalId: job.principalId,
-                failureClass: job.failureClass,
-                requeuedCount: job.requeuedCount,
-                updatedAt: job.updatedAt.toISOString(),
-              })),
-            },
-          );
+          const payload = {
+            exhaustedJobs: result.exhaustedJobs.map((job) => ({
+              id: job.id,
+              coalescingKey: job.coalescingKey,
+              connectionId: job.connectionId,
+              tenantId: job.tenantId,
+              principalId: job.principalId,
+              failureClass: job.failureClass,
+              requeuedCount: job.requeuedCount,
+              updatedAt: job.updatedAt.toISOString(),
+            })),
+          };
+          const message = `Sync self-heal sweep: ${result.exhausted} failed job(s) exhausted their requeue budget and need operator attention`;
+          if (exhaustedFailedJobLogLevel(result.exhaustedJobs) === "error") {
+            logger.error(message, payload);
+          } else {
+            logger.debug(message, payload);
+          }
         }
         return result.requeued + result.clearedDurable;
       },
@@ -906,13 +912,9 @@ function buildSchedulers(
             execution: config.EXECUTION,
             provider: {
               resolveAdapters,
-              custody: new CredentialCustody(
-                repos.credentials,
-                resolveAuth,
-                undefined,
-                undefined,
-                config.CREDENTIAL_ENCRYPTION_KEY,
-              ),
+              custody: new CredentialCustody(repos.credentials, resolveAuth, {
+                credentialEncryptionKey: config.CREDENTIAL_ENCRYPTION_KEY,
+              }),
             },
             onRetryError: (error, commandId) =>
               logger.error(
@@ -939,6 +941,7 @@ function buildSchedulers(
       // a full pass, and only this sweep forces one after the initial
       // connect).
       name: "calendarListRediscovery",
+      intervalMs: CALENDAR_LIST_REDISCOVERY_SWEEP_INTERVAL_MS,
       windowMs: -CALENDAR_LIST_STALE_AFTER_MS,
       run: async (before) => {
         const enqueued = await rediscoverStaleCalendarLists(

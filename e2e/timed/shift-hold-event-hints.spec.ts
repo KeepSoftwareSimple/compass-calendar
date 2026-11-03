@@ -49,13 +49,17 @@ const createTimedEventOffsetBy = async (
   await eventButton.focus();
   for (let press = 0; press < quarterHours; press++) {
     await page.keyboard.press(key);
+    const direction = key === "Shift+ArrowUp" ? -1 : 1;
+    const expectedStart =
+      new Date(saved.startDate).getTime() +
+      direction * (press + 1) * 15 * 60_000;
+    await expect
+      .poll(async () => {
+        const [event] = await getSavedEventsByTitle(page, title);
+        return new Date(event.startDate).getTime();
+      })
+      .toBe(expectedStart);
   }
-  await expect
-    .poll(async () => {
-      const [event] = await getSavedEventsByTitle(page, title);
-      return event?.startDate !== saved.startDate;
-    })
-    .toBe(true);
 };
 
 const shiftHintOverlay = (page: CalendarPage) =>
@@ -263,7 +267,7 @@ test("fast Shift+J does not toggle event jump keys", async ({ page }) => {
 
   await page.keyboard.down("Shift");
   await page.keyboard.down("j");
-  await page.waitForTimeout(250);
+  await page.clock.runFor(250);
   await page.keyboard.up("j");
   await page.keyboard.up("Shift");
 

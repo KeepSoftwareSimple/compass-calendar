@@ -21,6 +21,25 @@ export function subscribeAuthenticated(onChange: () => void): () => void {
   return authenticated.subscribe(onChange);
 }
 
+/**
+ * True once the first session check settles, either way. Until then a
+ * missing session may still be loading; after it, a missing session is real.
+ */
+const sessionResolved = createExternalStore(false);
+
+export function readSessionResolved(): boolean {
+  return sessionResolved.get();
+}
+
+export function setSessionResolved(value: boolean): void {
+  sessionResolved.set(value);
+}
+
+export function subscribeSessionResolved(onChange: () => void): () => void {
+  return sessionResolved.subscribe(onChange);
+}
+
 export function resetAuthSessionStoreForTests(): void {
   authenticated.set(false);
+  sessionResolved.set(false);
 }

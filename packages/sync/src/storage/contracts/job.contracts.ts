@@ -20,14 +20,12 @@ export type JobKind = z.infer<typeof JobKindSchema>;
 // pending: waiting to be claimed. claimed: leased by a worker. failed: a
 // terminal failure needing attention (retryable failures return to pending).
 export const JobStateSchema = z.enum(["pending", "claimed", "failed"]);
-export type JobState = z.infer<typeof JobStateSchema>;
 
 // The only failure class any code path produces. Durable failures never
 // persist a class at all — they settle as drops so the coalescing key stays
 // free for a re-enqueue (see sync-job-dispatch.service.ts). Kept as a
 // persisted field because existing job docs carry it.
 export const JobFailureClassSchema = z.literal("retryableTransient");
-export type JobFailureClass = z.infer<typeof JobFailureClassSchema>;
 
 // Claim order is arm order in claimDueJob, not a Mongo sort on this field.
 // Keep this to two rungs — each additional rung needs its own claim arm.

@@ -7,6 +7,7 @@ import {
   BookingSlugSchema,
   isSavedBookingPage,
   pickAdminPutBookingPageInput,
+  resolveBookingMeetingTypes,
   type WeeklyAvailabilityInterval,
 } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
@@ -227,6 +228,11 @@ export function validateBookingForm({
   const slugMessage = bookingSlugParseMessage(form.slug);
   if (slugMessage) {
     return { field: "address", message: slugMessage };
+  }
+  if (
+    resolveBookingMeetingTypes(form).some((type) => type.label.trim() === "")
+  ) {
+    return { field: "duration", message: "Name each meeting type." };
   }
   if (minNoticeInvalid) {
     return {

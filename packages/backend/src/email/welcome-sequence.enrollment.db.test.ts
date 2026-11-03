@@ -23,6 +23,7 @@ import {
 describe("welcome sequence enrollment", () => {
   const originalProvider = CONFIG.EMAIL_PROVIDER;
   const originalProfile = CONFIG.EMAIL_SCHEDULE_PROFILE;
+  const originalSyntheticBases = [...CONFIG.SYNTHETIC_JOURNEY_EMAILS];
 
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
@@ -37,6 +38,7 @@ describe("welcome sequence enrollment", () => {
   afterEach(async () => {
     CONFIG.EMAIL_PROVIDER = originalProvider;
     CONFIG.EMAIL_SCHEDULE_PROFILE = originalProfile;
+    CONFIG.SYNTHETIC_JOURNEY_EMAILS = originalSyntheticBases;
     await cleanupCollections();
   });
 
@@ -95,6 +97,43 @@ describe("welcome sequence enrollment", () => {
       userId,
       email: "runner+journey1@compasscaltest.invalid",
       name: "Journey Bot",
+    });
+    expect(result.isNewUser).toBe(true);
+    expect(result.user.isSynthetic).toBe(true);
+
+    const count = await mongoService.emailSend.countDocuments({
+      userId: new ObjectId(userId),
+    });
+    expect(count).toBe(0);
+  });
+
+  it("does not enroll prod journey plus-tagged signups configured in SYNTHETIC_JOURNEY_EMAILS", async () => {
+    CONFIG.SYNTHETIC_JOURNEY_EMAILS = [
+      "lance.essert+prod-journey-google@gmail.com",
+      "lance.essert+prod-journey-microsoft@gmail.com",
+      "lance.essert+prod-journey-apple@gmail.com",
+    ];
+    const userId = new ObjectId().toString();
+    const result = await userService.upsertUserFromAuth({
+      userId,
+      email: "lance.essert+prod-journey-google+journey1730123456789@gmail.com",
+      name: "Prod Journey Bot",
+    });
+    expect(result.isNewUser).toBe(true);
+    expect(result.user.isSynthetic).toBe(true);
+
+    const count = await mongoService.emailSend.countDocuments({
+      userId: new ObjectId(userId),
+    });
+    expect(count).toBe(0);
+  });
+
+  it("does not enroll keepsoftwaresimple.com signups", async () => {
+    const userId = new ObjectId().toString();
+    const result = await userService.upsertUserFromAuth({
+      userId,
+      email: "founder@keepsoftwaresimple.com",
+      name: "Founder",
     });
     expect(result.isNewUser).toBe(true);
     expect(result.user.isSynthetic).toBe(true);

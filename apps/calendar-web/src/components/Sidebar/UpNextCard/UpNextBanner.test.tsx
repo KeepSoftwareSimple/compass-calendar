@@ -65,7 +65,9 @@ describe("UpNextBanner", () => {
 
     expect(screen.getByText("Starts in 2 minutes")).toBeInTheDocument();
     expect(screen.getByText("Soon Event")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open" })).toBeInTheDocument();
+    const openButton = screen.getByRole("button", { name: "Open" });
+    expect(openButton).toBeInTheDocument();
+    expect(openButton.className).toContain("bg-accent-secondary");
     expect(screen.getByText("N")).toBeInTheDocument();
   });
 

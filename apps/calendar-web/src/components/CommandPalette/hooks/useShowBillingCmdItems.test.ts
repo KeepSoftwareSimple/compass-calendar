@@ -23,8 +23,10 @@ mockModuleForFile("@web/auth/compass/session/useSession", realUsesession, {
 });
 
 let access: AppAccess = { kind: "open" };
+let isAccessPending = false;
 mockModuleForFile("@web/billing/useAppAccess", realUseappaccess, {
   useAppAccess: () => access,
+  useIsAppAccessPending: () => isAccessPending,
 });
 
 const { useShowBillingCmdItems } = await import("./useShowBillingCmdItems");
@@ -36,6 +38,7 @@ describe("useShowBillingCmdItems", () => {
       settingsPage: "accounts",
     });
     access = { kind: "open" };
+    isAccessPending = false;
     mockUseSession.mockReset();
     mockUseSession.mockReturnValue({
       authenticated: true,
@@ -52,6 +55,23 @@ describe("useShowBillingCmdItems", () => {
     const { result } = renderHook(() => useShowBillingCmdItems());
 
     expect(result.current).toEqual([]);
+  });
+
+  it("holds disabled billing rows while the plan loads", () => {
+    isAccessPending = true;
+
+    const { result } = renderHook(() => useShowBillingCmdItems());
+
+    expect(
+      result.current.map(({ id, label, disabled }) => ({
+        id,
+        label,
+        disabled,
+      })),
+    ).toEqual([
+      { id: "show-billing-pending", label: "Manage Billing", disabled: true },
+      { id: "update-card-pending", label: "Update card", disabled: true },
+    ]);
   });
 
   it("returns no items on an install without billing", () => {

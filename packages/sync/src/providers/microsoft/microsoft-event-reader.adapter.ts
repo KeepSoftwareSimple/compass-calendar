@@ -12,9 +12,10 @@ import {
 } from "@sync/providers/microsoft/microsoft-event.normalizer";
 import { microsoftGraphRequest } from "@sync/providers/microsoft/microsoft-graph-request";
 import {
-  MICROSOFT_EVENT_PAGE_SIZE,
   MICROSOFT_EVENT_SELECT,
   MICROSOFT_GRAPH_BASE_URL,
+  MICROSOFT_GRAPH_PREFER_EVENT_PAGE,
+  MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE,
 } from "@sync/providers/microsoft/microsoft-http.constants";
 import { ProviderEventError } from "@sync/providers/provider-event.port";
 import {
@@ -35,6 +36,13 @@ export interface MicrosoftEventListPage {
   readonly deltaLink: string | null;
 }
 
+export interface MicrosoftExceptionInstancesParams {
+  readonly calendarId: string;
+  readonly seriesMasterId: string;
+  readonly startDateTime: string;
+  readonly endDateTime: string;
+}
+
 export interface MicrosoftEventListApi {
   listPage(params: {
     calendarId: string;
@@ -43,6 +51,9 @@ export interface MicrosoftEventListApi {
     pageLink?: string;
     strategy?: MicrosoftEventListStrategy;
   }): Promise<MicrosoftEventListPage>;
+  listExceptionInstances(
+    params: MicrosoftExceptionInstancesParams,
+  ): Promise<readonly GraphEventDeltaItem[]>;
 }
 
 export type MicrosoftEventListApiFactory = (
@@ -86,7 +97,46 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
     });
 
     const events = [];
+    const seenProviderIds = new Set<string>();
     let skipped = 0;
+    const colorLabels = input.colorLabels ?? new Map();
+    const seriesMasterIds = new Set<string>();
+
+    const pushItem = (item: GraphEventDeltaItem) => {
+      if (!item.id || seenProviderIds.has(item.id)) return;
+      try {
+        events.push(normalizeMicrosoftEvent(item, colorLabels));
+        seenProviderIds.add(item.id);
+      } catch (error) {
+        if (error instanceof ProviderEventError) {
+          skipped++;
+          this.#log.warn(
+            `Skipped unusable Microsoft event ${item.id} (${error.reason})`,
+          );
+          return;
+        }
+        throw error;
+      }
+    };
+
+    // Exceptions reach us twice over: inlined on the master as
+    // `exceptionOccurrences`, and again from the bounded instances fetch
+    // below. An inlined entry either names the same master or names none, so
+    // the enclosing master is the fallback either way. Plain occurrences carry
+    // no edit of their own and are projected from the master's rules instead.
+    const pushExceptions = (
+      exceptions: readonly GraphEventDeltaItem[] | undefined,
+      seriesMasterId: string,
+    ) => {
+      for (const exception of exceptions ?? []) {
+        if (exception.type === "occurrence") continue;
+        pushItem({
+          ...exception,
+          seriesMasterId: exception.seriesMasterId ?? seriesMasterId,
+        });
+      }
+    };
+
     for (const item of page.items) {
       if (item["@removed"]) {
         if (!item.id) {
@@ -96,12 +146,14 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
           );
           continue;
         }
+        if (seenProviderIds.has(item.id)) continue;
         events.push({
           kind: "cancellation" as const,
           providerEventId: item.id,
           providerVersion: "",
           series: null,
         });
+        seenProviderIds.add(item.id);
         continue;
       }
 
@@ -113,21 +165,23 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
         continue;
       }
 
-      try {
-        events.push(
-          normalizeMicrosoftEvent(item, input.colorLabels ?? new Map()),
-        );
-      } catch (error) {
-        if (error instanceof ProviderEventError) {
-          skipped++;
-          this.#log.warn(
-            `Skipped unusable Microsoft event ${item.id ?? "(no id)"} (${error.reason})`,
-          );
-          continue;
-        }
-        throw error;
+      pushItem(item);
+      if (item.type === "seriesMaster" && item.id) {
+        seriesMasterIds.add(item.id);
+        pushExceptions(item.exceptionOccurrences, item.id);
       }
     }
+
+    if (input.window)
+      for (const seriesMasterId of seriesMasterIds) {
+        const exceptions = await api.listExceptionInstances({
+          calendarId: input.calendarId,
+          seriesMasterId,
+          startDateTime: input.window.timeMin,
+          endDateTime: input.window.timeMax,
+        });
+        pushExceptions(exceptions, seriesMasterId);
+      }
 
     return {
       events,
@@ -195,7 +249,10 @@ class FetchMicrosoftEventListApi implements MicrosoftEventListApi {
       accessToken: this.#accessToken,
       url,
       headers: {
-        Prefer: `odata.maxpagesize=${params.strategy === "events" ? 25 : MICROSOFT_EVENT_PAGE_SIZE}, outlook.timezone="UTC"`,
+        Prefer:
+          params.strategy === "events"
+            ? `odata.maxpagesize=25, ${MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE}`
+            : MICROSOFT_GRAPH_PREFER_EVENT_PAGE,
       },
       fallbackError: "microsoft_event_read_failed",
     });
@@ -209,7 +266,7 @@ class FetchMicrosoftEventListApi implements MicrosoftEventListApi {
         continue;
       }
       const master = await this.#getEvent(item.id, true, params.calendarId);
-      items.push(master);
+      items.push({ ...master, exceptionOccurrences: [] });
       const normalized = normalizeMicrosoftEvent(master);
       if (normalized.kind !== "event") continue;
       if (
@@ -276,6 +333,37 @@ class FetchMicrosoftEventListApi implements MicrosoftEventListApi {
     };
   }
 
+  async listExceptionInstances(
+    params: MicrosoftExceptionInstancesParams,
+  ): Promise<readonly GraphEventDeltaItem[]> {
+    const calendarId = encodeURIComponent(params.calendarId);
+    const seriesMasterId = encodeURIComponent(params.seriesMasterId);
+    const query = new URLSearchParams({
+      startDateTime: params.startDateTime,
+      endDateTime: params.endDateTime,
+      $select: MICROSOFT_EVENT_SELECT,
+    });
+    let url: string | null =
+      `${MICROSOFT_GRAPH_BASE_URL}/me/calendars/${calendarId}/events/${seriesMasterId}/instances?${query}`;
+    const exceptions: GraphEventDeltaItem[] = [];
+
+    type InstancesPage = {
+      value?: GraphEventDeltaItem[];
+      "@odata.nextLink"?: string;
+    };
+    while (url) {
+      const requestUrl = url;
+      const data: InstancesPage =
+        await this.#request<InstancesPage>(requestUrl);
+      for (const row of data.value ?? []) {
+        if (row.type === "exception") exceptions.push(row);
+      }
+      url = data["@odata.nextLink"] ?? null;
+    }
+
+    return exceptions;
+  }
+
   async #getEvent(
     id: string | undefined,
     expand: boolean,
@@ -283,7 +371,7 @@ class FetchMicrosoftEventListApi implements MicrosoftEventListApi {
   ): Promise<GraphEvent> {
     if (!id) throw new Error("Microsoft event has no identity");
     const query = new URLSearchParams({
-      $select: `${MICROSOFT_EVENT_SELECT}${expand ? ",cancelledOccurrences,exceptionOccurrences" : ""}`,
+      $select: `${MICROSOFT_EVENT_SELECT}${expand ? ",exceptionOccurrences" : ""}`,
     });
     if (expand) query.set("$expand", "exceptionOccurrences");
     return this.#request<GraphEvent>(
@@ -297,7 +385,7 @@ class FetchMicrosoftEventListApi implements MicrosoftEventListApi {
     return microsoftGraphRequest<T>({
       accessToken: this.#accessToken,
       url,
-      headers: { Prefer: 'outlook.timezone="UTC"' },
+      headers: { Prefer: MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE },
       fallbackError: "microsoft_event_snapshot_failed",
     });
   }

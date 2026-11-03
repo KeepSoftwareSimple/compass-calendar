@@ -1,4 +1,3 @@
-import { type NextFunction, type Request, type Response } from "express";
 import { type VerifySessionOptions } from "supertokens-node/lib/build/recipe/session/types";
 import { verifySession as supertokensVerifySession } from "supertokens-node/recipe/session/framework/express";
 
@@ -21,9 +20,3 @@ export function registerTestVerifySession(
 export function resetVerifySession(): void {
   verifySessionFactory = supertokensVerifySession;
 }
-
-export type SessionRequestHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => void;

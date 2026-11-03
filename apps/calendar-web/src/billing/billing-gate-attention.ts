@@ -1,6 +1,7 @@
 import { type BookingNewMeetingsClaimResponse } from "@core/types/booking.contracts";
 import { useCheckoutCelebrationStore } from "@web/billing/checkout-celebration.store";
 import { type GuestRsvpToastPayload } from "@web/booking/GuestRsvpToast";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 
 /**
  * The billing gate is the only thing on screen until the user starts a trial.
@@ -26,22 +27,22 @@ export function setBillingGateOwnsScreen(owns: boolean): void {
 }
 
 function flushDeferredAttentionToasts(): void {
-  void import("@web/common/utils/toast/google-reconnect.toast").then(
-    ({ flushDeferredGoogleReconnectToast }) => {
-      flushDeferredGoogleReconnectToast();
-    },
-  );
-  void import("@web/common/utils/toast/google-delayed.toast").then(
-    ({ flushDeferredGoogleDelayedToast }) => {
-      flushDeferredGoogleDelayedToast();
-    },
-  );
-  void import("@web/booking/NewMeetingsToast").then(
+  void importOrReload(
+    () => import("@web/common/utils/toast/google-reconnect.toast"),
+  ).then(({ flushDeferredGoogleReconnectToast }) => {
+    flushDeferredGoogleReconnectToast();
+  });
+  void importOrReload(
+    () => import("@web/common/utils/toast/google-delayed.toast"),
+  ).then(({ flushDeferredGoogleDelayedToast }) => {
+    flushDeferredGoogleDelayedToast();
+  });
+  void importOrReload(() => import("@web/booking/NewMeetingsToast")).then(
     ({ flushDeferredNewMeetingsToast }) => {
       flushDeferredNewMeetingsToast();
     },
   );
-  void import("@web/booking/GuestRsvpToast").then(
+  void importOrReload(() => import("@web/booking/GuestRsvpToast")).then(
     ({ flushDeferredGuestRsvpToast }) => {
       flushDeferredGuestRsvpToast();
     },

@@ -403,6 +403,18 @@ xcodebuild test -project Compass.xcodeproj -scheme Compass \
   -destination 'platform=macOS'
 ```
 
+Local XCUITest uses the shared desktop. Run it only when the Mac is unlocked,
+the user is not using it, and no other native UI or strict verification run is
+active. Otherwise run the full gate on an isolated CI Mac:
+`gh workflow run test-macos.yml --ref <branch> -f strict_verify=true`.
+This runs `bun run verify --strict` and preserves its log without using the
+local desktop. Inspect the `strict` job verdict before marking a PR ready. The shared test
+application activates Compass after launch, before hit testing. XCTest may
+otherwise treat another app covering Compass as an interruption and inspect
+that app; this triggered a Brave crash inside an XCTest predicate query. If
+that happens, stop the run rather than repeatedly inspecting the other app.
+Do not dismiss user dialogs or change system security settings to make tests pass.
+
 `CompassUITests` launch with `-COMPASS_FIXTURE demo` for anonymous smoke (no
 backend) and `-COMPASS_UI_TEST` (via `XCUIApplication.compassUITest()`), which
 attaches the AppKit accessibility probes the tests read. Launches without it

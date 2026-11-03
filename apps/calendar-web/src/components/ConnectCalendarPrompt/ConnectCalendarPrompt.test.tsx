@@ -125,6 +125,7 @@ describe("ConnectCalendarPromptGate", () => {
       ...initialConnectCalendarPromptState,
       isSnoozed: false,
     });
+    persistentBrowserStore.set(STORAGE_KEYS.FIRST_EVENT_DONE, "dismissed");
     persistentBrowserStore.set(
       STORAGE_KEYS.CONNECT_CALENDAR_PROMPT_SNOOZED_AT,
       "",

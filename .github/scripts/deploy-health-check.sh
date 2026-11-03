@@ -468,7 +468,7 @@ remote_compose_prefix() {
 }
 
 remote_check_stack() {
-  local expected_services=("web" "backend" "sync")
+  local expected_services=("web" "api-proxy" "sync")
   local version=${RELEASE_TAG:-${TAG:-}}
   version=${version#v}
 
@@ -485,6 +485,14 @@ set -euo pipefail
 prefix="$prefix"
 services="$services"
 version="$version"
+active_slot=a
+if [ -f ~/compass/.backend-active-slot ]; then
+  active_slot=\$(tr -d '[:space:]' < ~/compass/.backend-active-slot)
+fi
+case "\$active_slot" in
+  a|b) ;;
+  *) active_slot=a ;;
+esac
 ps_output=\$(eval "\$prefix ps --format '{{.Service}} {{.State}} {{.Health}} {{.Image}}'")
 printf '%s\n' "\$ps_output"
 
@@ -500,7 +508,18 @@ for service in \$services; do
   fi
 done
 
-for service in web backend sync; do
+active_backend="backend-\$active_slot"
+line=\$(printf '%s\n' "\$ps_output" | awk -v service="\$active_backend" '\$1 == service { print; found=1 } END { exit found ? 0 : 1 }')
+printf '%s\n' "\$line" | grep -Eq " running |^\${active_backend} running " || {
+  printf 'active backend %s is not running: %s\n' "\$active_backend" "\$line" >&2
+  exit 1
+}
+if printf '%s\n' "\$line" | grep -Eq ' unhealthy| starting| exited| dead'; then
+  printf 'active backend %s is not healthy/running: %s\n' "\$active_backend" "\$line" >&2
+  exit 1
+fi
+
+for service in web "\$active_backend" sync; do
   line=\$(printf '%s\n' "\$ps_output" | awk -v service="\$service" '\$1 == service { print }')
   # web uses an environment-prefixed tag (e.g. staging-selfhosted-0.5.25); backend uses :0.5.25.
   # Check that the version string appears anywhere in the image tag for both.
@@ -652,6 +671,52 @@ $mongo_cmd "$MONGO_URI" --quiet --eval '
 REMOTE
 }
 
+check_frontend_http() {
+  SUPPRESS_FRONTEND_FINISH=1 validate_frontend
+}
+
+check_public_frontend_version() {
+  SUPPRESS_FRONTEND_FINISH=1 validate_frontend_version
+}
+
+remote_check_loopback_web_version() {
+  local expected
+  expected=$(expected_version) || return 1
+
+  ssh_remote "EXPECTED_VERSION=$(printf '%q' "$expected") bash -se" <<'REMOTE'
+set -euo pipefail
+config="$HOME/compass/compass.yaml"
+web_port=9080
+if [ -f "$config" ]; then
+  web_port=$(awk '
+    /^web:[[:space:]]*$/ { in_web=1; next }
+    in_web && /^[^[:space:]]/ { in_web=0 }
+    in_web && /^[[:space:]]+port:[[:space:]]*/ {
+      line=$0
+      sub(/^[[:space:]]+port:[[:space:]]*/, "", line)
+      gsub(/^"/, "", line)
+      gsub(/"$/, "", line)
+      print line
+      exit
+    }
+  ' "$config")
+fi
+web_port=${web_port:-9080}
+body=$(curl -fsS --max-time 20 "http://127.0.0.1:${web_port}/version.json")
+actual=$(printf '%s' "$body" | sed -nE 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -n 1)
+if [ -z "$actual" ]; then
+  printf 'missing version field from loopback version.json\n' >&2
+  exit 1
+fi
+if [ "$actual" != "$EXPECTED_VERSION" ]; then
+  ps_web=$(docker compose --project-name compass -f "$HOME/compass/compose.yaml" ps --format '{{.Service}} {{.Image}} {{.Ports}}' web 2>/dev/null | head -n 1)
+  printf 'loopback version.json on 127.0.0.1:%s expected %s, got %s; compose web: %s\n' \
+    "$web_port" "$EXPECTED_VERSION" "$actual" "${ps_web:-missing}" >&2
+  exit 1
+fi
+REMOTE
+}
+
 remote_check_selfhosted_data() {
   local mongo_password=${MONGO_PASSWORD:-}
   local postgres_password=${SUPERTOKENS_POSTGRES_PASSWORD:-}
@@ -704,9 +769,10 @@ run_all_checks() {
   if [ -z "${FRONTEND_URL:-}" ]; then
     record_failure "frontend-url" "missing FRONTEND_URL"
   else
-    SUPPRESS_FRONTEND_FINISH=1 validate_frontend >/tmp/compass-frontend-check.log 2>&1 || true
-    SUPPRESS_FRONTEND_FINISH=1 validate_frontend_version >/tmp/compass-frontend-version-check.log 2>&1 || true
+    run_check "frontend-http" check_frontend_http
+    run_check "public-frontend-version" check_public_frontend_version
   fi
+  run_check "loopback-web-version" remote_check_loopback_web_version
   run_check "backend-health" validate_backend_health
   run_check "backend-config-version" validate_backend_config_version
   run_check "sync-webhook-route" validate_sync_webhook_route

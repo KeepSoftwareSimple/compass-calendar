@@ -21,6 +21,7 @@ const WEB_DOCKERFILES = [
 ];
 const RELATIVE_IMPORT = / from "(\.[^"]*)";/g;
 const RUNTIME_STAGE = /^FROM .+ AS runtime$/m;
+const SIGNUP_STEP_VIEWED_TRACK = /track\s*\(\s*["']signup_step_viewed["']/g;
 
 const SOURCE_EXT = /\.(ts|tsx)$/;
 
@@ -51,7 +52,12 @@ export const RULE_HELP: Record<string, string> = {
     "register shortcuts through useAppShortcut or the engines under apps/calendar-web/src/shortcuts/, not a raw keydown listener. Existing engines: KEYDOWN_LISTENER_ALLOWLIST.",
   "phosphor-barrel":
     'import icons from "@phosphor-icons/react/dist/csr/<Icon>" (and IconContext / Icon types from dist/lib). The package barrel pulls every glyph into the boot set. Test files are exempt; they are not in the bundle.',
+  "signup-step-viewed-track":
+    'fire signup_step_viewed only through trackSignupStep in signup-funnel.ts (typed step + step_name). Do not call track("signup_step_viewed", ...).',
 };
+
+/** No exemptions: the funnel helper is the only supported emit path. */
+export const SIGNUP_STEP_VIEWED_TRACK_ALLOWLIST: ConstraintAllow[] = [];
 
 /** Empty: remaining barrels were deleted; imports target the concrete files. */
 export const BARREL_ALLOWLIST: ConstraintAllow[] = [];
@@ -256,6 +262,10 @@ export function keydownListenerHits(source: string): number[] {
 
 export function phosphorBarrelHits(source: string): number[] {
   return lineNumbers(source, PHOSPHOR_BARREL);
+}
+
+export function signupStepViewedDirectTrackHits(source: string): number[] {
+  return lineNumbers(source, SIGNUP_STEP_VIEWED_TRACK);
 }
 
 /**
@@ -572,6 +582,11 @@ export function scanConstraints(root = repoRoot): ConstraintHit[] {
       ) {
         for (const line of keydownListenerHits(source)) {
           hits.push({ path: rel, rule: "keydown-listener", line });
+        }
+      }
+      if (!matchesConstraintAllow(rel, SIGNUP_STEP_VIEWED_TRACK_ALLOWLIST)) {
+        for (const line of signupStepViewedDirectTrackHits(source)) {
+          hits.push({ path: rel, rule: "signup-step-viewed-track", line });
         }
       }
     }

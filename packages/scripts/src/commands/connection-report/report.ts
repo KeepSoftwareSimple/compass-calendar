@@ -7,9 +7,9 @@ import {
 } from "@core/types/sync/connection.contracts";
 import { ProviderKindSchema } from "@core/types/sync/identity.contracts";
 import { Collections } from "@backend/common/constants/collections";
+import { CONNECTION_STATE_REFRESH_STALE_AFTER_MS } from "@sync/domain/connection-state-refresh.sweep";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 
-const STALE_IMPORTING_MS = 60 * 60 * 1000;
 const ACTIVITY_WINDOW_1_MS = 24 * 60 * 60 * 1000;
 const ACTIVITY_WINDOW_30_MS = 30 * 24 * 60 * 60 * 1000;
 const ACTIVITY_WINDOW_90_MS = 90 * 24 * 60 * 60 * 1000;
@@ -105,7 +105,9 @@ export async function buildConnectionReport(input: {
     .filter((row): row is ConnectionReportRow => row !== null)
     .sort(compareRows);
 
-  const staleCutoff = new Date(now.getTime() - STALE_IMPORTING_MS);
+  const staleCutoff = new Date(
+    now.getTime() - CONNECTION_STATE_REFRESH_STALE_AFTER_MS,
+  );
   const importingDocs = await input.syncDb
     .collection<ImportingDoc>(SYNC_COLLECTIONS.providerConnections)
     .find(

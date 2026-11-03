@@ -1,7 +1,10 @@
 import { BILLING_PLAN } from "@core/constants/billing.constants";
 import dayjs from "@core/util/date/dayjs";
 import { shouldOfferSignupTrialStep } from "@web/billing/billing.query";
-import { formatTrialChargeDate } from "@web/billing/signup-trial-format.util";
+import {
+  formatSignupTrialTitle,
+  formatTrialChargeDate,
+} from "@web/billing/signup-trial-format.util";
 import { formatTrialStartPriceLine } from "@web/billing/trial-start-display.util";
 import { describe, expect, it } from "bun:test";
 
@@ -47,6 +50,12 @@ describe("shouldOfferSignupTrialStep", () => {
   });
 });
 
+describe("formatSignupTrialTitle", () => {
+  it("uses trial length from config", () => {
+    expect(formatSignupTrialTitle(7)).toBe("Start your 7-day free trial");
+  });
+});
+
 describe("formatTrialChargeDate", () => {
   it("formats the charge date from a pinned clock", () => {
     const pinned = dayjs("2026-01-15T12:00:00.000Z");
@@ -57,7 +66,7 @@ describe("formatTrialChargeDate", () => {
 describe("formatTrialStartPriceLine", () => {
   it("matches the trial ask copy", () => {
     expect(formatTrialStartPriceLine(BILLING_PLAN.DISPLAY_PRICE, 7)).toBe(
-      "$12.00/mo after 7 days. Cancel anytime in Settings.",
+      "$7.99/mo after 7 days. Cancel anytime in Settings.",
     );
   });
 });

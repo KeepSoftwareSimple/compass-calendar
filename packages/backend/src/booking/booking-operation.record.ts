@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { BookingMeetingTypeIdSchema } from "@core/types/booking.contracts";
 import { TimeZoneSchema } from "@core/types/domain-primitives";
 import { zObjectId } from "@core/types/object-id.schema";
 
@@ -10,7 +11,6 @@ export const BookingOperationKindSchema = z.enum([
   "reschedule",
   "edit",
 ]);
-export type BookingOperationKind = z.infer<typeof BookingOperationKindSchema>;
 
 export const BookingOperationStatusSchema = z.enum([
   "pending",
@@ -51,6 +51,8 @@ export const CreateBookingOperationRecordSchema =
     notes: z.string().trim().max(4000).nullable(),
     guestTimeZone: TimeZoneSchema,
     cancelToken: z.string().trim().min(1).max(256),
+    meetingTypeId: BookingMeetingTypeIdSchema.optional(),
+    meetingTypeLabel: z.string().trim().min(1).max(256).optional(),
   });
 export type CreateBookingOperationRecord = z.infer<
   typeof CreateBookingOperationRecordSchema
@@ -111,8 +113,6 @@ export const BOOKING_OPERATION_RESUMABLE_CREATE_STATUSES = [
   "failed",
 ] as const satisfies readonly BookingOperationStatus[];
 
-export const BOOKING_OPERATION_RECOVERABLE_STATUSES = [
-  "pending",
-  "submitted",
-  "compensating",
-] as const satisfies readonly BookingOperationStatus[];
+/** Heartbeat and claim: same in-flight set as overlap arbitration. */
+export const BOOKING_OPERATION_RECOVERABLE_STATUSES =
+  BOOKING_OPERATION_IN_FLIGHT_STATUSES;

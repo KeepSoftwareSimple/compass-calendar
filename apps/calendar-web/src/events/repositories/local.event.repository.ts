@@ -1,5 +1,5 @@
 import { DateTimeSchema, type EventId } from "@core/types/domain-primitives";
-import { type Event } from "@core/types/event.contracts";
+import { type Event, type EventSchedule } from "@core/types/event.contracts";
 import {
   type CreateEventInput,
   type EventListQuery,
@@ -22,8 +22,20 @@ import {
   composeLocalOccurrenceId,
   parseLocalOccurrenceId,
 } from "@web/events/recurrence/local-occurrence-id";
+import { truncateSeriesRulesBefore } from "@web/events/recurrence/truncate-series-rules.util";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
 import { type EventRepository } from "./event.repository.types";
+
+function resolveReplaceSchedule(
+  inputSchedule: ReplaceEventInput["schedule"],
+  existingSchedule: EventSchedule | undefined,
+): EventSchedule {
+  const schedule = inputSchedule ?? existingSchedule;
+  if (!schedule) {
+    throw new Error("replace requires a schedule when the event is not stored");
+  }
+  return schedule;
+}
 
 /**
  * Local event repository implementation using the offline data store.
@@ -39,39 +51,6 @@ import { type EventRepository } from "./event.repository.types";
  */
 function nowDateTime() {
   return DateTimeSchema.parse(new Date().toISOString());
-}
-
-// RRULE UNTIL is inclusive, so truncating "everything at/after `beforeStart`"
-// means UNTIL = one second before its instant. Always emits the full UTC
-// timed format (matching the backend's withUntil), never a bare date: an
-// all-day date-only UNTIL is compared against CompassEventRRule's
-// local-timezone-anchored dtstart (mirrors parseCompassEventDate +
-// `.local()`), and a bare date silently drops or keeps an extra day
-// whenever the local zone's UTC offset is negative (verified across
-// America/Denver, Asia/Tokyo, and UTC).
-function truncateRules(
-  rules: readonly string[],
-  beforeStart: string,
-): string[] {
-  const allDay = !beforeStart.includes("T");
-  const excludedInstant = allDay
-    ? dayjs(beforeStart, "YYYY-MM-DD").tz(dayjs.tz.guess()).local().toDate()
-    : dayjs(beforeStart).toDate();
-  const until = dayjs(excludedInstant)
-    .subtract(1, "second")
-    .utc()
-    .toRRuleDTSTARTString();
-
-  return rules.map((rule) => {
-    if (!rule.startsWith("RRULE:")) return rule;
-    const kept = rule
-      .slice("RRULE:".length)
-      .split(";")
-      .filter(
-        (part) => !part.startsWith("UNTIL=") && !part.startsWith("COUNT="),
-      );
-    return `RRULE:${[...kept, `UNTIL=${until}`].join(";")}`;
-  });
 }
 
 // Local calendars have no attendee support (a guest-edit against one is the
@@ -255,7 +234,7 @@ export class LocalEventRepository implements EventRepository {
         existing?.calendarId ??
         getLocalCalendarSentinelId(),
       content: detailsContent(input.content),
-      schedule: input.schedule,
+      schedule: resolveReplaceSchedule(input.schedule, existing?.schedule),
       recurrence: resolveRecurrence(input.recurrence, recurrenceFallback),
       createdAt: existing?.createdAt ?? nowDateTime(),
       updatedAt: nowDateTime(),
@@ -295,14 +274,18 @@ export class LocalEventRepository implements EventRepository {
     );
 
     if (!splits) {
+      const resolvedSchedule = resolveReplaceSchedule(
+        input.schedule,
+        record.event.schedule,
+      );
       const schedule =
         input.scope === "all"
           ? shiftSeriesScheduleByOccurrenceEdit(
               record.event.schedule,
               occurrenceStart,
-              input.schedule,
+              resolvedSchedule,
             )
-          : input.schedule;
+          : resolvedSchedule;
       const event: Event = {
         ...record.event,
         calendarId: input.calendarId ?? record.event.calendarId,
@@ -319,7 +302,10 @@ export class LocalEventRepository implements EventRepository {
       ...record.event,
       recurrence: {
         kind: "series",
-        rules: truncateRules(record.event.recurrence.rules, occurrenceStart),
+        rules: truncateSeriesRulesBefore(
+          record.event.recurrence.rules,
+          occurrenceStart,
+        ),
       },
       updatedAt: nowDateTime(),
     };
@@ -330,7 +316,7 @@ export class LocalEventRepository implements EventRepository {
       id,
       calendarId: input.calendarId ?? record.event.calendarId,
       content: detailsContent(input.content),
-      schedule: input.schedule,
+      schedule: resolveReplaceSchedule(input.schedule, record.event.schedule),
       recurrence,
       createdAt: nowDateTime(),
       updatedAt: null,
@@ -373,7 +359,7 @@ export class LocalEventRepository implements EventRepository {
           ...record.event,
           recurrence: {
             kind: "series",
-            rules: truncateRules(
+            rules: truncateSeriesRulesBefore(
               record.event.recurrence.rules,
               occurrenceStart,
             ),

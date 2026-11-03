@@ -3,7 +3,7 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import { isStripeConfigured } from "@backend/common/constants/config.util";
 
 /** Stripe API version supported by the installed SDK. */
-export const STRIPE_API_VERSION = "2026-08-26.dahlia" as const;
+export const STRIPE_API_VERSION = "2026-09-30.endive" as const;
 
 let client: Stripe | undefined;
 
@@ -52,6 +52,7 @@ export interface StripeBillingGateway {
     id: string,
     params?: Stripe.SubscriptionRetrieveParams,
   ): Promise<Stripe.Subscription>;
+  retrievePrice(id: string): Promise<Stripe.Price>;
   listInvoices(
     params?: Stripe.InvoiceListParams,
   ): Promise<{ data: Stripe.Invoice[] }>;
@@ -67,7 +68,9 @@ function createStripeBillingGateway(): StripeBillingGateway {
     createCustomer: (params, options) =>
       getStripe().customers.create(params, options),
     deleteCustomer: async (id, options) => {
-      await getStripe().customers.del(id, options);
+      // `del(id, params, options)`: options must not take the params slot, or
+      // Stripe rejects `idempotencyKey` as an unknown body parameter.
+      await getStripe().customers.del(id, {}, options);
     },
     retrieveCustomer: (id, params) =>
       getStripe().customers.retrieve(id, params),
@@ -80,6 +83,7 @@ function createStripeBillingGateway(): StripeBillingGateway {
       getStripe().subscriptions.update(id, params, options),
     retrieveSubscription: (id, params) =>
       getStripe().subscriptions.retrieve(id, params),
+    retrievePrice: (id) => getStripe().prices.retrieve(id),
     listInvoices: (params) => getStripe().invoices.list(params),
     constructWebhookEvent: (payload, header, secret) =>
       getStripe().webhooks.constructEventAsync(payload, header, secret),

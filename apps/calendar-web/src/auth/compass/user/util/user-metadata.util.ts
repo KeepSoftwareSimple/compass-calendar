@@ -1,6 +1,7 @@
 import { Status } from "@core/errors/status.codes";
 import { type UserMetadata } from "@core/types/user.types";
 import { UserApi } from "@web/api/user.api";
+import { isAbortError } from "@web/api/util/api.util";
 import { connectionHasReconnectRequired } from "@web/auth/providers/connect.util";
 import { syncReconnectRequiredFromConnections } from "@web/auth/providers/reconnect.state";
 import {
@@ -92,6 +93,11 @@ export const refreshUserMetadata = async (options?: {
 
       if (isUnauthorized) {
         userMetadataActions.clear();
+        return;
+      }
+
+      if (isAbortError(error)) {
+        userMetadataActions.finishLoading();
         return;
       }
 

@@ -87,7 +87,7 @@ const CalendarListHeaderContent: FC<{ email: string }> = ({ email }) => {
             variant="sidebar-primary"
           />
           {availableProviders.length > 1 ? (
-            <p className="mb-2 text-text-muted text-xs">
+            <p className="mb-2 min-w-0 text-pretty text-text-muted text-xs">
               {CALENDAR_HOST_EXPLAINER}
             </p>
           ) : null}

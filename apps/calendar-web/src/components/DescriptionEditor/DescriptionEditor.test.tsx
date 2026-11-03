@@ -123,7 +123,7 @@ describe("DescriptionEditor", () => {
       />,
     );
 
-    const link = screen.getByRole("link", { name: "Zoom meeting" });
+    const link = screen.getByRole("link", { name: /Zoom meeting/ });
     expect(link).toHaveAttribute("href", "https://zoom.us/j/123456789");
     // Forced at render time by the Link extension's HTMLAttributes, not
     // read from the source - an attacker-controlled target/rel in the
@@ -164,7 +164,7 @@ describe("DescriptionEditor", () => {
 
     fireEvent.paste(textbox, { clipboardData });
 
-    const link = screen.getByRole("link", { name: "click" });
+    const link = screen.getByRole("link", { name: /^click/ });
     expect(link).toHaveAttribute("href", "https://evil.example");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer nofollow");
@@ -209,8 +209,9 @@ describe("DescriptionEditor", () => {
       cancelUrl,
       rescheduleUrl,
     ]);
-    expect(links[0]).toHaveAttribute("title", cancelUrl);
-    expect(links[1]).toHaveAttribute("title", rescheduleUrl);
+    expect(links[0]?.getAttribute("aria-label")).toContain(cancelUrl);
+    expect(links[1]?.getAttribute("aria-label")).toContain(rescheduleUrl);
+    expect(links[0]).not.toHaveAttribute("title");
   });
 
   it("leaves existing HTML descriptions untouched", () => {
@@ -244,7 +245,7 @@ describe("DescriptionEditor", () => {
       />,
     );
 
-    const link = screen.getByRole("link", { name: "Cancel" });
+    const link = screen.getByRole("link", { name: /Cancel/ });
     fireEvent.click(link);
     expect(openSpy).not.toHaveBeenCalled();
 

@@ -118,11 +118,13 @@ extension NativeCalendarRootModel {
     }
 
     public func openUpNextEvent() {
+        guard !suppressBottomNotices else { return }
         guard let upNext = upNextState.snapshot.upNext else { return }
         focusEventDeepLink(eventId: upNext.id)
     }
 
     public func joinUpNextMeeting() {
+        guard !suppressBottomNotices else { return }
         guard let urlString = upNextState.conferenceURL,
               let url = URL(string: urlString)
         else {

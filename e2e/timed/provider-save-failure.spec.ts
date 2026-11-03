@@ -50,7 +50,7 @@ test.describe("provider save failure feedback", () => {
     await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
 
     await page.screenshot({
-      path: "/opt/cursor/artifacts/provider-save-failure-google-toast.png",
+      path: test.info().outputPath("provider-save-failure-google-toast.png"),
       fullPage: false,
     });
   });

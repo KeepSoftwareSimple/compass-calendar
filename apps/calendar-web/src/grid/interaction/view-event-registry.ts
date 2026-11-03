@@ -1,8 +1,4 @@
-import {
-  createEventRegistry,
-  type EventRegistry,
-  type RegisteredEventTarget,
-} from "./event.registry";
+import { createEventRegistry, type EventRegistry } from "./event.registry";
 import { createGridEventTargeting } from "./event.targeting";
 import { useEventRegistrationRef } from "./use-event-registration-ref";
 
@@ -12,9 +8,6 @@ const isViewInteractionEventType = (
   value: string | null,
 ): value is ViewInteractionEventType =>
   value === "all-day" || value === "timed";
-
-export type ViewRegisteredEventTarget =
-  RegisteredEventTarget<ViewInteractionEventType>;
 
 export type ViewEventRegistry = EventRegistry<ViewInteractionEventType>;
 
@@ -164,8 +157,6 @@ export const DAY_INTERACTION_EVENT_ID_ATTRIBUTE =
 export const DAY_INTERACTION_EVENT_TYPE_ATTRIBUTE =
   dayViewInteraction.typeAttribute;
 export type DayInteractionEventType = ViewInteractionEventType;
-export type DayRegisteredEventTarget = ViewRegisteredEventTarget;
-export type DayEventRegistry = ViewEventRegistry;
 export const getDayInteractionTargetAttributes =
   dayViewInteraction.getInteractionTargetAttributes;
 export const createDayEventRegistry = dayViewInteraction.createRegistry;
@@ -178,8 +169,6 @@ export const WEEK_INTERACTION_EVENT_ID_ATTRIBUTE =
 export const WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE =
   weekViewInteraction.typeAttribute;
 export type WeekInteractionEventType = ViewInteractionEventType;
-export type WeekRegisteredEventTarget = ViewRegisteredEventTarget;
-export type WeekEventRegistry = ViewEventRegistry;
 export const getWeekInteractionTargetAttributes =
   weekViewInteraction.getInteractionTargetAttributes;
 export const createWeekEventRegistry = weekViewInteraction.createRegistry;

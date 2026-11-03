@@ -12,7 +12,6 @@ import {
   createInitialMobileGameState,
   skipToEnd,
 } from "@web/components/MobileGate/mobile-game.state";
-import { UpNextBanner } from "@web/components/Sidebar/UpNextCard/UpNextBanner";
 import SSEProvider from "@web/sse/provider/SSEProvider";
 
 export const RootView = () => {
@@ -41,7 +40,6 @@ export const RootView = () => {
       <SSEProvider>
         <GlobalShortcutsHost />
         <DocumentTitle />
-        <UpNextBanner />
         <AuthenticatedLayout />
       </SSEProvider>
     </UserProvider>

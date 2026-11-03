@@ -19,5 +19,5 @@ test("Enter advances welcome after clicking modal body text", async ({
   await expect(welcomeDialog).toBeFocused();
 
   await page.keyboard.press("Enter");
-  await expect(welcomeDialog.getByText("Step 2 of 3")).toBeVisible();
+  await expect(welcomeDialog.getByText("Step 2 of 4")).toBeVisible();
 });

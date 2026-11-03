@@ -96,7 +96,7 @@ test("Alt+Shift+ArrowRight carries the event a week into the next window", async
   await expectTimedEventVisible(page, title);
 });
 
-test("m opens the focused event's menu without a mouse", async ({ page }) => {
+test(". opens the focused event's menu without a mouse", async ({ page }) => {
   await prepareTimedCalendarPage(page);
 
   const title = createEventTitle("Menu By Key");
@@ -108,7 +108,7 @@ test("m opens the focused event's menu without a mouse", async ({ page }) => {
     .locator("#mainGrid")
     .getByRole("button", { name: title });
   await eventButton.focus();
-  await page.keyboard.press("m");
+  await page.keyboard.press(".");
 
   const menu = page.getByRole("menu");
   await expect(menu).toBeVisible();

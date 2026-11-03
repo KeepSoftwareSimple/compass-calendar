@@ -17,6 +17,8 @@ import {
   CancelBookingReservationInputSchema,
   CreateBookingReservationInputSchema,
   CreateBookingReservationResponseSchema,
+  type HostUpcomingBookingReservationsResponse,
+  HostUpcomingBookingReservationsResponseSchema,
   isGuestEmail,
   PatchBookingReservationInputSchema,
   type PublicBookingPage,
@@ -25,13 +27,10 @@ import {
   PublicGetBookingReservationResponseSchema,
   RescheduleBookingReservationInputSchema,
   RescheduleBookingReservationResponseSchema,
+  resolvePageMeetingType,
   toPublicBookingPage,
 } from "@core/types/booking.contracts";
-import {
-  type CalendarConference,
-  conferenceForDestination,
-  createsGoogleMeetFromConference,
-} from "@core/types/calendar.contracts";
+import { createsGoogleMeetFromConference } from "@core/types/calendar.contracts";
 import {
   DateTimeSchema,
   type EventId,
@@ -44,6 +43,7 @@ import {
 import dayjs from "@core/util/date/dayjs";
 import { escapeHtml } from "@core/util/escape-html.util";
 import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
+import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { BookingException, bookingError } from "@backend/booking/booking.error";
 import {
   generateCancelToken,
@@ -92,10 +92,10 @@ import {
 } from "@backend/booking/services/booking-readiness";
 import { type CalendarBookingPort } from "@backend/booking/services/calendar-booking.port";
 import { CalendarBookingService } from "@backend/booking/services/calendar-booking.service";
-import calendarService from "@backend/calendar/services/calendar.service";
+import { resolveBookingDestinationConference } from "@backend/booking/services/destination-conference";
+import { resolveMeetLinksByEventId } from "@backend/booking/services/owner-upcoming-meet-links";
 import mongoService from "@backend/common/services/mongo.service";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
-import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
 import { enqueueBookingHostEmail } from "@backend/email/booking-host-email.enrollment";
 import { EventMutationException } from "@backend/event/event.error";
 
@@ -118,6 +118,29 @@ const assertHostAllowsGuestWrites = async (userId: ObjectId): Promise<void> => {
  */
 const reservationNotFound = () =>
   bookingError("RESERVATION_NOT_FOUND", "Reservation not found");
+
+const pageNotFound = () =>
+  bookingError("PAGE_NOT_FOUND", "Meeting page not found");
+
+const assertPageOwner = async (
+  userId: ObjectId,
+  slug: string,
+): Promise<BookingPageRecord> => {
+  const page = await bookingPageRepository.findBySlug(slug);
+  if (!page?.userId.equals(userId)) {
+    throw pageNotFound();
+  }
+  return page;
+};
+
+const reservationDurationMinutes = (
+  reservation: BookingReservationRecord,
+): number => {
+  const minutes = Math.round(
+    (reservation.slotEnd.getTime() - reservation.slotStart.getTime()) / 60_000,
+  );
+  return BookingDurationMinutesSchema.parse(minutes);
+};
 
 const guestTokenFrom = (raw: unknown): string => {
   if (
@@ -325,6 +348,25 @@ const bookingEventDescription = (
   return `${escapeHtml(trimmed).replace(/\n/g, "<br>")}<br><br>${links}`;
 };
 
+/**
+ * The meeting type fields to copy forward, omitted rather than undefined so
+ * Mongo never stores a null the strict record schema would reject.
+ */
+const meetingTypeSnapshot = (source: {
+  meetingTypeId?: string;
+  meetingTypeLabel?: string;
+}): { meetingTypeId?: string; meetingTypeLabel?: string } => ({
+  ...(source.meetingTypeId ? { meetingTypeId: source.meetingTypeId } : {}),
+  ...(source.meetingTypeLabel
+    ? { meetingTypeLabel: source.meetingTypeLabel }
+    : {}),
+});
+
+const meetingTypeLabelFor = (reservation: BookingReservationRecord) =>
+  reservation.meetingTypeLabel
+    ? { meetingTypeLabel: reservation.meetingTypeLabel }
+    : {};
+
 const durationMinutesForReservation = (
   reservation: BookingReservationRecord,
   pageDurationMinutes: number,
@@ -416,7 +458,7 @@ const presentReservation = async (
   page: BookingPageRecord & { bookingSlug: string },
   hostDisplayName: string,
 ): Promise<PublicGetBookingReservationResponse> => {
-  const conference = await destinationConference(
+  const conference = await resolveBookingDestinationConference(
     page.userId,
     page.destinationCalendarId,
   );
@@ -427,6 +469,7 @@ const presentReservation = async (
       reservation,
       page.durationMinutes,
     ),
+    ...meetingTypeLabelFor(reservation),
     hostDisplayName,
     status: reservation.status,
     bookingSlug: page.bookingSlug,
@@ -470,62 +513,32 @@ const nextGuestNotes = (
   return incoming.length > 0 ? incoming : null;
 };
 
-const destinationConference = async (
-  userId: ObjectId,
-  destinationCalendarId: string,
-): Promise<CalendarConference> => {
-  const local = await calendarService.getLocalCalendar(userId);
-  if (local && local._id.toHexString() === destinationCalendarId) {
-    return "none";
-  }
-
-  const client = getSyncServiceClient();
-  const principal = toSyncPrincipal(userId.toString());
-  const calendarsResult = await client.listCalendars(principal);
-  if (!calendarsResult.ok) {
-    return "meet";
-  }
-  const destination = calendarsResult.value.calendars.find(
-    (calendar) => (calendar.id as string) === destinationCalendarId,
-  );
-  if (!destination) {
-    return "none";
-  }
-
-  const connectionsResult = await client.listConnections(principal);
-  const connection = connectionsResult.ok
-    ? connectionsResult.value.connections.find(
-        (candidate) => candidate.id === destination.connectionId,
-      )
-    : undefined;
-  return conferenceForDestination(
-    connection?.provider ?? "google",
-    destination.createsGoogleMeet !== false,
-    connection?.capabilities,
-  );
-};
-
 /**
- * The confirmed starts the slot engine must treat as taken, minus the guest's
- * own reservation when it is the one being moved.
+ * The confirmed reservations the slot engine must treat as taken, minus the
+ * guest's own reservation when it is the one being moved. Each keeps its own
+ * length, so a 60 minute booking blocks a full hour on a page whose first
+ * meeting type is 30 minutes.
  *
  * `computeSlotsForPage` and `assertSlotAvailable` must agree exactly on this
  * set for the same reason they share {@link slotEngineInputForPage}: a slot
  * the guest was offered must not be rejected (or accepted) differently by the
  * re-check.
  */
-const confirmedStartsForWindow = async (
+const confirmedIntervalsForWindow = async (
   page: BookingPageRecord,
   windowStart: Date,
   windowEnd: Date,
   omitReservationStart: Date | undefined,
-): Promise<Date[]> => {
+): Promise<{ start: Date; end: Date }[]> => {
   const omitStartMs = omitReservationStart?.getTime();
-  const starts = await bookingReservationRepository.listConfirmedStartsByPageId(
-    page._id,
-    confirmedReservationScanRange(page, windowStart, windowEnd),
-  );
-  return starts.filter((start) => start.getTime() !== omitStartMs);
+  const intervals =
+    await bookingReservationRepository.listConfirmedIntervalsByPageId(
+      page._id,
+      confirmedReservationScanRange(windowStart, windowEnd),
+    );
+  return intervals
+    .filter((interval) => interval.slotStart.getTime() !== omitStartMs)
+    .map((interval) => ({ start: interval.slotStart, end: interval.slotEnd }));
 };
 
 /**
@@ -560,12 +573,13 @@ const inFlightForGuestMutation = async (
  */
 const slotEngineInputForPage = (
   page: BookingPageRecord,
+  durationMinutes: number,
   availability: BusyAvailabilityResponse,
-  confirmedReservationStarts: readonly Date[],
+  confirmedReservations: readonly { start: Date; end: Date }[],
   window: { now: Date; windowStart: Date; windowEnd: Date },
 ): ComputeBookingSlotsInput => ({
   timeZone: page.timeZone,
-  durationMinutes: page.durationMinutes,
+  durationMinutes: BookingDurationMinutesSchema.parse(durationMinutes),
   weeklyAvailability: page.weeklyAvailability,
   minNoticeHours: page.minNoticeHours,
   maxHorizonDays: page.maxHorizonDays,
@@ -574,8 +588,11 @@ const slotEngineInputForPage = (
     .map((interval) => ({
       start: new Date(interval.start),
       end: new Date(interval.end),
-    })),
-  confirmedReservationStarts,
+    }))
+    .concat(confirmedReservations),
+  // Reservations arrive above as real intervals: meeting types can differ in
+  // length, and the engine would stretch each start to `durationMinutes`.
+  confirmedReservationStarts: [],
   now: window.now,
   windowStart: window.windowStart,
   windowEnd: window.windowEnd,
@@ -621,7 +638,7 @@ export class PublicBookingService {
     const page = await resolveEnabledPage(slug);
     await assertHostAllowsGuestWrites(page.userId);
     const hostDisplayName = await getHostDisplayName(page.userId);
-    const conference = await destinationConference(
+    const conference = await resolveBookingDestinationConference(
       page.userId,
       page.destinationCalendarId,
     );
@@ -649,13 +666,63 @@ export class PublicBookingService {
     return BookingPageStatusResponseSchema.parse(mapProbeToStatus(probe));
   }
 
+  async listHostUpcomingReservations(
+    userId: ObjectId,
+    slug: string,
+  ): Promise<HostUpcomingBookingReservationsResponse> {
+    const page = await assertPageOwner(userId, slug);
+    const now = new Date();
+    const reservations =
+      await bookingReservationRepository.listUpcomingConfirmedByPageId(
+        page._id,
+        now,
+      );
+    const meetLinksByEventId = await resolveMeetLinksByEventId(
+      page.userId,
+      page.destinationCalendarId,
+      reservations,
+    );
+    return HostUpcomingBookingReservationsResponseSchema.parse({
+      reservations: reservations.map((reservation) => ({
+        reservationId: reservation._id.toHexString(),
+        guestName: reservation.guestName,
+        guestEmail: reservation.guestEmail,
+        slotStart: DateTimeSchema.parse(reservation.slotStart.toISOString()),
+        slotEnd: DateTimeSchema.parse(reservation.slotEnd.toISOString()),
+        durationMinutes: reservationDurationMinutes(reservation),
+        ...meetingTypeLabelFor(reservation),
+        meetLink: reservation.calendarEventId
+          ? (meetLinksByEventId.get(reservation.calendarEventId) ?? null)
+          : null,
+      })),
+    });
+  }
+
+  async cancelReservationForPageOwner(
+    userId: ObjectId,
+    slug: string,
+    reservationId: ObjectId,
+  ): Promise<void> {
+    const page = await assertPageOwner(userId, slug);
+    const reservation =
+      await bookingReservationRepository.findById(reservationId);
+    if (
+      !reservation?.pageId.equals(page._id) ||
+      reservation.status === "cancelled"
+    ) {
+      throw reservationNotFound();
+    }
+    await this.finalizeCancel(reservation);
+  }
+
   async getSlots(
     slug: string,
     rawQuery: unknown,
   ): Promise<BookingSlotsResponse> {
     const page = await resolveEnabledPage(slug);
     const query = parseSlotsQuery(rawQuery);
-    return this.computeSlotsForPage(page, query);
+    const meetingType = resolvePageMeetingType(page, query.meetingTypeId);
+    return this.computeSlotsForPage(page, query, meetingType.durationMinutes);
   }
 
   async getReservationSlots(
@@ -677,12 +744,17 @@ export class PublicBookingService {
       end: query.end,
       timeZone: query.timeZone,
     });
-    const response = await this.computeSlotsForPage(page, slotsQuery, {
-      excludeEventIds: reservation.calendarEventId
-        ? [reservation.calendarEventId as EventId]
-        : undefined,
-      omitReservationStart: reservation.slotStart,
-    });
+    const response = await this.computeSlotsForPage(
+      page,
+      slotsQuery,
+      durationMinutesForReservation(reservation, page.durationMinutes),
+      {
+        excludeEventIds: reservation.calendarEventId
+          ? [reservation.calendarEventId as EventId]
+          : undefined,
+        omitReservationStart: reservation.slotStart,
+      },
+    );
     const currentStartMs = reservation.slotStart.getTime();
     return BookingSlotsResponseSchema.parse({
       ...response,
@@ -695,6 +767,7 @@ export class PublicBookingService {
   private async computeSlotsForPage(
     page: BookingPageRecord,
     query: { start: string; end: string },
+    durationMinutes: number,
     options: {
       excludeEventIds?: readonly EventId[];
       omitReservationStart?: Date;
@@ -744,14 +817,14 @@ export class PublicBookingService {
       });
     }
 
-    const confirmedStarts = await confirmedStartsForWindow(
+    const confirmed = await confirmedIntervalsForWindow(
       page,
       windowStart,
       windowEnd,
       options.omitReservationStart,
     );
     const slotStarts = computeBookingSlots(
-      slotEngineInputForPage(page, availability, confirmedStarts, {
+      slotEngineInputForPage(page, durationMinutes, availability, confirmed, {
         now,
         windowStart,
         windowEnd,
@@ -764,7 +837,7 @@ export class PublicBookingService {
         slotStart,
         slotEnd: slotEndForStart(
           new Date(slotStart),
-          page.durationMinutes,
+          durationMinutes,
         ).toISOString(),
       })),
     });
@@ -811,15 +884,18 @@ export class PublicBookingService {
       );
     }
 
-    const confirmedStarts = await confirmedStartsForWindow(
+    const confirmed = await confirmedIntervalsForWindow(
       page,
       slotStart,
       slotEnd,
       options.omitReservationStart,
     );
+    const durationMinutes = Math.round(
+      (slotEnd.getTime() - slotStart.getTime()) / 60_000,
+    );
     const allowedStarts = new Set(
       computeBookingSlots(
-        slotEngineInputForPage(page, availability, confirmedStarts, {
+        slotEngineInputForPage(page, durationMinutes, availability, confirmed, {
           now,
           windowStart: slotStart,
           windowEnd: slotEnd,
@@ -836,7 +912,8 @@ export class PublicBookingService {
     await assertHostAllowsGuestWrites(page.userId);
     const input = CreateBookingReservationInputSchema.parse(rawInput);
     assertGuestEmail(input.guestEmail);
-    assertPinnedDuration(input.durationMinutes, page.durationMinutes);
+    const meetingType = resolvePageMeetingType(page, input.meetingTypeId);
+    assertPinnedDuration(input.durationMinutes, meetingType.durationMinutes);
 
     const slotStart = new Date(input.slotStart);
     const slotEnd = slotEndForStart(slotStart, input.durationMinutes);
@@ -896,6 +973,8 @@ export class PublicBookingService {
       notes: input.notes?.trim() ?? null,
       guestTimeZone: input.guestTimeZone,
       cancelToken,
+      meetingTypeId: meetingType.id,
+      meetingTypeLabel: meetingType.label,
     });
     return this.resumeCreateOperation(page, operation);
   }
@@ -991,10 +1070,18 @@ export class PublicBookingService {
     }
     const page = await resolveReservationPublicPage(reservation);
     await assertHostAllowsGuestWrites(page.userId);
-    assertPinnedDuration(input.durationMinutes, page.durationMinutes);
+    // A moved meeting keeps its own length. Clients that predate meeting
+    // types send the page duration, which is accepted and then ignored.
+    const ownMinutes = durationMinutesForReservation(
+      reservation,
+      page.durationMinutes,
+    );
+    if (input.durationMinutes !== page.durationMinutes) {
+      assertPinnedDuration(input.durationMinutes, ownMinutes);
+    }
 
     const slotStart = new Date(input.slotStart);
-    const slotEnd = slotEndForStart(slotStart, input.durationMinutes);
+    const slotEnd = slotEndForStart(slotStart, ownMinutes);
     const hostDisplayName = await getHostDisplayName(page.userId);
 
     if (slotStart.getTime() === reservation.slotStart.getTime()) {
@@ -1148,8 +1235,10 @@ export class PublicBookingService {
 
   #runRecoveryCycle = (): void => {
     const cycle = this.recoverDueOperations().catch((error: unknown) => {
-      logger.error(
+      logMongoNetworkError(
+        logger,
         "Could not recover interrupted booking operations",
+        error,
         error instanceof Error
           ? { message: error.message }
           : { error: String(error) },
@@ -1554,7 +1643,7 @@ export class PublicBookingService {
         excludeEventIds: [current.eventId as EventId],
       });
       const hostDisplayName = await getHostDisplayName(page.userId);
-      const conference = await destinationConference(
+      const conference = await resolveBookingDestinationConference(
         page.userId,
         page.destinationCalendarId,
       );
@@ -1602,6 +1691,7 @@ export class PublicBookingService {
           guestEmail: current.guestEmail,
           notes: current.notes,
           guestTimeZone: current.guestTimeZone,
+          ...meetingTypeSnapshot(current),
           status: "confirmed",
           calendarEventId: current.eventId,
           cancelTokenHash: hashCancelToken(current.cancelToken),

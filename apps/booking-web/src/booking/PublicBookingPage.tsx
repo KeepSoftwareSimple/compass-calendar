@@ -2,6 +2,8 @@ import { PublicBookingAlert } from "@booking-web/booking/PublicBookingAlert";
 import { PublicBookingDetailsStep } from "@booking-web/booking/PublicBookingDetailsStep";
 import { PublicBookingGuestForm } from "@booking-web/booking/PublicBookingGuestForm";
 import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
+import { PublicBookingMeetingTypePicker } from "@booking-web/booking/PublicBookingMeetingTypePicker";
+import { PublicBookingOwnerInbox } from "@booking-web/booking/PublicBookingOwnerInbox";
 import { PublicBookingPicker } from "@booking-web/booking/PublicBookingPicker";
 import { PublicBookingSkipLink } from "@booking-web/booking/PublicBookingSkipLink";
 import {
@@ -88,6 +90,8 @@ export function PublicBookingPage() {
   }
 
   const { page } = pageView;
+  const durationMinutes =
+    flow.meetingType?.selected.durationMinutes ?? page.durationMinutes;
 
   return (
     <PublicBookingLayout wide>
@@ -111,7 +115,7 @@ export function PublicBookingPage() {
         </h1>
         <p className="text-sm text-text-muted">
           {formatBookingDurationWithConference(
-            formatDurationMinutes(page.durationMinutes),
+            formatDurationMinutes(durationMinutes),
             resolveBookingConference(page.conference, page.createsGoogleMeet),
           )}
         </p>
@@ -135,7 +139,7 @@ export function PublicBookingPage() {
         <PublicBookingDetailsStep
           headingRef={flow.detailsHeadingRef}
           slotStart={flow.selectedSlotStart}
-          durationMinutes={page.durationMinutes}
+          durationMinutes={durationMinutes}
           timeZone={flow.guestTimeZone}
           disabled={flow.createReservation.isPending}
           values={flow.guestDetails}
@@ -145,6 +149,14 @@ export function PublicBookingPage() {
         />
       ) : (
         <>
+          {flow.meetingType ? (
+            <PublicBookingMeetingTypePicker
+              types={flow.meetingType.types}
+              selectedId={flow.meetingType.selected.id}
+              shortcutsEnabled={!flow.createReservation.isPending}
+              onSelect={flow.handleSelectMeetingType}
+            />
+          ) : null}
           <PublicBookingPicker
             monthKey={flow.monthKey}
             timeZone={flow.guestTimeZone}
@@ -172,7 +184,7 @@ export function PublicBookingPage() {
             <PublicBookingGuestForm
               disabled={flow.createReservation.isPending}
               submitDisabled={!flow.selectedSlotStart}
-              durationMinutes={page.durationMinutes}
+              durationMinutes={durationMinutes}
               guestTimeZone={flow.guestTimeZone}
               values={flow.guestDetails}
               onChange={flow.setGuestDetails}
@@ -183,6 +195,11 @@ export function PublicBookingPage() {
               Select a time to continue.
             </p>
           )}
+
+          <PublicBookingOwnerInbox
+            hostTimeZone={page.timeZone}
+            slug={username}
+          />
         </>
       )}
     </PublicBookingLayout>

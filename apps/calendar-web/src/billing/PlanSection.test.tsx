@@ -72,7 +72,7 @@ const activeSummary = (
   currentPeriodEnd: PERIOD_END,
   cancelAtPeriodEnd: false,
   trialEndsAt: null,
-  price: { amount: 1200, currency: "usd", interval: "month" },
+  price: { amount: 799, currency: "usd", interval: "month" },
   paymentMethod: {
     brand: "visa",
     last4: "4242",
@@ -190,7 +190,7 @@ describe("PlanSection", () => {
 
     expect(screen.getByText("Trial not started")).toBeInTheDocument();
     expect(
-      screen.getByText("$12.00/mo after 7 days. Cancel anytime."),
+      screen.getByText("$7.99/mo after 7 days. Cancel anytime."),
     ).toBeInTheDocument();
     expect(screen.queryByText("Loading your plan")).not.toBeInTheDocument();
     const startTrial = screen.getByRole("button", { name: "Start free trial" });
@@ -255,7 +255,7 @@ describe("PlanSection", () => {
 
     expect(screen.getByText("Premium")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("$12.00 per month")).toBeInTheDocument();
+      expect(screen.getByText("$7.99 per month")).toBeInTheDocument();
     });
     expect(screen.getByText(`Renews ${PERIOD_END_LABEL}`)).toBeInTheDocument();
     expect(
@@ -337,6 +337,10 @@ describe("PlanSection", () => {
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: billingQueryKeys.subscription,
     });
+    expect(track).not.toHaveBeenCalledWith(
+      "subscription_cancel_reason_submitted",
+      expect.anything(),
+    );
     expect(track).toHaveBeenCalledWith("billing_cancel_scheduled");
     expect(toastMocks.toast).toHaveBeenCalledWith(
       `Your plan ends on ${PERIOD_END_LABEL}`,
@@ -346,6 +350,41 @@ describe("PlanSection", () => {
     cancel.mockRestore();
     track.mockRestore();
     invalidate.mockRestore();
+  });
+
+  it("sends subscription_cancel_reason_submitted when a reason is chosen", async () => {
+    const user = userEvent.setup({ delay: null });
+    spyOn(BillingApi, "cancelSubscription").mockResolvedValue({
+      subscriptionStatus: "active",
+      trialEndsAt: null,
+      isReadOnly: false,
+      cancelAtPeriodEnd: true,
+    });
+    const track = spyOn(Track, "track");
+    await renderPlan();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Cancel subscription" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.keyboard("c");
+    const dialog = screen.getByRole("dialog", { name: "Cancel your plan?" });
+    await user.click(
+      within(dialog).getByRole("radio", { name: "Too expensive" }),
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Cancel subscription" }),
+    );
+
+    await waitFor(() => {
+      expect(track).toHaveBeenCalledWith(
+        "subscription_cancel_reason_submitted",
+        { reason: "too_expensive" },
+      );
+    });
+    track.mockRestore();
   });
 
   it("resumes when cancel-at-period-end is already scheduled", async () => {
@@ -428,7 +467,7 @@ describe("PlanSection", () => {
     await renderPlan();
 
     await waitFor(() => {
-      expect(screen.getByText("$12.00 per month")).toBeInTheDocument();
+      expect(screen.getByText("$7.99 per month")).toBeInTheDocument();
     });
     expect(screen.queryByText("Receipts")).not.toBeInTheDocument();
   });

@@ -1,9 +1,5 @@
 import { expect, test } from "@playwright/test";
-import {
-  createEventTitle,
-  expectTimedEventVisible,
-  fillTitleAndSaveEventForm,
-} from "../utils/event-test-utils";
+import { expectTimedEventVisible } from "../utils/event-test-utils";
 
 // Most E2E coverage skips onboarding to keep the calendar tests focused. This
 // spec deliberately starts with empty browser storage so a new user's path is
@@ -48,6 +44,11 @@ test("welcomes a first-time user and seeds sample events", async ({
     welcomeDialog.getByRole("button", { name: "On this device only" }),
   ).toBeVisible();
   await page.keyboard.press("s");
+  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
+  await expect(
+    welcomeDialog.getByRole("heading", { name: "Essential shortcuts" }),
+  ).toBeVisible();
+  await page.keyboard.press("Enter");
   await expect(welcomeDialog).toBeHidden();
   await expect(
     page.getByRole("region", { name: "Shortcut practice" }),
@@ -64,15 +65,15 @@ test("welcomes a first-time user and seeds sample events", async ({
     name: "Create your first event",
   });
   await expect(prompt).toBeVisible();
-  await expect(prompt).toContainText("Your calendar is ready");
+  await expect(prompt).toContainText(
+    "Your calendar is ready. Add something to it.",
+  );
   await prompt.getByRole("button", { name: "Add event" }).click();
-  await expect(prompt).toBeHidden();
-  const title = createEventTitle("First-run event");
-  await fillTitleAndSaveEventForm(page, title);
 
   // The prompt celebrates the first real event, then retires.
   await expect(prompt).toContainText("It's on the calendar.");
   await expect(prompt).toBeHidden();
+  const title = "Coffee";
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(welcomeDialog).toBeHidden();

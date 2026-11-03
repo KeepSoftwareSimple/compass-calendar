@@ -10,35 +10,42 @@ struct EventFormFooterTipsView: View {
 
     var body: some View {
         if !model.levelsStore.tipsMuted {
-            VStack(alignment: .center, spacing: 2) {
+            ViewThatFits(in: .horizontal) {
                 HStack(spacing: 4) {
-                    if tabNavigationApplies {
-                        ShortcutHintChip(label: "Tab")
-                        Text("/")
-                            .font(.rubik(11))
-                            .foregroundStyle(theme.textMutedColor)
-                        ShortcutHintChip(label: "Shift")
-                        ShortcutHintChip(label: "Tab")
-                        Text("between fields ·")
-                            .font(.rubik(11))
-                            .foregroundStyle(theme.textMutedColor)
-                    }
-                    Text("Hold")
-                        .font(.rubik(11))
-                        .foregroundStyle(theme.textMutedColor)
-                    ShortcutHintChip(label: KeycapGlyphs.display(["Mod"]))
-                    Text("then")
-                        .font(.rubik(11))
-                        .foregroundStyle(theme.textMutedColor)
-                    ShortcutHintChip(label: "0")
-                    Text("for actions")
-                        .font(.rubik(11))
-                        .foregroundStyle(theme.textMutedColor)
+                    if tabNavigationApplies { tabNavigation }
+                    actions
                 }
-                .frame(maxWidth: .infinity)
+                VStack(spacing: 2) {
+                    if tabNavigationApplies { tabNavigation }
+                    actions
+                }
             }
-            .frame(minHeight: 40)
+            .font(.rubik(11))
+            .foregroundStyle(theme.textMutedColor)
+            .frame(maxWidth: .infinity, minHeight: 40)
             .accessibilityIdentifier("compass-event-form-footer-tips")
         }
+    }
+
+    private var tabNavigation: some View {
+        HStack(spacing: 4) {
+            ShortcutHintChip(label: "Tab")
+            Text("/")
+            ShortcutHintChip(label: "Shift")
+            ShortcutHintChip(label: "Tab")
+            Text("between fields ·")
+        }
+        .fixedSize()
+    }
+
+    private var actions: some View {
+        HStack(spacing: 4) {
+            Text("Hold")
+            ShortcutHintChip(label: KeycapGlyphs.display(["Mod"]))
+            Text("then")
+            ShortcutHintChip(label: "0")
+            Text("for actions")
+        }
+        .fixedSize()
     }
 }

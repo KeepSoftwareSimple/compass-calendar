@@ -47,9 +47,22 @@ export function formatEventStatus(
  * projection already splits them out, and "Starts in X minutes" is meaningless
  * for them.
  */
+/**
+ * One height for every state (loading, all clear, an event with or without a
+ * Join link), sized to the tallest, so the calendar list below never moves
+ * when today's events land or the next event changes.
+ */
+export const UP_NEXT_CARD_HEIGHT_CLASS_NAME = "min-h-17";
+
 export const UpNextCard: FC = () => {
-  const { now, openEventDetails, upNext, conferenceUrl, isCurrentEvent } =
-    useUpNextEvent();
+  const {
+    now,
+    openEventDetails,
+    upNext,
+    conferenceUrl,
+    isCurrentEvent,
+    isLoading,
+  } = useUpNextEvent();
   const countdown = upNext
     ? formatEventStatus(
         dayjs(upNext.startDate),
@@ -62,7 +75,9 @@ export const UpNextCard: FC = () => {
   return (
     <section aria-label="Up next" {...pageJumpAttrs("up-next")}>
       {upNext ? (
-        <div className="group relative flex min-h-14 w-full min-w-0 flex-col gap-0.5 rounded bg-surface px-2 py-1.5 hover:brightness-110">
+        <div
+          className={`group relative flex ${UP_NEXT_CARD_HEIGHT_CLASS_NAME} w-full min-w-0 flex-col gap-0.5 rounded bg-surface px-2 py-1.5 hover:brightness-110`}
+        >
           {/* Covers the whole card so clicking anywhere opens the event -
               the Join link below sits in normal flow above this in paint
               order (via relative + z-10), so it still receives its own
@@ -98,8 +113,17 @@ export const UpNextCard: FC = () => {
             </a>
           )}
         </div>
+      ) : isLoading ? (
+        // Today's events are still loading: hold the card's box without
+        // claiming "All clear" before we know.
+        <div
+          aria-hidden
+          className={`${UP_NEXT_CARD_HEIGHT_CLASS_NAME} rounded bg-surface`}
+        />
       ) : (
-        <p className="flex min-h-14 items-center rounded bg-surface px-2 py-1.5 font-medium text-sm text-text-muted">
+        <p
+          className={`flex ${UP_NEXT_CARD_HEIGHT_CLASS_NAME} items-center rounded bg-surface px-2 py-1.5 font-medium text-sm text-text-muted`}
+        >
           All clear
         </p>
       )}

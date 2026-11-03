@@ -1,3 +1,4 @@
+import { MICROSOFT_SCOPE_PEOPLE_READ } from "@core/providers/microsoft.scopes";
 import {
   CONTACT_SUGGESTION_MAX_RESULTS,
   type ContactSuggestion,
@@ -16,6 +17,7 @@ import {
   type ContactsPort,
   type ContactsSearchError,
   type ContactsSearchInput,
+  type ContactsSearchSources,
 } from "@sync/providers/provider-contacts.port";
 import { classifyContactsSearchError } from "@sync/providers/provider-contacts-error";
 
@@ -55,6 +57,15 @@ export class MicrosoftPeopleAdapter implements ContactsPort {
 
   constructor(makeApi: MicrosoftPeopleApiFactory = defaultApiFactory) {
     this.#makeApi = makeApi;
+  }
+
+  // Graph serves saved and interacted-with people from one `/me/people` call
+  // behind one scope, so there is no separate "other contacts" surface.
+  sourcesForGrantedScopes(granted: ReadonlySet<string>): ContactsSearchSources {
+    return {
+      contacts: granted.has(MICROSOFT_SCOPE_PEOPLE_READ),
+      otherContacts: false,
+    };
   }
 
   async searchContacts(

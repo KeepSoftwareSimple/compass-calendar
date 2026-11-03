@@ -1,4 +1,5 @@
 import {
+  chromiumExecutableFromEnv,
   chromiumInstallLocationFromDryRun,
   collectChangedFiles,
   type GitCommands,
@@ -305,6 +306,25 @@ describe("resolveMergeBase and collectChangedFiles", () => {
       mergeBases: { "HEAD:main": "fff111" },
     });
     expect(resolveMergeBase(git)).toEqual({ sha: "fff111", ref: "main" });
+  });
+});
+
+describe("chromiumExecutableFromEnv", () => {
+  it("returns the env path when it exists", () => {
+    expect(
+      chromiumExecutableFromEnv({
+        PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: process.execPath,
+      }),
+    ).toBe(process.execPath);
+  });
+
+  it("ignores an unset or missing path", () => {
+    expect(chromiumExecutableFromEnv({})).toBeNull();
+    expect(
+      chromiumExecutableFromEnv({
+        PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: "/nonexistent/chromium",
+      }),
+    ).toBeNull();
   });
 });
 

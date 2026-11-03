@@ -5,6 +5,7 @@ import { useSession } from "@web/auth/compass/session/useSession";
 import { clearAuthenticationState } from "@web/auth/compass/state/auth.state.util";
 import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
 import { track } from "@web/auth/posthog/track";
+import { waitForPendingEventMutations } from "@web/events/mutations/event.mutation.runtime";
 
 const SIGN_OUT_TIMEOUT_MS = 4000;
 
@@ -12,6 +13,9 @@ export function useLogout() {
   const { setAuthenticated } = useSession();
 
   return useCallback(async (): Promise<{ signedOutRemotely: boolean }> => {
+    const { queryClient } = await import("@web/api/query-client");
+    await waitForPendingEventMutations(queryClient);
+
     // Clear auth state first, before awaiting signOut. The SIGN_OUT event
     // fires during signOut() and handleSessionMissing reads hasUserEverAuthenticated(),
     // which requires auth state to already be cleared to compute the correct source.

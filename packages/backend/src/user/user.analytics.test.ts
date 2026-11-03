@@ -1,6 +1,13 @@
 import { mockEnv } from "@backend/__tests__/helpers/mock.setup";
 import { userAnalytics } from "@backend/user/user.analytics";
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
+
+mock.module("@backend/user/posthog-synthetic-account.util", () => ({
+  posthogSyntheticFlagsForCompassUserId: mock(async () => ({
+    $internal_or_test_user: true,
+    is_synthetic: true,
+  })),
+}));
 
 describe("userAnalytics.capture", () => {
   const realFetch = globalThis.fetch;
@@ -29,7 +36,11 @@ describe("userAnalytics.capture", () => {
     expect(bodies[0]).toMatchObject({
       event: "account_deleted",
       distinct_id: "u1",
-      properties: { environment: "test" },
+      properties: {
+        environment: "test",
+        $internal_or_test_user: true,
+        is_synthetic: true,
+      },
     });
   });
 });

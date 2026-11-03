@@ -57,10 +57,10 @@ describe("isAllDayEventOnDay", () => {
 });
 
 describe("assignDayAllDayEventRows", () => {
-  it("returns one row when there are no all-day events", () => {
+  it("returns zero rows when there are no all-day events", () => {
     expect(assignDayAllDayEventRows([], () => 0)).toEqual({
       allDayEvents: [],
-      rowsCount: 1,
+      rowsCount: 0,
     });
   });
 

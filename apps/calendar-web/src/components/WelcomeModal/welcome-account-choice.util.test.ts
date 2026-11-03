@@ -1,6 +1,5 @@
 import { BILLING_PLAN } from "@core/constants/billing.constants";
 import {
-  signupTrialStepTermsLine,
   welcomeTrialCardTermsLine,
   welcomeTrialPrimaryLabel,
   welcomeTrialPrimaryProvider,
@@ -24,12 +23,6 @@ describe("welcome-account-choice.util", () => {
   it("uses billing trial length and card requirement in the terms line", () => {
     expect(welcomeTrialCardTermsLine()).toBe(
       `${BILLING_PLAN.TRIAL_LENGTH_DAYS}-day free trial. Card required, no charge until it ends.`,
-    );
-  });
-
-  it("uses shorter card copy on the signup trial step", () => {
-    expect(signupTrialStepTermsLine()).toBe(
-      "Card required. No charge until the trial ends.",
     );
   });
 });

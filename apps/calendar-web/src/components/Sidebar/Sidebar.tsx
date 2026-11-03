@@ -66,7 +66,7 @@ export function Sidebar({
           {eventDetails}
         </section>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-5 [scrollbar-gutter:stable]">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-y-auto overflow-x-hidden px-4 pb-5 [scrollbar-gutter:stable]">
           <Suspense fallback={<div aria-hidden className="h-63" />}>
             <MonthPicker
               monthsShown={monthsShown}

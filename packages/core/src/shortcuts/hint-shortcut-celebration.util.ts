@@ -22,6 +22,13 @@ export const hintShortcutPartLabel = (
   part: Exclude<HintShortcutTipPart, string>,
 ): string => partTokens(part).map(spokenToken).join("+");
 
+export function hintShortcutCelebrationKeyForPart(
+  hintId: string,
+  part: Exclude<HintShortcutTipPart, string>,
+): HintShortcutCelebrationKey {
+  return `${hintId}:${hintShortcutPartLabel(part)}`;
+}
+
 /** Builds `hintId:alt+arrowdown` style keys for each inline keycap group. */
 export function listHintShortcutCelebrationKeys(
   hintId: string,
@@ -30,7 +37,7 @@ export function listHintShortcutCelebrationKeys(
   const keys: HintShortcutCelebrationKey[] = [];
   for (const part of parts) {
     if (typeof part === "string") continue;
-    keys.push(`${hintId}:${hintShortcutPartLabel(part)}`);
+    keys.push(hintShortcutCelebrationKeyForPart(hintId, part));
   }
   return keys;
 }
@@ -42,7 +49,7 @@ export function hintShortcutCelebrationKeyAtPartIndex(
 ): HintShortcutCelebrationKey | null {
   const part = parts[partIndex];
   if (part === undefined || typeof part === "string") return null;
-  return `${hintId}:${hintShortcutPartLabel(part)}`;
+  return hintShortcutCelebrationKeyForPart(hintId, part);
 }
 
 export function firstHintShortcutCelebrationKey(

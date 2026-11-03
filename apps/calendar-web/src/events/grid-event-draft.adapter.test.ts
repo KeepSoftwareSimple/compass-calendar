@@ -22,6 +22,7 @@ import {
   replaceGridDraftSchedule,
   resolveDraftRecurrenceRules,
   suppressedSeriesIdForDraft,
+  timedGridSchedule,
 } from "./grid-event-draft.adapter";
 import { patchGridDraftRecurrence } from "./recurrence/recurrence-rules-equal";
 import { expect, test } from "bun:test";
@@ -179,6 +180,31 @@ test("parses an edit draft into a replace command", () => {
     ok: true,
     mode: "edit",
     eventId: timedEvent.id,
+    input: {
+      scope: "this",
+      recurrence: { kind: "preserve" },
+    },
+  });
+  if (!result.ok || result.mode !== "edit") throw new Error("expected edit");
+  expect(result.input.schedule).toBeUndefined();
+  expect(result.input.content.title).toBe(
+    timedEvent.content.kind === "details" ? timedEvent.content.title : "",
+  );
+});
+
+test("includes schedule on edit when the draft changes start time", () => {
+  const draft = editGridEventDraft(timedEvent);
+  if (!draft) throw new Error("Expected scheduled event draft");
+  draft.values.schedule = timedGridSchedule(
+    new Date("2026-08-01T10:00:00.000Z"),
+    new Date("2026-08-01T11:00:00.000Z"),
+  );
+
+  const result = parseGridEventDraft(draft);
+
+  expect(result).toMatchObject({
+    ok: true,
+    mode: "edit",
     input: {
       scope: "this",
       schedule: { kind: "timed" },

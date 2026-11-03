@@ -92,15 +92,7 @@ export class ProviderCalendarRepository {
       active: true,
       providerCalendarId: { $nin: [...presentProviderCalendarIds] },
     };
-    const retired = await this.collection
-      .find(filter)
-      .project<{ _id: ProviderCalendarId }>({ _id: 1 })
-      .toArray();
-    if (retired.length === 0) return [];
-    await this.collection.updateMany(filter, {
-      $set: { active: false, updatedAt: new Date() },
-    });
-    return retired.map((r) => r._id);
+    return this.retireMatching(filter);
   }
 
   // Mark inactive specific calendars (still listed at the provider but events
@@ -117,6 +109,15 @@ export class ProviderCalendarRepository {
       _id: { $in: [...ids] },
       active: true,
     };
+    return this.retireMatching(filter);
+  }
+
+  // Both retirement paths need the ids that actually transitioned
+  // active -> inactive, so the matching documents are read before the update
+  // rather than inferred from its modified count.
+  private async retireMatching(
+    filter: Filter<ProviderCalendarRecord>,
+  ): Promise<ProviderCalendarId[]> {
     const retired = await this.collection
       .find(filter)
       .project<{ _id: ProviderCalendarId }>({ _id: 1 })

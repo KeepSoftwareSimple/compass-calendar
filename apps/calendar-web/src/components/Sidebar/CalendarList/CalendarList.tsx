@@ -36,6 +36,7 @@ import {
 import { AccountSectionHeader } from "./AccountSectionHeader";
 import { AnonymousCalendarRow } from "./AnonymousCalendarRow";
 import { CalendarListHeader } from "./CalendarListHeader";
+import { useCalendarListHeight } from "./useCalendarListHeight";
 
 export const CalendarList: FC = () => {
   const { authenticated } = useSession();
@@ -46,6 +47,7 @@ export const CalendarList: FC = () => {
   const { toggleCalendarVisibility, announcement } = useCalendarVisibility();
   const accountEmailOrder = useConnectedAccountEmails();
   const collapsedKeys = useCollapsedAccountKeys();
+  const { skeletonHeight, measureRef } = useCalendarListHeight();
 
   const isAnonymous = !email;
   // CalendarListHeader renders a working connect button under exactly this
@@ -53,7 +55,7 @@ export const CalendarList: FC = () => {
   // directly beneath the control that solves it.
   const showConnectCta =
     authenticated && connections.length === 0 && availableProviders.length > 0;
-  // Session expiry already surfaces SessionExpiredToast — don't also show
+  // Session expiry already opens the login modal — don't also show
   // "Couldn't load calendars" / Retry (or a false empty-list story) for it.
   const showCalendarsLoadError = shouldShowContextualLoadError(isError, error);
   const hideCalendarsBody = isPending || (isError && !showCalendarsLoadError);
@@ -109,7 +111,18 @@ export const CalendarList: FC = () => {
           heading with no way to tell them apart. */}
       {groups.length === 0 && !isAnonymous && <CalendarListHeader />}
 
-      {hideCalendarsBody ? null : showCalendarsLoadError ? (
+      {hideCalendarsBody ? (
+        showConnectCta ? null : (
+          // Holds the list's last height while calendars load, so the notices
+          // below it don't jump when the rows arrive.
+          <div
+            aria-hidden
+            className="animate-pulse rounded bg-surface/50"
+            data-testid="calendar-list-skeleton"
+            style={{ height: skeletonHeight }}
+          />
+        )
+      ) : showCalendarsLoadError ? (
         <div className="flex items-center justify-between gap-2 text-xs">
           <p className="text-error">Couldn't load calendars.</p>
           <button
@@ -122,10 +135,12 @@ export const CalendarList: FC = () => {
         </div>
       ) : calendars.length === 0 && groups.length === 0 ? (
         showConnectCta ? null : (
-          <p className="text-text-muted text-xs">No calendars yet.</p>
+          <p className="text-text-muted text-xs" ref={measureRef}>
+            No calendars yet.
+          </p>
         )
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3" ref={measureRef}>
           {groups.map((group) => {
             const key = accountKey(group);
             const collapsed = collapsedKeys.has(key);

@@ -304,6 +304,38 @@ describe("EventForm", () => {
     document.body.removeAttribute("data-app-locked");
   });
 
+  it("preserves every character when the title changes in rapid succession", () => {
+    function Harness() {
+      const [currentDraft, setDraft] = useState<GridEventDraft | null>(
+        createNewDraft({ title: "" }),
+      );
+      if (!currentDraft) return null;
+
+      return (
+        <EventForm
+          draft={currentDraft}
+          isDraft={true}
+          isExistingEvent={false}
+          onClose={mock()}
+          onDelete={mock()}
+          onSubmit={mock()}
+          setDraft={setDraft}
+        />
+      );
+    }
+
+    renderWithStore(<Harness />);
+    const titleField = screen.getByPlaceholderText("Title");
+    const text = "TheQuickBrownFoxJumpsOverTheLazyDog012345678901234567890";
+
+    for (let index = 0; index < text.length; index += 1) {
+      const next = text.slice(0, index + 1);
+      fireEvent.change(titleField, { target: { value: next } });
+    }
+
+    expect(titleField).toHaveValue(text);
+  });
+
   it("renders the actions toolbar above the title", () => {
     renderWithStore(
       <EventForm

@@ -140,6 +140,84 @@ describe("shouldTeachPointerIntent", () => {
       }),
     ).toBe(false);
   });
+
+  describe("empty-grid intents (slot-click, allday-click)", () => {
+    const explorerProfile = {
+      version: 2 as const,
+      actions: {},
+      shortcuts: {
+        "edit-open": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 1, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+        "create-typed-time": { invocations: 5, recentImpressions: 0 },
+        "create-allday": { invocations: 5, recentImpressions: 0 },
+      },
+    };
+
+    it("teaches on every click at Explorer even when shortcuts were used", () => {
+      writeShortcutUsageProfile(explorerProfile);
+      markPointerIntentHintShown("card-click");
+      markPointerIntentHintShown("slot-click");
+      markPointerIntentHintShown("allday-click");
+      markPointerIntentHintShown("grid-scroll");
+      const session = getPointerIntentSessionSnapshot();
+      expect(session.hintsShownThisSession).toBeGreaterThan(
+        MAX_POINTER_HINTS_PER_SESSION,
+      );
+      expect(shouldTeachPointerIntent({ intent: "slot-click", session })).toBe(
+        true,
+      );
+      expect(
+        shouldTeachPointerIntent({ intent: "allday-click", session }),
+      ).toBe(true);
+    });
+
+    it("refuses when tips are muted", () => {
+      setTipsMuted(true);
+      expect(
+        shouldTeachPointerIntent({
+          intent: "slot-click",
+          session: getPointerIntentSessionSnapshot(),
+          tipsMuted: true,
+        }),
+      ).toBe(false);
+      expect(
+        shouldTeachPointerIntent({
+          intent: "allday-click",
+          session: getPointerIntentSessionSnapshot(),
+          tipsMuted: true,
+        }),
+      ).toBe(false);
+    });
+
+    it("refuses when tips are dismissed permanently", () => {
+      expect(
+        shouldTeachPointerIntent({
+          intent: "slot-click",
+          session: getPointerIntentSessionSnapshot(),
+          tipsDismissedPermanently: true,
+        }),
+      ).toBe(false);
+    });
+
+    it("refuses while another pill is visible", () => {
+      expect(
+        shouldTeachPointerIntent({
+          intent: "slot-click",
+          session: getPointerIntentSessionSnapshot(),
+          pillVisible: true,
+        }),
+      ).toBe(false);
+      expect(
+        shouldTeachPointerIntent({
+          intent: "allday-click",
+          session: getPointerIntentSessionSnapshot(),
+          pillVisible: true,
+        }),
+      ).toBe(false);
+    });
+  });
 });
 
 describe("teachingMessageForIntent", () => {

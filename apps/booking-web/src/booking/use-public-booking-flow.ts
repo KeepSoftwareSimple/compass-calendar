@@ -14,6 +14,10 @@ import {
 } from "@booking-web/booking/public-booking.query";
 import { PUBLIC_BOOKING_SLOT_CONFLICT } from "@booking-web/booking/public-booking.view";
 import {
+  meetingTypeSearchValue,
+  selectPublicMeetingType,
+} from "@booking-web/booking/public-booking-meeting-types";
+import {
   type PublicBookingSearch,
   tokenFromGuestActionUrl,
 } from "@booking-web/booking/public-booking-search";
@@ -69,11 +73,20 @@ export function usePublicBookingFlow() {
   const { guestTimeZone, monthKey, selectedSlotStart } = keys;
 
   const pageQuery = usePublicBookingPageQuery(slug);
+  const meetingType = pageQuery.data
+    ? selectPublicMeetingType(pageQuery.data, search.type)
+    : null;
+  // Before page meta lands, trust `?type=` so the first month still loads in
+  // parallel; the server falls back to type #1 for an unknown id.
+  const slotsTypeId = meetingType ? meetingType.requestTypeId : search.type;
+  const durationMinutes =
+    meetingType?.selected.durationMinutes ?? pageQuery.data?.durationMinutes;
   const slotsQuery = usePublicBookingSlotsQuery(
     slug,
     monthKey,
     pageQuery.data?.maxHorizonDays,
     guestTimeZone,
+    slotsTypeId,
   );
   const createReservation = useCreatePublicBookingReservationMutation(slug);
 
@@ -103,6 +116,7 @@ export function usePublicBookingFlow() {
         nextMonthKey,
         guestTimeZone,
         maxHorizonDays,
+        slotsTypeId,
       );
     },
     resolveNextAvailableDate: (afterDateKey, todayKey, maxHorizonDays) =>
@@ -114,6 +128,7 @@ export function usePublicBookingFlow() {
         guestTimeZone,
         todayKey,
         maxHorizonDays,
+        slotsTypeId,
       ),
   });
   const { alertMessage, setAlertMessage, updateSearch } = selection;
@@ -131,10 +146,10 @@ export function usePublicBookingFlow() {
     guestTimeZone,
     pageQuery.data?.maxHorizonDays,
     pageQuery.isSuccess && pageQuery.data.enabled && slotsQuery.isSuccess,
+    slotsTypeId,
   );
 
   useEffect(() => {
-    const durationMinutes = pageQuery.data?.durationMinutes;
     if (durationMinutes == null) return;
     const outcome = bookingSlotsOutcome({
       bookable: slotsQuery.data?.bookable,
@@ -145,23 +160,17 @@ export function usePublicBookingFlow() {
     trackOnce(slotsOutcomeKeyRef, `${slug}:${monthKey}:${outcome}`, () => {
       trackBookingSlotsLoaded(outcome, { duration_minutes: durationMinutes });
     });
-  }, [
-    monthKey,
-    pageQuery.data?.durationMinutes,
-    slug,
-    slotsQuery.data,
-    slotsQuery.isError,
-  ]);
+  }, [monthKey, durationMinutes, slug, slotsQuery.data, slotsQuery.isError]);
 
   useEffect(() => {
     if (!selectedSlotStart || pageQuery.data == null) return;
     trackOnce(selectedSlotTrackedRef, `${slug}:${selectedSlotStart}`, () => {
       trackBookingSlotSelected({
-        duration_minutes: pageQuery.data.durationMinutes,
+        duration_minutes: durationMinutes ?? pageQuery.data.durationMinutes,
         timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
       });
     });
-  }, [guestTimeZone, pageQuery.data, selectedSlotStart, slug]);
+  }, [durationMinutes, guestTimeZone, pageQuery.data, selectedSlotStart, slug]);
 
   useEffect(() => {
     if (!showDetailsStep || !selectedSlotStart || pageQuery.data == null) {
@@ -169,11 +178,18 @@ export function usePublicBookingFlow() {
     }
     trackOnce(detailsTrackedRef, `${slug}:${selectedSlotStart}`, () => {
       trackBookingDetailsReached({
-        duration_minutes: pageQuery.data.durationMinutes,
+        duration_minutes: durationMinutes ?? pageQuery.data.durationMinutes,
         timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
       });
     });
-  }, [guestTimeZone, pageQuery.data, selectedSlotStart, showDetailsStep, slug]);
+  }, [
+    durationMinutes,
+    guestTimeZone,
+    pageQuery.data,
+    selectedSlotStart,
+    showDetailsStep,
+    slug,
+  ]);
 
   // 409 only: keep typed details while they pick another slot. Other alerts
   // (empty horizon, confirm failure) must not open the guest form.
@@ -188,6 +204,17 @@ export function usePublicBookingFlow() {
   const handleMonthChange = (nextMonthKey: string) => {
     setChangingTime(false);
     selection.handleMonthChange(nextMonthKey);
+  };
+
+  /** A new type has different open times, so any picked slot is dropped. */
+  const handleSelectMeetingType = (id: string) => {
+    if (!meetingType || id === meetingType.selected.id) return;
+    setChangingTime(false);
+    setAlertMessage(null);
+    updateSearch({
+      type: meetingTypeSearchValue(meetingType.types, id),
+      slot: undefined,
+    });
   };
 
   const handleChangeTime = () => {
@@ -214,7 +241,8 @@ export function usePublicBookingFlow() {
 
     submitInFlightRef.current = true;
     setAlertMessage(null);
-    const durationMinutes = pageQuery.data.durationMinutes;
+    const selection = selectPublicMeetingType(pageQuery.data, search.type);
+    const durationMinutes = selection.selected.durationMinutes;
 
     try {
       const result = await createReservation.mutateAsync(
@@ -225,6 +253,9 @@ export function usePublicBookingFlow() {
           notes: values.notes || undefined,
           guestTimeZone: values.guestTimeZone,
           durationMinutes,
+          // Always name the type, #1 included, so the reservation records
+          // which meeting the guest picked.
+          meetingTypeId: selection.selected.id,
         }),
       );
       track("booking_reservation_created", {
@@ -273,6 +304,7 @@ export function usePublicBookingFlow() {
     slotsQuery,
     createReservation,
     guestTimeZone,
+    meetingType,
     monthKey,
     selectedSlotStart,
     selectedDateKey: selection.selectedDateKey,
@@ -292,6 +324,7 @@ export function usePublicBookingFlow() {
     handleMonthChange,
     handleTimeZoneChange: selection.handleTimeZoneChange,
     handleChangeTime,
+    handleSelectMeetingType,
     handlePrefetchMonth: selection.handlePrefetchMonth,
     handleJumpToNextAvailable: selection.handleJumpToNextAvailable,
     handleSubmit,

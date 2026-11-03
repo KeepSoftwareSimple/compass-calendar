@@ -1,4 +1,5 @@
 import { type FC, useEffect, useRef } from "react";
+import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { track } from "@web/auth/posthog/track";
 import {
   checkoutCelebrationActions,
@@ -24,7 +25,7 @@ const TITLE = "You're aboard!";
 const getBody = (access: AppAccess): string => {
   if (access.kind !== "server") return "Setting up your subscription...";
   if (access.status === "trialing") {
-    return "Your 7-day trial has started. Full access to all Compass features.";
+    return `Your ${BILLING_PLAN.TRIAL_LENGTH_DAYS}-day trial has started. Full access to all Compass features.`;
   }
   if (access.status === "active") return "You're a Compass Premium member.";
   return "Setting up your subscription...";

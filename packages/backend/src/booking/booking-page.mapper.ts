@@ -2,9 +2,13 @@ import {
   type AdminGetBookingPageResponse,
   type AdminGetBookingPageSetupResponse,
   type AdminPutBookingPageInput,
+  type BookingMeetingTypes,
   type BookingPage,
   BookingPageSchema,
+  defaultMeetingTypes,
+  meetingTypeWithDuration,
   pickAdminPutBookingPageInput,
+  resolveBookingMeetingTypes,
 } from "@core/types/booking.contracts";
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
 import { CONFIG } from "@backend/common/constants/config.constants";
@@ -36,6 +40,7 @@ export const mapBookingPageRecordToWire = (
     hostUserId: record.userId.toString(),
     enabled: record.enabled,
     durationMinutes: record.durationMinutes,
+    meetingTypes: resolveBookingMeetingTypes(record),
     destinationCalendarId: record.destinationCalendarId,
     blockingCalendarIds: record.blockingCalendarIds,
     timeZone: record.timeZone,
@@ -63,6 +68,7 @@ export const mapBookingPageRecordToSetupResponse = (
     BookingPageRecord,
     | "enabled"
     | "durationMinutes"
+    | "meetingTypes"
     | "destinationCalendarId"
     | "blockingCalendarIds"
     | "timeZone"
@@ -72,13 +78,42 @@ export const mapBookingPageRecordToSetupResponse = (
   >,
   suggestedSlug: string,
 ): AdminGetBookingPageSetupResponse => ({
-  ...pickAdminPutBookingPageInput(record),
+  ...pickAdminPutBookingPageInput({
+    ...record,
+    meetingTypes: resolveBookingMeetingTypes(record),
+  }),
   isConfigured: true,
   suggestedSlug,
 });
 
+/**
+ * The meeting types a PUT stores. Clients that predate meeting types send
+ * only `durationMinutes`: keep the stored types and move type #1 to that
+ * duration, renaming it only while it still carries the default label.
+ */
+export const meetingTypesForPut = (
+  input: Pick<AdminPutBookingPageInput, "durationMinutes" | "meetingTypes">,
+  existing:
+    | Pick<BookingPageRecord, "durationMinutes" | "meetingTypes">
+    | null
+    | undefined,
+): BookingMeetingTypes => {
+  if (input.meetingTypes) {
+    return input.meetingTypes;
+  }
+  const current = existing
+    ? resolveBookingMeetingTypes(existing)
+    : defaultMeetingTypes(input.durationMinutes);
+  const [first, ...rest] = current;
+  if (!first || first.durationMinutes === input.durationMinutes) {
+    return current;
+  }
+  return [meetingTypeWithDuration(first, input.durationMinutes), ...rest];
+};
+
 export const mapPutInputToRecordFields = (
   input: AdminPutBookingPageInput,
+  existing?: Pick<BookingPageRecord, "durationMinutes" | "meetingTypes"> | null,
 ): Omit<
   BookingPageRecord,
   | "_id"
@@ -90,5 +125,11 @@ export const mapPutInputToRecordFields = (
   | "hostNoticedReservationId"
 > => {
   const { slug: _slug, ...withoutSlug } = input;
-  return pickAdminPutBookingPageInput(withoutSlug);
+  const meetingTypes = meetingTypesForPut(input, existing);
+  const first = meetingTypes[0];
+  return pickAdminPutBookingPageInput({
+    ...withoutSlug,
+    durationMinutes: first ? first.durationMinutes : input.durationMinutes,
+    meetingTypes,
+  });
 };

@@ -33,7 +33,9 @@ export class EmailWebhookController {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Webhook error";
       logger.warn(`Resend webhook rejected: ${message}`);
-      res.status(Status.BAD_REQUEST).json({ error: message });
+      res
+        .status(Status.BAD_REQUEST)
+        .json({ error: "Invalid Resend webhook signature" });
       return;
     }
 

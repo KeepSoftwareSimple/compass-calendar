@@ -16,7 +16,7 @@ import {
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
 import { timezoneDialogActions } from "@web/timezone/timezone-dialog.store";
 import {
-  isTimezoneMismatchBannerActive,
+  shouldShowTimezoneMismatch,
   snoozeTimezoneMismatch,
   timezoneMismatchCopy,
   useTimezoneMismatchSnoozedBrowser,
@@ -28,7 +28,7 @@ export function useTimezoneCmdItems(): CommandItem[] {
   const pinnedTimeZone = usePinnedTimeZone();
   const browserTimeZone = useBrowserTimeZone();
   const snoozedForBrowser = useTimezoneMismatchSnoozedBrowser();
-  const mismatchActive = isTimezoneMismatchBannerActive(
+  const mismatchActive = shouldShowTimezoneMismatch(
     pinnedTimeZone,
     browserTimeZone,
     snoozedForBrowser,

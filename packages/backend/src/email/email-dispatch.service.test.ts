@@ -43,6 +43,7 @@ const baseRow = (overrides: Partial<EmailSendRecord> = {}): EmailSendRecord => {
 describe("EmailDispatchService", () => {
   const originalProvider = CONFIG.EMAIL_PROVIDER;
   const originalAllowlist = [...CONFIG.EMAIL_ALLOWLIST];
+  const originalSyntheticBases = [...CONFIG.SYNTHETIC_JOURNEY_EMAILS];
 
   beforeEach(() => {
     spyOn(emailSendRepository, "isQueued").mockResolvedValue(true);
@@ -51,6 +52,7 @@ describe("EmailDispatchService", () => {
   afterEach(() => {
     CONFIG.EMAIL_PROVIDER = originalProvider;
     CONFIG.EMAIL_ALLOWLIST = originalAllowlist;
+    CONFIG.SYNTHETIC_JOURNEY_EMAILS = originalSyntheticBases;
     mock.restore();
   });
 
@@ -133,6 +135,112 @@ describe("EmailDispatchService", () => {
       row._id,
       "Recipient not allowlisted",
     );
+  });
+
+  it("skips welcome sends for prod journey plus addresses on configured bases", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    CONFIG.SYNTHETIC_JOURNEY_EMAILS = [
+      "lance.essert+prod-journey-google@gmail.com",
+    ];
+    const row = baseRow();
+    const send = mock(async () => ({ messageId: "msg-1" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const markSkipped = spyOn(
+      emailSendRepository,
+      "markSkipped",
+    ).mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "lance.essert+prod-journey-google+journey1730123456789@gmail.com",
+      billing: undefined,
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markSkipped).toHaveBeenCalledWith(row._id, "Synthetic account");
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("skips welcome sends for configured synthetic journey plus addresses", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    CONFIG.SYNTHETIC_JOURNEY_EMAILS = ["lance.essert@gmail.com"];
+    const row = baseRow();
+    const send = mock(async () => ({ messageId: "msg-1" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const markSkipped = spyOn(
+      emailSendRepository,
+      "markSkipped",
+    ).mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "lance.essert+journey1730123456789@gmail.com",
+      billing: undefined,
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markSkipped).toHaveBeenCalledWith(row._id, "Synthetic account");
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("skips welcome sends for keepsoftwaresimple.com inboxes", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    const row = baseRow();
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const markSkipped = spyOn(
+      emailSendRepository,
+      "markSkipped",
+    ).mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "founder@keepsoftwaresimple.com",
+      isSynthetic: true,
+      billing: undefined,
+    });
+    const send = mock(async () => ({ messageId: "msg-1" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markSkipped).toHaveBeenCalledWith(row._id, "Synthetic account");
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("skips welcome sends for compasscaltest.invalid journey inboxes", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    const row = baseRow();
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const markSkipped = spyOn(
+      emailSendRepository,
+      "markSkipped",
+    ).mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "runner+journey1@compasscaltest.invalid",
+      isSynthetic: true,
+      billing: undefined,
+    });
+    const send = mock(async () => ({ messageId: "msg-1" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markSkipped).toHaveBeenCalledWith(row._id, "Synthetic account");
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("passes USER_FIRST_NAME when the user has a first name", async () => {

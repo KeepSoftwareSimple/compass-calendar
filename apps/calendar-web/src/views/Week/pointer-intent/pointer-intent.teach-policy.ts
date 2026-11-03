@@ -1,4 +1,5 @@
 import {
+  arePointerHintEnvironmentGatesClosed,
   type PointerHintGateOverrides,
   shouldTeachPointerHint,
 } from "@web/shortcuts/pointer-intent/pointer-hint.teach-policy";
@@ -13,15 +14,29 @@ export type ShouldTeachPointerIntentInput = PointerHintGateOverrides & {
   session: PointerIntentSessionSnapshot;
 };
 
+const EMPTY_GRID_EVERY_CLICK_INTENTS = new Set<PointerIntent>([
+  "slot-click",
+  "allday-click",
+]);
+
+function isEmptyGridEveryClickIntent(intent: PointerIntent): boolean {
+  return EMPTY_GRID_EVERY_CLICK_INTENTS.has(intent);
+}
+
 /**
- * A grid intent teaches once per session and retires on the first registry id
- * it names; every other rule lives in the shared pointer-hint gate.
+ * Grid intents other than empty-slot clicks teach once per session and retire
+ * on the first registry id they name. Empty-grid clicks reuse the shared
+ * mute/lock/pill gates and skip Explorer, session cap, and retire-on-use.
  */
 export function shouldTeachPointerIntent({
   intent,
   session,
   ...gates
 }: ShouldTeachPointerIntentInput): boolean {
+  if (isEmptyGridEveryClickIntent(intent)) {
+    return !arePointerHintEnvironmentGatesClosed(gates);
+  }
+
   return shouldTeachPointerHint({
     ...gates,
     shortcutId: INTENT_TEACHING[intent].shortcutIds[0],

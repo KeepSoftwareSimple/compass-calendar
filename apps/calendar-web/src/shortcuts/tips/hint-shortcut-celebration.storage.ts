@@ -13,7 +13,7 @@ export function readLocalHintShortcutCelebratedKeys(): readonly HintShortcutCele
   return readIdList(STORAGE_KEYS.SHORTCUT_HINT_FIRST_USED);
 }
 
-export function readHintShortcutCelebratedKeysFromMetadata(
+function readHintShortcutCelebratedKeysFromMetadata(
   metadata: UserMetadata | null | undefined,
 ): readonly HintShortcutCelebrationKey[] {
   return metadata?.shortcuts?.hintFirstUsed ?? [];
@@ -56,7 +56,7 @@ export function claimHintShortcutCelebration(
   return true;
 }
 
-export function markHintShortcutCelebratedLocally(
+function markHintShortcutCelebratedLocally(
   key: HintShortcutCelebrationKey,
 ): readonly HintShortcutCelebrationKey[] {
   const next = mergeHintShortcutCelebrationKeys(
@@ -87,7 +87,7 @@ export function mergeHintShortcutCelebrationFromMetadata(
   return merged;
 }
 
-export async function persistHintShortcutCelebratedToAccount(
+async function persistHintShortcutCelebratedToAccount(
   keys: readonly HintShortcutCelebrationKey[],
 ): Promise<void> {
   if (!readAuthenticated()) return;

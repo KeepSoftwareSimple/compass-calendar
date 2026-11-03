@@ -1,5 +1,6 @@
 import { type ObjectId } from "mongodb";
 import { z } from "zod/v4";
+import { BOOKING_MAX_DURATION_MINUTES } from "@core/types/booking.contracts";
 import { zObjectId } from "@core/types/object-id.schema";
 import {
   type BookingReservationRecord,
@@ -14,24 +15,25 @@ const ConfirmedSlotRowSchema = z.object({
   slotStart: z.date(),
 });
 
+const ConfirmedIntervalRowSchema = z.object({
+  slotStart: z.date(),
+  slotEnd: z.date(),
+});
+
 /**
  * Half-open [from, to) of `slotStart` values the slot engine can still see.
  *
  * Reservations ending after `windowStart` or starting before `windowEnd` can
- * block a candidate slot, so the range extends one meeting duration before
- * the window.
+ * block a candidate slot. Meeting types can differ in length, so the range
+ * extends the longest allowed meeting before the window.
  */
 export const confirmedReservationScanRange = (
-  page: { durationMinutes: number },
   windowStart: Date,
   windowEnd: Date,
-): { from: Date; to: Date } => {
-  const durationMs = page.durationMinutes * 60_000;
-  return {
-    from: new Date(windowStart.getTime() - durationMs),
-    to: windowEnd,
-  };
-};
+): { from: Date; to: Date } => ({
+  from: new Date(windowStart.getTime() - BOOKING_MAX_DURATION_MINUTES * 60_000),
+  to: windowEnd,
+});
 
 export type InsertBookingReservationInput = Omit<
   BookingReservationRecord,
@@ -56,19 +58,23 @@ class BookingReservationRepository {
     return BookingReservationRecordSchema.parse(record);
   }
 
-  async listConfirmedStartsByPageId(
+  /**
+   * Confirmed reservation intervals whose start falls in `range`. Each keeps
+   * its own length, so meetings of different types block what they occupy.
+   */
+  async listConfirmedIntervalsByPageId(
     pageId: ObjectId,
     range: { from: Date; to: Date },
-  ): Promise<Date[]> {
+  ): Promise<{ slotStart: Date; slotEnd: Date }[]> {
     const rows = await mongoService.bookingReservation
       .find({
         pageId,
         status: "confirmed",
         slotStart: { $gte: range.from, $lt: range.to },
       })
-      .project({ slotStart: 1 })
+      .project({ _id: 0, slotStart: 1, slotEnd: 1 })
       .toArray();
-    return rows.map((row) => ConfirmedSlotRowSchema.parse(row).slotStart);
+    return rows.map((row) => ConfirmedIntervalRowSchema.parse(row));
   }
 
   /**
@@ -120,6 +126,21 @@ class BookingReservationRepository {
       count: summary.count,
       latest: BookingReservationRecordSchema.parse(summary.latest),
     };
+  }
+
+  async listUpcomingConfirmedByPageId(
+    pageId: ObjectId,
+    now: Date,
+  ): Promise<BookingReservationRecord[]> {
+    const rows = await mongoService.bookingReservation
+      .find({
+        pageId,
+        status: "confirmed",
+        slotEnd: { $gt: now },
+      })
+      .sort({ slotStart: 1 })
+      .toArray();
+    return rows.map((row) => BookingReservationRecordSchema.parse(row));
   }
 
   async listConfirmedOverlapping(

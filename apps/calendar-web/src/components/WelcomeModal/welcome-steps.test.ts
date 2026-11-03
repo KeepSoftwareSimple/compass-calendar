@@ -11,10 +11,12 @@ describe("welcome steps", () => {
   it("advances through every screen and stops on the last", () => {
     expect(nextWelcomeStep(1)).toBe(2);
     expect(nextWelcomeStep(2)).toBe(3);
+    expect(nextWelcomeStep(3)).toBe(4);
     expect(nextWelcomeStep(LAST_WELCOME_STEP)).toBe(LAST_WELCOME_STEP);
   });
 
   it("steps back through every screen and stops on the first", () => {
+    expect(previousWelcomeStep(4)).toBe(3);
     expect(previousWelcomeStep(3)).toBe(2);
     expect(previousWelcomeStep(2)).toBe(1);
     expect(previousWelcomeStep(FIRST_WELCOME_STEP)).toBe(FIRST_WELCOME_STEP);

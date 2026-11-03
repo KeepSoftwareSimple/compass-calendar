@@ -8,3 +8,16 @@ export function isEventIdHidden(
 ): boolean {
   return Boolean(eventId && hiddenEventIds.has(eventId));
 }
+
+/** Drop one id so a hidden draft still participates in layout. */
+export function withoutHiddenEventId(
+  hiddenEventIds: ReadonlySet<string>,
+  eventId: string | undefined,
+): ReadonlySet<string> {
+  if (!eventId || !hiddenEventIds.has(eventId)) {
+    return hiddenEventIds;
+  }
+  const next = new Set(hiddenEventIds);
+  next.delete(eventId);
+  return next;
+}

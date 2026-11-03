@@ -10,6 +10,7 @@ final class GuestEmailSubmissionTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
+        XCTAssertTrue(window.buttons["Morning standup"].waitForExistence(timeout: 8))
         window.typeKey("c", modifierFlags: [])
         let form = window.descendants(matching: .any)["compass-event-form"].firstMatch
         XCTAssertTrue(form.waitForExistence(timeout: 8))
@@ -43,6 +44,9 @@ final class GuestEmailSubmissionTests: XCTestCase {
         title.click()
         title.typeKey(.return, modifierFlags: [])
         let invitations = window.staticTexts["Send invitation emails?"]
+        XCTAssertTrue(form.buttons["compass-event-form-save"].exists)
+        XCTAssertFalse(invitations.exists)
+        title.typeKey(.return, modifierFlags: [.command])
         XCTAssertTrue(invitations.waitForExistence(timeout: 8))
         window.typeKey(.escape, modifierFlags: [])
         XCTAssertTrue(invitations.waitForNonExistence(timeout: 8))

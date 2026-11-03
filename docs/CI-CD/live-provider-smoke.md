@@ -5,16 +5,22 @@ against real Google, Microsoft, and Apple test accounts. It never runs on
 pull requests. Workflow: [`.github/workflows/live-provider-smoke.yml`](../../.github/workflows/live-provider-smoke.yml).
 
 The job uses GitHub Environment `provider-smoke`. It does not read staging
-or production deploy secrets. A provider whose secrets are absent fails the
-job with a clear error (for example a missing `SMOKE_GOOGLE_REFRESH_TOKEN`),
-and posts to the Discord errors webhook. The summary line
-(`live-provider-smoke passed=... failed=...`) is printed and appended to the
-GitHub Actions step summary.
+or production deploy secrets. Providers listed in the Environment variable
+`SMOKE_EXPECTED_PROVIDERS` (comma-separated, for example `microsoft,apple`)
+must have their smoke secrets present or the job fails with a clear error.
+Other providers with missing secrets are skipped with a warning. The summary
+line (`live-provider-smoke passed=... skipped=... failed=...`) is printed
+and appended to the GitHub Actions step summary. Failures post to the Discord
+errors webhook.
 
-Events are created only on a calendar named `compass-smoke`. Every created
-event's description carries the GitHub run id. A teardown step deletes
-leftovers older than one day. Failure posts to the Discord errors webhook
-with the provider name.
+Events are created only on a calendar named `compass-smoke`. The smoke suite
+discovers that calendar at runtime (no `LIVE_CALENDAR_ID` secret). The shared
+adapter contract file in the same job skips live replay unless
+`LIVE_CALENDAR_ID` points at a calendar seeded with the recorded fixture
+events; recorded contract coverage runs in ordinary CI via
+`*.contract.test.ts`. Every created event's description carries the GitHub
+run id. A teardown step deletes leftovers older than one day. Failure posts to
+the Discord errors webhook with the provider name.
 
 ## Create the Environment
 
@@ -44,6 +50,7 @@ Environment variables:
 |---|---|
 | `GOOGLE_CLIENT_ID` | Same Google OAuth client id as staging |
 | `MICROSOFT_CLIENT_ID` | Same Entra client id as staging |
+| `SMOKE_EXPECTED_PROVIDERS` | Comma-separated providers that must run nightly (for example `microsoft,apple`) |
 
 ## Test calendar
 
