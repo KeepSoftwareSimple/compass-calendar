@@ -4,8 +4,10 @@ import {
   BookingSlotsQuerySchema,
   CreateBookingReservationInputSchema,
   defaultMeetingTypes,
+  meetingTypeWithDuration,
   resolveBookingMeetingType,
   resolveBookingMeetingTypes,
+  resolvePageMeetingType,
 } from "@core/types/booking.contracts";
 import { describe, expect, it } from "bun:test";
 
@@ -97,6 +99,42 @@ describe("resolveBookingMeetingType", () => {
   it("falls back to type #1 for a missing or unknown id", () => {
     expect(resolveBookingMeetingType([intro, deep], undefined)).toEqual(intro);
     expect(resolveBookingMeetingType([intro, deep], "gone")).toEqual(intro);
+  });
+});
+
+describe("resolvePageMeetingType", () => {
+  it("resolves stored types, then the requested id", () => {
+    expect(
+      resolvePageMeetingType(
+        { durationMinutes: 15, meetingTypes: [intro, deep] },
+        "deep-dive",
+      ),
+    ).toEqual(deep);
+  });
+
+  it("derives type #1 from duration when the page has no types", () => {
+    expect(resolvePageMeetingType({ durationMinutes: 45 }, undefined)).toEqual(
+      defaultMeetingTypes(45)[0],
+    );
+  });
+});
+
+describe("meetingTypeWithDuration", () => {
+  it("renames a default label with its duration but keeps a typed one", () => {
+    expect(
+      meetingTypeWithDuration(
+        { id: "default", label: "30 min meeting", durationMinutes: 30 },
+        15,
+      ),
+    ).toEqual({
+      id: "default",
+      label: "15 min meeting",
+      durationMinutes: 15,
+    });
+    expect(meetingTypeWithDuration(deep, 45)).toEqual({
+      ...deep,
+      durationMinutes: 45,
+    });
   });
 });
 

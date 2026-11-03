@@ -29,8 +29,7 @@ import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useD
 import { useEventFormCmdItems } from "@web/components/CommandPalette/hooks/useEventFormCmdItems";
 import { useLogoutCmdItems } from "@web/components/CommandPalette/hooks/useLogoutCmdItems";
 import {
-  MEETING_PAGE_LOADED_CMD_IDS,
-  MEETING_PAGE_PENDING_CMD_ID,
+  MEETING_PAGE_PENDING_CMD_IDS,
   useMeetingPageCmdItems,
 } from "@web/components/CommandPalette/hooks/useMeetingPageCmdItems";
 import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
@@ -95,9 +94,7 @@ const SECTION_HEADING_CLASS_NAME =
 
 /** Loaded command id to the placeholder shown in its slot while it loads. */
 const PENDING_CMD_ID_BY_LOADED_ID: Readonly<Record<string, string>> = {
-  ...Object.fromEntries(
-    MEETING_PAGE_LOADED_CMD_IDS.map((id) => [id, MEETING_PAGE_PENDING_CMD_ID]),
-  ),
+  ...MEETING_PAGE_PENDING_CMD_IDS,
   ...BILLING_PENDING_CMD_IDS,
   "subscribe-now": SUBSCRIBE_PENDING_CMD_ID,
 };
