@@ -14,6 +14,8 @@ import {
 import {
   EventInstanceListQuerySchema,
   EventInstanceListResponseSchema,
+  providerEventVersionOrNull,
+  StoredProviderEventVersionSchema,
   SyncEventCalendarIdSchema,
   SyncEventInstanceSchema,
   SyncEventOwnershipSchema,
@@ -475,6 +477,24 @@ describe("Sync event contracts", () => {
       expect(EventInstanceListResponseSchema.safeParse(response).success).toBe(
         true,
       );
+    });
+  });
+
+  describe("StoredProviderEventVersionSchema", () => {
+    it("coerces empty strings to null", () => {
+      expect(StoredProviderEventVersionSchema.parse("")).toBeNull();
+      expect(StoredProviderEventVersionSchema.parse("   ")).toBeNull();
+    });
+
+    it("keeps non-empty versions", () => {
+      expect(StoredProviderEventVersionSchema.parse('W/"abc"')).toBe('W/"abc"');
+    });
+  });
+
+  describe("providerEventVersionOrNull", () => {
+    it("returns null for missing or blank versions", () => {
+      expect(providerEventVersionOrNull(undefined)).toBeNull();
+      expect(providerEventVersionOrNull("")).toBeNull();
     });
   });
 });

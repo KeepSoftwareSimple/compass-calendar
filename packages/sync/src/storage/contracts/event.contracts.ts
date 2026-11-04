@@ -4,7 +4,7 @@ import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   ClientEventIdSchema,
   ProviderDeliveryStateSchema,
-  ProviderEventVersionSchema,
+  StoredProviderEventVersionSchema,
   SyncEventCalendarIdSchema,
   SyncEventContentSchema,
   SyncEventLifecycleStateSchema,
@@ -44,7 +44,7 @@ export const EventRecordSchema = z.strictObject({
   // linked to exactly one provider calendar.
   connectionId: ConnectionIdSchema.nullable(),
   providerEventId: ProviderEventIdSchema.nullable(),
-  providerVersion: ProviderEventVersionSchema.nullable(),
+  providerVersion: StoredProviderEventVersionSchema,
   providerUpdatedAt: z.date().nullable(),
   deliveryState: ProviderDeliveryStateSchema.nullable(),
   providerMetadata: z.record(z.string(), z.string()).nullable(),

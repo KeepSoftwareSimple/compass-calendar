@@ -4,7 +4,7 @@ import {
   SyncCommandInputSchema,
   SyncCommandOutcomeSchema,
 } from "@core/types/sync/command.contracts";
-import { ProviderEventVersionSchema } from "@core/types/sync/event.contracts";
+import { StoredProviderEventVersionSchema } from "@core/types/sync/event.contracts";
 import {
   IdempotencyKeySchema,
   PrincipalIdSchema,
@@ -35,7 +35,7 @@ const CommandRecordObjectSchema = z.strictObject({
   idempotencyKey: IdempotencyKeySchema,
   eventId: EventIdSchema,
   input: SyncCommandInputSchema,
-  expectedVersion: ProviderEventVersionSchema.nullable(),
+  expectedVersion: StoredProviderEventVersionSchema,
   outcome: SyncCommandOutcomeSchema,
   attemptCount: z.number().int().min(0),
   createdAt: z.date(),
@@ -68,7 +68,7 @@ export const CommandSubmitSchema = z
     idempotencyKey: IdempotencyKeySchema,
     eventId: EventIdSchema,
     input: SyncCommandInputSchema,
-    expectedVersion: ProviderEventVersionSchema.nullable(),
+    expectedVersion: StoredProviderEventVersionSchema,
     // Per-submission undo/redo replay intent, not persisted on the command
     // record (submit() only ever $setOnInsert's this object) — see
     // CommandSubmitRequestSchema.restore.

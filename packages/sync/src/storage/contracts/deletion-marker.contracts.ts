@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import {
-  ProviderEventVersionSchema,
+  StoredProviderEventVersionSchema,
   SyncEventCalendarIdSchema,
 } from "@core/types/sync/event.contracts";
 import {
@@ -25,7 +25,7 @@ export const DeletionMarkerRecordSchema = z.strictObject({
   connectionId: ConnectionIdSchema,
   calendarId: SyncEventCalendarIdSchema,
   providerEventId: ProviderEventIdSchema,
-  providerVersion: ProviderEventVersionSchema.nullable(),
+  providerVersion: StoredProviderEventVersionSchema,
   deletionSource: DeletionSourceSchema,
   deletedAt: z.date(),
   // When the TTL index removes this marker (deletedAt + retention window).

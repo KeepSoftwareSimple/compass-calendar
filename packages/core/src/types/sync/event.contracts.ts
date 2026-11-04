@@ -47,6 +47,27 @@ export const ProviderEventVersionSchema = z
   .brand<"ProviderEventVersion">();
 export type ProviderEventVersion = z.infer<typeof ProviderEventVersionSchema>;
 
+function emptyProviderVersionToNull(value: unknown): unknown {
+  if (typeof value === "string" && value.trim().length === 0) {
+    return null;
+  }
+  return value;
+}
+
+// Storage and command reads may carry "" when a provider omits an etag on a
+// cancellation (Google incremental, Microsoft @removed). Treat that as null.
+export const StoredProviderEventVersionSchema = z.preprocess(
+  emptyProviderVersionToNull,
+  ProviderEventVersionSchema.nullable(),
+);
+
+export function providerEventVersionOrNull(
+  version: string | null | undefined,
+): ProviderEventVersion | null {
+  const parsed = StoredProviderEventVersionSchema.safeParse(version);
+  return parsed.success ? parsed.data : null;
+}
+
 export const SyncEventOriginSchema = z.enum(["compass", "provider"]);
 export type SyncEventOrigin = z.infer<typeof SyncEventOriginSchema>;
 

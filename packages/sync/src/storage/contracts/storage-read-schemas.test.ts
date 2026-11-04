@@ -218,6 +218,16 @@ describe("EventReadSchema nested customizations", () => {
     });
     expect(parsed.customizations).toEqual({ title: "Overlay" });
   });
+
+  it("treats an empty stored providerVersion as null", () => {
+    const parsed = EventReadSchema.parse({
+      ...eventRecord,
+      connectionId: ID,
+      providerEventId: ID,
+      providerVersion: "",
+    });
+    expect(parsed.providerVersion).toBeNull();
+  });
 });
 
 expectReadStripsWriteRejects("InvalidationReadSchema", {

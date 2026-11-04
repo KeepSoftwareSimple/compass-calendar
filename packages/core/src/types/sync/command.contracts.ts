@@ -12,7 +12,7 @@ import {
 } from "@core/types/event-command.contracts";
 import {
   ClientEventIdSchema,
-  ProviderEventVersionSchema,
+  StoredProviderEventVersionSchema,
   SyncEventCalendarIdSchema,
   SyncEventContentSchema,
 } from "@core/types/sync/event.contracts";
@@ -198,7 +198,7 @@ const ConfirmedOutcomeSchema = z
     // Otherwise both present together — a provider identity without a
     // version (or vice versa) is not a coherent confirmed state.
     providerEventId: ProviderEventIdSchema.nullable(),
-    providerVersion: ProviderEventVersionSchema.nullable(),
+    providerVersion: StoredProviderEventVersionSchema,
   })
   .refine(
     (outcome) =>
@@ -243,7 +243,7 @@ export const SyncCommandSchema = z
     // update/move/delete. Null means no known provider version yet (an
     // unlinked event, or a first write attempt). Never present on create,
     // which has no prior provider state to condition against.
-    expectedVersion: ProviderEventVersionSchema.nullable(),
+    expectedVersion: StoredProviderEventVersionSchema,
     outcome: SyncCommandOutcomeSchema,
     attemptCount: z.number().int().min(0),
     createdAt: DateTimeSchema,
@@ -281,7 +281,7 @@ export const CommandSubmitRequestSchema = z
     idempotencyKey: IdempotencyKeySchema,
     eventId: EventIdSchema,
     input: SyncCommandInputSchema,
-    expectedVersion: ProviderEventVersionSchema.nullable(),
+    expectedVersion: StoredProviderEventVersionSchema,
     // Per-submission undo/redo replay intent (never persisted on the command
     // record itself) — see CreateEventInputSchema.restore in
     // event-command.contracts.ts. Lets a resubmission that collides with a

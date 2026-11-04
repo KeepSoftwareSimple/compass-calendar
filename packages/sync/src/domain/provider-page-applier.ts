@@ -1,6 +1,9 @@
 import { encodePopupReminderMinutes } from "@core/notifications/google-popup-reminders.util";
 import { type DateTime, type EventId } from "@core/types/domain-primitives";
-import { type SyncEventRecurrence } from "@core/types/sync/event.contracts";
+import {
+  providerEventVersionOrNull,
+  type SyncEventRecurrence,
+} from "@core/types/sync/event.contracts";
 import { type ProviderEventId } from "@core/types/sync/identity.contracts";
 import { occurrenceScheduleAt } from "@sync/domain/occurrence-projection";
 import { providerManagedMetadataEntry } from "@sync/domain/provider-managed-metadata";
@@ -361,9 +364,7 @@ export class ProviderPageApplier {
       providerEventId: read.providerEventId as NonNullable<
         EventRecord["providerEventId"]
       >,
-      providerVersion: read.providerVersion as NonNullable<
-        EventRecord["providerVersion"]
-      >,
+      providerVersion: providerEventVersionOrNull(read.providerVersion),
       // Imported provider events carry no Compass delivery intent.
       deliveryState: null,
       lifecycleState: "active" as const,
