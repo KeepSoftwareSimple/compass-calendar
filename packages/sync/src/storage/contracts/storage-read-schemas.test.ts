@@ -208,6 +208,16 @@ expectReadStripsWriteRejects("EventReadSchema", {
 });
 
 describe("EventReadSchema nested customizations", () => {
+  it("treats a legacy empty providerVersion as null", () => {
+    const parsed = EventReadSchema.parse({
+      ...eventRecord,
+      connectionId: ID,
+      providerEventId: ID,
+      providerVersion: "",
+    });
+    expect(parsed.providerVersion).toBeNull();
+  });
+
   it("strips an unknown key inside customizations", () => {
     const parsed = EventReadSchema.parse({
       ...eventRecord,
