@@ -196,6 +196,48 @@ export class ProviderConnectionRepository {
     return this.parseRecord(result);
   }
 
+  // Persist a derived state transition only when the row still holds the
+  // expected user-facing state. Returns null when another writer moved state
+  // first, so callers can skip duplicate SSE invalidations.
+  async tryTransitionDerivedState(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    id: ConnectionId,
+    expected: {
+      state: ConnectionState;
+      stateReason: ConnectionStateReason | null;
+    },
+    fields: {
+      state: ConnectionState;
+      stateReason: ConnectionStateReason | null;
+      lastSyncedAt: Date | null;
+      lastHealthyAt: Date | null;
+    },
+    now: Date = new Date(),
+  ): Promise<ProviderConnectionRecord | null> {
+    const result = await this.collection.findOneAndUpdate(
+      {
+        _id: id,
+        tenantId,
+        principalId,
+        state: expected.state,
+        stateReason: expected.stateReason,
+      },
+      {
+        $set: {
+          state: fields.state,
+          stateReason: fields.stateReason,
+          lastSyncedAt: fields.lastSyncedAt,
+          lastHealthyAt: fields.lastHealthyAt,
+          updatedAt: now,
+        },
+      },
+      { returnDocument: "after" },
+    );
+    if (!result) return null;
+    return this.parseRecord(result);
+  }
+
   // Stamp diagnosticKey on pre-S45 rows, then validate. Read paths share this
   // so support lookup and API reads never fail parse on legacy documents.
   private async parseRecord(
