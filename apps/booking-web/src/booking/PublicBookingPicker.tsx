@@ -23,7 +23,7 @@ interface PublicBookingPickerProps {
   onPrefetchMonth: (monthKey: string) => void;
   onSelectDate: (dateKey: string) => void;
   onSelectSlot: (slotStart: string) => void;
-  onJumpToNextAvailable: () => void;
+  onJumpToNextAvailable?: () => void;
   onRetrySlots: () => void;
   onEscapeFromSlot?: () => void;
 }

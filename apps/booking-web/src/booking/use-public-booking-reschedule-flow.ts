@@ -93,6 +93,7 @@ export function usePublicBookingRescheduleFlow() {
     slotsQuery,
     // Every month walk here is token-authenticated, so no token means no walk.
     horizonDays: token ? (pageQuery.data?.maxHorizonDays ?? null) : null,
+    horizonScanKey: monthKey,
     prefetchMonth: (nextMonthKey, maxHorizonDays) => {
       void prefetchPublicBookingReservationMonth(
         queryClient,
