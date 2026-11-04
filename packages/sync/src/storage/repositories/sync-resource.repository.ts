@@ -74,6 +74,37 @@ function notHeldOffFilter(now: Date): Record<string, unknown> {
 // one connection).
 export const DURABLE_DISCOVERY_FAILURE_RETRY_MS = 6 * 60 * 60 * 1000;
 
+/** True while a refused calendar-list discovery should not be re-listed. */
+export function isCalendarListDiscoveryInBackoff(
+  calendarList:
+    | Pick<SyncResourceRecord, "lastReadFailureAt" | "lastAttemptAt">
+    | null
+    | undefined,
+  now: Date,
+): boolean {
+  return (
+    calendarList?.lastReadFailureAt != null &&
+    calendarList.lastAttemptAt != null &&
+    now.getTime() - calendarList.lastAttemptAt.getTime() <
+      DURABLE_DISCOVERY_FAILURE_RETRY_MS
+  );
+}
+
+/** Mongo complement of `isCalendarListDiscoveryInBackoff`. */
+function notInDiscoveryBackoffFilter(now: Date): Record<string, unknown> {
+  return {
+    $or: [
+      { lastReadFailureAt: null },
+      { lastAttemptAt: null },
+      {
+        lastAttemptAt: {
+          $lt: new Date(now.getTime() - DURABLE_DISCOVERY_FAILURE_RETRY_MS),
+        },
+      },
+    ],
+  };
+}
+
 // Inactive calendars are skipped at selection so a foreground tick or
 // reconcile sweep never enqueues a pull that dispatch would drop. `$ne:
 // false` still matches rows written before the field (treated as active)
@@ -855,20 +886,7 @@ export class SyncResourceRepository {
               { lastFullListAt: null },
             ],
           },
-          // See DURABLE_DISCOVERY_FAILURE_RETRY_MS.
-          {
-            $or: [
-              { lastReadFailureAt: null },
-              { lastAttemptAt: null },
-              {
-                lastAttemptAt: {
-                  $lt: new Date(
-                    now.getTime() - DURABLE_DISCOVERY_FAILURE_RETRY_MS,
-                  ),
-                },
-              },
-            ],
-          },
+          notInDiscoveryBackoffFilter(now),
         ],
       },
       { lastAttemptAt: 1, lastFullListAt: 1 },

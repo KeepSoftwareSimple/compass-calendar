@@ -17,6 +17,18 @@ export interface PublicMeetingTypeSelection {
   requestTypeId: string | undefined;
 }
 
+/**
+ * Omit type #1 from query and slot-request ids. The server already picks the
+ * first type when the id is missing, so one-type pages and default picks keep
+ * the short URL they always used.
+ */
+export function optionalMeetingTypeId(
+  types: BookingMeetingTypes,
+  id: string,
+): string | undefined {
+  return id === types[0]?.id ? undefined : id;
+}
+
 /** `?type=` picks a meeting type; a missing or unknown id means type #1. */
 export function selectPublicMeetingType(
   page: Pick<PublicBookingPage, "durationMinutes" | "meetingTypes">,
@@ -27,14 +39,6 @@ export function selectPublicMeetingType(
   return {
     types,
     selected,
-    requestTypeId: selected.id === types[0]?.id ? undefined : selected.id,
+    requestTypeId: optionalMeetingTypeId(types, selected.id),
   };
-}
-
-/** The `?type=` value for a pick: type #1 clears it so links stay short. */
-export function meetingTypeSearchValue(
-  types: BookingMeetingTypes,
-  id: string,
-): string | undefined {
-  return id === types[0]?.id ? undefined : id;
 }
