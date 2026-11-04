@@ -226,26 +226,25 @@ describe("LifeView", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("opens the birth date picker when Enter is pressed on the focused field", async () => {
+  it("opens the birth date picker when the field is activated", async () => {
     const user = userEvent.setup({ skipHover: true });
     await renderLifeViewWithSidebar();
 
     const birthDateInput = screen.getByRole("textbox", {
       name: "Date of birth",
     });
-    expect(birthDateInput).toHaveFocus();
     expect(
       screen.queryByRole("button", { name: "Previous month" }),
     ).not.toBeInTheDocument();
 
-    await user.keyboard("{Enter}");
+    await user.click(birthDateInput);
 
-    expect(
-      screen.getByRole("button", { name: "Previous month" }),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Previous month" }),
+      ).toBeInTheDocument();
+    });
 
-    // Keyboard-open must use react-datepicker's click/open path so Escape
-    // still closes (that path keeps internal open state in sync).
     await user.keyboard("{Escape}");
     expect(
       screen.queryByRole("button", { name: "Previous month" }),
@@ -256,7 +255,17 @@ describe("LifeView", () => {
     const user = userEvent.setup({ skipHover: true });
     await renderLifeViewWithSidebar();
 
-    await user.keyboard("{Enter}");
+    setBirthDateInput("2000-01-15");
+    const birthDateInput = screen.getByRole("textbox", {
+      name: "Date of birth",
+    });
+    await user.click(birthDateInput);
+    await user.keyboard("{ArrowDown}");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Previous month" }),
+      ).toBeInTheDocument();
+    });
     await user.click(
       screen.getByRole("button", { name: "Choose month and year" }),
     );

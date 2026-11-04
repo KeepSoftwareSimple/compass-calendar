@@ -11,7 +11,7 @@ export type LifeBirthDateParseResult =
       kind: "date";
       date: Date;
       preview: string;
-      ambiguityNote?: string;
+      usesMonthDayOrder?: boolean;
     }
   | { kind: "invalid"; message: string };
 
@@ -19,6 +19,22 @@ export const LIFE_BIRTH_DATE_DISPLAY_FORMAT = "MMM D, YYYY";
 
 export function formatLifeBirthDatePreview(date: Date): string {
   return dayjs(date).format(LIFE_BIRTH_DATE_DISPLAY_FORMAT);
+}
+
+/** Single-line sidebar preview while the user types (stable layout, truncated in UI). */
+export function lifeBirthDateDraftPreview(
+  parse: LifeBirthDateParseResult,
+  draftTrimmed: string,
+): string {
+  if (!draftTrimmed) return "";
+  if (parse.kind === "invalid") return parse.message;
+  if (parse.kind === "year") return `${parse.year} · pick day`;
+  if (parse.kind === "date") {
+    return parse.usesMonthDayOrder
+      ? `${parse.preview} · month/day`
+      : parse.preview;
+  }
+  return "";
 }
 
 /** Month and keyboard cursor to show in the day grid for a successful parse. */
@@ -56,7 +72,7 @@ export function parseLifeBirthDateInput(
     return {
       kind: "year",
       year,
-      preview: `${year}, pick a day in the calendar`,
+      preview: `${year} · pick day`,
     };
   }
 
@@ -77,14 +93,14 @@ export function parseLifeBirthDateInput(
     return { kind: "invalid", message: "Birth date cannot be in the future" };
   }
 
-  let ambiguityNote: string | undefined;
+  let usesMonthDayOrder = false;
   const collapsed = trimmed.toLowerCase().replace(/\s+/g, " ");
   const numeric = collapsed.match(NUMERIC_MONTH_DAY_YEAR);
   if (numeric) {
     const first = Number(numeric[1]);
     const second = Number(numeric[2]);
     if (first <= 12 && second <= 12 && first !== second) {
-      ambiguityNote = `Read as ${asDayjs.format(LIFE_BIRTH_DATE_DISPLAY_FORMAT)} (U.S. month/day)`;
+      usesMonthDayOrder = true;
     }
   }
 
@@ -92,6 +108,6 @@ export function parseLifeBirthDateInput(
     kind: "date",
     date,
     preview: asDayjs.format(LIFE_BIRTH_DATE_DISPLAY_FORMAT),
-    ambiguityNote,
+    usesMonthDayOrder: usesMonthDayOrder || undefined,
   };
 }

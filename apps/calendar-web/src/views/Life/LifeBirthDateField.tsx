@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { parseLifeDate } from "@core/life/life-math";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import {
@@ -15,9 +16,9 @@ import {
 } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
 import { EventFormInfieldHint } from "@web/views/Forms/EventForm/EventFormFocusedHint";
 import { LifeBirthDatePopoverHints } from "@web/views/Life/LifeBirthDatePopoverHints";
-import { parseLifeDate } from "@web/views/Life/life.utils";
 import {
   formatLifeBirthDatePreview,
+  lifeBirthDateDraftPreview,
   lifeBirthDateGridAnchor,
   parseLifeBirthDateInput,
 } from "@web/views/Life/parseLifeBirthDateInput.util";
@@ -471,19 +472,10 @@ export function LifeBirthDateField({
     }
   };
 
-  const previewLine =
-    draftText.trim().length > 0
-      ? draftParse.kind === "invalid"
-        ? draftParse.message
-        : draftParse.kind === "date"
-          ? (draftParse.ambiguityNote ?? draftParse.preview)
-          : draftParse.kind === "year"
-            ? draftParse.preview
-            : "\u00a0"
-      : "\u00a0";
+  const draftTrimmed = draftText.trim();
+  const previewLine = lifeBirthDateDraftPreview(draftParse, draftTrimmed);
 
-  const previewIsError =
-    draftParse.kind === "invalid" && draftText.trim() !== "";
+  const previewIsError = draftParse.kind === "invalid" && draftTrimmed !== "";
 
   const popoverHintMode = gridFocused ? "grid" : "typing";
 
@@ -508,12 +500,13 @@ export function LifeBirthDateField({
     >
       <p
         aria-live="polite"
-        className={`min-h-4 w-full text-xs ${
+        className={`h-4 w-full shrink-0 truncate text-xs leading-4 ${
           previewIsError ? "text-danger" : "text-text-muted"
         }`}
         data-testid="life-birth-date-preview"
+        title={previewLine || undefined}
       >
-        {previewLine}
+        {previewLine || "\u00a0"}
       </p>
       <div className="group/control relative w-full">
         <DatePicker

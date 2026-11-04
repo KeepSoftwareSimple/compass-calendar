@@ -1,5 +1,6 @@
 import dayjs from "@core/util/date/dayjs";
 import {
+  lifeBirthDateDraftPreview,
   lifeBirthDateGridAnchor,
   parseLifeBirthDateInput,
 } from "@web/views/Life/parseLifeBirthDateInput.util";
@@ -34,7 +35,7 @@ describe("parseLifeBirthDateInput", () => {
     expect(result).toEqual({
       kind: "year",
       year: 1993,
-      preview: "1993, pick a day in the calendar",
+      preview: "1993 · pick day",
     });
   });
 
@@ -42,7 +43,10 @@ describe("parseLifeBirthDateInput", () => {
     const result = parseLifeBirthDateInput("4/12/1993", options);
     expect(result.kind).toBe("date");
     if (result.kind === "date") {
-      expect(result.ambiguityNote).toContain("U.S. month/day");
+      expect(result.usesMonthDayOrder).toBe(true);
+      expect(lifeBirthDateDraftPreview(result, "4/12/1993")).toBe(
+        "Apr 12, 1993 · month/day",
+      );
     }
   });
 
