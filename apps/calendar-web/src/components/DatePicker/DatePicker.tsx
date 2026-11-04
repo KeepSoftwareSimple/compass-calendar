@@ -26,12 +26,16 @@ import { Focusable, INPUT_RESET_CLASSNAME } from "../Focusable/Focusable";
 import { CircleIcon } from "../Icons/CircleIcon";
 import { TooltipWrapper } from "../Tooltip/TooltipWrapper";
 
+export type CaptionPickerView = "day" | "year" | "month";
+
 export interface Props extends Omit<ReactDatePickerProps, "autoFocus"> {
   animationOnToggle?: boolean;
   bgColor?: string;
   headerActionsClassName?: string;
   headerClassName?: string;
-  headerEndContent?: React.ReactNode;
+  headerEndContent?:
+    | React.ReactNode
+    | ((context: { captionView: CaptionPickerView }) => React.ReactNode);
   /** Capture-phase keyboard handler on the popper calendar root (grid popovers portal here). */
   onCalendarKeyDownCapture?: React.KeyboardEventHandler<HTMLDivElement>;
   inputClassName?: string;
@@ -68,8 +72,6 @@ const reactDatePickerExport =
     default?: ReactDatePickerComponent;
   };
 const ReactDatePicker = reactDatePickerExport.default ?? reactDatePickerExport;
-
-type CaptionPickerView = "day" | "year" | "month";
 
 /** Caption picker walks year, then month, then back to the day grid. */
 const CAPTION_VIEW_AFTER_SELECT: Record<
@@ -358,8 +360,14 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
               : undefined,
         };
 
+        const resolvedHeaderEndContent =
+          typeof headerEndContent === "function"
+            ? headerEndContent({ captionView })
+            : headerEndContent;
         const stackHeaderHints =
-          view === "grid" && Boolean(headerEndContent) && !customHeaderCount;
+          view === "grid" &&
+          Boolean(resolvedHeaderEndContent) &&
+          !customHeaderCount;
 
         return (
           <div
@@ -475,15 +483,17 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
                   )}
                 </div>
               )}
-              {!stackHeaderHints && !customHeaderCount && headerEndContent ? (
+              {!stackHeaderHints &&
+              !customHeaderCount &&
+              resolvedHeaderEndContent ? (
                 <div className="ml-auto flex min-w-0 items-center">
-                  {headerEndContent}
+                  {resolvedHeaderEndContent}
                 </div>
               ) : null}
             </div>
-            {stackHeaderHints && headerEndContent ? (
+            {stackHeaderHints && resolvedHeaderEndContent ? (
               <div className="flex w-full min-w-0 justify-end">
-                {headerEndContent}
+                {resolvedHeaderEndContent}
               </div>
             ) : null}
           </div>
