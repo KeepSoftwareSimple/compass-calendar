@@ -395,7 +395,12 @@ function defaultGit(): GitCommands {
     },
     addWorktree(ref: string): string {
       const dir = mkdtempSync(join(tmpdir(), "compass-verify-baseline-"));
-      execGit(["worktree", "add", "--detach", dir, ref]);
+      try {
+        execGit(["worktree", "add", "--detach", dir, ref]);
+      } catch (error) {
+        rmSync(dir, { recursive: true, force: true });
+        throw error;
+      }
       return dir;
     },
     removeWorktree(dir: string): void {
