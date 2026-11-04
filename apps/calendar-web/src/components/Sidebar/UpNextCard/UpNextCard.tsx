@@ -14,7 +14,7 @@ export function formatStartsIn(start: Dayjs, now: Dayjs): string {
   const minutes = Math.round(start.diff(now, "minute", true));
   if (minutes <= 0) return "Starts now";
   if (minutes < 60) {
-    return `Starts in ${minutes} minute${minutes === 1 ? "" : "s"}`;
+    return `Starts in ${minutes} min`;
   }
   const hours = Math.round(minutes / 60);
   return `Starts in ${hours} hour${hours === 1 ? "" : "s"}`;
@@ -30,7 +30,7 @@ export function formatEventStatus(
     const minutesRemaining = Math.round(end.diff(now, "minute", true));
     if (minutesRemaining <= 0) return "Ending now";
     if (minutesRemaining < 60) {
-      return `Ends in ${minutesRemaining} minute${minutesRemaining === 1 ? "" : "s"}`;
+      return `Ends in ${minutesRemaining} min`;
     }
     const hours = Math.round(minutesRemaining / 60);
     return `Ends in ${hours} hour${hours === 1 ? "" : "s"}`;
@@ -44,7 +44,7 @@ export function formatEventStatus(
  * no upcoming timed events left.
  *
  * All-day events are excluded by construction: the view model's `timedEvents`
- * projection already splits them out, and "Starts in X minutes" is meaningless
+ * projection already splits them out, and "Starts in X min" is meaningless
  * for them.
  */
 /**

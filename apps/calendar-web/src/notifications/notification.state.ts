@@ -15,13 +15,13 @@ export type NotificationToggleSource = "palette";
 
 export const SAMPLE_NOTIFICATION_TITLE = "Compass notifications are on";
 export const SAMPLE_NOTIFICATION_BODY =
-  "You'll get a heads-up like this 5 minutes before each event.";
+  "You'll get a heads-up like this 5 min before each event.";
 
 export const NOTIFICATIONS_ENABLED_TOAST =
   "Event notifications on. A test notification should have just appeared. If it didn't, allow this browser in your system's notification settings.";
 /** Fallback when the browser accepted the grant but refused to construct one. */
 export const NOTIFICATIONS_ENABLED_NO_SAMPLE_TOAST =
-  "Event notifications on. You'll get a heads-up 5 minutes before each event while this browser is open.";
+  "Event notifications on. You'll get a heads-up 5 min before each event while this browser is open.";
 
 /**
  * A browser grant is not the whole story: the OS can still swallow every

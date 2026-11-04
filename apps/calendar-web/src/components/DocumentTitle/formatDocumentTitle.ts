@@ -37,7 +37,7 @@ export function formatDocumentTitle({
       return `Now: ${eventTitle} - ${DOCUMENT_TITLE_BRAND}`;
     }
     if (minutes < 60) {
-      return `In ${minutes}m: ${eventTitle} - ${DOCUMENT_TITLE_BRAND}`;
+      return `In ${minutes} min: ${eventTitle} - ${DOCUMENT_TITLE_BRAND}`;
     }
     const hours = Math.round(minutes / 60);
     return `In ${hours}h: ${eventTitle} - ${DOCUMENT_TITLE_BRAND}`;

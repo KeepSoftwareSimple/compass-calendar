@@ -184,9 +184,6 @@ public enum UpcomingNotifierLogic {
         if minutesUntilStart == 0 {
             return "Starting now (\(startLabel))"
         }
-        if minutesUntilStart == 1 {
-            return "Starts in 1 minute (\(startLabel))"
-        }
-        return "Starts in \(minutesUntilStart) minutes (\(startLabel))"
+        return "Starts in \(minutesUntilStart) min (\(startLabel))"
     }
 }

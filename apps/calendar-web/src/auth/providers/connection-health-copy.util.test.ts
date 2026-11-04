@@ -87,10 +87,10 @@ describe("connectionHealthCopy", () => {
         stateReason: "workOverdue",
         credentialKind: "oauthRedirect",
         surface: "settings",
-        lastUpdatedSuffix: " Last updated 15 minutes ago.",
+        lastUpdatedSuffix: " Last updated 15 min ago.",
       }),
     ).toBe(
-      "Calendar updates are taking longer than usual. Last updated 15 minutes ago. Try Refresh, or reconnect if this continues.",
+      "Calendar updates are taking longer than usual. Last updated 15 min ago. Try Refresh, or reconnect if this continues.",
     );
   });
 
@@ -101,10 +101,10 @@ describe("connectionHealthCopy", () => {
         stateReason: "providerErrors",
         credentialKind: "oauthRedirect",
         surface: "settings",
-        lastUpdatedSuffix: " Last updated 15 minutes ago.",
+        lastUpdatedSuffix: " Last updated 15 min ago.",
       }),
     ).toBe(
-      "Couldn't update your calendar. Last updated 15 minutes ago. Try Refresh, or reconnect if this continues.",
+      "Couldn't update your calendar. Last updated 15 min ago. Try Refresh, or reconnect if this continues.",
     );
   });
 
