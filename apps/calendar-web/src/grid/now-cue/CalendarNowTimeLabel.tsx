@@ -1,5 +1,6 @@
 import cn from "classnames";
 import { ZIndex } from "@web/common/constants/web.constants";
+import { NOW_WEEK_TIME_LABEL_PILL_WIDTH_PX } from "@web/grid/now-cue/now-line-time.util";
 
 type CalendarNowTimeLabelProps = {
   label: string;
@@ -19,7 +20,7 @@ export function CalendarNowTimeLabel({
         "pointer-events-none absolute text-accent tabular-nums",
         variant === "gutter"
           ? "right-0 w-[50px] -translate-y-1/2 text-center font-medium text-[10px] leading-none"
-          : "c-now-time-label-pill left-0 max-w-[56px] -translate-x-full -translate-y-1/2 rounded-full border border-accent/35 bg-background px-1.5 py-0.5 font-medium text-[10px] leading-none shadow-[0_0_0_1px_var(--color-background)]",
+          : "c-now-time-label-pill left-0 -translate-x-full -translate-y-1/2 rounded-full border border-accent/35 bg-background px-0.5 py-px text-center font-medium text-[9px] leading-none shadow-[0_0_0_1px_var(--color-background)]",
       )}
       data-testid="now-time-label"
       data-now-label-variant={variant}
@@ -27,7 +28,7 @@ export function CalendarNowTimeLabel({
         top: `${topPercent}%`,
         zIndex: ZIndex.LAYER_3,
         ...(variant === "week-column"
-          ? { width: "max-content", minWidth: "3.25rem" }
+          ? { width: `${NOW_WEEK_TIME_LABEL_PILL_WIDTH_PX}px` }
           : { width: "var(--calendar-now-label-width, 50px)" }),
       }}
     >

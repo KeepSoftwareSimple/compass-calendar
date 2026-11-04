@@ -13,8 +13,17 @@ import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 /** Wall-clock minutes near an hour label where the now-time label overlaps. */
 export const NOW_TIME_LABEL_COLLISION_MINUTES = 12;
 
+/** Day gutter and day-view labels (`7:37 AM`). */
 export function formatNowLineTimeLabel(now: Dayjs, timeZone: string): string {
   return inEffectiveTimeZone(now, timeZone).format(HOURS_AM_FORMAT);
+}
+
+/** Compact week seam pill without AM/PM (`7:37`). */
+export function formatNowLineWeekPillLabel(
+  now: Dayjs,
+  timeZone: string,
+): string {
+  return inEffectiveTimeZone(now, timeZone).format("h:mm");
 }
 
 export function nowLineGridMinutes(
@@ -58,8 +67,8 @@ export function nowTimeLabelPlacement(
   return allSameDay ? "gutter" : "column-edge";
 }
 
-/** Layout-stable max width for the week now pill (longest `h:mm AM` label + padding). */
-export const NOW_WEEK_TIME_LABEL_PILL_MAX_WIDTH_PX = 56;
+/** Layout-stable width for the compact week pill (`12:59` + padding). */
+export const NOW_WEEK_TIME_LABEL_PILL_WIDTH_PX = 34;
 
 /** Week view: first visible column uses the hour gutter instead of the column seam. */
 export function weekNowTimeLabelUsesGutter(todayColumnIndex: number): boolean {

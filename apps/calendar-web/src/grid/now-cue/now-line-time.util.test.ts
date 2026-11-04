@@ -8,6 +8,7 @@ import dayjs from "@core/util/date/dayjs";
 import { TIMED_EVENT_COLUMN_INSET } from "@web/grid/grid.constants";
 import {
   formatNowLineTimeLabel,
+  formatNowLineWeekPillLabel,
   hourLabelIndexOverlappingNow,
   nowLineGridMinutes,
   nowLineTopPercent,
@@ -74,6 +75,7 @@ describe("formatNowLineTimeLabel and grid alignment", () => {
     setSystemTime(new Date("2026-04-24T13:37:00.000Z"));
 
     expect(formatNowLineTimeLabel(dayjs(), denver)).toBe("7:37 AM");
+    expect(formatNowLineWeekPillLabel(dayjs(), denver)).toBe("7:37");
   });
 
   it("shares grid minutes and top percent with the now line on fall-back morning", () => {

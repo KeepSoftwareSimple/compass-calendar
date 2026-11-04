@@ -180,7 +180,7 @@ describe("TimedGrid", () => {
     );
 
     const label = screen.getByTestId("now-time-label");
-    expect(label).toHaveTextContent("7:37 AM");
+    expect(label).toHaveTextContent("7:37");
     expect(label).toHaveAttribute("data-now-label-variant", "week-column");
     expect(label.className).toContain("-translate-x-full");
   });

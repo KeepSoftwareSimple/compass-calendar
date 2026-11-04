@@ -5,7 +5,7 @@ import { accentGradient } from "@web/common/styles/theme.util";
 import { timedGridTopPercent } from "@web/grid/grid.constants";
 import { CalendarNowTimeLabel } from "@web/grid/now-cue/CalendarNowTimeLabel";
 import {
-  formatNowLineTimeLabel,
+  formatNowLineWeekPillLabel,
   nowLineGridMinutes,
   weekNowTimeLabelUsesGutter,
 } from "@web/grid/now-cue/now-line-time.util";
@@ -29,7 +29,7 @@ export function CalendarNowLine({
   const now = useMinuteTick();
   const minutesFromMidnight = nowLineGridMinutes(now, effectiveTimeZone);
   const topPercent = timedGridTopPercent(minutesFromMidnight);
-  const timeLabel = formatNowLineTimeLabel(now, effectiveTimeZone);
+  const weekPillLabel = formatNowLineWeekPillLabel(now, effectiveTimeZone);
   const { pulsing: pulseNowLine, pulseKey } = useNowCuePulse();
 
   return (
@@ -45,7 +45,7 @@ export function CalendarNowLine({
     >
       {showWeekPill ? (
         <CalendarNowTimeLabel
-          label={timeLabel}
+          label={weekPillLabel}
           topPercent={0}
           variant="week-column"
         />
