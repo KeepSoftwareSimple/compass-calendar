@@ -29,6 +29,21 @@ the placeholders above are explanatory and are not valid runnable configuration.
 If the environment has an email allowlist, it must also include the destination.
 The `log` provider renders without delivering to an inbox.
 
+Hosted deployments regenerate `compass.yaml` from the selected GitHub Environment.
+Configure the following inputs there so the trial settings survive redeploys:
+
+| Input | GitHub Environment storage | Value |
+| --- | --- | --- |
+| `REFLECTION_ENABLED` | Variable | `false` initially, `true` only for approved activation |
+| `REFLECTION_ROLLOUT_ENABLED` | Variable | `false` throughout the private trial |
+| `REFLECTION_TRIAL_USER_ID` | Secret | Existing account ID resolved below |
+| `REFLECTION_TRIAL_EMAIL` | Secret | Approved destination address |
+
+Unset delivery flags default to `false`. Flags accept only `true` or `false`.
+Trial bindings are written into private runtime configuration and are not logged.
+Manual edits to generated hosted configuration are replaced by the next deploy.
+The birthday stays in the account database, seeded from the private input below.
+
 Create a private JSON file outside the checkout with the confirmed account
 email, birthday, timezone, and calendar exclusions. The birthday must be an
 actual `YYYY-MM-DD` date, and `excludedCalendarIds` defaults to an empty array.
