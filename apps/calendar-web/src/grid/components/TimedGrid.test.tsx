@@ -9,11 +9,12 @@ import {
 } from "@web/grid/grid.constants";
 import { ALL_DAY_COLUMN_TINT_PERCENT } from "@web/grid/utils/allDayColumnTint.util";
 import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, setSystemTime } from "bun:test";
 import "@testing-library/jest-dom";
 import { TimedGrid } from "./TimedGrid";
 
 const today = dayjs("2026-04-24T12:00:00.000Z");
+const denverToday = dayjs.tz("2026-04-24T12:00", "America/Denver");
 
 describe("TimedGrid", () => {
   it("is reachable by Tab, not just by mouse click", async () => {
@@ -140,6 +141,72 @@ describe("TimedGrid", () => {
 
     const grid = screen.getByRole("region", { name: "Timed events grid" });
     expect(grid.style.getPropertyValue("--calendar-day-hour-slots")).toBe("25");
+  });
+
+  it("shows the now-time label in the gutter on day view when today is visible", () => {
+    act(() => setPinnedTimeZone("America/Denver"));
+    setSystemTime(new Date("2026-04-24T13:37:00.000Z"));
+
+    render(
+      <TimedGrid
+        eventsLayer={null}
+        timedColumnsRef={() => {}}
+        timedGridRef={() => {}}
+        today={denverToday}
+        visibleDates={[{ date: denverToday, key: "today" }]}
+      />,
+    );
+
+    expect(screen.getByTestId("now-time-label")).toHaveTextContent("7:37 AM");
+  });
+
+  it("shows the week now pill left of today's column when today is mid-week", () => {
+    act(() => setPinnedTimeZone("America/Denver"));
+    setSystemTime(new Date("2026-04-24T13:37:00.000Z"));
+    const weekStart = dayjs.tz("2026-04-20T12:00", "America/Denver");
+    const weekDays = Array.from({ length: 7 }, (_, index) => {
+      const date = weekStart.add(index, "day");
+      return { date, key: date.format("YYYY-MM-DD") };
+    });
+
+    render(
+      <TimedGrid
+        eventsLayer={null}
+        timedColumnsRef={() => {}}
+        timedGridRef={() => {}}
+        today={denverToday}
+        visibleDates={weekDays}
+      />,
+    );
+
+    const label = screen.getByTestId("now-time-label");
+    expect(label).toHaveTextContent("7:37");
+    expect(label).toHaveAttribute("data-now-label-variant", "week-column");
+    expect(label.className).toContain("-translate-x-full");
+  });
+
+  it("shows the week now label in the gutter when today is the first column", () => {
+    act(() => setPinnedTimeZone("America/Denver"));
+    setSystemTime(new Date("2026-04-20T13:37:00.000Z"));
+    const monday = dayjs.tz("2026-04-20T12:00", "America/Denver");
+    const weekDays = Array.from({ length: 7 }, (_, index) => {
+      const date = monday.add(index, "day");
+      return { date, key: date.format("YYYY-MM-DD") };
+    });
+
+    render(
+      <TimedGrid
+        eventsLayer={null}
+        timedColumnsRef={() => {}}
+        timedGridRef={() => {}}
+        today={monday}
+        visibleDates={weekDays}
+      />,
+    );
+
+    const label = screen.getByTestId("now-time-label");
+    expect(label).toHaveAttribute("data-now-label-variant", "gutter");
+    expect(label.className).not.toContain("-translate-x-full");
   });
 
   it("sets grid geometry CSS variables once on the scroll region", () => {

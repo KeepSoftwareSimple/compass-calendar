@@ -1,21 +1,16 @@
-import cn from "classnames";
 import { type FC, type ReactNode, type RefCallback, useMemo } from "react";
 import {
   civilHourSlotCount,
-  gridMinutesFromCivilMidnight,
   maxCivilHourSlotCount,
 } from "@core/util/date/civil-day";
-import dayjs, { type Dayjs } from "@core/util/date/dayjs";
+import { type Dayjs } from "@core/util/date/dayjs";
 import { PH_NO_RAGECLICK_CLASS } from "@web/auth/posthog/posthog-calendar-grid.util";
 import {
   DATA_TIMED_GRID_ROW,
   ID_GRID_COLUMNS_TIMED,
   ID_GRID_MAIN,
-  ZIndex,
 } from "@web/common/constants/web.constants";
-import { useMinuteTick } from "@web/common/hooks/useMinuteTick";
 import { type CSSVariables } from "@web/common/styles/css.types";
-import { accentGradient } from "@web/common/styles/theme.util";
 import { getHourLabels } from "@web/common/utils/datetime/web.date.util";
 import { ScrollableRegion } from "@web/components/ScrollableRegion/ScrollableRegion";
 import { CalendarTimeColumn } from "@web/grid/components/CalendarTimeColumn";
@@ -25,10 +20,10 @@ import {
   calendarColumnGridVars,
   TIMED_HOUR_SLOT_HEIGHT_CLASS,
   TIMED_VISIBLE_HOURS,
-  timedGridTopPercent,
 } from "@web/grid/grid.constants";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
-import { useNowCuePulse } from "@web/grid/now-cue/useNowCuePulse";
+import { CalendarNowLine } from "@web/grid/now-cue/CalendarNowLine";
+import { nowTimeLabelPlacement } from "@web/grid/now-cue/now-line-time.util";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 
@@ -74,6 +69,15 @@ export const TimedGrid: FC<TimedGridProps> = ({
     return longestDay ?? fallback;
   }, [civilHourSlots, effectiveTimeZone, today, visibleDates, visibleDayDates]);
   const hourRowLabels = getHourLabels(true, labelDay, effectiveTimeZone);
+  const timeLabelPlacement = nowTimeLabelPlacement(visibleDates);
+  const showTodayNowCue = todayColumnIndexes.length > 0;
+  const todayColumnIndex = todayColumnIndexes[0] ?? -1;
+  const showGutterNowTimeLabel =
+    showTodayNowCue &&
+    (timeLabelPlacement === "gutter" ||
+      (timeLabelPlacement === "column-edge" && todayColumnIndex === 0));
+  const showWeekColumnNowTimeLabel =
+    showTodayNowCue && timeLabelPlacement === "column-edge";
 
   return (
     <ScrollableRegion
@@ -93,7 +97,10 @@ export const TimedGrid: FC<TimedGridProps> = ({
         } as CSSVariables
       }
     >
-      <CalendarTimeColumn at={labelDay.toDate()} />
+      <CalendarTimeColumn
+        at={labelDay.toDate()}
+        showNowTimeLabel={showGutterNowTimeLabel}
+      />
       <div
         className={`absolute top-0 left-(--calendar-grid-margin-left) grid h-[calc(var(--calendar-day-hour-slots)*100%/var(--calendar-visible-hours))] w-[calc(100%-var(--calendar-grid-margin-left))] ${CALENDAR_COLUMN_GRID_CLASS}`}
         id={columnsId}
@@ -121,44 +128,10 @@ export const TimedGrid: FC<TimedGridProps> = ({
             columnIndex={columnIndex}
             effectiveTimeZone={effectiveTimeZone}
             key={visibleDates[columnIndex]?.key}
+            showWeekColumnTimeLabel={showWeekColumnNowTimeLabel}
           />
         ))}
       </div>
     </ScrollableRegion>
-  );
-};
-
-const CalendarNowLine = ({
-  columnCount,
-  columnIndex,
-  effectiveTimeZone,
-}: {
-  columnCount: number;
-  columnIndex: number;
-  effectiveTimeZone: string;
-}) => {
-  useMinuteTick();
-  const minutesFromMidnight = gridMinutesFromCivilMidnight(
-    dayjs(),
-    effectiveTimeZone,
-  );
-  const { pulsing: pulseNowLine, pulseKey } = useNowCuePulse();
-
-  return (
-    <div
-      aria-hidden="true"
-      className={cn(
-        "c-now-line-rim absolute h-px",
-        pulseNowLine && "c-now-cue-pulse",
-      )}
-      key={pulseKey("now-line")}
-      style={{
-        background: accentGradient,
-        top: `${timedGridTopPercent(minutesFromMidnight)}%`,
-        left: `calc(${columnIndex} * 100% / ${columnCount})`,
-        width: `calc(100% / ${columnCount})`,
-        zIndex: ZIndex.LAYER_2,
-      }}
-    />
   );
 };
