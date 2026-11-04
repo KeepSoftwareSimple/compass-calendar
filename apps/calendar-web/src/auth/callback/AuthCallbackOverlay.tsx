@@ -1,4 +1,5 @@
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
+import { PixelCompass } from "@web/components/PixelCompass/PixelCompass";
 
 /**
  * The "we are exchanging your code" screen every OAuth return lands on.
@@ -12,12 +13,7 @@ export function AuthCallbackOverlay() {
       message="Returning you to Compass."
       role="status"
       variant="status"
-      icon={
-        <div
-          className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-text"
-          aria-hidden="true"
-        />
-      }
+      icon={<PixelCompass className="h-12 w-12" />}
     />
   );
 }

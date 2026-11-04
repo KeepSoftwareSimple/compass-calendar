@@ -92,8 +92,8 @@ export const EventGrid: FC<EventGridProps> = ({
         aria-label="Loading events"
         className={
           isErrorEvents
-            ? "bg-background [&>div]:my-0"
-            : "pointer-events-none backdrop-blur-none [&>div]:my-0 [&>div]:h-10 [&>div]:w-10 [&>div]:border-2"
+            ? "bg-background"
+            : "pointer-events-none backdrop-blur-none"
         }
         role="status"
         style={{ zIndex: ZIndex.MAX }}
