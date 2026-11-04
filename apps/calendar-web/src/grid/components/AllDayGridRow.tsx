@@ -9,7 +9,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { PH_NO_RAGECLICK_CLASS } from "@web/auth/posthog/posthog-calendar-grid.util";
 import {
@@ -23,25 +22,22 @@ import {
   setAllDayRowExpanded,
   useAllDayRowExpanded,
 } from "@web/grid/all-day-row/allDayRowCollapse.store";
+import { GridDayColumnHeaders } from "@web/grid/components/GridDayColumnHeaders";
 import {
+  CALENDAR_COLUMN_GRID_CLASS,
+  calendarColumnGridVars,
   EVENT_ALLDAY_GAP,
   EVENT_ALLDAY_HEIGHT,
   EVENT_ALLDAY_ROW_HEIGHT,
-  EVENT_WIDTH_MINIMUM,
 } from "@web/grid/grid.constants";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
-import { allDayColumnTintStyle } from "@web/grid/utils/allDayColumnTint.util";
 import {
   ALL_DAY_ROW_COLLAPSED_VISIBLE_LANES,
   allDayRowHeightPx,
   allDayRowStackHeightPx,
   isAllDayRowCollapsible,
 } from "@web/grid/utils/allDayRowHeight.util";
-import {
-  selectEventJumpActiveDayKeys,
-  useEventJumpStore,
-} from "@web/shortcuts/shift-hint/event-jump.store";
 
 /** Marks row chrome (toggle, "+N more") that is not an empty all-day slot. */
 const ALL_DAY_ROW_CONTROL_ATTRIBUTE = "data-allday-row-control";
@@ -83,7 +79,6 @@ export const AllDayGridRow: FC<AllDayRowProps> = ({
   rowId = ID_GRID_ALLDAY_ROW,
   visibleDates,
 }) => {
-  const activeDayKeys = useEventJumpStore(selectEventJumpActiveDayKeys);
   const marginLeft = useGridMarginLeft();
   const storedExpanded = useAllDayRowExpanded();
   const [focusPeek, setFocusPeek] = useState(false);
@@ -138,49 +133,20 @@ export const AllDayGridRow: FC<AllDayRowProps> = ({
       }}
     >
       <div
-        className="absolute top-0 left-[var(--calendar-grid-margin-left)] grid h-full w-[calc(100%_-_var(--calendar-grid-margin-left))] grid-cols-[repeat(var(--calendar-column-count),minmax(var(--calendar-column-min-width),1fr))] before:pointer-events-none before:absolute before:inset-x-0 before:bottom-0 before:h-0.5 before:bg-border before:content-['']"
+        className={`absolute top-0 left-[var(--calendar-grid-margin-left)] grid h-full w-[calc(100%_-_var(--calendar-grid-margin-left))] ${CALENDAR_COLUMN_GRID_CLASS} before:pointer-events-none before:absolute before:inset-x-0 before:bottom-0 before:h-0.5 before:bg-border before:content-['']`}
         id={columnsId}
         ref={allDayColumnsRef}
         style={
           {
-            "--calendar-column-count": visibleDates.length,
-            "--calendar-column-min-width": `${EVENT_WIDTH_MINIMUM}px`,
+            ...calendarColumnGridVars(visibleDates.length),
             "--calendar-grid-margin-left": `${marginLeft}px`,
           } as CSSVariables
         }
       >
-        <table className="contents">
-          <thead className="contents">
-            <tr className="contents">
-              {visibleDates.map(
-                ({ date, key, surfaceLabel, allDayTintColor }) => {
-                  const dayKey = date.format(YEAR_MONTH_DAY_FORMAT);
-                  const isJumpDay = activeDayKeys.includes(dayKey);
-                  const isFocusedColumn = key === highlightedColumnKey;
-                  const tintStyle = allDayColumnTintStyle(
-                    allDayTintColor,
-                    isJumpDay || isFocusedColumn,
-                  );
-                  return (
-                    <th
-                      className="relative box-border block h-full min-w-[var(--calendar-column-min-width)] border-border border-l transition-colors duration-150 data-[focused-column=true]:bg-accent/10 data-[jump-day=true]:bg-accent/10 motion-reduce:transition-none"
-                      data-all-day-tint={tintStyle ? "true" : undefined}
-                      data-focused-column={isFocusedColumn ? "true" : undefined}
-                      data-jump-day={isJumpDay ? "true" : undefined}
-                      data-grid-date={dayKey}
-                      aria-label={
-                        surfaceLabel ?? date.format("dddd, MMMM D, YYYY")
-                      }
-                      key={key}
-                      scope="col"
-                      style={tintStyle}
-                    />
-                  );
-                },
-              )}
-            </tr>
-          </thead>
-        </table>
+        <GridDayColumnHeaders
+          highlightedColumnKey={highlightedColumnKey}
+          visibleDates={visibleDates}
+        />
       </div>
       <div
         // Flex like the section, so a margin-offset w-full events layer
@@ -198,12 +164,11 @@ export const AllDayGridRow: FC<AllDayRowProps> = ({
       </div>
       {collapsed ? (
         <div
-          className="pointer-events-none absolute grid grid-cols-[repeat(var(--calendar-column-count),minmax(var(--calendar-column-min-width),1fr))]"
+          className={`pointer-events-none absolute grid ${CALENDAR_COLUMN_GRID_CLASS}`}
           data-testid="allday-row-more"
           style={
             {
-              "--calendar-column-count": visibleDates.length,
-              "--calendar-column-min-width": `${EVENT_WIDTH_MINIMUM}px`,
+              ...calendarColumnGridVars(visibleDates.length),
               height: `${EVENT_ALLDAY_HEIGHT}px`,
               left: `${marginLeft}px`,
               right: 0,

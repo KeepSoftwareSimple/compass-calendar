@@ -1,6 +1,5 @@
 import cn from "classnames";
 import { type FC, type ReactNode, type RefCallback, useMemo } from "react";
-import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import {
   civilHourSlotCount,
   gridMinutesFromCivilMidnight,
@@ -20,8 +19,10 @@ import { accentGradient } from "@web/common/styles/theme.util";
 import { getHourLabels } from "@web/common/utils/datetime/web.date.util";
 import { ScrollableRegion } from "@web/components/ScrollableRegion/ScrollableRegion";
 import { CalendarTimeColumn } from "@web/grid/components/CalendarTimeColumn";
+import { GridDayColumnHeaders } from "@web/grid/components/GridDayColumnHeaders";
 import {
-  EVENT_WIDTH_MINIMUM,
+  CALENDAR_COLUMN_GRID_CLASS,
+  calendarColumnGridVars,
   TIMED_HOUR_SLOT_HEIGHT_CLASS,
   TIMED_VISIBLE_HOURS,
   timedGridTopPercent,
@@ -29,11 +30,6 @@ import {
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { useNowCuePulse } from "@web/grid/now-cue/useNowCuePulse";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
-import { allDayColumnTintStyle } from "@web/grid/utils/allDayColumnTint.util";
-import {
-  selectEventJumpActiveDayKeys,
-  useEventJumpStore,
-} from "@web/shortcuts/shift-hint/event-jump.store";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 
 interface TimedGridProps {
@@ -57,7 +53,6 @@ export const TimedGrid: FC<TimedGridProps> = ({
   today,
   visibleDates,
 }) => {
-  const activeDayKeys = useEventJumpStore(selectEventJumpActiveDayKeys);
   const marginLeft = useGridMarginLeft();
   const todayColumnIndexes = visibleDates.flatMap(({ date }, index) =>
     date.isSame(today, "day") ? [index] : [],
@@ -91,8 +86,7 @@ export const TimedGrid: FC<TimedGridProps> = ({
       ref={timedGridRef}
       style={
         {
-          "--calendar-column-count": visibleDates.length,
-          "--calendar-column-min-width": `${EVENT_WIDTH_MINIMUM}px`,
+          ...calendarColumnGridVars(visibleDates.length),
           "--calendar-grid-margin-left": `${marginLeft}px`,
           "--calendar-day-hour-slots": civilHourSlots,
           "--calendar-visible-hours": TIMED_VISIBLE_HOURS,
@@ -101,43 +95,15 @@ export const TimedGrid: FC<TimedGridProps> = ({
     >
       <CalendarTimeColumn at={labelDay.toDate()} />
       <div
-        className="absolute top-0 left-(--calendar-grid-margin-left) grid h-[calc(var(--calendar-day-hour-slots)*100%/var(--calendar-visible-hours))] w-[calc(100%-var(--calendar-grid-margin-left))] grid-cols-[repeat(var(--calendar-column-count),minmax(var(--calendar-column-min-width),1fr))]"
+        className={`absolute top-0 left-(--calendar-grid-margin-left) grid h-[calc(var(--calendar-day-hour-slots)*100%/var(--calendar-visible-hours))] w-[calc(100%-var(--calendar-grid-margin-left))] ${CALENDAR_COLUMN_GRID_CLASS}`}
         id={columnsId}
         ref={timedColumnsRef}
       >
-        <table className="contents">
-          <thead className="contents">
-            <tr className="contents">
-              {visibleDates.map(
-                ({ date, key, surfaceLabel, allDayTintColor }) => {
-                  const dayKey = date.format(YEAR_MONTH_DAY_FORMAT);
-                  const isJumpDay = activeDayKeys.includes(dayKey);
-                  const isFocusedColumn = key === highlightedColumnKey;
-                  const tintStyle = allDayColumnTintStyle(
-                    allDayTintColor,
-                    isJumpDay || isFocusedColumn,
-                  );
-                  return (
-                    <th
-                      className="relative box-border block h-full min-w-[var(--calendar-column-min-width)] border-border border-l transition-colors duration-150 data-[past=true]:data-[focused-column=true]:bg-accent/10 data-[past=true]:data-[jump-day=true]:bg-accent/10 data-[focused-column=true]:bg-accent/10 data-[jump-day=true]:bg-accent/10 data-[past=true]:bg-surface motion-reduce:transition-none"
-                      data-all-day-tint={tintStyle ? "true" : undefined}
-                      data-focused-column={isFocusedColumn ? "true" : undefined}
-                      data-jump-day={isJumpDay ? "true" : undefined}
-                      data-grid-date={dayKey}
-                      data-past={date.isBefore(today, "day")}
-                      aria-label={
-                        surfaceLabel ?? date.format("dddd, MMMM D, YYYY")
-                      }
-                      key={key}
-                      scope="col"
-                      style={tintStyle}
-                    />
-                  );
-                },
-              )}
-            </tr>
-          </thead>
-        </table>
+        <GridDayColumnHeaders
+          highlightedColumnKey={highlightedColumnKey}
+          pastBefore={today}
+          visibleDates={visibleDates}
+        />
       </div>
 
       <div className="absolute left-(--calendar-grid-margin-left) h-full w-[calc(100%-var(--calendar-grid-margin-left))]">

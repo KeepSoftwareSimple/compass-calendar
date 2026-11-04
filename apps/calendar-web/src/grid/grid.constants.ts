@@ -1,3 +1,5 @@
+import { type CSSVariables } from "@web/common/styles/css.types";
+
 export const DRAFT_PADDING_BOTTOM = 3;
 export const EVENT_ALLDAY_HEIGHT = 20;
 export const EVENT_ALLDAY_GAP = 3;
@@ -27,6 +29,21 @@ export const GRID_EVENT_TITLE_COMPACT_LINE_HEIGHT = "1.1";
 export const MIN_EVENT_HEIGHT_FOR_TIME_LABEL = 36;
 export const MIN_EVENT_WIDTH_FOR_TIME_LABEL = 90;
 export const EVENT_WIDTH_MINIMUM = 80;
+
+/**
+ * Column grid both grid surfaces (timed, all-day) share, driven by the
+ * variables {@link calendarColumnGridVars} sets on an ancestor.
+ */
+export const CALENDAR_COLUMN_GRID_CLASS =
+  "grid-cols-[repeat(var(--calendar-column-count),minmax(var(--calendar-column-min-width),1fr))]";
+
+/** The variables CALENDAR_COLUMN_GRID_CLASS and the column cells read. */
+export function calendarColumnGridVars(columnCount: number): CSSVariables {
+  return {
+    "--calendar-column-count": columnCount,
+    "--calendar-column-min-width": `${EVENT_WIDTH_MINIMUM}px`,
+  };
+}
 // Narrowest a day column can get before the week view drops a day instead;
 // wider than EVENT_WIDTH_MINIMUM so titles/time labels stay legible.
 export const DAY_COLUMN_MIN_USABLE_WIDTH = 140;
