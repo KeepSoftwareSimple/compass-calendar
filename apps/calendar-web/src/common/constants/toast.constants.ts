@@ -32,6 +32,7 @@ export const GUEST_RSVP_TOAST_ID: Id = "guest-rsvp";
 export const SHORTCUT_LEVEL_UP_TOAST_ID: Id = "shortcut-level-up";
 export const CONFERENCE_LINK_ADDED_TOAST_ID: Id = "conference-link-added";
 export const DESKTOP_UPDATE_READY_TOAST_ID: Id = "desktop-update-ready";
+export const APP_UPDATE_AVAILABLE_TOAST_ID: Id = "app-update-available";
 
 /**
  * Toast chrome follows `[data-theme]` instead of a JS hex snapshot, so body

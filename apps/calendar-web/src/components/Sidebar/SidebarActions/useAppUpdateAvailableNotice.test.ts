@@ -55,4 +55,27 @@ describe("useAppUpdateAvailableNotice", () => {
     renderHook(() => useAppUpdateAvailableNotice(true, "9.9.9"));
     expect(showAppUpdateAvailableToast).not.toHaveBeenCalled();
   });
+
+  it("notifies again when a newer build replaces the pending version", () => {
+    const { rerender } = renderHook(
+      ({
+        available,
+        version,
+      }: {
+        available: boolean;
+        version: string | null;
+      }) => useAppUpdateAvailableNotice(available, version),
+      { initialProps: { available: true, version: "9.9.9" } },
+    );
+
+    expect(showAppUpdateAvailableToast).toHaveBeenCalledTimes(1);
+    expect(showAppUpdateAvailableToast).toHaveBeenCalledWith("9.9.9");
+
+    rerender({ available: true, version: "10.0.0" });
+    expect(showAppUpdateAvailableToast).toHaveBeenCalledTimes(2);
+    expect(showAppUpdateAvailableToast).toHaveBeenLastCalledWith("10.0.0");
+
+    rerender({ available: true, version: "10.0.0" });
+    expect(showAppUpdateAvailableToast).toHaveBeenCalledTimes(2);
+  });
 });
