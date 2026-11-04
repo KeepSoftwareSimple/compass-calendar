@@ -17,3 +17,9 @@ export const SOCIAL_LINKS: SocialLink[] = [
     href: "https://github.com/KeepSoftwareSimple/compass-calendar",
   },
 ];
+
+export const BLOG_LINK = {
+  id: "blog",
+  label: "Blog",
+  href: "https://www.compasscalendar.com/blog",
+} as const;
