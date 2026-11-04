@@ -1,5 +1,8 @@
 import { type Collection, type Db, ObjectId } from "mongodb";
-import { type SyncEventCalendarId } from "@core/types/sync/event.contracts";
+import {
+  nullableProviderEventVersionFromBoundary,
+  type SyncEventCalendarId,
+} from "@core/types/sync/event.contracts";
 import {
   type ConnectionId,
   type PrincipalId,
@@ -33,7 +36,12 @@ export class DeletionMarkerRepository {
   async record(
     input: DeletionMarkerRecordInput,
   ): Promise<DeletionMarkerRecord> {
-    const fields = DeletionMarkerRecordInputSchema.parse(input);
+    const fields = DeletionMarkerRecordInputSchema.parse({
+      ...input,
+      providerVersion: nullableProviderEventVersionFromBoundary(
+        input.providerVersion,
+      ),
+    });
     const expiresAt = new Date(
       fields.deletedAt.getTime() + DELETION_MARKER_RETENTION_MS,
     );
