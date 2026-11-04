@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -19,7 +19,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "a11y": {
         "noNoninteractiveTabindex": "warn",
         "noRedundantRoles": "warn",
@@ -158,6 +158,7 @@
       "!logs",
       "!node_modules",
       "!*.min.js",
+      "!*.html",
       "!bun.lock",
       "!apps/calendar-macos"
     ]
