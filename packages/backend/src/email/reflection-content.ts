@@ -53,10 +53,8 @@ export function selectReflectionEvents(input: {
   const upcoming = eligible
     .filter((event) => event.windowKey === "upcoming")
     .sort((a, b) => a.schedule.start.localeCompare(b.schedule.start));
-  const history = eligible.filter(
-    (event) =>
-      event.windowKey.startsWith("history:") &&
-      (!event.recurring || event.schedule.kind === "allDay"),
+  const history = eligible.filter((event) =>
+    event.windowKey.startsWith("history:"),
   );
   const historicalWeekMatch = (event: ReflectionEvent) => {
     const year = event.windowKey.split(":")[1] ?? localDate(event).slice(0, 4);

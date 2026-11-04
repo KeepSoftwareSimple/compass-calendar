@@ -56,6 +56,39 @@ describe("reflection content", () => {
     });
     expect(selected.memories[0]?.id).toBe("fresh");
   });
+
+  it("keeps recurring memories available while favoring one-off highlights", () => {
+    const weekly = event("weekly", "2020-11-04", {
+      recurring: true,
+      schedule: {
+        kind: "timed",
+        start: "2020-11-04T17:00:00Z",
+        end: "2020-11-04T18:00:00Z",
+        timeZone: "America/Denver",
+      },
+    });
+    const moved = {
+      ...weekly,
+      id: "moved",
+      eventId: "moved",
+      seriesId: "master",
+      title: "Walk with a friend",
+    };
+    const oneOff = {
+      ...weekly,
+      id: "one-off",
+      eventId: "one-off",
+      recurring: false,
+    };
+    const sparse = selectReflectionEvents({ ...input, events: [moved] });
+    expect(sparse.memories.map((memory) => memory.id)).toEqual(["moved"]);
+    const ranked = selectReflectionEvents({
+      ...input,
+      events: [weekly, oneOff, moved],
+    });
+    expect(ranked.memories[0]?.id).toBe("one-off");
+    expect(ranked.memories).toHaveLength(3);
+  });
   it("hides series exceptions and deduplicates shared UIDs at equivalent instants", () => {
     const schedule = {
       kind: "timed",

@@ -144,6 +144,65 @@ describe("private reflection delivery", () => {
     ).toBe("sent");
   });
 
+  it("searches every available prior year and drains old-history pages before sending", async () => {
+    const seen = new Set<string>();
+    let oldestPages = 0;
+    spyOn(getSyncServiceClient(), "readReflection").mockImplementation(
+      async (_principal, query) => {
+        for (const window of query.windows) seen.add(window.key);
+        const oldest = query.windows.some(
+          (window) => window.key === "history:2010",
+        );
+        if (oldest) oldestPages++;
+        const secondPage = oldest && !!query.cursor;
+        return {
+          ok: true,
+          correlationId: "history-test",
+          value: {
+            oldestYear: 2010,
+            historyComplete: true,
+            truncated: false,
+            nextCursor: oldest && !query.cursor ? "oldest-page-2" : null,
+            events: secondPage
+              ? [
+                  {
+                    id: "old-memory",
+                    eventId: "old-memory",
+                    seriesId: "old-series",
+                    calendarId: "calendar",
+                    title: "Walk with a friend in 2010",
+                    recurring: true,
+                    uid: null,
+                    windowKey: "history:2010",
+                    schedule: {
+                      kind: "timed",
+                      start: "2010-10-28T16:00:00Z",
+                      end: "2010-10-28T17:00:00Z",
+                      timeZone: "America/Denver",
+                    },
+                  },
+                ]
+              : [],
+          },
+        };
+      },
+    );
+    await enqueueDueReflections(now);
+    const row = EmailSendRecordSchema.parse(
+      await mongoService.emailSend.findOne({ userId }),
+    );
+    const send = mock(async () => ({ messageId: "historical-reflection" }));
+    await dispatchReflection(row, { send, verifyWebhook: () => [] });
+    expect(seen.size).toBe(18);
+    expect(seen.has("history:2025")).toBe(true);
+    expect(seen.has("history:2010")).toBe(true);
+    expect(oldestPages).toBe(2);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0]?.[0]?.text).toContain(
+      "Walk with a friend in 2010",
+    );
+  });
+
   it("fails closed if the trial binding disappears and expires missed morning sends", async () => {
     CONFIG.REFLECTION_TRIAL_EMAIL = undefined;
     await enqueueDueReflections(now);
