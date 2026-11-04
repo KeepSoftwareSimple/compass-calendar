@@ -18,10 +18,6 @@ common_args=(
   -clonedSourcePackagesDirPath build/SourcePackages
 )
 
-if [ -n "${MACOS_XCRESULT_PATH:-}" ]; then
-  common_args+=(-resultBundlePath "$MACOS_XCRESULT_PATH")
-fi
-
 # UI suites are independent app launches; parallel classes cuts wall time on Mac runners.
 parallel_args=()
 if [ "${MACOS_PARALLEL_UI_TESTS:-1}" != "0" ]; then
@@ -34,5 +30,11 @@ fi
 echo "── xcodebuild build-for-testing (Compass scheme) ──"
 xcodebuild build-for-testing "${common_args[@]}"
 
+test_args=("${common_args[@]}")
+if [ -n "${MACOS_XCRESULT_PATH:-}" ]; then
+  rm -rf "$MACOS_XCRESULT_PATH"
+  test_args+=(-resultBundlePath "$MACOS_XCRESULT_PATH")
+fi
+
 echo "── xcodebuild test-without-building (Compass scheme) ──"
-xcodebuild test-without-building "${common_args[@]}" "${parallel_args[@]}"
+xcodebuild test-without-building "${test_args[@]}" "${parallel_args[@]}"
