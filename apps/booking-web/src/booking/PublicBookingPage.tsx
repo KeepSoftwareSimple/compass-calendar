@@ -4,6 +4,7 @@ import { PublicBookingGuestForm } from "@booking-web/booking/PublicBookingGuestF
 import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
 import { PublicBookingMeetingTypePicker } from "@booking-web/booking/PublicBookingMeetingTypePicker";
 import { PublicBookingOwnerInbox } from "@booking-web/booking/PublicBookingOwnerInbox";
+import { PublicBookingPageOwnerEditButton } from "@booking-web/booking/PublicBookingPageOwnerEditButton";
 import { PublicBookingPicker } from "@booking-web/booking/PublicBookingPicker";
 import { PublicBookingSkipLink } from "@booking-web/booking/PublicBookingSkipLink";
 import {
@@ -106,13 +107,18 @@ export function PublicBookingPage() {
         }
       />
       <header className="flex flex-col gap-1">
-        <h1
-          className={PUBLIC_BOOKING_HEADING_CLASS}
-          ref={headingRef}
-          tabIndex={-1}
-        >
-          Meet with {page.hostDisplayName}
-        </h1>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h1
+            className={PUBLIC_BOOKING_HEADING_CLASS}
+            ref={headingRef}
+            tabIndex={-1}
+          >
+            Meet with {page.hostDisplayName}
+          </h1>
+          {flow.isPageOwner === true ? (
+            <PublicBookingPageOwnerEditButton enabled={!flow.showDetailsStep} />
+          ) : null}
+        </div>
         <p className="text-sm text-text-muted">
           {formatBookingDurationWithConference(
             formatDurationMinutes(durationMinutes),
@@ -172,9 +178,13 @@ export function PublicBookingPage() {
             onPrefetchMonth={flow.handlePrefetchMonth}
             onSelectDate={flow.handleSelectDay}
             onSelectSlot={flow.handleSelectSlot}
-            onJumpToNextAvailable={() => {
-              void flow.handleJumpToNextAvailable();
-            }}
+            onJumpToNextAvailable={
+              flow.horizonHasOpenSlots === false
+                ? undefined
+                : () => {
+                    void flow.handleJumpToNextAvailable();
+                  }
+            }
             onRetrySlots={() => {
               void slotsQuery.refetch();
             }}

@@ -51,6 +51,8 @@ interface PublicBookingSlotSelectionParams {
    * loaded (page meta, plus the guest token when rescheduling).
    */
   horizonDays: number | null;
+  /** Guest vs owner copy when the whole horizon has no open times. */
+  resolveHorizonEmptyMessage?: (horizonDays: number) => string | null;
   /**
    * When the URL has no `?date=`, open this day in the month grid (for example
    * the guest's current meeting day on reschedule).
@@ -58,6 +60,8 @@ interface PublicBookingSlotSelectionParams {
   preferredDateKey?: string | null;
   /** True while another step owns focus, so the picker heading must not take it. */
   pickerFocusSuspended?: boolean;
+  /** Bumps when month or meeting type changes so horizon scans restart. */
+  horizonScanKey: string;
   prefetchMonth: (monthKey: string, maxHorizonDays: number) => void;
   resolveNextAvailableDate: (
     afterDateKey: string | null,
@@ -82,13 +86,18 @@ export function usePublicBookingSlotSelection({
   horizonDays,
   preferredDateKey = null,
   pickerFocusSuspended = false,
+  horizonScanKey,
   prefetchMonth,
   resolveNextAvailableDate,
+  resolveHorizonEmptyMessage,
 }: PublicBookingSlotSelectionParams) {
   const navigate = useNavigate();
   const { guestTimeZone, monthKey, selectedSlotStart, slotDateKey } = keys;
 
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [horizonHasOpenSlots, setHorizonHasOpenSlots] = useState<
+    boolean | null
+  >(null);
   const alertRef = useRef<HTMLParagraphElement>(null);
   const pickerHeadingRef = useRef<HTMLHeadingElement>(null);
   const pendingPickerFocusRef = useRef(false);
@@ -139,6 +148,68 @@ export function usePublicBookingSlotSelection({
     !slotsHasData && (slotsQuery.isPending || slotsQuery.isFetching);
   const slotsError = Boolean(slotsQuery.isError && !slotsHasData);
   const slotsPending = slotsFetching && !slotsError;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset when month or type changes
+  useEffect(() => {
+    setHorizonHasOpenSlots(null);
+  }, [horizonScanKey]);
+
+  useEffect(() => {
+    if (horizonDays == null || slotsPending || slotsError || !slotsQuery.data) {
+      return;
+    }
+    if (!slotsQuery.data.bookable) {
+      setHorizonHasOpenSlots(false);
+      return;
+    }
+    if (slotsQuery.data.slots.length > 0) {
+      setHorizonHasOpenSlots(true);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const next = await resolveNextAvailableDate(null, todayKey, horizonDays);
+      if (cancelled) {
+        return;
+      }
+      if (next) {
+        setHorizonHasOpenSlots(true);
+        return;
+      }
+      setHorizonHasOpenSlots(false);
+      const message =
+        resolveHorizonEmptyMessage?.(horizonDays) ??
+        `No open times in the next ${horizonDays} days. Check back later.`;
+      if (message) {
+        setAlertMessage(message);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    horizonDays,
+    resolveHorizonEmptyMessage,
+    resolveNextAvailableDate,
+    slotsError,
+    slotsPending,
+    slotsQuery.data,
+    todayKey,
+  ]);
+
+  useEffect(() => {
+    if (horizonHasOpenSlots !== false || horizonDays == null) {
+      return;
+    }
+    const message =
+      resolveHorizonEmptyMessage?.(horizonDays) ??
+      `No open times in the next ${horizonDays} days. Check back later.`;
+    if (message) {
+      setAlertMessage(message);
+    }
+  }, [horizonDays, horizonHasOpenSlots, resolveHorizonEmptyMessage]);
 
   const updateSearch = (
     patch: Partial<PublicBookingSearch>,
@@ -243,11 +314,13 @@ export function usePublicBookingSlotSelection({
       });
       return;
     }
-    // Every month up to the horizon came back empty - say so instead of
-    // silently doing nothing.
-    setAlertMessage(
-      `No open times in the next ${horizonDays} days. Check back later.`,
-    );
+    setHorizonHasOpenSlots(false);
+    const message =
+      resolveHorizonEmptyMessage?.(horizonDays) ??
+      `No open times in the next ${horizonDays} days. Check back later.`;
+    if (message) {
+      setAlertMessage(message);
+    }
   };
 
   return {
@@ -272,5 +345,6 @@ export function usePublicBookingSlotSelection({
     handleTimeZoneChange,
     handlePrefetchMonth,
     handleJumpToNextAvailable,
+    horizonHasOpenSlots,
   };
 }
