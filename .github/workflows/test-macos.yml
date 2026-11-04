@@ -253,9 +253,6 @@ jobs:
           bun cli desktop:export --check
       - name: Run full strict verification
         shell: bash
-        env:
-          MACOS_PARALLEL_UI_TESTS: "1"
-          MACOS_PARALLEL_TEST_WORKERS: "3"
         run: |
           set -o pipefail
           mkdir -p build

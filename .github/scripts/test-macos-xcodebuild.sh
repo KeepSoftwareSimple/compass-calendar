@@ -18,12 +18,11 @@ common_args=(
   -clonedSourcePackagesDirPath build/SourcePackages
 )
 
-# UI suites are independent app launches; parallel classes cuts wall time on Mac runners.
 parallel_args=()
-if [ "${MACOS_PARALLEL_UI_TESTS:-1}" != "0" ]; then
+if [ "${MACOS_PARALLEL_UI_TESTS:-0}" = "1" ]; then
   parallel_args+=(
     -parallel-testing-enabled YES
-    -maximum-parallel-testing-workers "${MACOS_PARALLEL_TEST_WORKERS:-3}"
+    -maximum-parallel-testing-workers "${MACOS_PARALLEL_TEST_WORKERS:-2}"
   )
 fi
 
