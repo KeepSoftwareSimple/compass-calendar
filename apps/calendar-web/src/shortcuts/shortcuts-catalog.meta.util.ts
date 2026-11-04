@@ -1,4 +1,5 @@
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
+/** node:crypto — test/build-time fingerprinting only; never import this module from router-eager UI. */
 import { createHash } from "node:crypto";
 
 /** Deterministic JSON for catalog fingerprints (object key order varies by runtime). */
@@ -24,14 +25,3 @@ export const fingerprintPublicShortcutCatalog = (
   catalog: ShortcutOverlaySection[],
 ): string =>
   createHash("sha256").update(stableJsonStringify(catalog)).digest("hex");
-
-export const formatShortcutsCatalogLastUpdated = (isoDate: string): string => {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-};

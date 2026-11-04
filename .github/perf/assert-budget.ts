@@ -48,6 +48,16 @@
  * tens of bytes. The 1,065 KB script budget leaves ~1 KB of headroom at the
  * measured median; boot-set gzip (~647 KB locally) is unchanged in intent.
  *
+ * Note 2026-11-04: main run 41869027781 (a5d00dd, #5095 now-line) measured
+ * 1,091,036 bytes script transfer, ~26 KB over the 1,065 KB ceiling. Boot-set
+ * gzip on the same build was ~744 KB vs ~584 KB on the prior green main
+ * (04321cef, run 41865683021, 968,384 bytes script). Bisect showed the jump
+ * landed in #5101, not #5095: ShortcutsCatalogView imported
+ * shortcuts-catalog.meta.util.ts for date formatting, which top-level-imports
+ * node:crypto and pulled the browser polyfill into the router-eager graph.
+ * #5095 added ~1 KB boot gzip. Fix: split the formatter out of the crypto
+ * module; no budget change (median returns to ~970 KB on CI-shaped builds).
+ *
  * Note 2026-09-13: not recalibrated. Lazy-splitting three closed dialogs
  * (#3704) added three dynamic roots, and Bun keys chunks on the set of roots
  * that reach a module, so shared boot modules fragmented into 15 extra
