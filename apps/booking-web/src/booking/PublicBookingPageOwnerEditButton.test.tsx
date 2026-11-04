@@ -16,7 +16,9 @@ describe("PublicBookingPageOwnerEditButton", () => {
 
     const editLink = screen.getByRole("link", { name: "Edit page" });
     expect(editLink).toHaveAttribute("href", "/?meetingSetup=1");
-    expect(screen.getByText("E")).toBeInTheDocument();
+    expect(editLink.parentElement?.parentElement).toContainElement(
+      document.querySelector(".c-keycap"),
+    );
 
     await user.hover(editLink);
     await waitFor(() => {
