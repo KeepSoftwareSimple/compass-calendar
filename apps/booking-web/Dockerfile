@@ -46,6 +46,7 @@ COPY --from=build --chown=compass:compass /app/build/booking-web ./build/booking
 COPY --from=build --chown=compass:compass /app/apps/calendar-web/compressible-static-types.ts ./apps/calendar-web/compressible-static-types.ts
 COPY --from=build --chown=compass:compass /app/apps/calendar-web/guest-meet-static-path.ts ./apps/calendar-web/guest-meet-static-path.ts
 COPY --from=build --chown=compass:compass /app/apps/calendar-web/spa-route-path.ts ./apps/calendar-web/spa-route-path.ts
+COPY --from=build --chown=compass:compass /app/apps/calendar-web/src/common/constants/routes.ts ./apps/calendar-web/src/common/constants/routes.ts
 COPY --from=build --chown=compass:compass /app/self-host/serve-web.ts ./self-host/serve-web.ts
 
 USER compass
