@@ -8,12 +8,37 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 
 const repoRoot = join(import.meta.dir, "..");
 
 function readRepoFile(path: string): string {
   return readFileSync(join(repoRoot, path), { encoding: "utf8" });
+}
+
+/** Relative TS imports reachable from serve-web.ts at Docker runtime. */
+function serveWebRuntimeModulePaths(): string[] {
+  const queue = ["self-host/serve-web.ts"];
+  const seen = new Set<string>();
+
+  while (queue.length > 0) {
+    const file = queue.pop()!;
+    if (seen.has(file)) {
+      continue;
+    }
+    seen.add(file);
+
+    const content = readRepoFile(file);
+    for (const match of content.matchAll(/from "(\.[^"]+)"/g)) {
+      const resolved = normalize(join(dirname(file), match[1]!));
+      const withExt = resolved.endsWith(".ts") ? resolved : `${resolved}.ts`;
+      if (!seen.has(withExt)) {
+        queue.push(withExt);
+      }
+    }
+  }
+
+  return [...seen].sort();
 }
 
 async function runHealthScript(
@@ -144,11 +169,11 @@ describe("self-host docker compose", () => {
   });
 
   it("ships every file serve-web.ts imports in each web runtime image", () => {
-    const serveWeb = readRepoFile("self-host/serve-web.ts");
-    const imports = [...serveWeb.matchAll(/from "\.\.\/(apps\/[^"]+)"/g)].map(
-      (match) => `${match[1]}.ts`,
+    const runtimeModules = serveWebRuntimeModulePaths();
+    expect(runtimeModules).toContain("apps/calendar-web/spa-route-path.ts");
+    expect(runtimeModules).toContain(
+      "apps/calendar-web/src/common/constants/routes.ts",
     );
-    expect(imports).toContain("apps/calendar-web/spa-route-path.ts");
 
     for (const file of [
       "self-host/Dockerfile.web",
@@ -156,7 +181,10 @@ describe("self-host docker compose", () => {
       "apps/booking-web/Dockerfile",
     ]) {
       const dockerfile = readRepoFile(file);
-      for (const imported of imports) {
+      for (const imported of runtimeModules) {
+        if (!imported.startsWith("apps/calendar-web/")) {
+          continue;
+        }
         expect(dockerfile).toContain(`/app/${imported} ./${imported}`);
       }
     }
