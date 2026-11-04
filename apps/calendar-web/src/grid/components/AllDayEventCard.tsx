@@ -39,7 +39,9 @@ export interface AllDayEventCardProps {
   isHidden?: boolean;
   isPlaceholder: boolean;
   isSelected?: boolean;
+  onBlur?: () => void;
   onEventKeyDown?: (event: GridEvent) => void;
+  onFocus?: () => void;
   onMouseEnter?: (e: MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: (e: MouseEvent<HTMLDivElement>) => void;
   position: EventPosition;
@@ -55,7 +57,9 @@ const AllDayEventCardBase = (
     isHidden = false,
     isPlaceholder,
     isSelected = false,
+    onBlur,
     onEventKeyDown,
+    onFocus,
     onMouseEnter,
     onMouseLeave,
     position,
@@ -132,6 +136,8 @@ const AllDayEventCardBase = (
         isPlaceholder,
         position,
       })}
+      onBlur={onBlur}
+      onFocus={onFocus}
       onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

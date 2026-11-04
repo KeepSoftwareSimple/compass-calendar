@@ -3,6 +3,7 @@ import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.types";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
+import { withGridEventKeyboardFocusZIndex } from "@web/grid/components/grid-event-focus-z-index";
 import { TimedEventCard } from "@web/grid/components/TimedEventCard";
 import { getTimedEventPosition } from "@web/grid/layout/event.position";
 import {
@@ -84,23 +85,27 @@ const GridTimedEventBase = (
     deckLayout &&
     (isSelected || isActiveDraft) &&
     !shouldFloatAboveDeck;
-  const zIndex = shouldFloatAboveDeck
+  const stackZIndex = shouldFloatAboveDeck
     ? ZIndex.MAX
     : deckRaised
       ? elevateTimedDeckZIndex(deckLayout, baseZIndex)
       : baseZIndex;
+  const zIndex = withGridEventKeyboardFocusZIndex(
+    stackZIndex,
+    isFocused && !shouldFloatAboveDeck,
+  );
 
   const deckBoxShadow = isDeck ? timedDeckBoxShadow(isFocused) : undefined;
   return (
     <TimedEventCard
-      onBlur={isDeck ? () => setIsFocused(false) : undefined}
+      onBlur={() => setIsFocused(false)}
       boxShadow={deckBoxShadow}
       calendarIdentity={calendarIdentity}
       displayMode={displayMode}
       event={event}
       focusColor={focusColor}
       guestResponse={guestResponse}
-      onFocus={isDeck ? () => setIsFocused(true) : undefined}
+      onFocus={() => setIsFocused(true)}
       interactionAttributes={interactionAttributes}
       isHidden={isHidden}
       isSelected={isSelected || isActiveDraft}
