@@ -46,16 +46,17 @@ jobs:
           git diff --name-only "$FROM_SHA" "$MERGE_SHA" >"$paths_file"
           summary=$(python3 -B docs/acceptance/macos-parity/parity_loop.py ingest \
             --merge-sha "$MERGE_SHA" --paths "$paths_file" --dry-run || true)
-          gh issue comment 4783 --body "$(cat <<BODY
-macos-parity-loop: merge ${MERGE_SHA} since watermark ${FROM_SHA}.
-
-\`\`\`
-${summary}
-\`\`\`
-
-Land reviewed entries by advancing \`reviewedWatermark\` in an accounting PR.
-BODY
-)"
+          body_file=$(mktemp)
+          {
+            echo "macos-parity-loop: merge ${MERGE_SHA} since watermark ${FROM_SHA}."
+            echo
+            echo '```'
+            printf '%s\n' "$summary"
+            echo '```'
+            echo
+            echo 'Land reviewed entries by advancing reviewedWatermark in an accounting PR.'
+          } >"$body_file"
+          gh issue comment 4783 --body-file "$body_file"
 
   kick:
     name: Pick and launch parity worker
