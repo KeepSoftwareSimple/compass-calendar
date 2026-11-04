@@ -1,6 +1,10 @@
+import { PencilSimpleIcon } from "@phosphor-icons/react/dist/csr/PencilSimple";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { meetingSetupRootHref } from "@web/booking/meeting-setup.search";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
+
+const EDIT_ICON_SIZE = 16;
 
 interface PublicBookingPageOwnerEditButtonProps {
   enabled: boolean;
@@ -20,12 +24,18 @@ export function PublicBookingPageOwnerEditButton({
   );
 
   return (
-    <a
-      href={href}
-      className="c-focus-ring inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md border border-border bg-surface-panel px-2.5 py-1 font-medium text-sm text-text transition-colors hover:bg-surface-raised"
-    >
-      Edit page
+    <span className="inline-flex shrink-0 items-center gap-1">
+      <TooltipWrapper description="Edit page (E)" asChild>
+        <a
+          href={href}
+          aria-label="Edit page"
+          aria-keyshortcuts="E"
+          className="c-focus-ring flex h-9 w-9 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-panel hover:text-text"
+        >
+          <PencilSimpleIcon aria-hidden size={EDIT_ICON_SIZE} />
+        </a>
+      </TooltipWrapper>
       <ShortcutKeys keys="E" />
-    </a>
+    </span>
   );
 }

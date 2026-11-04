@@ -1,10 +1,29 @@
 import { PublicBookingPageOwnerEditButton } from "@booking-web/booking/PublicBookingPageOwnerEditButton";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, spyOn } from "bun:test";
 
 describe("PublicBookingPageOwnerEditButton", () => {
+  it("renders an icon link with a visible E keycap and tooltip text", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    render(
+      <HotkeysProvider>
+        <PublicBookingPageOwnerEditButton enabled />
+      </HotkeysProvider>,
+    );
+
+    const editLink = screen.getByRole("link", { name: "Edit page" });
+    expect(editLink).toHaveAttribute("href", "/?meetingSetup=1");
+    expect(screen.getByText("E")).toBeInTheDocument();
+
+    await user.hover(editLink);
+    await waitFor(() => {
+      expect(screen.getByText("Edit page (E)")).toBeInTheDocument();
+    });
+  });
+
   it("navigates to meeting settings when E is pressed outside inputs", async () => {
     const assignSpy = spyOn(window.location, "assign").mockImplementation(
       () => {},
