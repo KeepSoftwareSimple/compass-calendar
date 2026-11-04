@@ -1611,6 +1611,10 @@
     padding-inline: 0;
   }
 
+  [data-shortcuts-print] [data-shortcuts-print-updated] {
+    color: #000;
+  }
+
   [data-shortcuts-print] .c-keycap {
     background: #fff;
     color: #000;

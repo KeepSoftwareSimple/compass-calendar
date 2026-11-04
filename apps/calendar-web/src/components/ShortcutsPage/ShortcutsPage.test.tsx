@@ -7,6 +7,8 @@ import {
   ShortcutsCatalogView,
 } from "@web/components/ShortcutsPage/ShortcutsCatalogView";
 import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
+import { PUBLIC_SHORTCUT_CATALOG_LAST_UPDATED } from "@web/shortcuts/shortcuts-catalog.data";
+import { formatShortcutsCatalogLastUpdated } from "@web/shortcuts/shortcuts-catalog.meta.util";
 import { NotFoundView } from "@web/views/NotFound/NotFound";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
@@ -63,6 +65,16 @@ describe("public /shortcuts page", () => {
         expect(screen.getByText(shortcut.label)).toBeInTheDocument();
       }
     }
+  });
+
+  it("shows when the public catalog was last updated", () => {
+    render(<ShortcutsCatalogView />);
+
+    expect(
+      screen.getByText(
+        `Last updated ${formatShortcutsCatalogLastUpdated(PUBLIC_SHORTCUT_CATALOG_LAST_UPDATED)}`,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("sets the document title and meta description, then restores them", () => {
