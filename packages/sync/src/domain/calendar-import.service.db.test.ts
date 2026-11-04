@@ -307,7 +307,7 @@ describe("importCalendarEvents", () => {
     expect(await occStarts(mId)).toHaveLength(2);
   });
 
-  it("counts an instance whose master never appears as skipped", async () => {
+  it("retains an instance whose master never appears as a factual one-off", async () => {
     const calendar = await seedCalendar();
     const reader = new FakeReader({
       full: [
@@ -319,9 +319,27 @@ describe("importCalendarEvents", () => {
 
     const result = await importCalendarEvents(deps(reader), calendar, now);
 
-    expect(result.imported).toBe(0);
-    expect(result.skipped).toBe(1);
-    expect(await occCount(calendar._id)).toBe(0);
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(await occCount(calendar._id)).toBe(1);
+    const retained = await events.findByProviderIdentity(
+      calendar.tenantId,
+      calendar.principalId,
+      {
+        connectionId: calendar.connectionId,
+        calendarId: calendar._id,
+        providerEventId: "orphan_i" as ProviderEventId,
+      },
+    );
+    expect(retained?.content).toEqual(
+      instance("orphan_i", "ghost", "2026-07-21T09:00:00-06:00").content,
+    );
+    expect(retained?.schedule).toEqual(single("orphan_i").schedule);
+    expect(retained?.recurrence).toEqual({ kind: "single" });
+    expect(retained?.providerMetadata).toMatchObject({
+      orphanSeriesProviderId: "ghost",
+      orphanRecurrenceId: "2026-07-21T09:00:00-06:00",
+    });
   });
 
   it("carries the reader's per-event skip count into the result", async () => {

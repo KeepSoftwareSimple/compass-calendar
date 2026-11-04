@@ -153,7 +153,7 @@ export async function repairCalendar(
       await deps.resources.setRepairCheckpoint(resource, pageToken, skipped);
     }
   } while (pageToken);
-  skipped += (await applier.finish()).orphans;
+  skipped += (await applier.finish({ fullSnapshot: true })).orphans;
 
   if (!cursor || (deps.reader.fullSnapshotOnly && skipped > 0)) {
     // An unusable completed pass must restart from the beginning, including

@@ -78,6 +78,7 @@ export class ProviderPageApplier {
   #masters = new Map<string, EventRecord>();
   // Series members read before their master, awaiting it.
   #pending: ProviderEventRead[] = [];
+  #deletedProviderIds = new Set<string>();
   // Occurrence reprojections accumulated across the page (singles, masters,
   // exceptions), written in one batched transaction per flush instead of one
   // transaction per event — see event-occurrence.repository.ts's
@@ -117,7 +118,15 @@ export class ProviderPageApplier {
     const singleReads: ProviderEvent[] = [];
     const memberReads: ProviderEventRead[] = [];
 
-    for (const read of reads) {
+    // A later full-pass read supersedes the windowed pass, including when an
+    // active orphan was cancelled in between. Never resurrect that older read.
+    const latest = new Map(reads.map((read) => [read.providerEventId, read]));
+    this.#pending = this.#pending.filter(
+      (read) => !latest.has(read.providerEventId),
+    );
+    for (const read of latest.values()) {
+      if (read.kind === "event")
+        this.#deletedProviderIds.delete(read.providerEventId);
       if (read.kind === "event" && read.recurrence.kind === "seriesMaster") {
         masterReads.push(read);
       } else if (read.kind === "event" && read.recurrence.kind === "single") {
@@ -126,6 +135,7 @@ export class ProviderPageApplier {
         memberReads.push(read);
       } else if (read.kind === "cancellation") {
         standaloneCancellations.push(read);
+        this.#deletedProviderIds.add(read.providerEventId);
       }
     }
 
@@ -180,11 +190,12 @@ export class ProviderPageApplier {
 
   // Final pass: link any still-buffered member to a now-available master,
   // project the masters that gained one, and return how many members never
-  // linked (a provider anomaly — an instant with no master in any page).
+  // linked. Complete snapshots retain active orphans as factual one-offs; a
+  // missing cancellation parent remains a gap unless its deletion was observed.
   // Unresolved series cancellations are also returned so pull can fall back
   // to standalone deletion by the full provider id — a rare standalone whose
   // Google id looks like an instance must not be stranded as an orphan.
-  async finish(): Promise<{
+  async finish(options: { fullSnapshot?: boolean } = {}): Promise<{
     orphans: number;
     leftoverCancellations: ProviderEventCancellation[];
   }> {
@@ -194,7 +205,53 @@ export class ProviderPageApplier {
     const leftoverCancellations = this.#pending.filter(
       (read): read is ProviderEventCancellation => read.kind === "cancellation",
     );
-    const orphans = this.#pending.length;
+    // A complete snapshot can contain active exceptions whose parent is no
+    // longer accessible. Keep their own factual content/schedule as single
+    // events, retaining provider identity and original linkage for recovery.
+    // Incremental pages cannot establish absence, so they retain gap accounting.
+    if (options.fullSnapshot) {
+      const active = [
+        ...new Map(
+          this.#pending
+            .filter((read): read is ProviderEvent => read.kind === "event")
+            .map((read) => [read.providerEventId, read]),
+        ).values(),
+      ];
+      const records = await this.events.upsertManyByProviderIdentity(
+        active.map((read) => {
+          if (read.recurrence.kind !== "instance") {
+            throw new Error("orphan instance expected");
+          }
+          return {
+            ...this.#eventUpsert(read, { kind: "single" }),
+            providerMetadata: {
+              ...providerMetadataFor(read),
+              orphanSeriesProviderId: read.recurrence.seriesProviderId,
+              orphanRecurrenceId: read.recurrence.recurrenceId,
+            },
+          };
+        }),
+        { preserveIcalUidWhenAbsent: true },
+      );
+      for (const [index, read] of active.entries()) {
+        const record = records[index];
+        if (!record)
+          throw new Error("orphan instance upsert returned no event");
+        this.#remember(read, record);
+        this.#pendingProjections.push({ event: record });
+      }
+      await this.#flushProjections();
+    }
+    const orphans = this.#pending.filter((read) => {
+      if (!options.fullSnapshot) return true;
+      if (read.kind === "event") return false;
+      // A cancelled child of an explicitly deleted parent has no active
+      // content to import. Unknown parents remain an unexplained coverage gap.
+      return (
+        !read.series ||
+        !this.#deletedProviderIds.has(read.series.seriesProviderId)
+      );
+    }).length;
     this.#pending = [];
     return { orphans, leftoverCancellations };
   }
