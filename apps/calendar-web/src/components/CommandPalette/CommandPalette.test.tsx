@@ -769,6 +769,7 @@ describe("CommandPalette", () => {
       await waitFor(() => {
         expect(screen.getByText("Searching for “devot”")).toBeInTheDocument();
       });
+      expect(screen.getByLabelText("Searching events")).toBeInTheDocument();
       expect(screen.getByRole("status").textContent).toBe("");
 
       resolveSearch([dentist]);

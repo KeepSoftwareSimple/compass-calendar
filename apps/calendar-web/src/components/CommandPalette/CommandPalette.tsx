@@ -385,7 +385,15 @@ const CommandPaletteContent = ({
                 {showSearchStatus ? (
                   <div className="mb-1">
                     <div className={SECTION_HEADING_CLASS_NAME}>Events</div>
-                    <div className="px-3 py-2 text-text-muted">
+                    <div
+                      aria-busy="true"
+                      className="flex min-h-[2.5rem] items-center gap-2 px-3 py-2 text-text-muted"
+                    >
+                      <span
+                        aria-label="Searching events"
+                        role="progressbar"
+                        className="inline-block size-4 shrink-0 animate-spin rounded-full border-2 border-border border-t-text motion-reduce:animate-none"
+                      />
                       {searchingText}
                     </div>
                   </div>
