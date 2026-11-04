@@ -100,6 +100,56 @@ describe("LifeBirthDateField", () => {
     });
   });
 
+  it("shows the parsed month in the grid while typing with the calendar open", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    const onCommit = mock(() => {});
+
+    render(
+      <ControlledBirthDateField
+        onCommit={onCommit}
+        storedBirthDate="2000-01-01"
+      />,
+      { wrapper },
+    );
+
+    const input = screen.getByRole("textbox", { name: "Date of birth" });
+    await user.click(input);
+    await user.keyboard("{ArrowDown}");
+    await user.clear(input);
+    await user.type(input, "4/12/1993");
+
+    await waitFor(() => {
+      expect(screen.getByText("Apr 1993")).toBeInTheDocument();
+    });
+  });
+
+  it("commits a year typed with arrow-down day pick on Enter", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    const onCommit = mock(() => {});
+
+    render(
+      <ControlledBirthDateField onCommit={onCommit} storedBirthDate="" />,
+      { wrapper },
+    );
+
+    const input = screen.getByRole("textbox", { name: "Date of birth" });
+    await user.click(input);
+    await user.type(input, "1993");
+    await user.keyboard("{ArrowDown}");
+
+    await waitFor(() => {
+      expect(screen.getByText("Jan 1993")).toBeInTheDocument();
+    });
+
+    await user.keyboard("{ArrowRight}{Enter}");
+
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    const [[committed]] = onCommit.mock.calls as unknown as [[Date]];
+    expect(committed.getFullYear()).toBe(1993);
+    expect(committed.getMonth()).toBe(0);
+    expect(committed.getDate()).toBeGreaterThan(1);
+  });
+
   it("selects a day from the open grid with a click", async () => {
     const user = userEvent.setup({ skipHover: true });
     const onCommit = mock(() => {});

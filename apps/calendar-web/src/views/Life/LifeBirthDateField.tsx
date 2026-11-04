@@ -18,6 +18,7 @@ import { LifeBirthDatePopoverHints } from "@web/views/Life/LifeBirthDatePopoverH
 import { parseLifeDate } from "@web/views/Life/life.utils";
 import {
   formatLifeBirthDatePreview,
+  lifeBirthDateGridAnchor,
   parseLifeBirthDateInput,
 } from "@web/views/Life/parseLifeBirthDateInput.util";
 
@@ -29,6 +30,13 @@ const consume = (event: React.KeyboardEvent) => {
 
 const LIFE_BIRTH_INPUT_CLASSNAME =
   "c-life-input c-life-birth-date-field__input w-full max-w-44";
+
+const calendarMonthCaptionSelector =
+  '.lifeBirthDatePicker [aria-label="Choose month and year"]';
+
+const readOpenCalendarMonthLabel = (): string | null =>
+  document.querySelector(calendarMonthCaptionSelector)?.textContent?.trim() ??
+  null;
 
 export interface LifeBirthDateFieldProps {
   id: string;
@@ -66,14 +74,24 @@ export function LifeBirthDateField({
     onCalendarClose();
   };
 
-  const pickerMonthRef = useRef(dayjs(committedDate ?? today).startOf("month"));
-  const [yearJumpTick, setYearJumpTick] = useState(0);
+  const [pickerMonth, setPickerMonth] = useState(() =>
+    dayjs(committedDate ?? today).startOf("month"),
+  );
+  const pickerMonthRef = useRef(pickerMonth);
   const syncPickerMonth = (next: Dayjs) => {
-    pickerMonthRef.current = next.startOf("month");
+    const month = next.startOf("month");
+    pickerMonthRef.current = month;
+    setPickerMonth(month);
   };
+
   const [pickerCursor, setPickerCursor] = useState<Dayjs | null>(null);
   const pickerCursorRef = useRef<Dayjs | null>(null);
+  const [gridFocused, setGridFocused] = useState(false);
   const isGridFocusedRef = useRef(false);
+  const setGridFocusedSync = (next: boolean) => {
+    isGridFocusedRef.current = next;
+    setGridFocused(next);
+  };
   const setPickerCursorSync = (next: Dayjs | null) => {
     pickerCursorRef.current = next;
     setPickerCursor(next);
@@ -81,56 +99,29 @@ export function LifeBirthDateField({
 
   const [draftText, setDraftText] = useState("");
   const shownDateRef = useRef<number | null>(null);
-  const pendingYearJumpRef = useRef<number | null>(null);
+  const draftParseKeyRef = useRef("");
+  const [monthNudgeTick, setMonthNudgeTick] = useState(0);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reopen resets month from committed birth date only.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reopen picks month from input parse or committed date.
   useEffect(() => {
     if (!isOpen) {
       pickerCursorRef.current = null;
       setPickerCursor(null);
-      isGridFocusedRef.current = false;
-      pendingYearJumpRef.current = null;
+      setGridFocusedSync(false);
       return;
     }
     calendarCloseRequestedRef.current = false;
-    if (pendingYearJumpRef.current === null) {
-      syncPickerMonth(dayjs(committedRef.current ?? today));
+    const inputValue =
+      containerRef.current?.querySelector("input")?.value.trim() ?? "";
+    const anchor = lifeBirthDateGridAnchor(
+      parseLifeBirthDateInput(inputValue, parseOptions),
+    );
+    if (anchor) {
+      applyGridAnchor(anchor);
+      return;
     }
+    syncPickerMonth(dayjs(committedRef.current ?? today));
   }, [isOpen, today]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: yearJumpTick triggers caption year pick after open.
-  useEffect(() => {
-    const year = pendingYearJumpRef.current;
-    if (!isOpen || year === null) return;
-
-    const calendarRoot = document.querySelector(".lifeBirthDatePicker");
-    if (!(calendarRoot instanceof HTMLElement)) return;
-
-    const openYearGrid = () => {
-      calendarRoot
-        .querySelector<HTMLButtonElement>(
-          '[aria-label="Choose month and year"]',
-        )
-        ?.click();
-    };
-
-    const pickYear = () => {
-      const yearButton = Array.from(
-        calendarRoot.querySelectorAll<HTMLButtonElement>(
-          ".react-datepicker__year-text",
-        ),
-      ).find((button) => button.textContent?.trim() === String(year));
-      if (yearButton) {
-        yearButton.click();
-        pendingYearJumpRef.current = null;
-      }
-    };
-
-    requestAnimationFrame(() => {
-      openYearGrid();
-      requestAnimationFrame(pickYear);
-    });
-  }, [isOpen, yearJumpTick]);
 
   useEffect(() => {
     committedRef.current = parseLifeDate(storedBirthDate);
@@ -159,10 +150,71 @@ export function LifeBirthDateField({
 
   const draftParse = parseLifeBirthDateInput(draftText, parseOptions);
 
+  const applyGridAnchor = (anchor: { month: Dayjs; cursor: Dayjs }) => {
+    setPickerCursorSync(anchor.cursor);
+    if (!anchor.month.isSame(pickerMonthRef.current, "month")) {
+      syncPickerMonth(anchor.month);
+      setMonthNudgeTick((tick) => tick + 1);
+    }
+  };
+
+  const syncGridFromDraft = () => {
+    const anchor = lifeBirthDateGridAnchor(draftParse);
+    if (!anchor) return;
+    applyGridAnchor(anchor);
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: draftParse identity tracks typed parse results.
+  useEffect(() => {
+    const key =
+      draftParse.kind === "date"
+        ? `date:${draftParse.date.getTime()}`
+        : draftParse.kind === "year"
+          ? `year:${draftParse.year}`
+          : "";
+    if (key === draftParseKeyRef.current) return;
+    draftParseKeyRef.current = key;
+    if (!key) return;
+    syncGridFromDraft();
+  }, [draftParse]);
+
+  useEffect(() => {
+    if (!isOpen || monthNudgeTick === 0) return;
+
+    const targetLabel = pickerMonthRef.current.format("MMM YYYY");
+    let attempts = 0;
+    let cancelled = false;
+
+    const step = () => {
+      if (cancelled || attempts++ > 24) return;
+      const label = readOpenCalendarMonthLabel();
+      if (label === targetLabel) return;
+
+      const current = label ? dayjs(label, "MMM YYYY") : null;
+      if (!current?.isValid()) return;
+
+      const delta = pickerMonthRef.current.diff(current, "month");
+      if (delta === 0) return;
+
+      const navLabel = delta > 0 ? "Next month" : "Previous month";
+      document
+        .querySelector(".calendar.lifeBirthDatePicker")
+        ?.querySelector<HTMLButtonElement>(`button[aria-label="${navLabel}"]`)
+        ?.click();
+      requestAnimationFrame(step);
+    };
+
+    requestAnimationFrame(step);
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, monthNudgeTick]);
+
   const revertInput = (target: HTMLInputElement) => {
     const committed = committedRef.current;
     target.value = committed ? formatLifeBirthDatePreview(committed) : "";
     setDraftText("");
+    draftParseKeyRef.current = "";
   };
 
   const commitParsedDate = (date: Date) => {
@@ -170,17 +222,23 @@ export function LifeBirthDateField({
     shownDateRef.current = date.getTime();
     onCommit(date);
     setDraftText("");
+    draftParseKeyRef.current = "";
   };
 
   const openCalendar = () => {
     onCalendarOpen();
   };
 
-  const jumpToYear = (year: number) => {
-    pendingYearJumpRef.current = year;
-    syncPickerMonth(dayjs(new Date(year, 0, 1)));
-    setYearJumpTick((tick) => tick + 1);
+  const openCalendarFromInput = (input: HTMLInputElement) => {
+    setDraftText(input.value);
+    const parsed = parseLifeBirthDateInput(input.value.trim(), parseOptions);
+    const anchor = lifeBirthDateGridAnchor(parsed);
+    if (anchor) {
+      applyGridAnchor(anchor);
+      setGridFocusedSync(true);
+    }
     openCalendar();
+    if (anchor) focusKeyboardSelectedDay();
   };
 
   const commitOrRevert = (
@@ -205,10 +263,12 @@ export function LifeBirthDateField({
     if (parsed.kind === "empty") {
       onCommit(null);
       setDraftText("");
+      draftParseKeyRef.current = "";
       return "committed";
     }
     if (parsed.kind === "year") {
-      jumpToYear(parsed.year);
+      const anchor = lifeBirthDateGridAnchor(parsed);
+      if (anchor) applyGridAnchor(anchor);
       return "year";
     }
     if (parsed.kind === "invalid") {
@@ -291,7 +351,7 @@ export function LifeBirthDateField({
 
     if (event.key === "Tab") {
       if (input instanceof HTMLInputElement) commitOrRevert(input);
-      isGridFocusedRef.current = false;
+      setGridFocusedSync(false);
       requestCalendarClose();
       event.stopPropagation();
       return;
@@ -329,9 +389,12 @@ export function LifeBirthDateField({
       event.key === "ArrowDown" &&
       pickerCursorRef.current === null
     ) {
-      const anchor = dayjs(committedRef.current ?? today).startOf("day");
+      syncGridFromDraft();
+      const anchor =
+        pickerCursorRef.current ??
+        dayjs(committedRef.current ?? today).startOf("day");
       setPickerCursorSync(anchor);
-      isGridFocusedRef.current = true;
+      setGridFocusedSync(true);
       focusKeyboardSelectedDay();
       return;
     }
@@ -348,7 +411,7 @@ export function LifeBirthDateField({
         if (!next.isSame(pickerMonthRef.current, "month")) {
           syncPickerMonth(next);
         }
-        isGridFocusedRef.current = true;
+        setGridFocusedSync(true);
         focusKeyboardSelectedDay();
         break;
       }
@@ -357,7 +420,7 @@ export function LifeBirthDateField({
         break;
       case "close":
         requestCalendarClose();
-        isGridFocusedRef.current = false;
+        setGridFocusedSync(false);
         input?.focus();
         break;
     }
@@ -395,7 +458,7 @@ export function LifeBirthDateField({
 
     if (event.key === "ArrowDown") {
       consume(event);
-      openCalendar();
+      openCalendarFromInput(target);
       return;
     }
 
@@ -403,7 +466,7 @@ export function LifeBirthDateField({
       consume(event);
       const outcome = commitOrRevert(target);
       if (outcome === "unchanged" || outcome === "year") {
-        openCalendar();
+        openCalendarFromInput(target);
       }
     }
   };
@@ -422,6 +485,8 @@ export function LifeBirthDateField({
   const previewIsError =
     draftParse.kind === "invalid" && draftText.trim() !== "";
 
+  const popoverHintMode = gridFocused ? "grid" : "typing";
+
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: keyboard routing for the birth-date field matches EventFormDateField.
     <div
@@ -432,7 +497,7 @@ export function LifeBirthDateField({
         if (next instanceof Element && next.closest(".react-datepicker"))
           return;
         if (isOpen) {
-          isGridFocusedRef.current = false;
+          setGridFocusedSync(false);
           requestCalendarClose();
         }
         if (event.target instanceof HTMLInputElement) {
@@ -441,6 +506,15 @@ export function LifeBirthDateField({
       }}
       onKeyDownCapture={handleKeyDownCapture}
     >
+      <p
+        aria-live="polite"
+        className={`min-h-4 w-full text-xs ${
+          previewIsError ? "text-danger" : "text-text-muted"
+        }`}
+        data-testid="life-birth-date-preview"
+      >
+        {previewLine}
+      </p>
       <div className="group/control relative w-full">
         <DatePicker
           aria-label="Date of birth"
@@ -456,7 +530,7 @@ export function LifeBirthDateField({
                         ? "year"
                         : captionView === "month"
                           ? "month"
-                          : "day"
+                          : popoverHintMode
                     }
                   />
                 )
@@ -479,11 +553,14 @@ export function LifeBirthDateField({
           }}
           onFocus={(event) => {
             if (event.target instanceof HTMLInputElement) {
-              isGridFocusedRef.current = false;
+              setGridFocusedSync(false);
               event.target.select();
             }
           }}
           onInputClick={onCalendarOpen}
+          onMonthChange={(date) => {
+            syncPickerMonth(dayjs(date));
+          }}
           onSelect={(date, event) => {
             if (!date || !isOpen) return;
             const target = event?.target;
@@ -499,7 +576,7 @@ export function LifeBirthDateField({
             if (event.type === "click") return;
             setDraftText(event.currentTarget.value);
           }}
-          openToDate={pickerMonthRef.current.toDate()}
+          openToDate={pickerMonth.toDate()}
           highlightDates={
             isOpen && pickerCursor
               ? [
@@ -526,15 +603,6 @@ export function LifeBirthDateField({
           <LifeBirthDatePopoverHints mode="closed" />
         </EventFormInfieldHint>
       </div>
-      <p
-        aria-live="polite"
-        className={`min-h-4 w-full text-xs ${
-          previewIsError ? "text-danger" : "text-text-muted"
-        }`}
-        data-testid="life-birth-date-preview"
-      >
-        {previewLine}
-      </p>
     </div>
   );
 }

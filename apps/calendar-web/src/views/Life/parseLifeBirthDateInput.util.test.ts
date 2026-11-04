@@ -1,5 +1,8 @@
 import dayjs from "@core/util/date/dayjs";
-import { parseLifeBirthDateInput } from "@web/views/Life/parseLifeBirthDateInput.util";
+import {
+  lifeBirthDateGridAnchor,
+  parseLifeBirthDateInput,
+} from "@web/views/Life/parseLifeBirthDateInput.util";
 import { describe, expect, it } from "bun:test";
 
 const today = dayjs("2026-01-01");
@@ -61,5 +64,23 @@ describe("parseLifeBirthDateInput", () => {
 
   it("rejects unparseable input", () => {
     expect(parseLifeBirthDateInput("not a date", options).kind).toBe("invalid");
+  });
+
+  it("maps parsed dates to a grid month and day cursor", () => {
+    const parsed = parseLifeBirthDateInput("4/12/1993", options);
+    expect(parsed.kind).toBe("date");
+    if (parsed.kind !== "date") return;
+    const anchor = lifeBirthDateGridAnchor(parsed);
+    expect(anchor?.month.format("YYYY-MM")).toBe("1993-04");
+    expect(anchor?.cursor.date()).toBe(12);
+  });
+
+  it("maps a year-only parse to January of that year", () => {
+    const parsed = parseLifeBirthDateInput("1993", options);
+    expect(parsed.kind).toBe("year");
+    if (parsed.kind !== "year") return;
+    const anchor = lifeBirthDateGridAnchor(parsed);
+    expect(anchor?.month.format("YYYY-MM")).toBe("1993-01");
+    expect(anchor?.cursor.date()).toBe(1);
   });
 });

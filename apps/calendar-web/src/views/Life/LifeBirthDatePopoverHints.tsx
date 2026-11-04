@@ -1,7 +1,21 @@
-import { MONTH_PICKER_PREV_KEYCAPS } from "@core/shortcuts/binding-keycaps.constants";
+import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { EventFormHintKeys } from "@web/views/Forms/EventForm/EventFormFocusedHint";
 
-export type LifeBirthDateHintMode = "closed" | "day" | "year" | "month";
+export type LifeBirthDateHintMode =
+  | "closed"
+  | "typing"
+  | "grid"
+  | "year"
+  | "month";
+
+function HintRow({ keys, label }: { keys: string | string[]; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-text-muted text-xs">
+      <ShortcutKeys keys={keys} />
+      <span aria-hidden>{label}</span>
+    </span>
+  );
+}
 
 export function LifeBirthDatePopoverHints({
   mode,
@@ -21,13 +35,22 @@ export function LifeBirthDatePopoverHints({
     return (
       <span
         data-testid="life-birth-date-calendar-hint"
-        className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-1 gap-y-0.5"
+        className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-2 gap-y-0.5"
       >
-        <EventFormHintKeys keys="Enter" label="Enter selects" />
-        <span aria-hidden className="text-text-muted">
-          ·
-        </span>
-        <EventFormHintKeys keys="Esc" label="Escape closes" />
+        <HintRow keys="Enter" label="select" />
+        <HintRow keys="Esc" label="close" />
+      </span>
+    );
+  }
+
+  if (mode === "typing") {
+    return (
+      <span
+        data-testid="life-birth-date-calendar-hint"
+        className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-2 gap-y-0.5"
+      >
+        <HintRow keys="Enter" label="save" />
+        <HintRow keys="ArrowDown" label="calendar" />
       </span>
     );
   }
@@ -35,37 +58,11 @@ export function LifeBirthDatePopoverHints({
   return (
     <span
       data-testid="life-birth-date-calendar-hint"
-      className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-1 gap-y-0.5"
+      className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-2 gap-y-0.5"
     >
-      <EventFormHintKeys
-        keys={["ArrowUp", "ArrowDown", "ArrowLeft"]}
-        label="Arrow keys move in the calendar"
-      />
-      <span aria-hidden className="text-text-muted">
-        ·
-      </span>
-      <EventFormHintKeys keys="Enter" label="Enter selects the day" />
-      <span aria-hidden className="text-text-muted">
-        ·
-      </span>
-      <EventFormHintKeys
-        keys={["PageUp", "PageDown"]}
-        label="Page up and page down change month"
-      />
-      <span aria-hidden className="text-text-muted">
-        ·
-      </span>
-      <EventFormHintKeys
-        keys={["Shift", "PageUp"]}
-        label="Shift page up changes year"
-      />
-      <span aria-hidden className="text-text-muted">
-        ·
-      </span>
-      <EventFormHintKeys
-        keys={[...MONTH_PICKER_PREV_KEYCAPS]}
-        label="Previous month"
-      />
+      <HintRow keys={["ArrowUp", "ArrowDown", "ArrowLeft"]} label="day" />
+      <HintRow keys={["PageUp", "PageDown"]} label="month" />
+      <HintRow keys={["Shift", "PageUp"]} label="year" />
     </span>
   );
 }

@@ -21,6 +21,21 @@ export function formatLifeBirthDatePreview(date: Date): string {
   return dayjs(date).format(LIFE_BIRTH_DATE_DISPLAY_FORMAT);
 }
 
+/** Month and keyboard cursor to show in the day grid for a successful parse. */
+export function lifeBirthDateGridAnchor(
+  parse: LifeBirthDateParseResult,
+): { month: Dayjs; cursor: Dayjs } | null {
+  if (parse.kind === "date") {
+    const cursor = dayjs(parse.date).startOf("day");
+    return { month: cursor.startOf("month"), cursor };
+  }
+  if (parse.kind === "year") {
+    const cursor = dayjs(new Date(parse.year, 0, 1)).startOf("day");
+    return { month: cursor.startOf("month"), cursor };
+  }
+  return null;
+}
+
 export function parseLifeBirthDateInput(
   text: string,
   options: { today: Dayjs; minDate: Date; maxDate: Date },
