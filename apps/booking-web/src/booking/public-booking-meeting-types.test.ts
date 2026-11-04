@@ -4,9 +4,17 @@ import {
 } from "@booking-web/booking/public-booking-meeting-types";
 import { describe, expect, it } from "bun:test";
 
-const intro = { id: "intro", label: "Intro call", durationMinutes: 15 };
-const deep = { id: "deep-dive", label: "Deep dive", durationMinutes: 60 };
-const page = { durationMinutes: 15, meetingTypes: [intro, deep] };
+const intro = {
+  id: "intro",
+  label: "Intro call",
+  durationMinutes: 15 as const,
+};
+const deep = {
+  id: "deep-dive",
+  label: "Deep dive",
+  durationMinutes: 60 as const,
+};
+const page = { durationMinutes: 15 as const, meetingTypes: [intro, deep] };
 
 describe("optionalMeetingTypeId", () => {
   it("omits type #1 and keeps every other id", () => {
