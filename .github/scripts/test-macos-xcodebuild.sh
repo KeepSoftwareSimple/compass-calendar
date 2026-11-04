@@ -36,4 +36,8 @@ if [ -n "${MACOS_XCRESULT_PATH:-}" ]; then
 fi
 
 echo "── xcodebuild test-without-building (Compass scheme) ──"
-xcodebuild test-without-building "${test_args[@]}" "${parallel_args[@]}"
+test_cmd=(xcodebuild test-without-building "${test_args[@]}")
+if ((${#parallel_args[@]} > 0)); then
+  test_cmd+=("${parallel_args[@]}")
+fi
+"${test_cmd[@]}"
