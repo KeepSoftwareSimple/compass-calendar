@@ -72,6 +72,7 @@ Internal documentation for engineers and agents working in the Compass repo.
 - [CI audit, September 2026](./CI-CD/ci-audit-2026-09.md)
 - [Error Autofix Routine](./CI-CD/error-autofix-routine.md)
 - [Agent loop Routine](./CI-CD/agent-loop-routine.md)
+- [macOS parity maintenance loop](./CI-CD/macos-parity-loop-routine.md)
 - [CLI And Maintenance Commands](./development/cli.md)
 - [Versioning](./CI-CD/versioning.md)
 
