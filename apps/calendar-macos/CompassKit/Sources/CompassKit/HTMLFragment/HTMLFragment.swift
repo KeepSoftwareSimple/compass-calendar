@@ -65,11 +65,6 @@ enum HTMLFragmentSanitizer {
     static func sanitize(_ html: String) -> String {
         var output = html
         output = output.replacingOccurrences(
-            of: #"(?is)<script\b[^>]*>.*?</script>"#,
-            with: "",
-            options: .regularExpression
-        )
-        output = output.replacingOccurrences(
             of: #"href\s*=\s*["']javascript:[^"']*["']"#,
             with: "",
             options: [.regularExpression, .caseInsensitive]

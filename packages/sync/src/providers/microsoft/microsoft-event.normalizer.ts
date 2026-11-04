@@ -207,18 +207,42 @@ function mapDescription(item: GraphEvent): string {
   return item.bodyPreview ?? "";
 }
 
+function replaceUntilStable(
+  input: string,
+  pattern: RegExp,
+  replacement: string,
+): string {
+  let current = input;
+  for (;;) {
+    const next = current.replace(pattern, replacement);
+    if (next === current) {
+      return current;
+    }
+    current = next;
+  }
+}
+
+function decodeHtmlEntities(input: string): string {
+  let current = input;
+  for (;;) {
+    const next = current
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&amp;/gi, "&");
+    if (next === current) {
+      return current;
+    }
+    current = next;
+  }
+}
+
 function stripHtml(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .trim();
+  let text = html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n");
+  text = replaceUntilStable(text, /<[^>]+>/g, "");
+  return decodeHtmlEntities(text).trim();
 }
 
 function mapOrganizer(organizer: GraphEvent["organizer"]): Organizer | null {
