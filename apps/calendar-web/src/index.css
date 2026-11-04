@@ -1404,7 +1404,7 @@
     display: none;
   }
   & .attendee-field__control {
-    min-height: 30px;
+    min-height: 1.25rem;
     border: 0;
     border-radius: var(--radius-default);
     background: transparent;
