@@ -9,6 +9,7 @@ import {
   type ProviderEventCancellation,
 } from "@sync/providers/provider-event.port";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
+import { EventReadSchema } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
@@ -342,6 +343,65 @@ describe("ProviderPageApplier", () => {
     // 3 series occurrences minus the excepted instant, plus the cancelled row.
     expect(occ).toBe(3);
   });
+
+  it.each(["", "   "])(
+    "persists an unversioned series cancellation (%j) without inventing an etag",
+    async (providerVersion) => {
+      const calendar = await seedCalendar();
+      const run = applier(calendar);
+      const cancel = {
+        ...seriesCancellation("m_c", "m", "2026-07-21T09:00:00-06:00"),
+        providerVersion,
+      };
+      await run.applyPage([master("m"), cancel]);
+      await run.applyPage([cancel]);
+      const stored = await events.findByProviderIdentity(
+        calendar.tenantId,
+        calendar.principalId,
+        {
+          connectionId: calendar.connectionId,
+          calendarId: calendar._id,
+          providerEventId: "m_c" as ProviderEventId,
+        },
+      );
+      expect(stored?.providerVersion).toBeNull();
+      expect(stored?.recurrence).toMatchObject({
+        kind: "exception",
+        cancelled: true,
+      });
+      expect(() =>
+        EventReadSchema.parse({
+          ...stored,
+          providerVersion: "",
+          recurrence: { kind: "single" },
+        }),
+      ).toThrow();
+      // Older appliers wrote the empty token before rejecting their result.
+      // A restarted repair must be able to read and replace that stored row.
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.events)
+        .updateOne({ providerEventId: "m_c" }, { $set: { providerVersion } });
+      await applier(calendar).applyPage([cancel]);
+      expect(
+        (
+          await storage
+            .db()
+            .collection(SYNC_COLLECTIONS.events)
+            .findOne({ providerEventId: "m_c" })
+        )?.providerVersion,
+      ).toBeNull();
+      expect(
+        await storage.db().collection(SYNC_COLLECTIONS.events).countDocuments(),
+      ).toBe(2);
+      expect(
+        await storage
+          .db()
+          .collection(SYNC_COLLECTIONS.eventOccurrences)
+          .countDocuments({ cancelled: false }),
+      ).toBe(2);
+    },
+  );
 
   it("reports members that never found a master as orphans on finish", async () => {
     const calendar = await seedCalendar();

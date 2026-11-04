@@ -73,6 +73,28 @@ export type EventRecord = z.infer<typeof EventRecordSchema>;
 // in-memory record and left untouched in Mongo. Writes stay strict. Nested
 // customizations is stripped on its own because Zod's unknown-key policy is
 // per object.
-export const EventReadSchema = EventRecordSchema.extend({
-  customizations: EventCustomizationsSchema.strip().nullable().optional(),
-}).strip();
+export const EventReadSchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object") return value;
+    const row = value as Record<string, unknown>;
+    const recurrence = row["recurrence"];
+    // Older imports persisted unversioned cancellation tombstones as empty
+    // strings before validation failed. Read those as absent tokens so repair
+    // can replace them. Active events still require a valid provider version.
+    if (
+      typeof row["providerVersion"] === "string" &&
+      !row["providerVersion"].trim() &&
+      recurrence &&
+      typeof recurrence === "object" &&
+      "kind" in recurrence &&
+      recurrence.kind === "exception" &&
+      "cancelled" in recurrence &&
+      recurrence.cancelled === true
+    )
+      return { ...row, providerVersion: null };
+    return value;
+  },
+  EventRecordSchema.extend({
+    customizations: EventCustomizationsSchema.strip().nullable().optional(),
+  }).strip(),
+);

@@ -331,6 +331,11 @@ export class ProviderPageApplier {
     const recurrenceId = read.series.recurrenceId as DateTime;
     return {
       ...this.#upsertIdentity(read),
+      // Cancellation-only provider rows may omit their concurrency token.
+      // Keep that absence explicit instead of persisting an invalid empty etag.
+      providerVersion: read.providerVersion.trim()
+        ? (read.providerVersion as NonNullable<EventRecord["providerVersion"]>)
+        : null,
       providerUpdatedAt: null,
       providerMetadata: null,
       content: master.content,
