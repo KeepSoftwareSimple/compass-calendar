@@ -8,22 +8,23 @@ Native UI XCTest runs only on isolated GitHub Macs. No local desktop takeover.
 
 ## Current package
 
-Branch `chore/macos-parity-review-ledger`: record merged welcome-body #5050
-and named-link destination-help #5027 acceptance using actual exact-head logs
-and inspected evidence. All broad gates remain open. Transfer complete frozen
-source reviews for go-to-date, shortcut-level badge and week-view layout into
-specific missing/unreviewed native behavior rows and narrow reviewed exclusions.
+Branch `chore/macos-go-to-date-evidence`: record only the navigation portion of
+merged #5091, splitting each frozen go-to-date case from its actual accessibility
+announcement requirement. All three native bare-G date cases passed at exact
+d7c39bc7607d3fbcf7f2e55a7ebbed4da08bdda9. Downloaded native/web strict41827629001
+logs show PASS with no checks skipped; normal native41827631836 and merge-group
+native41835411040 passed. All three retained captures were inspected in
+`/tmp/compass-gdate-d7c-shots`: palette closed and chosen date visible, with a
+matching month-picker selection. These are sampled light-theme captures.
 
-Pure parser/math/model tests do not prove real keyboard or first-frame geometry.
-Keep supported 900/1280/1728 widths, stored closed sidebar, reduced motion and
-alignment/stability requirements open. Exclude only the impossible 320px native
-window against AppDelegate minSize720, and literal CSS scrollbar mechanics.
-Native overflow remains required. No product or test behavior changes.
+Announcement rows stay missing: parser vectors prove strings, but the native
+statusAnnouncement store value has no UI/AX consumer found. Review proper native
+accessibility notification integration and meaningful observation; never substitute
+fake visible test text or infer an announcement from successful navigation.
 
-Next actionable work: missing real native go-to-date keyboard/palette/date and
-announcement regression, or confirmed failing keyboard behavior after reviewing
-current evidence. Keep #4783 open for signed-in RSVP and signed-build acceptance.
-Human-closed #5037 stays closed; all its diagnostics remain outside main.
+No product/test changes in this accounting package. Visual, signed-in, supported
+geometry, startup/performance and final-build gates remain open under #4783.
+Future web propagation remains deferred. Human-closed #5037 stays closed.
 
 ## Verified history, do not repeat
 
