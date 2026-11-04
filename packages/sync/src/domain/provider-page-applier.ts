@@ -361,9 +361,10 @@ export class ProviderPageApplier {
       providerEventId: read.providerEventId as NonNullable<
         EventRecord["providerEventId"]
       >,
-      providerVersion: read.providerVersion as NonNullable<
-        EventRecord["providerVersion"]
-      >,
+      // Sparse cancellations can carry no etag; the stored contract requires a
+      // non-empty version, and an empty one makes every later read fail.
+      providerVersion: (read.providerVersion.trim() ||
+        "missing") as NonNullable<EventRecord["providerVersion"]>,
       // Imported provider events carry no Compass delivery intent.
       deliveryState: null,
       lifecycleState: "active" as const,

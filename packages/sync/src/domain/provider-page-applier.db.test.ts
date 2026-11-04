@@ -343,6 +343,25 @@ describe("ProviderPageApplier", () => {
     expect(occ).toBe(3);
   });
 
+  it("stores a series cancellation with a blank version as a readable tombstone", async () => {
+    const calendar = await seedCalendar();
+    const run = applier(calendar);
+
+    await run.applyPage([
+      master("m"),
+      {
+        ...seriesCancellation("m_c", "m", "2026-07-21T09:00:00-06:00"),
+        providerVersion: "",
+      },
+    ]);
+
+    const stored = await storage
+      .db()
+      .collection(SYNC_COLLECTIONS.events)
+      .findOne({ providerEventId: "m_c" });
+    expect(stored?.providerVersion).toBe("missing");
+  });
+
   it("reports members that never found a master as orphans on finish", async () => {
     const calendar = await seedCalendar();
     const run = applier(calendar);
