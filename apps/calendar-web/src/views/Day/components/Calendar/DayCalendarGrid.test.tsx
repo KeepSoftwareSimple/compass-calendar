@@ -529,7 +529,7 @@ describe("DayCalendarGrid", () => {
     );
   });
 
-  it("keeps a focused Day deck card in its fan-out stack", () => {
+  it("raises a focused Day deck card above overlap partners for a full focus ring", () => {
     setDayEvents([
       createTimedEvent({
         _id: "back",
@@ -553,7 +553,7 @@ describe("DayCalendarGrid", () => {
     expect(initialBackZIndex).toBeLessThan(ZIndex.MAX);
 
     act(() => back.focus());
-    expect(Number(back.style.zIndex)).toBe(initialBackZIndex);
+    expect(Number(back.style.zIndex)).toBe(ZIndex.MAX);
 
     act(() => back.blur());
     expect(Number(back.style.zIndex)).toBe(initialBackZIndex);
