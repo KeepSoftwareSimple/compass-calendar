@@ -220,6 +220,16 @@ describe("EventReadSchema nested customizations", () => {
   });
 });
 
+describe("EventReadSchema providerVersion", () => {
+  it("treats an empty stored providerVersion as null", () => {
+    const parsed = EventReadSchema.parse({
+      ...eventRecord,
+      providerVersion: "",
+    });
+    expect(parsed.providerVersion).toBeNull();
+  });
+});
+
 expectReadStripsWriteRejects("InvalidationReadSchema", {
   read: InvalidationReadSchema,
   write: InvalidationAppendSchema,

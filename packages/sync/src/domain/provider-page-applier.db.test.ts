@@ -297,6 +297,30 @@ describe("ProviderPageApplier", () => {
     });
   });
 
+  it("persists a series cancellation when providerVersion is empty", async () => {
+    const calendar = await seedCalendar();
+    const run = applier(calendar);
+
+    await run.applyPage([
+      master("bare"),
+      {
+        ...seriesCancellation("bare_c", "bare", "2026-07-21T09:00:00-06:00"),
+        providerVersion: "",
+      },
+    ]);
+
+    const cancelled = await events.findByProviderIdentity(
+      calendar.tenantId,
+      calendar.principalId,
+      {
+        connectionId: calendar.connectionId,
+        calendarId: calendar._id,
+        providerEventId: "bare_c" as ProviderEventId,
+      },
+    );
+    expect(cancelled?.providerVersion).toBeNull();
+  });
+
   it("returns standalone cancellations unconsumed and writes nothing for them", async () => {
     const calendar = await seedCalendar();
     const run = applier(calendar);
