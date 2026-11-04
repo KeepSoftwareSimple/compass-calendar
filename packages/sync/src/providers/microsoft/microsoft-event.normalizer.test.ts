@@ -33,6 +33,47 @@ const asCancellation = (read: ReturnType<typeof normalizeMicrosoftEvent>) => {
 };
 
 describe("normalizeMicrosoftEvent", () => {
+  it("keeps the original recurrence timezone when Graph returns UTC timestamps", () => {
+    const read = asProviderEvent(
+      normalizeMicrosoftEvent(
+        mEvent({
+          originalStartTimeZone: "Mountain Standard Time",
+          start: { dateTime: "2026-07-14T15:00:00", timeZone: "UTC" },
+          end: { dateTime: "2026-07-14T16:00:00", timeZone: "UTC" },
+        }),
+      ),
+    );
+    expect(read.schedule).toEqual({
+      kind: "timed",
+      start: "2026-07-14T09:00:00-06:00",
+      end: "2026-07-14T10:00:00-06:00",
+      timeZone: "America/Denver",
+    });
+  });
+
+  it("keeps all-day dates in the original positive-offset timezone", () => {
+    const read = asProviderEvent(
+      normalizeMicrosoftEvent(
+        mEvent({
+          isAllDay: true,
+          originalStartTimeZone: "Tokyo Standard Time",
+          start: { dateTime: "2026-07-13T15:00:00", timeZone: "UTC" },
+          end: { dateTime: "2026-07-14T15:00:00", timeZone: "UTC" },
+        }),
+      ),
+    );
+    expect(read.schedule).toEqual({
+      kind: "allDay",
+      start: "2026-07-14",
+      end: "2026-07-15",
+    });
+    expect(() =>
+      normalizeMicrosoftEvent(
+        mEvent({ originalStartTimeZone: "unknown timezone" }),
+      ),
+    ).toThrow(ProviderEventError);
+  });
+
   it("normalizes a timed event with content and identity", () => {
     const read = asProviderEvent(
       normalizeMicrosoftEvent(

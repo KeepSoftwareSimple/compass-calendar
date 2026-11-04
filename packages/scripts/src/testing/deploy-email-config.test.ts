@@ -1,7 +1,15 @@
+import { parse } from "yaml";
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const EMAIL_BLOCK_SCRIPT = ".github/scripts/deploy-write-email-block.sh";
+const completeEmailConfig = {
+  EMAIL_PROVIDER: "resend",
+  EMAIL_API_KEY: "re_test",
+  EMAIL_FROM: "Compass <hello@mail.example.com>",
+  EMAIL_WEBHOOK_SECRET: "whsec_test",
+  EMAIL_UNSUBSCRIBE_SECRET: "unsub-secret",
+};
 
 async function runEmailBlockScript(
   command: string,
@@ -11,7 +19,14 @@ async function runEmailBlockScript(
     ["bash", "-c", `. ${EMAIL_BLOCK_SCRIPT}; ${command}`],
     {
       cwd: process.cwd(),
-      env: { ...process.env, ...env },
+      env: {
+        ...process.env,
+        REFLECTION_ENABLED: "",
+        REFLECTION_ROLLOUT_ENABLED: "",
+        REFLECTION_TRIAL_USER_ID: "",
+        REFLECTION_TRIAL_EMAIL: "",
+        ...env,
+      },
       stderr: "pipe",
       stdout: "pipe",
     },
@@ -86,6 +101,68 @@ describe("deploy write email block", () => {
     expect(result.stdout).toContain("scheduleProfile: fast");
     expect(result.stdout).toContain("gapDays: 1");
     expect(result.stdout).toContain("maxEmailsPerDay: 10");
+  });
+
+  it("keeps reflections off when no deploy inputs are configured", async () => {
+    const result = await runWriteEmailBlock(completeEmailConfig);
+    expect(result.exitCode).toBe(0);
+    expect(parse(result.stdout).email.reflection).toBeUndefined();
+  });
+
+  it("writes private trial settings without enabling general rollout or logging its binding", async () => {
+    const userId = "000000000000000000000123";
+    const email = "trial+reflection@example.com";
+    const result = await runWriteEmailBlock({
+      ...completeEmailConfig,
+      REFLECTION_ENABLED: "true",
+      REFLECTION_TRIAL_USER_ID: userId,
+      REFLECTION_TRIAL_EMAIL: email,
+    });
+    expect(result.exitCode).toBe(0);
+    expect(parse(result.stdout).email.reflection).toEqual({
+      enabled: true,
+      rolloutEnabled: false,
+      trialUserId: userId,
+      trialEmail: email,
+    });
+    expect(result.stderr).not.toContain(userId);
+    expect(result.stderr).not.toContain(email);
+    const workflow = readFileSync(
+      ".github/workflows/_deploy-environment.yml",
+      "utf8",
+    );
+    expect(workflow).toContain(
+      "REFLECTION_ENABLED: ${{ vars.REFLECTION_ENABLED }}",
+    );
+    expect(workflow).toContain(
+      "REFLECTION_ROLLOUT_ENABLED: ${{ vars.REFLECTION_ROLLOUT_ENABLED }}",
+    );
+    expect(workflow).toContain(
+      "REFLECTION_TRIAL_USER_ID: ${{ secrets.REFLECTION_TRIAL_USER_ID }}",
+    );
+    expect(workflow).toContain(
+      "REFLECTION_TRIAL_EMAIL: ${{ secrets.REFLECTION_TRIAL_EMAIL }}",
+    );
+  });
+
+  it("retains an explicit reflection kill switch and rejects invalid flag values", async () => {
+    const stopped = await runWriteEmailBlock({
+      ...completeEmailConfig,
+      REFLECTION_ENABLED: "false",
+    });
+    expect(stopped.exitCode).toBe(0);
+    expect(parse(stopped.stdout).email.reflection).toEqual({
+      enabled: false,
+      rolloutEnabled: false,
+    });
+    const invalid = await runWriteEmailBlock({
+      ...completeEmailConfig,
+      REFLECTION_ENABLED: "yes",
+    });
+    expect(invalid.exitCode).toBe(1);
+    expect(invalid.stderr).toContain(
+      "REFLECTION_ENABLED must be true or false",
+    );
   });
 
   it("omits the block and logs missing values when secrets are absent", async () => {

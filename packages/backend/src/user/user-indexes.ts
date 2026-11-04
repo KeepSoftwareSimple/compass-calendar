@@ -9,6 +9,10 @@ export const HIDDEN_EVENT_USER_CREATED_INDEX = "hidden_event_user_created";
 
 export async function ensureUserIndexes(): Promise<void> {
   await mongoService.user.createIndex(
+    { "reflectionPreferences.enabled": 1, reflectionNextSendAt: 1, _id: 1 },
+    { name: "user_reflection_due" },
+  );
+  await mongoService.user.createIndex(
     { "identities.provider": 1, "identities.subjectId": 1 },
     {
       name: USER_IDENTITIES_PROVIDER_SUBJECT_INDEX,

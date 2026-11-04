@@ -56,6 +56,11 @@ import {
   type PrincipalPurgeResponse,
   PrincipalPurgeResponseSchema,
 } from "@core/types/sync/principal.contracts";
+import {
+  ReflectionImportResponseSchema,
+  type ReflectionReadRequest,
+  ReflectionReadResponseSchema,
+} from "@core/types/sync/reflection.contracts";
 import { createHmac, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 
@@ -311,6 +316,27 @@ function signServiceRequest(secret: string, timestamp: number): string {
 // typed result — the caller never sees a thrown network error, a raw status, or
 // an unvalidated body.
 export class SyncServiceClient {
+  importReflectionHistory(
+    principal: SyncPrincipal,
+    calendarIds: ReflectionReadRequest["calendarIds"],
+  ) {
+    return this.#request({
+      method: "POST",
+      path: "/internal/reflection/import",
+      principal,
+      body: { calendarIds },
+      schema: ReflectionImportResponseSchema,
+    });
+  }
+  readReflection(principal: SyncPrincipal, body: ReflectionReadRequest) {
+    return this.#request({
+      method: "POST",
+      path: "/internal/reflection/read",
+      principal,
+      body,
+      schema: ReflectionReadResponseSchema,
+    });
+  }
   readonly #baseUrl: string;
   readonly #secret: string;
   readonly #timeoutMs: number;

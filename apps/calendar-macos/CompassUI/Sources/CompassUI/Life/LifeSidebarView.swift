@@ -36,7 +36,7 @@ struct LifeSidebarView: View {
           .accessibilityAddTraits(.updatesFrequently)
         VStack(spacing: 16) {
           VStack(spacing: 4) {
-            Text("Date of birth").help("We don't store this information")
+            Text("Date of birth").help("Saved to your account when signed in")
             TextField("Select date", text: $birthDate)
               .accessibilityLabel("Date of birth")
               .focused($focusedField, equals: .birthDate)
@@ -95,8 +95,15 @@ struct LifeSidebarView: View {
         }
         .textFieldStyle(.plain)
         .multilineTextAlignment(.center)
+        if let error = model.lifeStore.error {
+          Text(error).accessibilityAddTraits(.updatesFrequently)
+          Button("Retry loading life settings") {
+            Task { await model.reloadLifePreferences() }
+          }
+        }
         Text(quote).italic()
       }
+      .disabled(model.lifeStore.isLoading)
       .font(.rubik(14))
       .foregroundStyle(theme.textMutedColor)
       .padding(20)

@@ -1,5 +1,15 @@
 import { ShuffleIcon } from "@phosphor-icons/react/dist/csr/Shuffle";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  clampLifespan,
+  formatDateInputValue,
+  getLifeVariationDescription,
+  getRandomLifespan,
+  LIFE_VARIATIONS,
+  MAX_LIFESPAN,
+  MIN_LIFESPAN,
+  parseLifeDate,
+} from "@core/life/life-math";
 import { ID_LIFE_BIRTH_DATE } from "@web/common/constants/web.constants";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
@@ -11,17 +21,8 @@ import {
   consumeUiFocusTextInsertSuppress,
   shouldSuppressUiFocusTextInsert,
 } from "@web/shortcuts/ui-focus/ui-focus-text-insert.util";
+import { ReflectionPreferencesControl } from "@web/views/Life/ReflectionPreferencesControl";
 import { LifeQuote } from "./LifeQuote";
-import {
-  clampLifespan,
-  formatDateInputValue,
-  getLifeVariationDescription,
-  getRandomLifespan,
-  LIFE_VARIATIONS,
-  MAX_LIFESPAN,
-  MIN_LIFESPAN,
-  parseLifeDate,
-} from "./life.utils";
 import { type LifePreferences } from "./life-preferences.storage";
 
 interface LifeSidebarContentProps {
@@ -94,6 +95,7 @@ export function LifeSidebarContent({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto px-5 pb-5 text-sm">
+      <ReflectionPreferencesControl />
       <section
         aria-label="Life variation"
         className="flex flex-col gap-2 text-text-muted"
@@ -138,7 +140,7 @@ export function LifeSidebarContent({
         {...pageJumpAttrs("life-details")}
       >
         <div className="flex w-full flex-col items-center gap-1 text-text-muted">
-          <TooltipWrapper description="We don't store this information">
+          <TooltipWrapper description="Saved to your account when signed in">
             <span className="cursor-help">Date of birth</span>
           </TooltipWrapper>
           <DatePicker

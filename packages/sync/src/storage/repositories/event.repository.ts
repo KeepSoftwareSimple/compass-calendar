@@ -90,6 +90,23 @@ export type UpsertByProviderIdentityOptions = {
 };
 
 export class EventRepository {
+  async findUnlinkedBelowGeneration(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    calendarId: EventRecord["calendarId"],
+    generation: number,
+  ): Promise<EventRecord[]> {
+    const rows = await this.collection
+      .find({
+        tenantId,
+        principalId,
+        calendarId,
+        providerEventId: null,
+        generation: { $lt: generation },
+      })
+      .toArray();
+    return rows.map((row) => EventReadSchema.parse(row));
+  }
   private readonly collection: Collection<EventRecord>;
 
   constructor(db: Db) {
@@ -400,6 +417,23 @@ export class EventRepository {
       principalId,
     });
     return record ? EventReadSchema.parse(record) : null;
+  }
+
+  async promoteGeneration(
+    event: EventRecord,
+    generation: number,
+  ): Promise<EventRecord | null> {
+    const result = await this.collection.findOneAndUpdate(
+      {
+        _id: event._id,
+        tenantId: event.tenantId,
+        principalId: event.principalId,
+        generation: event.generation,
+      },
+      { $set: { generation } },
+      { returnDocument: "after" },
+    );
+    return result ? EventReadSchema.parse(result) : null;
   }
 
   // Batch-hydrate full event records by id, owner-scoped. The full-fidelity read
@@ -858,14 +892,15 @@ export class EventRepository {
     principalId: PrincipalId,
     calendarId: EventRecord["calendarId"],
     generation: number,
-  ): Promise<void> {
-    await this.collection.deleteMany({
+  ): Promise<number> {
+    const result = await this.collection.deleteMany({
       tenantId,
       principalId,
       calendarId,
       generation: { $lt: generation },
       providerEventId: { $ne: null },
     });
+    return result.deletedCount;
   }
 
   // Hard-delete every provider-linked event for one connection (retention).

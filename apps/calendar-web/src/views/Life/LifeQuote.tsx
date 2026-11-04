@@ -1,4 +1,4 @@
-import { getRandomLifeQuote } from "./life-quotes";
+import { getRandomLifeQuote } from "@core/life/life-quotes";
 
 export function LifeQuote() {
   const quote = getRandomLifeQuote();

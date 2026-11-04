@@ -56,6 +56,11 @@ import {
   HiddenEventIdsResponseSchema,
   SetEventHiddenInputSchema,
 } from "@core/types/event-visibility.contracts";
+import {
+  LifePreferencesResponseSchema,
+  LifePreferencesSchema,
+  SaveLifePreferencesSchema,
+} from "@core/types/life-preferences.contracts";
 import { ServerMessageSchema } from "@core/types/server-message.contracts";
 import {
   ConnectionBeginConnectedResponseSchema,
@@ -186,6 +191,12 @@ export const SWIFT_CONTRACT_MANIFEST: SwiftContractManifestEntry[] = [
     swiftName: "ConnectionRefreshResponse",
     schema: ConnectionRefreshResponseSchema,
   },
+  { swiftName: "StoredLifePreferences", schema: LifePreferencesSchema },
+  {
+    swiftName: "LifePreferencesResponse",
+    schema: LifePreferencesResponseSchema,
+  },
+  { swiftName: "SaveLifePreferences", schema: SaveLifePreferencesSchema },
   { swiftName: "UserProfile", schema: UserProfileSchema },
   { swiftName: "UserMetadata", schema: UserMetadataSchema },
 ];

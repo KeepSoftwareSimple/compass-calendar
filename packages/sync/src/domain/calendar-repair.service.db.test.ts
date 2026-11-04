@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { IdempotencyKeySchema } from "@core/types/sync/identity.contracts";
 import {
   FakeReader,
   pageOf as page,
@@ -8,13 +9,16 @@ import {
   fakeTokenSource as tokenSource,
 } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
+import { pullCalendarChanges } from "@sync/domain/calendar-pull.service";
 import {
   type CalendarRepairDeps,
   repairCalendar,
 } from "@sync/domain/calendar-repair.service";
+import { ProviderEventReadError } from "@sync/providers/provider-event-reader.port";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
+import { CommandRepository } from "@sync/storage/repositories/command.repository";
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
@@ -182,6 +186,90 @@ describe("repairCalendar", () => {
     expect(await eventCountAt(calendar._id, 1)).toBe(1);
   });
 
+  it("refreshes snapshot-only history, deletes absent events, and preserves pending local intent", async () => {
+    const calendar = await seedCalendar();
+    await seedImported(calendar);
+    const pending = await seedEvent(calendar, "pending", 0);
+    const removed = await seedEvent(calendar, "removed", 0);
+    const commands = new CommandRepository(storage.db());
+    await commands.submit({
+      tenantId: calendar.tenantId,
+      principalId: calendar.principalId,
+      idempotencyKey: IdempotencyKeySchema.parse("snapshot-pending"),
+      eventId: pending._id,
+      input: {
+        kind: "delete",
+        invitation: "none",
+        scope: "all",
+        recurrenceId: null,
+      },
+      expectedVersion: null,
+    });
+    const reader = Object.assign(
+      new FakeReader([
+        page([single("new")], { nextSyncToken: "full-snapshot:v1" }),
+      ]),
+      { fullSnapshotOnly: true, supportsFullHistory: true },
+    );
+    const result = await pullCalendarChanges(
+      { ...deps(reader), commands },
+      calendar,
+      now,
+    );
+    expect(result.status).toBe("applied");
+    if (result.status !== "applied") throw new Error("expected applied");
+    expect(result.deleted).toBe(1);
+    expect(result.resource.historyCoverageVersion).toBe(1);
+    expect(
+      await events.findById(
+        calendar.tenantId,
+        calendar.principalId,
+        removed._id,
+      ),
+    ).toBeNull();
+    const preserved = await events.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      pending._id,
+    );
+    expect(preserved?.generation).toBe(result.resource.activeGeneration);
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.eventOccurrences)
+        .countDocuments({
+          eventId: pending._id,
+          generation: result.resource.activeGeneration,
+        }),
+    ).toBeGreaterThan(0);
+    expect(reader.calls[0]?.cursor).toBeUndefined();
+  });
+
+  it("does not delete old history when a snapshot skips unusable records", async () => {
+    const calendar = await seedCalendar();
+    await seedImported(calendar);
+    const old = await seedEvent(calendar, "old", 0);
+    const reader = Object.assign(
+      new FakeReader([
+        page([], { skipped: 1, nextSyncToken: "full-snapshot:v1" }),
+      ]),
+      { fullSnapshotOnly: true, supportsFullHistory: true },
+    );
+    const result = await repairCalendar(deps(reader), calendar, now);
+    expect(result.status).toBe("incomplete");
+    expect(
+      await events.findById(calendar.tenantId, calendar.principalId, old._id),
+    ).not.toBeNull();
+    expect(await occAtGeneration(calendar._id, 0)).toBe(1);
+    const stored = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      result.resource._id,
+    );
+    expect(stored?.activeGeneration).toBe(0);
+    expect(stored?.historyCoverageVersion).toBe(0);
+  });
+
   it("leaves the old generation active and intact when the pass yields no cursor", async () => {
     const calendar = await seedCalendar();
     await seedImported(calendar);
@@ -219,6 +307,13 @@ describe("repairCalendar", () => {
       local._id,
     );
     expect(survived).not.toBeNull();
+    expect(survived?.generation).toBe(1);
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.eventOccurrences)
+        .countDocuments({ eventId: local._id, generation: 1 }),
+    ).toBe(1);
   });
 
   it("resumes an in-flight repair generation instead of bumping again", async () => {
@@ -241,6 +336,110 @@ describe("repairCalendar", () => {
     // Reused generation 1, did not bump to 2.
     expect(result.generation).toBe(1);
     expect(result.resource.importGeneration).toBe(1);
+  });
+
+  it("resumes after a committed page without losing the skipped-record count", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedImported(calendar);
+    const interrupted = new FakeReader([
+      { ...page([single("first")], { nextPageToken: "page-2" }), skipped: 1 },
+    ]);
+    await expect(
+      repairCalendar(deps(interrupted), calendar, now),
+    ).rejects.toThrow("no page scripted");
+    const checkpoint = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(checkpoint?.repairPageCursor).toBe("page-2");
+    expect(checkpoint?.activeGeneration).toBe(0);
+    const resumed = Object.assign(
+      new FakeReader([page([single("second")], { nextSyncToken: "cursor-1" })]),
+      { supportsFullHistory: true },
+    );
+    const result = await repairCalendar(deps(resumed), calendar, now);
+    expect(resumed.calls[0]?.pageToken).toBe("page-2");
+    expect(result.status).toBe("repaired");
+    if (result.status !== "repaired") throw new Error("expected repaired");
+    expect(result.skipped).toBe(1);
+    expect(result.resource.historyCoverageVersion).toBe(0);
+    expect(result.resource.repairPageCursor).toBeNull();
+    expect(await eventCountAt(calendar._id, result.generation)).toBe(2);
+  });
+
+  it("replays unresolved members after a crash instead of checkpointing past them", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedImported(calendar);
+    const member = {
+      ...single("override"),
+      recurrence: {
+        kind: "instance" as const,
+        seriesProviderId: "master",
+        recurrenceId: "2026-07-14T15:00:00.000Z",
+      },
+    };
+    const interrupted = new FakeReader([
+      page([member], { nextPageToken: "master-page" }),
+    ]);
+    await expect(
+      repairCalendar(deps(interrupted), calendar, now),
+    ).rejects.toThrow("no page scripted");
+    const checkpoint = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(checkpoint?.repairPageCursor).toBeNull();
+    const resumed = new FakeReader([
+      page([member], { nextPageToken: "master-page" }),
+      page(
+        [
+          {
+            ...single("master"),
+            recurrence: {
+              kind: "seriesMaster",
+              rules: ["RRULE:FREQ=WEEKLY;COUNT=3"],
+            },
+          },
+        ],
+        { nextSyncToken: "cursor-1" },
+      ),
+    ]);
+    const result = await repairCalendar(deps(resumed), calendar, now);
+    expect(resumed.calls[0]?.pageToken).toBeNull();
+    expect(result.status).toBe("repaired");
+    if (result.status !== "repaired") throw new Error("expected repaired");
+    expect(result.skipped).toBe(0);
+    expect(await eventCountAt(calendar._id, result.generation)).toBe(2);
+  });
+
+  it("restarts an expired repair checkpoint while preserving the active history", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedImported(calendar);
+    await seedEvent(calendar, "active-history", 0);
+    await resources.startNewGeneration(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    await resources.setRepairCheckpoint(resource, "expired-page", 0);
+    const reader = new FakeReader(
+      [],
+      new ProviderEventReadError("cursorExpired", "Page expired"),
+    );
+    await expect(repairCalendar(deps(reader), calendar, now)).rejects.toThrow(
+      "Page expired",
+    );
+    const updated = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(updated?.activeGeneration).toBe(0);
+    expect(updated?.repairPageCursor).toBeNull();
+    expect(updated?.importGeneration).toBe(2);
+    expect(await occAtGeneration(calendar._id, 0)).toBe(1);
   });
 
   it("converges when run twice (idempotent)", async () => {

@@ -15,6 +15,7 @@ import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { refreshEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
 import { draftActions } from "@web/events/stores/draft.store";
 import { closeStream } from "@web/sse/client/sse.client";
+import { clearAccountLifePreferences } from "@web/views/Life/life-preferences.storage";
 
 /**
  * Clears module-scoped state (repository source, metadata, SSE stream, drafts).
@@ -22,6 +23,7 @@ import { closeStream } from "@web/sse/client/sse.client";
  * setAuthenticated(false) before any cache-eviction refetches fire.
  */
 export function clearAccountScopedClientState(): void {
+  clearAccountLifePreferences();
   // Flip remote→local, which transitively clears undo history via the
   // undo store's repository-source subscription.
   refreshEventRepositorySource(false);

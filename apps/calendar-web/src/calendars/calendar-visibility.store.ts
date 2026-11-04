@@ -1,7 +1,10 @@
 import { useSyncExternalStore } from "react";
 import { type CalendarId } from "@core/types/domain-primitives";
+import { UserApi } from "@web/api/user.api";
+import { readAuthenticated } from "@web/auth/compass/session/auth-session.store";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { createStorageBackedStore } from "@web/common/utils/external-store.util";
+import { getToast } from "@web/common/utils/toast/toast.port";
 import {
   readHiddenCalendarIds,
   writeHiddenCalendarIds,
@@ -39,7 +42,18 @@ export function setCalendarVisibility(
   else next.add(calendarId);
 
   const saved = writeHiddenCalendarIds(next);
-  if (saved) hiddenIdsStore.set(next);
+  if (saved) {
+    hiddenIdsStore.set(next);
+    if (readAuthenticated())
+      void UserApi.updateReflectionCalendarVisibility(
+        calendarId,
+        isVisible,
+      ).catch(() => {
+        getToast().error(
+          "Calendar visibility changed on this device, but reflection email settings could not be updated. Please try again.",
+        );
+      });
+  }
   return saved;
 }
 

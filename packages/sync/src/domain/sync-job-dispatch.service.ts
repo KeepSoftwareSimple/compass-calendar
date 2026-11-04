@@ -459,6 +459,7 @@ async function runSyncJob(
   // Stamp the attempt for the same reason the inactive drop above does.
   if (
     job.kind === "incrementalPull" &&
+    !executionDeps.reader.fullSnapshotOnly &&
     resource.cursorExpiredBackoffUntil !== null &&
     resource.cursorExpiredBackoffUntil > now()
   ) {

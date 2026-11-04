@@ -89,6 +89,13 @@ const ConfigSchema = z
       .max(50)
       .optional(),
     BOOKING_HOST_EMAIL_ENABLED: BooleanFromInput.default(true),
+    REFLECTION_ENABLED: BooleanFromInput.default(false),
+    REFLECTION_ROLLOUT_ENABLED: BooleanFromInput.default(false),
+    REFLECTION_TRIAL_USER_ID: z
+      .string()
+      .regex(/^[a-f0-9]{24}$/i)
+      .optional(),
+    REFLECTION_TRIAL_EMAIL: z.string().email().optional(),
   })
   .strict()
   .superRefine((env, context) => {
@@ -284,6 +291,10 @@ export function parseRawConfig(config: CompassConfig): Config {
     EMAIL_PREVIEW_LOOP_GAP_DAYS: config.email?.previewLoop?.gapDays,
     EMAIL_PREVIEW_LOOP_MAX_PER_DAY: config.email?.previewLoop?.maxEmailsPerDay,
     BOOKING_HOST_EMAIL_ENABLED: config.email?.bookingHostEmailEnabled ?? true,
+    REFLECTION_ENABLED: config.email?.reflection?.enabled,
+    REFLECTION_ROLLOUT_ENABLED: config.email?.reflection?.rolloutEnabled,
+    REFLECTION_TRIAL_USER_ID: config.email?.reflection?.trialUserId,
+    REFLECTION_TRIAL_EMAIL: config.email?.reflection?.trialEmail,
   });
 }
 
@@ -368,6 +379,10 @@ export function parseConfigFromEnv(
       ? Number.parseInt(rawEnv["EMAIL_PREVIEW_LOOP_MAX_PER_DAY"], 10)
       : undefined,
     BOOKING_HOST_EMAIL_ENABLED: nonEmpty(rawEnv["BOOKING_HOST_EMAIL_ENABLED"]),
+    REFLECTION_ENABLED: nonEmpty(rawEnv["REFLECTION_ENABLED"]),
+    REFLECTION_ROLLOUT_ENABLED: nonEmpty(rawEnv["REFLECTION_ROLLOUT_ENABLED"]),
+    REFLECTION_TRIAL_USER_ID: nonEmpty(rawEnv["REFLECTION_TRIAL_USER_ID"]),
+    REFLECTION_TRIAL_EMAIL: nonEmpty(rawEnv["REFLECTION_TRIAL_EMAIL"]),
   });
 }
 

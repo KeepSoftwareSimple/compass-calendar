@@ -1314,6 +1314,28 @@ public enum KindEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case connection = "connection"
 }
 
+public struct LifePreferencesResponse: Codable, Hashable, Sendable {
+    public let preferences: LifePreferencesResponsePreferences?
+    public let revision: Int
+
+    public init(preferences: LifePreferencesResponsePreferences?, revision: Int) {
+        self.preferences = preferences
+        self.revision = revision
+    }
+}
+
+public struct LifePreferencesResponsePreferences: Codable, Hashable, Sendable {
+    public let birthDate: String
+    public let lifespan: Int
+    public let variation: VariationEnum
+
+    public init(birthDate: String, lifespan: Int, variation: VariationEnum) {
+        self.birthDate = birthDate
+        self.lifespan = lifespan
+        self.variation = variation
+    }
+}
+
 public enum OperationEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case full = "full"
     case incremental = "incremental"
@@ -1482,6 +1504,16 @@ public enum RsvpEventInputResponseStatusEnum: String, Codable, Hashable, Sendabl
 public enum RsvpEventInputScopeEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case all = "all"
     case single = "single"
+}
+
+public struct SaveLifePreferences: Codable, Hashable, Sendable {
+    public let expectedRevision: Int?
+    public let preferences: LifePreferencesResponsePreferences
+
+    public init(expectedRevision: Int?, preferences: LifePreferencesResponsePreferences) {
+        self.expectedRevision = expectedRevision
+        self.preferences = preferences
+    }
 }
 
 public enum ScopeEnum: String, Codable, Hashable, Sendable, CaseIterable {
@@ -1681,6 +1713,18 @@ public enum SourceEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case request = "request"
 }
 
+public struct StoredLifePreferences: Codable, Hashable, Sendable {
+    public let birthDate: String
+    public let lifespan: Int
+    public let variation: VariationEnum
+
+    public init(birthDate: String, lifespan: Int, variation: VariationEnum) {
+        self.birthDate = birthDate
+        self.lifespan = lifespan
+        self.variation = variation
+    }
+}
+
 public enum SubscriptionStatusEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case active = "active"
     case awaitingCheckout = "awaiting_checkout"
@@ -1781,6 +1825,12 @@ public struct UserProfile: Codable, Hashable, Sendable {
         self.picture = picture
         self.userId = userId
     }
+}
+
+public enum VariationEnum: String, Codable, Hashable, Sendable, CaseIterable {
+    case average = "average"
+    case long = "long"
+    case random = "random"
 }
 
 public enum WeekdayEnum: Int, Codable, Hashable, Sendable, CaseIterable {

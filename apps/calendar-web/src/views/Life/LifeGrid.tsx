@@ -1,10 +1,10 @@
 import { type Ref } from "react";
+import { getLifeDotLabel, WEEKS_PER_ROW } from "@core/life/life-math";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@web/components/Tooltip/Tooltip";
-import { getLifeDotLabel, WEEKS_PER_ROW } from "./life.utils";
 
 interface LifeGridProps {
   showCurrentWeek: boolean;

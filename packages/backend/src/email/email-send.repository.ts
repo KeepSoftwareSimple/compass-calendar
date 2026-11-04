@@ -172,7 +172,7 @@ class EmailSendRepository {
     const attemptCount = parseRecord(existing).attemptCount + 1;
     const lastError = truncateError(error);
     const exhausted = attemptCount >= EMAIL_SEND_MAX_ATTEMPTS;
-    return patchRow({ _id: id }, () =>
+    return patchRow({ _id: id, status: "queued" }, () =>
       exhausted
         ? { status: "failed", attemptCount, lastError }
         : { status: "queued", attemptCount, lastError, nextAttemptAt },

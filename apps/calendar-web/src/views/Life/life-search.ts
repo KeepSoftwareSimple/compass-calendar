@@ -4,7 +4,7 @@ import {
   LIFE_VARIATION_ORDER,
   LIFE_VARIATIONS,
   type LifeVariation,
-} from "./life.utils";
+} from "@core/life/life-math";
 import { type LifePreferences } from "./life-preferences.storage";
 
 export interface LifeSearch {

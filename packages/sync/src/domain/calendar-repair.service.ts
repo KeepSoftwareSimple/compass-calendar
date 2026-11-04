@@ -2,14 +2,21 @@ import { toColorLabelMap } from "@sync/domain/color-label-map";
 import { listEventPageWithAuthRetry } from "@sync/domain/list-event-page-with-auth-retry";
 import { ProviderPageApplier } from "@sync/domain/provider-page-applier";
 import { type AccessTokenSource } from "@sync/domain/provider-write-ladder";
-import { type ProviderEventReader } from "@sync/providers/provider-event-reader.port";
+import { reprojectOccurrences } from "@sync/domain/reproject";
+import {
+  ProviderEventReadError,
+  type ProviderEventReader,
+} from "@sync/providers/provider-event-reader.port";
+import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 import { type SyncResourceRecord } from "@sync/storage/contracts/sync-resource.contracts";
+import { type CommandRepository } from "@sync/storage/repositories/command.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
 export interface CalendarRepairDeps {
+  commands?: Pick<CommandRepository, "nonterminalEventIds">;
   events: EventRepository;
   occurrences: EventOccurrenceRepository;
   resources: SyncResourceRepository;
@@ -24,11 +31,13 @@ export type CalendarRepairResult =
       status: "repaired";
       resource: SyncResourceRecord;
       generation: number;
+      imported: number;
+      deleted: number;
+      skipped: number;
     }
   | {
-      // The provider pass finished without a cursor, so the rebuild cannot be
-      // trusted as complete. Reads stay on the old, intact generation; a later
-      // repair resumes the same in-flight generation.
+      // The provider pass could not be trusted as complete. Reads stay on the
+      // active generation and a later attempt starts a fresh snapshot.
       status: "incomplete";
       resource: SyncResourceRecord;
     };
@@ -75,6 +84,7 @@ export async function repairCalendar(
     resource._id,
     now(),
   );
+  await deps.resources.recordHistoryCoverage(resource, 0, false, now());
 
   // Reuse an in-flight repair generation (a previous attempt bumped it but never
   // activated) instead of starting yet another; otherwise begin a fresh one.
@@ -106,8 +116,9 @@ export async function repairCalendar(
   const colorLabels = toColorLabelMap(calendar.eventLabels);
   const calendarDefaultPopupReminderMinutes =
     calendar.defaultPopupReminderMinutes ?? [];
-  let pageToken: string | null = null;
+  let pageToken: string | null = resource.repairPageCursor ?? null;
   let cursor: string | null = null;
+  let skipped = resource.repairSkipped ?? 0;
   do {
     const read = await listEventPageWithAuthRetry(deps, calendar.connectionId, {
       accessToken,
@@ -115,20 +126,116 @@ export async function repairCalendar(
       pageToken,
       colorLabels,
       calendarDefaultPopupReminderMinutes,
+    }).catch(async (error: unknown) => {
+      if (
+        pageToken &&
+        error instanceof ProviderEventReadError &&
+        error.reason === "cursorExpired"
+      ) {
+        // A provider page checkpoint can expire while an interrupted job waits.
+        // Restart the staging snapshot on the next retry instead of replaying
+        // that unusable checkpoint forever.
+        await deps.resources.startNewGeneration(
+          resource.tenantId,
+          resource.principalId,
+          resource._id,
+        );
+      }
+      throw error;
     });
     const page = read.page;
+    skipped += page.skipped;
     accessToken = read.accessToken;
     await applier.applyPage(page.events);
     pageToken = page.nextPageToken;
     cursor = page.nextSyncToken ?? cursor;
+    if (pageToken && !applier.hasUnresolvedMembers) {
+      await deps.resources.setRepairCheckpoint(resource, pageToken, skipped);
+    }
   } while (pageToken);
-  await applier.finish();
+  skipped += (await applier.finish()).orphans;
 
-  if (!cursor) {
-    // No durable cursor means the rebuild can't be trusted complete. Leave the
-    // old generation active and intact; the bumped importGeneration lets a later
-    // repair resume this same generation.
+  if (!cursor || (deps.reader.fullSnapshotOnly && skipped > 0)) {
+    // An unusable completed pass must restart from the beginning, including
+    // skipped records. A fresh staging generation prevents rows from this failed
+    // snapshot surviving if the provider no longer returns them on the retry.
+    await deps.resources.startNewGeneration(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+    );
     return { status: "incomplete", resource };
+  }
+
+  // A snapshot must not erase local intent still waiting for provider work.
+  // Promote and project pending events (and their series) before old-generation
+  // cleanup, just as incremental pulls preserve events with pending commands.
+  {
+    const pending = deps.commands
+      ? await deps.events.findByIds(
+          calendar.tenantId,
+          calendar.principalId,
+          await deps.commands.nonterminalEventIds(
+            calendar.tenantId,
+            calendar.principalId,
+          ),
+        )
+      : [];
+    const local = await deps.events.findUnlinkedBelowGeneration(
+      calendar.tenantId,
+      calendar.principalId,
+      calendar._id,
+      newGeneration,
+    );
+    const retained = new Map<string, EventRecord>();
+    for (const event of [...local, ...pending]) {
+      if (event.calendarId !== calendar._id) continue;
+      retained.set(event._id, event);
+      if (event.recurrence.kind === "exception") {
+        const master = await deps.events.findById(
+          event.tenantId,
+          event.principalId,
+          event.recurrence.seriesId,
+        );
+        if (master) retained.set(master._id, master);
+      }
+    }
+    for (const event of [...retained.values()]) {
+      if (event.recurrence.kind !== "seriesMaster") continue;
+      for (const exception of await deps.events.findSeriesExceptions(
+        event.tenantId,
+        event.principalId,
+        event._id,
+      ))
+        retained.set(exception._id, exception);
+    }
+    for (const event of retained.values()) {
+      if (event.generation >= newGeneration) continue;
+      const promoted = await deps.events.promoteGeneration(
+        event,
+        newGeneration,
+      );
+      if (!promoted)
+        throw new Error("Pending event changed during calendar snapshot");
+      const exceptions =
+        promoted.recurrence.kind === "seriesMaster"
+          ? await deps.events.findSeriesExceptions(
+              promoted.tenantId,
+              promoted.principalId,
+              promoted._id,
+            )
+          : [];
+      await reprojectOccurrences(
+        deps.occurrences,
+        promoted,
+        now,
+        exceptions.flatMap((exception) =>
+          exception.recurrence.kind === "exception"
+            ? [exception.recurrence.recurrenceId]
+            : [],
+        ),
+      );
+    }
   }
 
   // Activate the new generation, then advance the cursor — reads flip in one
@@ -154,11 +261,17 @@ export async function repairCalendar(
     calendar._id,
     newGeneration,
   );
-  await deps.events.deleteStaleProviderEventsBelowGeneration(
+  const deleted = await deps.events.deleteStaleProviderEventsBelowGeneration(
     calendar.tenantId,
     calendar.principalId,
     calendar._id,
     newGeneration,
+  );
+  await deps.resources.recordHistoryCoverage(
+    resource,
+    skipped,
+    deps.reader.supportsFullHistory === true,
+    now(),
   );
 
   const updated = await deps.resources.findById(
@@ -170,5 +283,8 @@ export async function repairCalendar(
     status: "repaired",
     resource: updated ?? resource,
     generation: newGeneration,
+    imported: applier.importedCount,
+    deleted,
+    skipped,
   };
 }

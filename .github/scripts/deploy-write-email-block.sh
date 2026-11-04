@@ -110,4 +110,29 @@ write_email_block() {
     fi
     printf '%s\n' "    maxEmailsPerDay: ${EMAIL_PREVIEW_LOOP_MAX_PER_DAY}"
   fi
+
+  if [ -n "${REFLECTION_ENABLED:-}${REFLECTION_ROLLOUT_ENABLED:-}${REFLECTION_TRIAL_USER_ID:-}${REFLECTION_TRIAL_EMAIL:-}" ]; then
+    python3 - <<'PY'
+import json
+import os
+
+def flag(name):
+    value = os.environ.get(name) or "false"
+    if value not in ("true", "false"):
+        raise SystemExit(f"{name} must be true or false")
+    return value == "true"
+
+reflection = {
+    "enabled": flag("REFLECTION_ENABLED"),
+    "rolloutEnabled": flag("REFLECTION_ROLLOUT_ENABLED"),
+}
+for env_name, field in (
+    ("REFLECTION_TRIAL_USER_ID", "trialUserId"),
+    ("REFLECTION_TRIAL_EMAIL", "trialEmail"),
+):
+    if os.environ.get(env_name):
+        reflection[field] = os.environ[env_name]
+print("  reflection: " + json.dumps(reflection))
+PY
+  fi
 }

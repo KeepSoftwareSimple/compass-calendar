@@ -2,6 +2,43 @@ import { createResendEmailProvider } from "@backend/email/providers/resend.provi
 import { afterEach, describe, expect, it, mock } from "bun:test";
 
 describe("createResendEmailProvider", () => {
+  it("transports PNG attachments and optional content IDs", async () => {
+    const fetchMock = mock(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      expect(body.attachments).toEqual([
+        {
+          filename: "life.png",
+          content: "cG5n",
+          content_type: "image/png",
+          content_id: "life",
+        },
+      ]);
+      return new Response(JSON.stringify({ id: "re_image" }), { status: 200 });
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+    const provider = createResendEmailProvider({
+      apiKey: "test",
+      from: "hello@example.com",
+      webhookSecret: "test",
+    });
+    await provider.send({
+      idempotencyKey: "reflection-test",
+      to: "reader@example.com",
+      headers: {},
+      subject: "Reflection",
+      html: '<img src="cid:life" alt="Life in weeks">',
+      text: "Life in weeks",
+      attachments: [
+        {
+          filename: "life.png",
+          content: "cG5n",
+          contentType: "image/png",
+          contentId: "life",
+        },
+      ],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {

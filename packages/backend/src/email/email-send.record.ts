@@ -9,9 +9,34 @@ export const EmailSendStatusSchema = z.enum([
   "failed",
 ]);
 
-export const EmailSendSequenceSchema = z.enum(["welcome", "booking-host"]);
+export const EmailSendSequenceSchema = z.enum([
+  "welcome",
+  "booking-host",
+  "reflection",
+]);
 
 export const EmailSendRecordSchema = z.strictObject({
+  reflection: z
+    .object({
+      date: z.iso.date(),
+      timeZone: z.string(),
+      cadence: z.enum(["daily", "weekly"]),
+      trial: z.boolean(),
+      memoryIds: z.array(z.string()).optional(),
+      prepared: z
+        .object({
+          subject: z.string(),
+          html: z.string(),
+          text: z.string(),
+          pngBase64: z.string().nullable(),
+          memoryIds: z.array(z.string()),
+          calendarIds: z.array(z.string()),
+          lifeRevision: z.number().int().nonnegative(),
+          hiddenDigest: z.string(),
+        })
+        .optional(),
+    })
+    .optional(),
   _id: z.string(),
   userId: zObjectId,
   sequence: EmailSendSequenceSchema,

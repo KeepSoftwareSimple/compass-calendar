@@ -110,6 +110,17 @@ const CompassConfigSchema = z
           .optional(),
         /** When false, booking host alert emails are not enqueued. Default on. */
         bookingHostEmailEnabled: z.boolean().optional(),
+        reflection: z
+          .object({
+            enabled: z.boolean().default(false),
+            rolloutEnabled: z.boolean().default(false),
+            trialUserId: z
+              .string()
+              .regex(/^[a-f0-9]{24}$/i)
+              .optional(),
+            trialEmail: z.email().optional(),
+          })
+          .optional(),
       })
       .nullish(),
     posthog: z

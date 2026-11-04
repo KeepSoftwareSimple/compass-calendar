@@ -58,22 +58,29 @@ test("life view i focuses the birth date field and u returns to the grid", async
 }) => {
   await page.addInitScript(() => {
     localStorage.setItem("compass.onboarding.has-seen-life-view-intro", "true");
+    localStorage.setItem(
+      "compass.life.preferences",
+      JSON.stringify({
+        birthDate: "2001-02-03",
+        lifespan: 79,
+        variation: "average",
+      }),
+    );
   });
   await page.goto("/life", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Life" })).toBeVisible();
 
-  const currentWeek = page.getByRole("button", { name: /current week/i });
-  if (await currentWeek.count()) {
-    await currentWeek.first().focus();
-  }
+  const currentWeek = page
+    .getByRole("region", { name: /^Life visualization:/ })
+    .getByRole("button", { name: /\| week \d+ \/ \d+$/ });
+  await expect(currentWeek).toBeVisible();
+  await currentWeek.focus();
 
   const birthDate = page.getByRole("textbox", { name: "Date of birth" });
   await page.keyboard.press("i");
   await expect(birthDate).toBeFocused();
-  await expect(birthDate).toHaveValue("Jan 1, 2000");
+  await expect(birthDate).toHaveValue("Feb 3, 2001");
 
   await page.keyboard.press("u");
-  if (await currentWeek.count()) {
-    await expect(currentWeek.first()).toBeFocused({ timeout: 5_000 });
-  }
+  await expect(currentWeek).toBeFocused({ timeout: 5_000 });
 });

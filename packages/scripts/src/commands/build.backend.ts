@@ -38,6 +38,7 @@ const result = await Bun.build({
   entrypoints: [path.join(COMPASS_ROOT_DEV, "packages/backend/src/app.ts")],
   outdir: BACKEND_BUILD,
   target: "bun",
+  external: ["@resvg/resvg-js"],
   sourcemap: "inline",
   minify: false,
 });
@@ -61,13 +62,22 @@ if (await Bun.file(configPath).exists()) {
   log.warning(`Compass config file not found: ${configPath}`);
 }
 
-// 4. Write a minimal package.json. Everything is inlined in app.js.
+// 4. Keep the native PNG renderer external and ship its font asset.
 await Bun.write(
   path.join(BACKEND_BUILD, "package.json"),
-  JSON.stringify({ dependencies: {} }, null, 2),
+  JSON.stringify({ dependencies: { "@resvg/resvg-js": "2.6.2" } }, null, 2),
 );
 
-// 5. Install an empty production dependency tree so Bun writes its runtime files.
+for (const asset of ["Rubik-Variable.ttf", "OFL.txt"]) {
+  await Bun.write(
+    path.join(BACKEND_BUILD, "assets", asset),
+    Bun.file(
+      path.join(COMPASS_ROOT_DEV, "packages/backend/src/email/assets", asset),
+    ),
+  );
+}
+
+// 5. Install the renderer binary for the target production platform.
 log.info("Installing production dependency metadata ...");
 const install = Bun.spawnSync({
   cmd: ["bun", "install", "--production", "--ignore-scripts", "--no-progress"],

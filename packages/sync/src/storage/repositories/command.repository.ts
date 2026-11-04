@@ -28,6 +28,16 @@ import {
 const NONTERMINAL_COMMAND_STATES = ["pending", "applying", "reconciling"];
 
 export class CommandRepository {
+  async nonterminalEventIds(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+  ): Promise<EventId[]> {
+    return this.collection.distinct("eventId", {
+      tenantId,
+      principalId,
+      "outcome.state": { $in: NONTERMINAL_COMMAND_STATES },
+    });
+  }
   private readonly collection: Collection<CommandRecord>;
 
   constructor(db: Db) {

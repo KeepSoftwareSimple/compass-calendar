@@ -12,7 +12,7 @@ import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-e
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
-import { toIanaTimeZone } from "@sync/providers/microsoft/microsoft-timezone";
+import { requireIanaTimeZone } from "@sync/providers/microsoft/microsoft-timezone";
 import {
   ProviderEventError,
   type ProviderEventRead,
@@ -85,6 +85,7 @@ export interface GraphEvent {
   readonly originalEndTimeZone?: string;
   readonly cancelledOccurrences?: readonly string[];
   readonly exceptionOccurrences?: readonly GraphEvent[];
+  readonly ["exceptionOccurrences@odata.nextLink"]?: string;
   readonly onlineMeeting?: GraphOnlineMeeting;
   readonly onlineMeetingProvider?: string;
   readonly categories?: readonly string[];
@@ -277,8 +278,14 @@ function mapSchedule(item: GraphEvent) {
   }
 
   if (item.isAllDay) {
-    const startDate = extractDatePart(start);
-    const endDate = extractDatePart(end);
+    const timeZone = toIanaTimeZone(
+      item.recurrence?.range.recurrenceTimeZone ??
+        item.originalStartTimeZone ??
+        start.timeZone ??
+        "UTC",
+    );
+    const startDate = extractDatePart(start, timeZone);
+    const endDate = extractDatePart(end, timeZone);
     if (!startDate || !endDate) {
       throw new ProviderEventError(
         "unmappableSchedule",
@@ -311,9 +318,12 @@ function mapSchedule(item: GraphEvent) {
   );
 }
 
-function extractDatePart(value: GraphDateTimeTimeZone): string | null {
+function extractDatePart(
+  value: GraphDateTimeTimeZone,
+  timeZone: string,
+): string | null {
   if (!value.dateTime) return null;
-  const parsed = dayjs.utc(value.dateTime);
+  const parsed = dayjs(toOffsetIso(value, timeZone)).tz(timeZone);
   if (!parsed.isValid()) return null;
   return parsed.format(DATE_ONLY);
 }
@@ -339,6 +349,17 @@ function resolveTimedEventTimeZone(
     return originalStartZone;
   }
   return "UTC";
+}
+
+function toIanaTimeZone(timeZone: string): string {
+  try {
+    return requireIanaTimeZone(timeZone);
+  } catch {
+    throw new ProviderEventError(
+      "unmappableSchedule",
+      "Event timezone could not be resolved",
+    );
+  }
 }
 
 function mapRecurrence(
@@ -394,5 +415,6 @@ function toOffsetIso(value: GraphDateTimeTimeZone, timeZone: string): string {
     );
   }
   const raw = stripGraphDateTimeFraction(value.dateTime);
-  return dayjs.utc(raw).tz(timeZone).format(RFC3339_OFFSET);
+  const anchored = dayjs.utc(raw).tz(timeZone);
+  return anchored.format(RFC3339_OFFSET);
 }

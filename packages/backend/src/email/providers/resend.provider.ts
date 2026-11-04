@@ -80,6 +80,12 @@ export function createResendEmailProvider(options: {
         html?: string;
         text?: string;
         template?: { id: string; variables: Record<string, string> };
+        attachments?: {
+          filename: string;
+          content: string;
+          content_type: string;
+          content_id?: string;
+        }[];
       };
 
       const body: ResendSendBody = {
@@ -90,6 +96,13 @@ export function createResendEmailProvider(options: {
       if (options.replyTo) {
         body.reply_to = options.replyTo;
       }
+      if (input.attachments?.length)
+        body.attachments = input.attachments.map((attachment) => ({
+          filename: attachment.filename,
+          content: attachment.content,
+          content_type: attachment.contentType,
+          ...(attachment.contentId ? { content_id: attachment.contentId } : {}),
+        }));
 
       if (input.template) {
         body.template = {

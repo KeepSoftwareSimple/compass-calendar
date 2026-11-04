@@ -24,7 +24,7 @@ export function useLifeUiFocusShortcuts() {
     () => {
       moveLifeUiFocusLeft();
     },
-    { shortcutId: "focus-event" },
+    { shortcutId: "focus-event", ignoreInputs: false },
   );
 
   useUiFocusLetterShortcut(

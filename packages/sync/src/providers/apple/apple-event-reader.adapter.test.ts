@@ -153,6 +153,10 @@ describe("AppleEventReaderAdapter", () => {
     expect(second.events).toHaveLength(3);
     expect(second.nextPageToken).toBeNull();
     expect(second.nextSyncToken).toBe("sync-token-final");
+    expect(adapter.supportsFullHistory).toBe(true);
+    expect(
+      api.calls.find((call) => call.method === "calendarQuery")?.args[1],
+    ).toBeNull();
     expect(
       api.calls.filter((call) => call.method === "calendarQuery"),
     ).toHaveLength(1);

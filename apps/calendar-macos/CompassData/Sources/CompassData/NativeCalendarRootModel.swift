@@ -393,6 +393,7 @@ public final class NativeCalendarRootModel {
         await configStore.load()
         await configureAnalyticsFromConfig()
         await authStore.bootstrap()
+        await lifeStore.load(userId: authStore.userId, remote: environment.apiClient.user)
         if demoPresentation != nil {
             authStore.closeModal()
         }
@@ -463,6 +464,7 @@ public final class NativeCalendarRootModel {
     }
 
     public func handleResume() async {
+        await reloadLifePreferences()
         if let eventStream {
             await eventStream.stop()
         }
@@ -492,11 +494,16 @@ public final class NativeCalendarRootModel {
     public internal(set) var isLoggingOut = false
     public internal(set) var logoutError: String?
 
+    public func reloadLifePreferences() async {
+        await lifeStore.load(userId: authStore.userId, remote: environment.apiClient.user)
+    }
+
     public func signOut() async throws {
         try await authStore.signOut()
     }
 
     private func handleAuthenticated() async {
+        await lifeStore.load(userId: authStore.userId, remote: environment.apiClient.user)
         guard resetAccountCaches(discardDraft: false) else { return }
         let revision = sessionRevision
         billingStore.setAuthenticated(true)
@@ -537,6 +544,7 @@ public final class NativeCalendarRootModel {
     }
 
     private func handleSignedOut() async {
+        await lifeStore.load(userId: nil, remote: environment.apiClient.user)
         let cachesReady = resetAccountCaches()
         let revision = sessionRevision
         billingStore.setAuthenticated(false)
