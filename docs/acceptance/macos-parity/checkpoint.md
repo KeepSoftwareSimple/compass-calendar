@@ -26,6 +26,13 @@ No product/test changes in this accounting package. Visual, signed-in, supported
 geometry, startup/performance and final-build gates remain open under #4783.
 Future web propagation remains deferred. Human-closed #5037 stays closed.
 
+Exact-head 290524ec81c252adc567b34d8c0feec290510490 strict BOTH: web strict41906964440
+PASS (downloaded log VERDICT PASS). Normal macOS PR41877000312 PASS at same head.
+Native strict legs41876996986 and41906964440 were cancelled at the 30 minute job
+limit during xcodebuild (PRE-EXISTING infra timeout, not a new test failure). PR5123
+extends the limit; after it merges, dispatch `test-macos.yml` with strict_verify on
+this branch once, then mark #5109 ready and auto-merge.
+
 ## Verified history, do not repeat
 
 - #4984 merged 2026-10-31T13:28:50Z. Exact e176 native/web strict41142347442
