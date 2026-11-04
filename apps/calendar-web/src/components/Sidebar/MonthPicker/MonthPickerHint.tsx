@@ -7,8 +7,17 @@ interface Props {
   unit: MonthPickerUnit;
 }
 
+const hintSlotClassName =
+  "mt-1.5 flex min-h-10 w-full items-center justify-center px-0";
+
 const hintClassName =
-  "c-context-tooltip top-full bottom-auto left-1/2 mt-1.5 mb-0 flex -translate-x-1/2 items-center gap-1.5";
+  "pointer-coarse:hidden flex max-w-full flex-wrap items-center justify-center gap-x-1 gap-y-0.5 font-medium text-text leading-snug invisible opacity-0 transition-opacity duration-200 ease-in-out group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100";
+
+const hintSeparator = (
+  <span aria-hidden className="text-text-muted">
+    ·
+  </span>
+);
 
 function statusText(
   isFocused: boolean,
@@ -36,7 +45,7 @@ export const MonthPickerHint: FC<Props> = ({ children, unit }) => {
 
   return (
     <div
-      className="group relative"
+      className="group relative min-w-0"
       onBlurCapture={(event) => {
         const next = event.relatedTarget;
         if (next instanceof Node && event.currentTarget.contains(next)) return;
@@ -55,32 +64,39 @@ export const MonthPickerHint: FC<Props> = ({ children, unit }) => {
       }}
     >
       {children}
-      <span role="status" className={hintClassName}>
-        <span className="sr-only">
-          {statusText(isFocused, hasMovedWithArrows, unit)}
+      <div className={hintSlotClassName}>
+        <span
+          role="status"
+          data-testid="month-picker-keycap-hint"
+          className={hintClassName}
+          style={{ fontSize: "var(--font-size-s)" }}
+        >
+          <span className="sr-only">
+            {statusText(isFocused, hasMovedWithArrows, unit)}
+          </span>
+          {isFocused ? (
+            <>
+              <ShortcutKeys keys={["ArrowUp", "ArrowDown"]} />
+              <span aria-hidden>{unit}</span>
+              {hasMovedWithArrows ? (
+                <>
+                  {hintSeparator}
+                  <ShortcutKeys keys="Enter" />
+                  <span aria-hidden>open</span>
+                </>
+              ) : null}
+              {hintSeparator}
+              <ShortcutKeys keys="U" />
+              <span aria-hidden>back</span>
+            </>
+          ) : (
+            <>
+              <ShortcutKeys keys="I" />
+              <span aria-hidden>focus</span>
+            </>
+          )}
         </span>
-        {isFocused ? (
-          <>
-            <ShortcutKeys keys={["ArrowUp", "ArrowDown"]} />
-            <span aria-hidden>move by {unit}</span>
-            {hasMovedWithArrows ? (
-              <>
-                <span aria-hidden>·</span>
-                <ShortcutKeys keys="Enter" />
-                <span aria-hidden>opens it</span>
-              </>
-            ) : null}
-            <span aria-hidden>·</span>
-            <ShortcutKeys keys="U" />
-            <span aria-hidden>returns to the grid</span>
-          </>
-        ) : (
-          <>
-            <ShortcutKeys keys="I" />
-            <span aria-hidden>focuses the picker</span>
-          </>
-        )}
-      </span>
+      </div>
     </div>
   );
 };
