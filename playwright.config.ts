@@ -39,8 +39,14 @@ const ciReporters: [string, { outputFile: string }][] = [
   ["json", { outputFile: "test-results/playwright-report.json" }],
 ];
 
+// `@artifact` tests only write screenshots for PR evidence; they check
+// nothing the default run does not already cover. `bun run test:e2e:artifacts`
+// runs them on their own.
+const runArtifactsOnly = process.env.PLAYWRIGHT_ARTIFACTS === "1";
+
 export default defineConfig({
   testDir: "./e2e",
+  ...(runArtifactsOnly ? { grep: /@artifact/ } : { grepInvert: /@artifact/ }),
   timeout: 30_000,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["list"], ...ciReporters] : "list",

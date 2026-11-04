@@ -30,6 +30,14 @@ means every selected check passed but a Playwright check was skipped (no
 Chromium; install with `bunx playwright install chromium`), so CI parity is
 not proven. It exits 0 by default so you can iterate; pass `--strict` before
 labeling a PR so `INCOMPLETE` exits 1.
+When `test:web`, `test:a11y`, or `test:e2e` fails, verify reruns just the
+failing files on the branch and then on `origin/main` in a temporary `git
+worktree`, and classifies each failing test as NEW (fails only on the
+branch), PRE-EXISTING (fails on main too), or FLAKY (passed on the branch
+rerun). Only NEW failures make the verdict `FAIL`; the summary lists every
+group so it can be pasted into a PR body. Playwright tests tagged
+`@artifact` only write screenshots: `test:e2e` skips them and
+`bun run test:e2e:artifacts` runs them alone.
 GitHub still runs the Unit workflow matrix and the E2E workflow on every
 non-docs PR; this helper does not.
 

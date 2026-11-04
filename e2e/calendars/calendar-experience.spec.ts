@@ -1082,9 +1082,9 @@ function microsoftHolidayCalendar(): FixtureCalendar {
   });
 }
 
-test("artifact: recurring all-day x hide screenshots at 1280px", async ({
-  page,
-}) => {
+test("artifact: recurring all-day x hide screenshots at 1280px", {
+  tag: "@artifact",
+}, async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await setupBirthdayExperiencePage(page);
   await focusAllDayBirthdayWithKeyboard(page);
@@ -1101,9 +1101,9 @@ test("artifact: recurring all-day x hide screenshots at 1280px", async ({
   });
 });
 
-test("artifact: recurring all-day x hide screenshots at 360px", async ({
-  page,
-}) => {
+test("artifact: recurring all-day x hide screenshots at 360px", {
+  tag: "@artifact",
+}, async ({ page }) => {
   const card = await setupBirthdayExperiencePage(page);
   await page.setViewportSize({ width: 360, height: 740 });
   await card.click();

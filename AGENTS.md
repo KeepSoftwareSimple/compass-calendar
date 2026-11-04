@@ -25,6 +25,9 @@ Playwright. Docs index: `docs/README.md`.
   `INCOMPLETE`: install Chromium with `bunx playwright install chromium` and
   rerun, or point `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` at a preinstalled one
   (Claude Code web: `/opt/pw-browsers/chromium`).
+- Failing tests are rerun against `origin/main`: only NEW failures fail the
+  verdict. Paste its PRE-EXISTING and FLAKY lists into the PR body.
+  Screenshot-only `@artifact` specs: `bun run test:e2e:artifacts`.
 - macOS: `docs/development/local-development.md`. Swift edits: run
   `bun cli contracts:swift --check` and `bun cli desktop:export --check`
   (drop `--check` to regenerate when schemas or shortcuts change).

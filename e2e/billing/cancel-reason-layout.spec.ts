@@ -171,7 +171,9 @@ for (const viewport of VIEWPORTS) {
   });
 }
 
-test("capture full cancel reason dialog artifact", async ({ page }) => {
+test("capture full cancel reason dialog artifact", {
+  tag: "@artifact",
+}, async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const dialog = await openCancelDialog(page);
   await expect(

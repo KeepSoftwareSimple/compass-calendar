@@ -27,7 +27,9 @@ async function reachFirstEventPrompt(page: import("@playwright/test").Page) {
   return prompt;
 }
 
-test.describe("staging first-event prompt capture", () => {
+test.describe("staging first-event prompt capture", {
+  tag: "@artifact",
+}, () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test("1280px desktop", async ({ page }) => {
