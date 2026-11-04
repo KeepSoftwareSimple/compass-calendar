@@ -145,21 +145,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-xcode-
 
-      - name: Generate Xcode project
-        run: |
-          xcodegen generate
-
       # The Compass scheme runs CompassKitTests and CompassUITests.
       - name: Build and test
+        env:
+          MACOS_XCRESULT_PATH: build/Compass.xcresult
         run: |
           xcodebuild -version
-          xcodebuild test \
-            -project Compass.xcodeproj \
-            -scheme Compass \
-            -destination platform=macOS \
-            -derivedDataPath build/DerivedData \
-            -clonedSourcePackagesDirPath build/SourcePackages \
-            -resultBundlePath build/Compass.xcresult
+          bash ../../.github/scripts/test-macos-xcodebuild.sh
 
       # Window snapshots from NativeImageSnapshotTests and the screen
       # recordings of failing UI tests, named by test, so a PR's UI can be
@@ -213,6 +205,16 @@ jobs:
         run: brew install xcodegen
       - name: Render app icon
         run: bash .github/scripts/render-macos-icon.sh
+      - name: Restore SwiftPM and derived data
+        id: xcode-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            apps/calendar-macos/build/DerivedData
+            apps/calendar-macos/build/SourcePackages
+          key: ${{ runner.os }}-xcode-sparkle-v1-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-
       - name: Restore SwiftPM build directories
         id: swift-cache
         uses: actions/cache/restore@v6
@@ -251,10 +253,21 @@ jobs:
           bun cli desktop:export --check
       - name: Run full strict verification
         shell: bash
+        env:
+          MACOS_PARALLEL_UI_TESTS: "1"
+          MACOS_PARALLEL_TEST_WORKERS: "3"
         run: |
           set -o pipefail
           mkdir -p build
           bun run verify --strict --serial macos | tee build/macos-strict.log
+      - name: Save SwiftPM and derived data
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            apps/calendar-macos/build/DerivedData
+            apps/calendar-macos/build/SourcePackages
+          key: ${{ steps.xcode-cache.outputs.cache-primary-key }}
       - name: Upload strict verification log
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
