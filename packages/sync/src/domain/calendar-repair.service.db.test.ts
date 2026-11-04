@@ -245,6 +245,67 @@ describe("repairCalendar", () => {
     expect(reader.calls[0]?.cursor).toBeUndefined();
   });
 
+  it("incremental snapshot pull reads events with a legacy empty providerVersion", async () => {
+    const calendar = await seedCalendar();
+    await seedImported(calendar);
+    const legacyId = objectId() as EventRecord["_id"];
+    await storage
+      .db()
+      .collection(SYNC_COLLECTIONS.events)
+      .insertOne({
+        _id: legacyId,
+        tenantId: calendar.tenantId,
+        principalId: calendar.principalId,
+        origin: "provider",
+        calendarId: calendar._id,
+        clientEventId: null,
+        connectionId: calendar.connectionId,
+        providerEventId: "legacy-empty-version",
+        providerVersion: "",
+        providerUpdatedAt: null,
+        deliveryState: null,
+        providerMetadata: null,
+        content: content("legacy-empty-version"),
+        schedule,
+        recurrence: { kind: "single" },
+        lifecycleState: "active",
+        generation: 0,
+        createdAt: now(),
+        updatedAt: now(),
+        confirmedAt: now(),
+      });
+    await occurrences.replaceForEvent(legacyId, 0, [
+      {
+        tenantId: calendar.tenantId,
+        principalId: calendar.principalId,
+        eventId: legacyId,
+        occurrenceKey: `${legacyId}:0`,
+        calendarId: calendar._id,
+        schedule,
+        startAt: new Date("2026-07-14T15:00:00.000Z"),
+        endAt: new Date("2026-07-14T16:00:00.000Z"),
+        busy: true,
+        title: "legacy-empty-version",
+        cancelled: false,
+        generation: 0,
+      } as never,
+    ]);
+    const reader = Object.assign(
+      new FakeReader([
+        page([single("fresh")], { nextSyncToken: "full-snapshot:v2" }),
+      ]),
+      { fullSnapshotOnly: true, supportsFullHistory: true },
+    );
+
+    const result = await pullCalendarChanges(deps(reader), calendar, now);
+
+    expect(result.status).toBe("applied");
+    if (result.status !== "applied") throw new Error("expected applied");
+    expect(
+      await events.findById(calendar.tenantId, calendar.principalId, legacyId),
+    ).toBeNull();
+  });
+
   it("does not delete old history when a snapshot skips unusable records", async () => {
     const calendar = await seedCalendar();
     await seedImported(calendar);

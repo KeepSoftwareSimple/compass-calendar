@@ -47,6 +47,13 @@ export const ProviderEventVersionSchema = z
   .brand<"ProviderEventVersion">();
 export type ProviderEventVersion = z.infer<typeof ProviderEventVersionSchema>;
 
+// Provider adapters use "" when a version or etag is absent. Older sync writes
+// persisted that literally; reads must treat it as null, not a version string.
+export const NullableProviderEventVersionSchema = z.preprocess(
+  (value) => (value === "" ? null : value),
+  ProviderEventVersionSchema.nullable(),
+);
+
 export const SyncEventOriginSchema = z.enum(["compass", "provider"]);
 export type SyncEventOrigin = z.infer<typeof SyncEventOriginSchema>;
 
