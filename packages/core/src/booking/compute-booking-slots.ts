@@ -20,7 +20,6 @@ export interface ComputeBookingSlotsInput {
   minNoticeHours: number;
   maxHorizonDays: number;
   busyIntervals: readonly BookingBusyInterval[];
-  confirmedReservationStarts: readonly Date[];
   now: Date;
   windowStart: Date;
   windowEnd: Date;
@@ -144,7 +143,6 @@ export const computeBookingSlots = (
     minNoticeHours,
     maxHorizonDays,
     busyIntervals,
-    confirmedReservationStarts,
     now,
     windowStart,
     windowEnd,
@@ -158,16 +156,7 @@ export const computeBookingSlots = (
   const minNoticeMs = minNoticeHours * 60 * 60_000;
   const horizonEnd = dayjs(now).add(maxHorizonDays, "day").toDate();
 
-  const reservationIntervals: BookingBusyInterval[] =
-    confirmedReservationStarts.map((start) => ({
-      start,
-      end: new Date(start.getTime() + durationMs),
-    }));
-
-  const blockedIntervals = mergeBookingBusyIntervals([
-    ...busyIntervals,
-    ...reservationIntervals,
-  ]);
+  const blockedIntervals = mergeBookingBusyIntervals(busyIntervals);
 
   const slots: string[] = [];
   const seenStarts = new Set<number>();

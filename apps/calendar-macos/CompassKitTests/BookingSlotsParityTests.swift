@@ -35,9 +35,6 @@ final class BookingSlotsParityTests: XCTestCase {
                 return BookingBusyInterval(start: start, end: end)
             }
 
-            let reservations = (input["confirmedReservationStarts"] as? [String] ?? [])
-                .compactMap(parseISO8601)
-
             let computeInput = ComputeBookingSlotsInput(
                 timeZone: input["timeZone"] as? String ?? "UTC",
                 durationMinutes: input["durationMinutes"] as? Int ?? 30,
@@ -45,7 +42,6 @@ final class BookingSlotsParityTests: XCTestCase {
                 minNoticeHours: input["minNoticeHours"] as? Int ?? 0,
                 maxHorizonDays: input["maxHorizonDays"] as? Int ?? 60,
                 busyIntervals: busy,
-                confirmedReservationStarts: reservations,
                 now: parseISO8601(input["now"] as? String ?? "") ?? Date(),
                 windowStart: parseISO8601(input["windowStart"] as? String ?? "") ?? Date(),
                 windowEnd: parseISO8601(input["windowEnd"] as? String ?? "") ?? Date()

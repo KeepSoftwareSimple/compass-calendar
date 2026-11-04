@@ -394,7 +394,6 @@ public final class BookingStore {
             minNoticeHours: payload.minNoticeHours,
             maxHorizonDays: payload.maxHorizonDays,
             busyIntervals: [],
-            confirmedReservationStarts: [],
             now: now,
             windowStart: windowStart,
             windowEnd: windowEnd

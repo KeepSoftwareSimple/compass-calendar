@@ -17,7 +17,6 @@ public struct ComputeBookingSlotsInput: Sendable {
     public var minNoticeHours: Int
     public var maxHorizonDays: Int
     public var busyIntervals: [BookingBusyInterval]
-    public var confirmedReservationStarts: [Date]
     public var now: Date
     public var windowStart: Date
     public var windowEnd: Date
@@ -29,7 +28,6 @@ public struct ComputeBookingSlotsInput: Sendable {
         minNoticeHours: Int,
         maxHorizonDays: Int,
         busyIntervals: [BookingBusyInterval],
-        confirmedReservationStarts: [Date],
         now: Date,
         windowStart: Date,
         windowEnd: Date
@@ -40,7 +38,6 @@ public struct ComputeBookingSlotsInput: Sendable {
         self.minNoticeHours = minNoticeHours
         self.maxHorizonDays = maxHorizonDays
         self.busyIntervals = busyIntervals
-        self.confirmedReservationStarts = confirmedReservationStarts
         self.now = now
         self.windowStart = windowStart
         self.windowEnd = windowEnd
@@ -92,12 +89,7 @@ public enum ComputeBookingSlots {
             calendar.date(byAdding: .day, value: input.maxHorizonDays, to: input.now)
             ?? input.now
 
-        let reservationIntervals = input.confirmedReservationStarts.map {
-            BookingBusyInterval(start: $0, end: Date(timeInterval: durationMs, since: $0))
-        }
-        let blockedIntervals = mergeBookingBusyIntervals(
-            input.busyIntervals + reservationIntervals
-        )
+        let blockedIntervals = mergeBookingBusyIntervals(input.busyIntervals)
 
         var slots: [String] = []
         var seenStarts = Set<Int>()

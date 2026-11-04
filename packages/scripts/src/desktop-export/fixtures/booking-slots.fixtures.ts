@@ -12,7 +12,6 @@ type BookingSlotsVectorCase = {
     minNoticeHours: number;
     maxHorizonDays: number;
     busyIntervals: { start: string; end: string }[];
-    confirmedReservationStarts: string[];
     now: string;
     windowStart: string;
     windowEnd: string;
@@ -34,9 +33,6 @@ const serializeInput = (
     start: interval.start.toISOString(),
     end: interval.end.toISOString(),
   })),
-  confirmedReservationStarts: input.confirmedReservationStarts.map((start) =>
-    start.toISOString(),
-  ),
   now: input.now.toISOString(),
   windowStart: input.windowStart.toISOString(),
   windowEnd: input.windowEnd.toISOString(),
@@ -54,7 +50,6 @@ const baseInput = (
   minNoticeHours: 0,
   maxHorizonDays: 60,
   busyIntervals: [],
-  confirmedReservationStarts: [],
   now: new Date("2026-09-01T12:00:00.000Z"),
   windowStart: new Date("2026-09-07T06:00:00.000Z"),
   windowEnd: new Date("2026-09-14T06:00:00.000Z"),

@@ -589,10 +589,9 @@ const slotEngineInputForPage = (
       start: new Date(interval.start),
       end: new Date(interval.end),
     }))
+    // Reservations join the busy intervals as real intervals: meeting types
+    // can differ in length, so each one must block its own duration.
     .concat(confirmedReservations),
-  // Reservations arrive above as real intervals: meeting types can differ in
-  // length, and the engine would stretch each start to `durationMinutes`.
-  confirmedReservationStarts: [],
   now: window.now,
   windowStart: window.windowStart,
   windowEnd: window.windowEnd,

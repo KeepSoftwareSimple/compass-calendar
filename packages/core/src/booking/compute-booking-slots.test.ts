@@ -19,7 +19,6 @@ const baseInput = (
   minNoticeHours: 0,
   maxHorizonDays: 60,
   busyIntervals: [],
-  confirmedReservationStarts: [],
   now: new Date("2026-09-01T12:00:00.000Z"),
   windowStart: new Date("2026-09-07T06:00:00.000Z"),
   windowEnd: new Date("2026-09-14T06:00:00.000Z"),
