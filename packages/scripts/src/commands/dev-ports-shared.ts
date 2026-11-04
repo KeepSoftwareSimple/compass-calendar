@@ -27,14 +27,20 @@ export function isPortFree(port: number): Promise<boolean> {
   });
 }
 
-function listWorktreePaths(): string[] {
-  const output = execSync("git worktree list --porcelain", {
-    encoding: "utf8",
-  });
+// Parses `git worktree list --porcelain`, skipping entries git marks
+// `prunable` (their directory is gone; git just hasn't pruned the record).
+export function parseWorktreeList(output: string): string[] {
   return output
-    .split("\n")
-    .filter((line) => line.startsWith("worktree "))
-    .map((line) => line.slice("worktree ".length));
+    .split(/\n\s*\n/)
+    .filter((block) => !/^prunable\b/m.test(block))
+    .map((block) => block.match(/^worktree (.+)$/m)?.[1])
+    .filter((worktree): worktree is string => Boolean(worktree));
+}
+
+function listWorktreePaths(): string[] {
+  return parseWorktreeList(
+    execSync("git worktree list --porcelain", { encoding: "utf8" }),
+  );
 }
 
 export function siblingConfigPaths(root: string): string[] {

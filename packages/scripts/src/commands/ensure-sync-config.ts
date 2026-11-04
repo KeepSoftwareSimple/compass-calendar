@@ -97,7 +97,7 @@ export function ensureSyncConfig(
   return doc.toString();
 }
 
-export function readSiblingSyncPorts(root: string): number[] {
+function readSiblingSyncPorts(root: string): number[] {
   return siblingConfigPaths(root)
     .map((file) => readSyncPort(readFileSync(file, "utf8")))
     .filter((port): port is number => port !== null);

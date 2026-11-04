@@ -7,7 +7,7 @@ import {
 } from "@scripts/commands/dev-ports-shared";
 import {
   ensureSyncConfigFile,
-  readSiblingSyncPorts,
+  readSyncPort,
 } from "@scripts/commands/ensure-sync-config";
 import { parse, parseDocument } from "yaml";
 import { execSync } from "node:child_process";
@@ -99,10 +99,22 @@ export function reassignPorts(yamlText: string, next: DevPorts): string | null {
   return doc.toString();
 }
 
-function readSiblingPorts(root: string): DevPorts[] {
-  return siblingConfigPaths(root)
-    .map((file) => readPorts(readFileSync(file, "utf8")))
-    .filter((ports): ports is DevPorts => ports !== null);
+// One sibling worktree's port claims, read from its compass.yaml.
+export interface SiblingClaim {
+  worktree: string;
+  ports: DevPorts;
+  syncPort: number | null;
+}
+
+function readSiblingClaims(root: string): SiblingClaim[] {
+  return siblingConfigPaths(root).flatMap((file) => {
+    const yamlText = readFileSync(file, "utf8");
+    const ports = readPorts(yamlText);
+    if (!ports) return [];
+    return [
+      { worktree: path.dirname(file), ports, syncPort: readSyncPort(yamlText) },
+    ];
+  });
 }
 
 function ensureConfigExists(root: string, configPath: string): void {
@@ -121,31 +133,78 @@ function isPortsClaimed(ports: DevPorts, claimed: DevPorts[]): boolean {
   );
 }
 
-// Smallest offset whose web/backend pair is unclaimed by any sibling
-// worktree's compass.yaml and actually free on the OS, or null if none of
-// the first 50 offsets work out. claimedSyncPorts excludes candidates that
-// collide with a sync port some worktree already has assigned — the two
-// ranges overlap (see the module doc), so this is the reverse half of the
-// same guard ensureSyncConfigFile applies for backend ports.
-async function findNextPorts(
-  claimed: DevPorts[],
-  claimedSyncPorts: number[] = [],
+type IsPortFree = (port: number) => Promise<boolean>;
+
+// Smallest offset whose web/backend pair is unclaimed by any of `claims` and
+// actually free on the OS, or null if none of the first 50 offsets work out.
+// Sync ports count as claims too: the sync range overlaps the backend range
+// (see the module doc), so this is the reverse half of the same guard
+// ensureSyncConfigFile applies for backend ports.
+async function searchPorts(
+  claims: SiblingClaim[],
+  isFree: IsPortFree,
 ): Promise<DevPorts | null> {
+  const claimed = claims.map((c) => c.ports);
+  const syncPorts = claims.map((c) => c.syncPort);
   for (let offset = 1; offset <= 50; offset++) {
     const candidate: DevPorts = {
       web: WEB_PORT_BASE + offset,
       backend: BACKEND_PORT_BASE + offset,
     };
     if (isPortsClaimed(candidate, claimed)) continue;
-    if (claimedSyncPorts.includes(candidate.backend)) continue;
-    if (
-      (await isPortFree(candidate.web)) &&
-      (await isPortFree(candidate.backend))
-    ) {
+    if (syncPorts.includes(candidate.backend)) continue;
+    if ((await isFree(candidate.web)) && (await isFree(candidate.backend))) {
       return candidate;
     }
   }
   return null;
+}
+
+// Claims whose web, backend, or sync port is actually bound right now.
+export async function liveClaims(
+  claims: SiblingClaim[],
+  isFree: IsPortFree = isPortFree,
+): Promise<SiblingClaim[]> {
+  const live: SiblingClaim[] = [];
+  for (const claim of claims) {
+    const ports = [claim.ports.web, claim.ports.backend, claim.syncPort];
+    for (const port of ports) {
+      if (port !== null && !(await isFree(port))) {
+        live.push(claim);
+        break;
+      }
+    }
+  }
+  return live;
+}
+
+// Every worktree that ever ran dev:* keeps its compass.yaml claim forever,
+// and each one can use up to two slots of the backend range (backend + sync),
+// so a few dozen idle worktrees exhaust all 50 offsets. Respect every claim
+// first; if that finds nothing, retry counting only claims that are live.
+export async function findNextPorts(
+  claims: SiblingClaim[],
+  isFree: IsPortFree = isPortFree,
+): Promise<DevPorts | null> {
+  return (
+    (await searchPorts(claims, isFree)) ??
+    searchPorts(await liveClaims(claims, isFree), isFree)
+  );
+}
+
+export function describeExhaustedPorts(live: SiblingClaim[]): string {
+  const holders = live.map(
+    (c) =>
+      `  ${c.worktree} (web ${c.ports.web}, backend ${c.ports.backend}` +
+      `${c.syncPort === null ? "" : `, sync ${c.syncPort}`})`,
+  );
+  return [
+    "[dev-ports] no free port pair found within 50 offsets.",
+    holders.length > 0
+      ? "Running worktrees holding claims:"
+      : "No sibling worktree is running; the ports are bound by other processes.",
+    ...holders,
+  ].join("\n");
 }
 
 // Best-effort: PIDs listening on the given TCP port, or [] if none (or if
@@ -202,17 +261,17 @@ async function main(scope?: Scope): Promise<void> {
   const current = readPorts(yamlText);
   if (!current) return;
 
-  const claimed = readSiblingPorts(root);
+  const claims = readSiblingClaims(root);
+  const claimed = claims.map((c) => c.ports);
   if (!isPortsClaimed(current, claimed)) {
     warnIfPortsHeld(current, scope);
     await ensureSyncConfigFile(root, configPath, claimed);
     return;
   }
 
-  const claimedSyncPorts = readSiblingSyncPorts(root);
-  const next = await findNextPorts(claimed, claimedSyncPorts);
+  const next = await findNextPorts(claims);
   if (!next) {
-    throw new Error("[dev-ports] no free port pair found within 50 offsets");
+    throw new Error(describeExhaustedPorts(await liveClaims(claims)));
   }
 
   const rewritten = reassignPorts(yamlText, next);
