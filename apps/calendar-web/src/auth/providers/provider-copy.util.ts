@@ -30,8 +30,16 @@ export const CALENDAR_HOST_EXPLAINER =
 /** Anonymous local-only calendar row and onboarding device-only path. */
 export const LOCAL_DEVICE_ONLY_LABEL = "On this device only";
 
+/** Anonymous explore: nudge to connect and start a trial. */
 export const LOCAL_DEVICE_ONLY_SUBTITLE =
   "Events stay in this browser until you connect an account.";
+
+/** Signed-in users with sync: local rows are intentionally device-scoped. */
+export const LOCAL_DEVICE_ONLY_BROWSER_ONLY =
+  "Events on this calendar stay in this browser only.";
+
+export const LOCAL_DEVICE_ONLY_MOVE_HINT =
+  "Create or move events onto a synced calendar to keep them across devices.";
 
 /** Settings and sign-in add-account chooser trigger. */
 export const CONNECT_CALENDAR_ACCOUNT_LABEL = "Connect a calendar account";

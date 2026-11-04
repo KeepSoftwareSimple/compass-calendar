@@ -49,7 +49,7 @@ export const CalendarList: FC = () => {
   const collapsedKeys = useCollapsedAccountKeys();
   const { skeletonHeight, measureRef } = useCalendarListHeight();
 
-  const isAnonymous = !email;
+  const isAnonymous = !authenticated;
   // CalendarListHeader renders a working connect button under exactly this
   // condition, so the empty-state text below would only restate the problem
   // directly beneath the control that solves it.
