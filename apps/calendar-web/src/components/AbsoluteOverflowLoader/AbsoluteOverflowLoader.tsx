@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import { type HTMLAttributes } from "react";
+import { PixelCompass } from "@web/components/PixelCompass/PixelCompass";
 
 export const AbsoluteOverflowLoader = ({
   className,
@@ -12,6 +13,6 @@ export const AbsoluteOverflowLoader = ({
     )}
     {...props}
   >
-    <div className="c-loader-spinner" />
+    <PixelCompass className="h-12 w-12" />
   </div>
 );
