@@ -265,15 +265,15 @@ describe("serve-web path traversal", () => {
 describe("serve-web unknown paths", () => {
   it("serves real calendar routes with 200", async () => {
     for (const route of [
-      "/",
-      "/week",
+      ROOT_ROUTES.ROOT,
+      ROOT_ROUTES.WEEK,
       "/week/2026-11-02",
-      "/day",
+      ROOT_ROUTES.DAY,
       "/day/2026-11-03",
-      "/life",
-      "/shortcuts",
+      ROOT_ROUTES.LIFE,
+      ROOT_ROUTES.SHORTCUTS,
       "/auth/google/callback",
-      "/billing/desktop-return",
+      ROOT_ROUTES.BILLING_DESKTOP_RETURN,
     ]) {
       const response = await fetch(`${baseUrl}${route}`);
       expect({ route, status: response.status }).toEqual({
@@ -348,9 +348,9 @@ describe("serve-web canonical links", () => {
 
   it("points /life and /shortcuts at themselves in the initial HTML", async () => {
     for (const [route, expected] of [
-      ["/life", `${HOME}life`],
-      ["/life/", `${HOME}life`],
-      ["/shortcuts", `${HOME}shortcuts`],
+      [ROOT_ROUTES.LIFE, `${HOME}life`],
+      [`${ROOT_ROUTES.LIFE}/`, `${HOME}life`],
+      [ROOT_ROUTES.SHORTCUTS, `${HOME}shortcuts`],
     ]) {
       const response = await fetch(`${baseUrl}${route}`);
       expect(response.status).toBe(200);
@@ -377,7 +377,7 @@ describe("serve-web canonical links", () => {
     const homeEtag = home.headers.get("etag") ?? "";
     await home.text();
 
-    const life = await fetch(`${baseUrl}/life`, {
+    const life = await fetch(`${baseUrl}${ROOT_ROUTES.LIFE}`, {
       headers: { "Accept-Encoding": "gzip" },
     });
     const lifeEtag = life.headers.get("etag") ?? "";
@@ -385,13 +385,13 @@ describe("serve-web canonical links", () => {
     expect(canonicalOf(await life.text())).toBe(`${HOME}life`);
     expect(lifeEtag).not.toBe(homeEtag);
 
-    const stale = await fetch(`${baseUrl}/life`, {
+    const stale = await fetch(`${baseUrl}${ROOT_ROUTES.LIFE}`, {
       headers: { "If-None-Match": homeEtag },
     });
     expect(stale.status).toBe(200);
     expect(canonicalOf(await stale.text())).toBe(`${HOME}life`);
 
-    const fresh = await fetch(`${baseUrl}/life`, {
+    const fresh = await fetch(`${baseUrl}${ROOT_ROUTES.LIFE}`, {
       headers: { "If-None-Match": lifeEtag },
     });
     expect(fresh.status).toBe(304);

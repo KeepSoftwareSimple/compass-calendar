@@ -1,18 +1,20 @@
+import { ROOT_ROUTES } from "./src/common/constants/routes";
+
 /**
  * Paths the calendar-web router (src/routers/router.routes.tsx) renders.
  * self-host/serve-web.ts still answers anything else with index.html, so the
  * client shows its NotFound view, but with HTTP 404 so search engines do not
- * index soft-404 pages. Keep in step with ROOT_ROUTES in
- * src/common/constants/routes.ts; serve-web.test.ts checks every route.
+ * index soft-404 pages. Values come from ROOT_ROUTES; serve-web.test.ts
+ * checks every route.
  */
-const EXACT_PATHS = new Set([
-  "/",
-  "/week",
-  "/day",
-  "/life",
-  "/shortcuts",
-  "/cleanup",
-  "/billing/desktop-return",
+const EXACT_PATHS = new Set<string>([
+  ROOT_ROUTES.ROOT,
+  ROOT_ROUTES.WEEK,
+  ROOT_ROUTES.DAY,
+  ROOT_ROUTES.LIFE,
+  ROOT_ROUTES.SHORTCUTS,
+  ROOT_ROUTES.CLEANUP,
+  ROOT_ROUTES.BILLING_DESKTOP_RETURN,
 ]);
 
 const PARAM_PATHS = [
@@ -27,7 +29,10 @@ const PARAM_PATHS = [
  * in the initial HTML so crawlers see it without running JS; the client's
  * useCanonicalPath keeps it right after in-app navigation.
  */
-const SELF_CANONICAL_PATHS = new Set(["/life", "/shortcuts"]);
+const SELF_CANONICAL_PATHS = new Set<string>([
+  ROOT_ROUTES.LIFE,
+  ROOT_ROUTES.SHORTCUTS,
+]);
 
 function normalizePath(pathname: string): string {
   return pathname.split("?")[0]?.replace(/\/+$/, "") || "/";
