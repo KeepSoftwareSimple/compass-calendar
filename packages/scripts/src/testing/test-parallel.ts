@@ -278,6 +278,9 @@ async function runCli(): Promise<void> {
       ? backendTestSpawnEnv(FAST_MONGO_URI)
       : { ...process.env, TZ: "Etc/UTC", NODE_ENV: "test" };
 
+  // Every shard runs even after one fails, so the output names every failing
+  // file (verify's baseline reruns read it).
+  let exitCode = 0;
   for (const { index, shard } of selectedShards) {
     const shardLabel =
       shards.length > 1
@@ -301,12 +304,13 @@ async function runCli(): Promise<void> {
     const code = await proc.exited;
     stopGuard();
     if (code !== 0) {
-      console.log(`\n${shardLabel}: finished in ${formatDuration(started)}s`);
-      process.exit(code ?? 1);
+      console.log(`\n${shardLabel}: failed with exit code ${code}`);
+      if (exitCode === 0) exitCode = code ?? 1;
     }
   }
 
   console.log(`\n${label}: finished in ${formatDuration(started)}s`);
+  if (exitCode !== 0) process.exit(exitCode);
 }
 
 if (import.meta.main) {

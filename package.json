@@ -33,6 +33,7 @@
     "test": "bun test:core && bun test:sync && bun test:web && bun test:backend && bun test:scripts && bun test:self-host",
     "test:a11y": "bunx playwright test e2e/accessibility",
     "test:e2e": "bunx playwright test",
+    "test:e2e:artifacts": "PLAYWRIGHT_ARTIFACTS=1 bunx playwright test",
     "parity:screenshots:web": "PARITY_WEB_OUT=build/desktop-parity/web bunx playwright test e2e/parity/desktop-web-parity.spec.ts --project chromium-desktop --workers=1",
     "test:backend": "bun packages/scripts/src/testing/test-mongo-env.ts backend --",
     "test:backend:fast": "bun packages/scripts/src/testing/test-parallel.ts backend-fast -- --path-ignore-patterns '**/*.db.test.ts' --path-ignore-patterns '**/header-session.test.ts'",

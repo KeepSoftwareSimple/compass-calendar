@@ -20,13 +20,15 @@ the repo records it.
    `bunx playwright install chromium` and rerun. Never weaken a test, widen a
    timeout, or change test order to get there.
 
-   The local verdict is evidence; CI is the gate. A sandbox slow enough to
-   blow Playwright's 30s budget fails specs the diff cannot reach, and that
-   is the sandbox failing, not the change. When every failure is a timeout
-   (`page.goto`, `waitForLoadState`, axe `frame.evaluate`) rather than an
-   assertion, and none of them lands in a file the diff can affect, name the
-   failing specs and that evidence in the PR and ship anyway. Anything you
-   cannot show is environmental is a real failure and blocks.
+   The local verdict is evidence; CI is the gate. When `test:web`,
+   `test:a11y`, or `test:e2e` fails, verify reruns the failing files on the
+   branch and on `origin/main` in a temporary worktree and prints a
+   `Baseline against origin/main:` block that sorts each failure into NEW
+   (fails only on the branch), PRE-EXISTING (fails on main too), or FLAKY
+   (passed on rerun). Only NEW failures make the verdict `FAIL`; fix those.
+   Paste the PRE-EXISTING and FLAKY lists into the PR body as-is. A failure
+   verify cannot classify (a crash, an error outside a test) stays `FAIL`;
+   show why it is environmental in the PR or treat it as real.
 3. **Self-check.** Read the complete base-to-head diff as a stranger would:
    state, races, cleanup, keyboard and focus paths, accessibility, auth,
    data loss. If the diff added more than a screen of new abstraction, run
