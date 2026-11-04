@@ -1,12 +1,18 @@
 import { ZodError, type z } from "zod/v4";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
+import { Logger } from "@core/logger/winston.logger";
 import {
   type EventMutationError,
   type EventMutationErrorCodeSchema,
 } from "@core/types/event-command.contracts";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { type SyncClientError } from "@backend/common/services/sync-service/sync-service.client";
+
+const logger = Logger("app:event.error");
+
+const GENERIC_MUTATION_FAILURE_MESSAGE =
+  "Something went wrong. Please try again.";
 
 export type EventMutationErrorCode = z.infer<
   typeof EventMutationErrorCodeSchema
@@ -135,9 +141,13 @@ export const toEventMutationError = (
 
   // Programmer bugs and unexpected throws are not provider outages — never
   // advertise them as retryable or clients will hammer the same broken path.
-  const message = e instanceof Error ? e.message : "Unexpected error";
+  logger.error("Unexpected event mutation error", e);
   return {
     status: Status.INTERNAL_SERVER,
-    body: { code: "PROVIDER_FAILURE", message, retryable: false },
+    body: {
+      code: "PROVIDER_FAILURE",
+      message: GENERIC_MUTATION_FAILURE_MESSAGE,
+      retryable: false,
+    },
   };
 };
