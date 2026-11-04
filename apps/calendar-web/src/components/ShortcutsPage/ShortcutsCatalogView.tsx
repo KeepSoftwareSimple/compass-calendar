@@ -1,7 +1,11 @@
 import { useEffect } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { useCanonicalPath } from "@web/common/hooks/useCanonicalPath";
-import { PUBLIC_SHORTCUT_CATALOG } from "@web/shortcuts/shortcuts-catalog.data";
+import {
+  PUBLIC_SHORTCUT_CATALOG,
+  PUBLIC_SHORTCUT_CATALOG_LAST_UPDATED,
+} from "@web/shortcuts/shortcuts-catalog.data";
+import { formatShortcutsCatalogLastUpdated } from "@web/shortcuts/shortcuts-catalog.meta.util";
 
 export const SHORTCUTS_PAGE_TITLE = "Compass keyboard shortcuts";
 export const SHORTCUTS_PAGE_DESCRIPTION =
@@ -74,9 +78,18 @@ export const ShortcutsCatalogView = () => {
         </button>
       </header>
       <main className="mx-auto flex w-full max-w-2xl flex-col px-4 py-10">
-        <h1 className="mb-2 font-medium text-3xl text-text">
+        <h1 className="mb-1 font-medium text-3xl text-text">
           {SHORTCUTS_PAGE_TITLE}
         </h1>
+        <p
+          data-shortcuts-print-updated
+          className="mb-3 text-text-muted text-xs"
+        >
+          Last updated{" "}
+          {formatShortcutsCatalogLastUpdated(
+            PUBLIC_SHORTCUT_CATALOG_LAST_UPDATED,
+          )}
+        </p>
         <p className="mb-8 text-sm text-text-muted">
           The same catalog as the in-app legend. Press ? in Compass to search
           it.
