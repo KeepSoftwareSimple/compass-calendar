@@ -71,6 +71,17 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
   ],
   [SYNC_COLLECTIONS.events]: [
     {
+      name: "reflection_principal_kind_start",
+      key: {
+        tenantId: 1,
+        principalId: 1,
+        calendarId: 1,
+        lifecycleState: 1,
+        "recurrence.kind": 1,
+        "schedule.start": 1,
+      },
+    },
+    {
       name: "reflection_principal_page",
       key: {
         tenantId: 1,

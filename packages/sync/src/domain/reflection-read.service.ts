@@ -69,10 +69,44 @@ export async function readReflectionPage(
     .sort({ "schedule.start": 1 })
     .limit(1)
     .next();
+  // Canonical history can contain decades of unrelated single events. Keep
+  // masters for historical recurrence expansion, but only read single/exception
+  // schedules that could overlap a requested window. Two days of padding keep
+  // these string date comparisons conservative across all-day dates and offsets;
+  // projectOccurrences remains the exact overlap authority.
+  const bounds = input.windows.map((window) => ({
+    start: new Date(
+      Math.min(Date.parse(window.startDate), Date.parse(window.start)) -
+        2 * 86_400_000,
+    )
+      .toISOString()
+      .slice(0, 10),
+    end: new Date(
+      Math.max(Date.parse(window.endDate), Date.parse(window.end)) +
+        2 * 86_400_000,
+    )
+      .toISOString()
+      .slice(0, 10),
+  }));
+  const latestEnd = bounds
+    .map((bound) => bound.end)
+    .sort()
+    .at(-1);
   const rows = input.windows.length
     ? await collection
         .find({
           ...filter,
+          $or: [
+            {
+              "recurrence.kind": "seriesMaster",
+              "schedule.start": { $lt: latestEnd! },
+            },
+            ...bounds.map((bound) => ({
+              "recurrence.kind": { $in: ["single", "exception"] },
+              "schedule.start": { $lt: bound.end },
+              "schedule.end": { $gte: bound.start },
+            })),
+          ],
           ...(input.cursor
             ? { _id: { $gt: input.cursor as EventRecord["_id"] } }
             : {}),
