@@ -1,6 +1,10 @@
 import classNames from "classnames";
 import { type ReactNode } from "react";
 
+/** Shared with location inputs and guest combobox (`text-sm` / 20px line). */
+export const FORM_CARD_FIELD_FONT_SIZE = "0.875rem";
+export const FORM_CARD_FIELD_LINE_HEIGHT = "1.25rem";
+
 /** Matches `text-sm` first line (`leading-5`); icons center on this line box. */
 export const FORM_CARD_ICON_ROW_LINE_CLASSNAME = "h-5 leading-5";
 
