@@ -71,6 +71,13 @@ export const TimedGrid: FC<TimedGridProps> = ({
   const hourRowLabels = getHourLabels(true, labelDay, effectiveTimeZone);
   const timeLabelPlacement = nowTimeLabelPlacement(visibleDates);
   const showTodayNowCue = todayColumnIndexes.length > 0;
+  const todayColumnIndex = todayColumnIndexes[0] ?? -1;
+  const showGutterNowTimeLabel =
+    showTodayNowCue &&
+    (timeLabelPlacement === "gutter" ||
+      (timeLabelPlacement === "column-edge" && todayColumnIndex === 0));
+  const showWeekColumnNowTimeLabel =
+    showTodayNowCue && timeLabelPlacement === "column-edge";
 
   return (
     <ScrollableRegion
@@ -92,7 +99,7 @@ export const TimedGrid: FC<TimedGridProps> = ({
     >
       <CalendarTimeColumn
         at={labelDay.toDate()}
-        showNowTimeLabel={showTodayNowCue && timeLabelPlacement === "gutter"}
+        showNowTimeLabel={showGutterNowTimeLabel}
       />
       <div
         className={`absolute top-0 left-(--calendar-grid-margin-left) grid h-[calc(var(--calendar-day-hour-slots)*100%/var(--calendar-visible-hours))] w-[calc(100%-var(--calendar-grid-margin-left))] ${CALENDAR_COLUMN_GRID_CLASS}`}
@@ -121,9 +128,7 @@ export const TimedGrid: FC<TimedGridProps> = ({
             columnIndex={columnIndex}
             effectiveTimeZone={effectiveTimeZone}
             key={visibleDates[columnIndex]?.key}
-            showColumnEdgeTimeLabel={
-              showTodayNowCue && timeLabelPlacement === "column-edge"
-            }
+            showWeekColumnTimeLabel={showWeekColumnNowTimeLabel}
           />
         ))}
       </div>

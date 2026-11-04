@@ -160,7 +160,7 @@ describe("TimedGrid", () => {
     expect(screen.getByTestId("now-time-label")).toHaveTextContent("7:37 AM");
   });
 
-  it("shows the now-time label on today's column edge in week view", () => {
+  it("shows the week now pill left of today's column when today is mid-week", () => {
     act(() => setPinnedTimeZone("America/Denver"));
     setSystemTime(new Date("2026-04-24T13:37:00.000Z"));
     const weekStart = dayjs.tz("2026-04-20T12:00", "America/Denver");
@@ -179,7 +179,34 @@ describe("TimedGrid", () => {
       />,
     );
 
-    expect(screen.getByTestId("now-time-label")).toHaveTextContent("7:37 AM");
+    const label = screen.getByTestId("now-time-label");
+    expect(label).toHaveTextContent("7:37 AM");
+    expect(label).toHaveAttribute("data-now-label-variant", "week-column");
+    expect(label.className).toContain("-translate-x-full");
+  });
+
+  it("shows the week now label in the gutter when today is the first column", () => {
+    act(() => setPinnedTimeZone("America/Denver"));
+    setSystemTime(new Date("2026-04-20T13:37:00.000Z"));
+    const monday = dayjs.tz("2026-04-20T12:00", "America/Denver");
+    const weekDays = Array.from({ length: 7 }, (_, index) => {
+      const date = monday.add(index, "day");
+      return { date, key: date.format("YYYY-MM-DD") };
+    });
+
+    render(
+      <TimedGrid
+        eventsLayer={null}
+        timedColumnsRef={() => {}}
+        timedGridRef={() => {}}
+        today={monday}
+        visibleDates={weekDays}
+      />,
+    );
+
+    const label = screen.getByTestId("now-time-label");
+    expect(label).toHaveAttribute("data-now-label-variant", "gutter");
+    expect(label.className).not.toContain("-translate-x-full");
   });
 
   it("sets grid geometry CSS variables once on the scroll region", () => {

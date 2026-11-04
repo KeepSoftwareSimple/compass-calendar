@@ -7,6 +7,7 @@ import { CalendarNowTimeLabel } from "@web/grid/now-cue/CalendarNowTimeLabel";
 import {
   formatNowLineTimeLabel,
   nowLineGridMinutes,
+  weekNowTimeLabelUsesGutter,
 } from "@web/grid/now-cue/now-line-time.util";
 import { useNowCuePulse } from "@web/grid/now-cue/useNowCuePulse";
 
@@ -14,15 +15,17 @@ type CalendarNowLineProps = {
   columnCount: number;
   columnIndex: number;
   effectiveTimeZone: string;
-  showColumnEdgeTimeLabel: boolean;
+  showWeekColumnTimeLabel: boolean;
 };
 
 export function CalendarNowLine({
   columnCount,
   columnIndex,
   effectiveTimeZone,
-  showColumnEdgeTimeLabel,
+  showWeekColumnTimeLabel,
 }: CalendarNowLineProps) {
+  const showWeekPill =
+    showWeekColumnTimeLabel && !weekNowTimeLabelUsesGutter(columnIndex);
   const now = useMinuteTick();
   const minutesFromMidnight = nowLineGridMinutes(now, effectiveTimeZone);
   const topPercent = timedGridTopPercent(minutesFromMidnight);
@@ -40,11 +43,11 @@ export function CalendarNowLine({
         zIndex: ZIndex.LAYER_2,
       }}
     >
-      {showColumnEdgeTimeLabel ? (
+      {showWeekPill ? (
         <CalendarNowTimeLabel
           label={timeLabel}
           topPercent={0}
-          variant="column-edge"
+          variant="week-column"
         />
       ) : null}
       <div

@@ -5,12 +5,16 @@ import {
   CIVIL_DAY_US_SPRING_FORWARD_YMD,
 } from "@core/test/civil-day.vectors.data";
 import dayjs from "@core/util/date/dayjs";
+import { TIMED_EVENT_COLUMN_INSET } from "@web/grid/grid.constants";
 import {
   formatNowLineTimeLabel,
   hourLabelIndexOverlappingNow,
   nowLineGridMinutes,
   nowLineTopPercent,
   nowTimeLabelPlacement,
+  weekNowTimeLabelClearsEventContent,
+  weekNowTimeLabelRightEdgePx,
+  weekNowTimeLabelUsesGutter,
 } from "@web/grid/now-cue/now-line-time.util";
 import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
 import { afterEach, describe, expect, it, setSystemTime } from "bun:test";
@@ -45,6 +49,22 @@ describe("nowTimeLabelPlacement", () => {
         })),
       ),
     ).toBe("column-edge");
+  });
+});
+
+describe("week now-time label placement", () => {
+  it("uses the hour gutter when today is the first visible column", () => {
+    expect(weekNowTimeLabelUsesGutter(0)).toBe(true);
+    expect(weekNowTimeLabelUsesGutter(3)).toBe(false);
+  });
+
+  it("keeps the pill outside today's event content area", () => {
+    for (const columnIndex of [0, 1, 3, 6]) {
+      expect(weekNowTimeLabelClearsEventContent(columnIndex)).toBe(true);
+      expect(weekNowTimeLabelRightEdgePx(columnIndex)).toBeLessThanOrEqual(
+        TIMED_EVENT_COLUMN_INSET,
+      );
+    }
   });
 });
 
