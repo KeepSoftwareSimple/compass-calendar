@@ -5,7 +5,7 @@ import {
   PUBLIC_SHORTCUT_CATALOG,
   PUBLIC_SHORTCUT_CATALOG_LAST_UPDATED,
 } from "@web/shortcuts/shortcuts-catalog.data";
-import { formatShortcutsCatalogLastUpdated } from "@web/shortcuts/shortcuts-catalog.meta.util";
+import { formatShortcutsCatalogLastUpdated } from "@web/shortcuts/shortcuts-catalog-last-updated.format";
 
 export const SHORTCUTS_PAGE_TITLE = "Compass keyboard shortcuts";
 export const SHORTCUTS_PAGE_DESCRIPTION =
