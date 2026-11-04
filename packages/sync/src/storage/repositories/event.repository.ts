@@ -15,6 +15,7 @@ import {
   EventIdSchema,
 } from "@core/types/domain-primitives";
 import { AttendeeResponseStatusSchema } from "@core/types/event-attendance.contracts";
+import { nullableProviderEventVersionFromBoundary } from "@core/types/sync/event.contracts";
 import {
   ConnectionIdSchema,
   type PrincipalId,
@@ -1044,6 +1045,9 @@ function upsertSetFields(
   } = input;
   const set: Record<string, unknown> = {
     ...fields,
+    providerVersion: nullableProviderEventVersionFromBoundary(
+      input.providerVersion,
+    ),
     providerMetadata,
     updatedAt: now,
   };

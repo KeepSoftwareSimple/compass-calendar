@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import {
-  NullableProviderEventVersionSchema,
+  NullableProviderEventVersionReadSchema,
+  ProviderEventVersionSchema,
   SyncEventCalendarIdSchema,
 } from "@core/types/sync/event.contracts";
 import {
@@ -25,7 +26,7 @@ export const DeletionMarkerRecordSchema = z.strictObject({
   connectionId: ConnectionIdSchema,
   calendarId: SyncEventCalendarIdSchema,
   providerEventId: ProviderEventIdSchema,
-  providerVersion: NullableProviderEventVersionSchema,
+  providerVersion: ProviderEventVersionSchema.nullable(),
   deletionSource: DeletionSourceSchema,
   deletedAt: z.date(),
   // When the TTL index removes this marker (deletedAt + retention window).
@@ -39,7 +40,13 @@ export type DeletionMarkerRecord = z.infer<typeof DeletionMarkerRecordSchema>;
 // reads that row, and a strictObject rejects the unknown key
 // (`unrecognized_keys`) and throws. Unknown keys are dropped from the
 // in-memory record and left untouched in Mongo. Writes stay strict.
-export const DeletionMarkerReadSchema = DeletionMarkerRecordSchema.strip();
+export const DeletionMarkerReadSchema = DeletionMarkerRecordSchema.omit({
+  providerVersion: true,
+})
+  .extend({
+    providerVersion: NullableProviderEventVersionReadSchema,
+  })
+  .strip();
 
 export const DeletionMarkerRecordInputSchema = DeletionMarkerRecordSchema.omit({
   _id: true,

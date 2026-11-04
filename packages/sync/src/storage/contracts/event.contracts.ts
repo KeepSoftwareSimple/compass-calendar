@@ -3,8 +3,9 @@ import { EventIdSchema } from "@core/types/domain-primitives";
 import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   ClientEventIdSchema,
-  NullableProviderEventVersionSchema,
+  NullableProviderEventVersionReadSchema,
   ProviderDeliveryStateSchema,
+  ProviderEventVersionSchema,
   SyncEventCalendarIdSchema,
   SyncEventContentSchema,
   SyncEventLifecycleStateSchema,
@@ -44,7 +45,7 @@ export const EventRecordSchema = z.strictObject({
   // linked to exactly one provider calendar.
   connectionId: ConnectionIdSchema.nullable(),
   providerEventId: ProviderEventIdSchema.nullable(),
-  providerVersion: NullableProviderEventVersionSchema,
+  providerVersion: ProviderEventVersionSchema.nullable(),
   providerUpdatedAt: z.date().nullable(),
   deliveryState: ProviderDeliveryStateSchema.nullable(),
   providerMetadata: z.record(z.string(), z.string()).nullable(),
@@ -73,6 +74,11 @@ export type EventRecord = z.infer<typeof EventRecordSchema>;
 // in-memory record and left untouched in Mongo. Writes stay strict. Nested
 // customizations is stripped on its own because Zod's unknown-key policy is
 // per object.
-export const EventReadSchema = EventRecordSchema.extend({
-  customizations: EventCustomizationsSchema.strip().nullable().optional(),
-}).strip();
+export const EventReadSchema = EventRecordSchema.omit({
+  providerVersion: true,
+})
+  .extend({
+    providerVersion: NullableProviderEventVersionReadSchema,
+    customizations: EventCustomizationsSchema.strip().nullable().optional(),
+  })
+  .strip();

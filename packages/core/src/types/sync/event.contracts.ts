@@ -47,12 +47,21 @@ export const ProviderEventVersionSchema = z
   .brand<"ProviderEventVersion">();
 export type ProviderEventVersion = z.infer<typeof ProviderEventVersionSchema>;
 
-// Provider adapters use "" when a version or etag is absent. Older sync writes
-// persisted that literally; reads must treat it as null, not a version string.
-export const NullableProviderEventVersionSchema = z.preprocess(
-  (value) => (value === "" ? null : value),
-  ProviderEventVersionSchema.nullable(),
-);
+// Provider cancellation reads and legacy Mongo rows may carry "" when etag is
+// absent. Persist and serve those as unknown (null), not as invalid versions.
+export function nullableProviderEventVersionFromBoundary(
+  version: string | null | undefined,
+): ProviderEventVersion | null {
+  if (version == null) return null;
+  const trimmed = version.trim();
+  return trimmed.length === 0 ? null : (trimmed as ProviderEventVersion);
+}
+
+export const NullableProviderEventVersionReadSchema = z.preprocess((value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" && value.trim().length === 0) return null;
+  return value;
+}, ProviderEventVersionSchema.nullable());
 
 export const SyncEventOriginSchema = z.enum(["compass", "provider"]);
 export type SyncEventOrigin = z.infer<typeof SyncEventOriginSchema>;
