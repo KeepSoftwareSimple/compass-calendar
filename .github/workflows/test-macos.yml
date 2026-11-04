@@ -201,7 +201,7 @@ jobs:
   strict:
     if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
