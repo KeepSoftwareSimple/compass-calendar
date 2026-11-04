@@ -14,7 +14,7 @@ import {
 } from "@booking-web/booking/public-booking.query";
 import { PUBLIC_BOOKING_SLOT_CONFLICT } from "@booking-web/booking/public-booking.view";
 import {
-  meetingTypeSearchValue,
+  optionalMeetingTypeId,
   selectPublicMeetingType,
 } from "@booking-web/booking/public-booking-meeting-types";
 import {
@@ -212,7 +212,7 @@ export function usePublicBookingFlow() {
     setChangingTime(false);
     setAlertMessage(null);
     updateSearch({
-      type: meetingTypeSearchValue(meetingType.types, id),
+      type: optionalMeetingTypeId(meetingType.types, id),
       slot: undefined,
     });
   };
