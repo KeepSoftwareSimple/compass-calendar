@@ -1,4 +1,7 @@
-import { searchEventsByTitle } from "@core/event/search-events-by-title";
+import {
+  scoreEventTitleSearch,
+  searchEventsByTitle,
+} from "@core/event/search-events-by-title";
 import { DateTimeSchema } from "@core/types/domain-primitives";
 import { type Event, type EventRecurrence } from "@core/types/event.contracts";
 import { describe, expect, it } from "bun:test";
@@ -128,6 +131,70 @@ describe("searchEventsByTitle", () => {
     expect(hits.some((hit) => hit.id === seriesId)).toBe(false);
   });
 
+  it("finds a title with punctuation, a typo, and without the arrow prefix", () => {
+    const zolcalo = event({
+      title: "-> Zolcalo",
+      start: "2026-09-16T09:00:00.000Z",
+    });
+    const hits = searchEventsByTitle([zolcalo], "zocalo", NOW);
+
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.content).toEqual(
+      expect.objectContaining({ title: "-> Zolcalo" }),
+    );
+  });
+
+  it("finds a title when the query omits accents", () => {
+    const zocalo = event({
+      title: "Zócalo lunch",
+      start: "2026-09-16T09:00:00.000Z",
+    });
+    const hits = searchEventsByTitle([zocalo], "zocalo", NOW);
+
+    expect(hits).toHaveLength(1);
+  });
+
+  it("matches a partial word prefix before fuzzy tiers", () => {
+    const zolcalo = event({
+      title: "-> Zolcalo",
+      start: "2026-09-16T09:00:00.000Z",
+    });
+    const hits = searchEventsByTitle([zolcalo], "zolc", NOW);
+
+    expect(hits).toHaveLength(1);
+  });
+
+  it("ranks an exact title match above a fuzzy match", () => {
+    const exact = event({
+      id: "exact000000000000000000",
+      title: "Zocalo",
+      start: "2026-09-20T09:00:00.000Z",
+    });
+    const fuzzy = event({
+      id: "fuzzy000000000000000000",
+      title: "-> Zolcalo",
+      start: "2026-09-16T09:00:00.000Z",
+    });
+
+    const hits = searchEventsByTitle([fuzzy, exact], "zocalo", NOW);
+
+    expect(hits.map((hit) => hit.id)).toEqual([exact.id, fuzzy.id]);
+  });
+
+  it("does not fuzzy-match two-character queries", () => {
+    const unrelated = event({
+      title: "Xylophone",
+      start: "2026-09-16T09:00:00.000Z",
+    });
+    const near = event({
+      title: "Team sync",
+      start: "2026-09-16T10:00:00.000Z",
+    });
+
+    expect(searchEventsByTitle([unrelated, near], "xy", NOW)).toHaveLength(1);
+    expect(searchEventsByTitle([unrelated, near], "ze", NOW)).toHaveLength(0);
+  });
+
   it("keeps the series master when no occurrence matches the query", () => {
     const seriesId = "standaloneseries000000000";
     const master = event({
@@ -141,5 +208,13 @@ describe("searchEventsByTitle", () => {
 
     expect(hits).toHaveLength(1);
     expect(hits[0]?.id).toBe(seriesId);
+  });
+});
+
+describe("scoreEventTitleSearch", () => {
+  it("scores an exact normalized match above a fuzzy match", () => {
+    expect(scoreEventTitleSearch("Zocalo", "zocalo")).toBeGreaterThan(
+      scoreEventTitleSearch("-> Zolcalo", "zocalo"),
+    );
   });
 });
