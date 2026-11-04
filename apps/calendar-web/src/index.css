@@ -1192,6 +1192,11 @@
   outline-offset: 2px;
 }
 
+.c-life-birth-date-field .c-life-birth-date-field__input:focus,
+.c-life-birth-date-field .c-life-birth-date-field__input:focus-visible {
+  outline-offset: 0;
+}
+
 .c-number-input {
   appearance: textfield;
 }

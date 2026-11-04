@@ -1,5 +1,6 @@
 import { ShuffleIcon } from "@phosphor-icons/react/dist/csr/Shuffle";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   clampLifespan,
   formatDateInputValue,
@@ -8,19 +9,13 @@ import {
   LIFE_VARIATIONS,
   MAX_LIFESPAN,
   MIN_LIFESPAN,
-  parseLifeDate,
 } from "@core/life/life-math";
 import { ID_LIFE_BIRTH_DATE } from "@web/common/constants/web.constants";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
-import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import { NumberInput } from "@web/components/NumberInput/NumberInput";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
-import {
-  clearUiFocusTextInsertSuppress,
-  consumeUiFocusTextInsertSuppress,
-  shouldSuppressUiFocusTextInsert,
-} from "@web/shortcuts/ui-focus/ui-focus-text-insert.util";
+import { LifeBirthDateField } from "@web/views/Life/LifeBirthDateField";
 import { ReflectionPreferencesControl } from "@web/views/Life/ReflectionPreferencesControl";
 import { LifeQuote } from "./LifeQuote";
 import { type LifePreferences } from "./life-preferences.storage";
@@ -54,8 +49,6 @@ export function LifeSidebarContent({
     String(preferences.lifespan),
   );
   const previousLifespanRef = useRef(preferences.lifespan);
-  const birthDate = parseLifeDate(preferences.birthDate);
-  const variation = LIFE_VARIATIONS[preferences.variation];
 
   useEffect(() => {
     if (!autoFocusBirthDate) return;
@@ -68,18 +61,21 @@ export function LifeSidebarContent({
       previousLifespanRef.current = preferences.lifespan;
     }
   }, [preferences.lifespan]);
-  const clearBirthDate = () => {
-    onPreferencesChange((current) => ({ ...current, birthDate: "" }));
-    setIsBirthDatePickerOpen(false);
-  };
-  const setBirthDate = (date: Date) => {
-    const minimumDate = new Date(1900, 0, 1);
-    const maximumDate = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
-    if (date < minimumDate || date > maximumDate) return;
+
+  const minimumBirthDate = new Date(1900, 0, 1);
+  const maximumBirthDate = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+
+  const commitBirthDate = (date: Date | null) => {
+    if (!date) {
+      onPreferencesChange((current) => ({ ...current, birthDate: "" }));
+      setIsBirthDatePickerOpen(false);
+      return;
+    }
+    if (date < minimumBirthDate || date > maximumBirthDate) return;
 
     const birthDateValue = formatDateInputValue(date);
     onPreferencesChange((current) => ({
@@ -116,7 +112,9 @@ export function LifeSidebarContent({
               onClick={() => onCycleVariation(1)}
             />
           </TooltipWrapper>
-          <h2 className="font-semibold text-text">{variation.label}</h2>
+          <h2 className="font-semibold text-text">
+            {LIFE_VARIATIONS[preferences.variation].label}
+          </h2>
           {headerEndContent ? (
             <div className="ml-auto flex items-center">{headerEndContent}</div>
           ) : null}
@@ -143,73 +141,18 @@ export function LifeSidebarContent({
           <TooltipWrapper description="Saved to your account when signed in">
             <span className="cursor-help">Date of birth</span>
           </TooltipWrapper>
-          <DatePicker
-            aria-label="Date of birth"
-            captionPicker
-            calendarClassName="lifeBirthDatePicker"
-            dateFormat="MMM d, yyyy"
+          <LifeBirthDateField
             id={ID_LIFE_BIRTH_DATE}
-            inputClassName="c-life-input w-full max-w-44 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-panel"
-            isClearable
             isOpen={isBirthDatePickerOpen}
-            maxDate={today}
-            minDate={new Date(1900, 0, 1)}
+            maxDate={maximumBirthDate}
+            minDate={minimumBirthDate}
             onCalendarClose={() => setIsBirthDatePickerOpen(false)}
-            onCalendarOpen={() => setIsBirthDatePickerOpen(true)}
-            onChange={(date) => (date ? setBirthDate(date) : clearBirthDate())}
-            onChangeRaw={(event) => {
-              let value = event.currentTarget.value;
-              if (shouldSuppressUiFocusTextInsert("i") && value.endsWith("i")) {
-                clearUiFocusTextInsertSuppress();
-                value = value.slice(0, -1);
-                event.currentTarget.value = value;
-              }
-              const date = parseLifeDate(value);
-              if (date) {
-                setBirthDate(date);
-              } else if (!value) {
-                clearBirthDate();
-              }
+            onCalendarOpen={() => {
+              flushSync(() => setIsBirthDatePickerOpen(true));
             }}
-            onInputClick={() => setIsBirthDatePickerOpen(true)}
-            // Keep first impression on the grid: focus without opening. Enter/
-            // arrows open via click so react-datepicker's internal open state
-            // stays in sync (Escape / day-grid focus depend on it).
-            onKeyDown={(event) => {
-              if (consumeUiFocusTextInsertSuppress(event.key)) {
-                event.preventDefault();
-                return;
-              }
-              if (isBirthDatePickerOpen) return;
-              if (
-                event.key === "Enter" ||
-                event.key === "ArrowDown" ||
-                event.key === "ArrowUp"
-              ) {
-                event.preventDefault();
-                (event.target as HTMLElement).click();
-                return;
-              }
-              if (
-                event.key.length === 1 &&
-                !event.ctrlKey &&
-                !event.metaKey &&
-                !event.altKey
-              ) {
-                event.preventDefault();
-              }
-            }}
-            onSelect={(date) => {
-              if (!date) return;
-              setBirthDate(date);
-            }}
-            placeholderText="Select date"
-            preventOpenOnFocus
-            selected={birthDate ?? undefined}
-            title="Date of birth"
-            view="grid"
-            withTodayButton={false}
-            withUnderline={false}
+            onCommit={commitBirthDate}
+            storedBirthDate={preferences.birthDate}
+            today={today}
           />
         </div>
 

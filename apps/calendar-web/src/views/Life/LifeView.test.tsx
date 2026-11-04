@@ -149,6 +149,12 @@ function getGrid(region: HTMLElement) {
   return region.querySelector("[data-total-dots]") as HTMLElement;
 }
 
+function setBirthDateInput(value: string) {
+  const input = screen.getByRole("textbox", { name: "Date of birth" });
+  fireEvent.change(input, { target: { value } });
+  fireEvent.blur(input);
+}
+
 beforeEach(() => {
   mockedLifeSearch = {};
   mockNavigate.mockClear();
@@ -220,26 +226,25 @@ describe("LifeView", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("opens the birth date picker when Enter is pressed on the focused field", async () => {
+  it("opens the birth date picker when the field is activated", async () => {
     const user = userEvent.setup({ skipHover: true });
     await renderLifeViewWithSidebar();
 
     const birthDateInput = screen.getByRole("textbox", {
       name: "Date of birth",
     });
-    expect(birthDateInput).toHaveFocus();
     expect(
       screen.queryByRole("button", { name: "Previous month" }),
     ).not.toBeInTheDocument();
 
-    await user.keyboard("{Enter}");
+    await user.click(birthDateInput);
 
-    expect(
-      screen.getByRole("button", { name: "Previous month" }),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Previous month" }),
+      ).toBeInTheDocument();
+    });
 
-    // Keyboard-open must use react-datepicker's click/open path so Escape
-    // still closes (that path keeps internal open state in sync).
     await user.keyboard("{Escape}");
     expect(
       screen.queryByRole("button", { name: "Previous month" }),
@@ -250,7 +255,17 @@ describe("LifeView", () => {
     const user = userEvent.setup({ skipHover: true });
     await renderLifeViewWithSidebar();
 
-    await user.keyboard("{Enter}");
+    setBirthDateInput("2000-01-15");
+    const birthDateInput = screen.getByRole("textbox", {
+      name: "Date of birth",
+    });
+    await user.click(birthDateInput);
+    await user.keyboard("{ArrowDown}");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Previous month" }),
+      ).toBeInTheDocument();
+    });
     await user.click(
       screen.getByRole("button", { name: "Choose month and year" }),
     );
@@ -269,9 +284,7 @@ describe("LifeView", () => {
   it("updates weeks lived when the birth date changes", async () => {
     await renderLifeViewWithSidebar();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Date of birth" }), {
-      target: { value: "1990-06-15" },
-    });
+    setBirthDateInput("1990-06-15");
 
     expect(
       screen.getByText("1,854 weeks lived - 35 years - 45%"),
@@ -291,9 +304,7 @@ describe("LifeView", () => {
       ).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Date of birth" }), {
-      target: { value: "1993-09-14" },
-    });
+    setBirthDateInput("1993-09-14");
 
     expect(
       screen.getByText("1,717 weeks lived - 32 years - 42%"),
@@ -318,9 +329,7 @@ describe("LifeView", () => {
   it("persists the user's life preferences", async () => {
     await renderLifeViewWithSidebar();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Date of birth" }), {
-      target: { value: "2000-01-01" },
-    });
+    setBirthDateInput("2000-01-01");
     fireEvent.change(screen.getByLabelText(/age of death/i), {
       target: { value: "81" },
     });
@@ -536,9 +545,7 @@ describe("LifeView", () => {
   it("focuses the current week when the today shortcut is pressed", async () => {
     await renderLifeViewWithSidebar();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Date of birth" }), {
-      target: { value: "1990-06-15" },
-    });
+    setBirthDateInput("1990-06-15");
     const dateOfBirth = screen.getByRole("textbox", { name: "Date of birth" });
     fireEvent.blur(dateOfBirth);
     (dateOfBirth as HTMLElement).blur();
@@ -583,9 +590,7 @@ describe("LifeView", () => {
   it("jumps focus to page areas via hold-Mod digits", async () => {
     await renderLifeViewWithSidebar();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Date of birth" }), {
-      target: { value: "1990-06-15" },
-    });
+    setBirthDateInput("1990-06-15");
     const currentWeek = screen.getByRole("button", {
       name: /January 1, 2026 \| week/,
     });
