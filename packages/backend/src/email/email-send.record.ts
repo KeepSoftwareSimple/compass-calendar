@@ -29,6 +29,7 @@ export const EmailSendRecordSchema = z.strictObject({
           html: z.string(),
           text: z.string(),
           pngBase64: z.string().nullable(),
+          pdfBase64: z.string().nullable().optional(),
           memoryIds: z.array(z.string()),
           calendarIds: z.array(z.string()),
           lifeRevision: z.number().int().nonnegative(),

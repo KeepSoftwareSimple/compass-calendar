@@ -1,6 +1,6 @@
 import { DEFAULT_LIFESPAN, getTotalLifeDots } from "@core/life/life-math";
 
-export function reflectionLifePercent(completedWeeks: number): number {
+function reflectionLifePercent(completedWeeks: number): number {
   return Math.min(
     100,
     Math.max(

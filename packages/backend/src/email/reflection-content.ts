@@ -169,8 +169,7 @@ export function renderReflectionEmail(input: {
     sections.push({
       heading: "This time in your life",
       lines: input.memories.map(
-        (event) =>
-          `${input.weekMatch(event) ? "This week" : "Around this time"} ${calendarDate(event).year()}: ${event.title}`,
+        (event) => `${calendarDate(event).year()}: ${event.title}`,
       ),
     });
   if (!input.historyComplete)

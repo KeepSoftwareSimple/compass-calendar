@@ -144,13 +144,15 @@ export async function dispatchReflection(
         "List-Unsubscribe": unsubscribe.listUnsubscribeHeader,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
-      ...(prepared.pngBase64
+      ...((prepared.pdfBase64 ?? prepared.pngBase64)
         ? {
             attachments: [
               {
-                filename: `compass-life-in-weeks-${edition.date}.png`,
-                content: prepared.pngBase64,
-                contentType: "image/png",
+                filename: `compass-life-in-weeks-${edition.date}.${prepared.pdfBase64 ? "pdf" : "png"}`,
+                content: (prepared.pdfBase64 ?? prepared.pngBase64)!,
+                contentType: prepared.pdfBase64
+                  ? "application/pdf"
+                  : "image/png",
               },
             ],
           }
