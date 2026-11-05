@@ -7,9 +7,12 @@ export ROOT
 cd "$ROOT/apps/calendar-macos"
 
 shard="${MACOS_UI_SHARD:?Set MACOS_UI_SHARD to 1-4}"
-shard_file="$ROOT/.github/macos-ui-shards.json"
 
-mapfile -t classes < <(
+classes=()
+while IFS= read -r class_name; do
+  [ -n "$class_name" ] || continue
+  classes+=("$class_name")
+done < <(
   MACOS_UI_SHARD="$shard" ROOT="$ROOT" python3 - <<'PY'
 import json
 import os
@@ -19,16 +22,17 @@ path = os.path.join(os.environ["ROOT"], ".github/macos-ui-shards.json")
 shard = os.environ["MACOS_UI_SHARD"]
 with open(path, encoding="utf-8") as f:
     data = json.load(f)
-classes = data.get("shards", {}).get(str(shard))
-if not classes:
+class_list = data.get("shards", {}).get(str(shard))
+if not class_list:
     print(f"Unknown or empty shard {shard!r}", file=sys.stderr)
     sys.exit(1)
-for name in classes:
+for name in class_list:
     print(name)
 PY
 )
+
 if ((${#classes[@]} == 0)); then
-  echo "Shard $shard has no classes in $shard_file" >&2
+  echo "Shard $shard has no classes" >&2
   exit 1
 fi
 
