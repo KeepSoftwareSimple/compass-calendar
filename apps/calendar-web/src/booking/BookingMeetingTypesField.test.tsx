@@ -1,9 +1,12 @@
 import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { type AdminPutBookingPageInput } from "@core/types/booking.contracts";
-import { BookingMeetingTypesField } from "@web/booking/BookingMeetingTypesField";
+import {
+  BookingMeetingTypesField,
+  MEETING_TYPE_KEYBOARD_HINT_LABEL,
+} from "@web/booking/BookingMeetingTypesField";
 import { useSettingsShortcuts } from "@web/settings/useSettingsShortcuts";
 import { describe, expect, it } from "bun:test";
 
@@ -116,10 +119,47 @@ describe("BookingMeetingTypesField", () => {
     expect(rows()).toHaveLength(1);
   });
 
-  it("shows Enter and Delete keycaps for the focused row", () => {
+  it("shows row Delete hint only when the row is focused, not while editing a name", async () => {
+    const user = userEvent.setup({ delay: null });
     render(<Harness initial={twoTypes} />);
-    expect(screen.getByText("edits")).toBeVisible();
-    expect(screen.getByText("removes a focused type")).toBeVisible();
+    const status = screen.getByRole("status", {
+      name: MEETING_TYPE_KEYBOARD_HINT_LABEL,
+    });
+    expect(status).toHaveTextContent("On row:");
+    expect(status).toHaveTextContent("removes type");
+
+    await user.click(screen.getByLabelText("Meeting type 2 name"));
+    expect(status).toHaveTextContent("returns to row");
+    expect(status).not.toHaveTextContent("removes type");
+
+    act(() => {
+      rows()[1]?.focus();
+    });
+    expect(status).toHaveTextContent("removes type");
+    expect(status).not.toHaveTextContent("On row:");
+  });
+
+  it("Escape in the name returns focus to the row without removing the type", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<Harness initial={twoTypes} />);
+    await user.click(screen.getByLabelText("Meeting type 2 name"));
+    await user.keyboard("{Escape}");
+    expect(rows()).toHaveLength(2);
+    expect(rows()[1]).toHaveFocus();
+  });
+
+  it("does not remove a type from the duration select and still updates duration", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<Harness initial={twoTypes} />);
+    const duration = screen.getByLabelText("Meeting type 2 duration");
+    await user.click(duration);
+    expect(
+      screen.getByRole("status", { name: MEETING_TYPE_KEYBOARD_HINT_LABEL }),
+    ).toHaveTextContent("On row:");
+    await user.keyboard("{Delete}");
+    expect(rows()).toHaveLength(2);
+    await user.selectOptions(duration, "45");
+    expect(duration).toHaveValue("45");
   });
 
   it("the remove button removes its row", async () => {
