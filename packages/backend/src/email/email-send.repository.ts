@@ -211,6 +211,22 @@ class EmailSendRepository {
     return result.modifiedCount;
   }
 
+  async cancelQueuedReflection(userId: ObjectId): Promise<number> {
+    const now = new Date();
+    const result = await mongoService.emailSend.updateMany(
+      { userId, sequence: "reflection", status: "queued" },
+      {
+        $set: { status: "canceled", updatedAt: now },
+        $unset: { "reflection.prepared": "" },
+      },
+    );
+    await mongoService.emailSend.updateMany(
+      { userId, sequence: "reflection", status: "canceled" },
+      { $unset: { "reflection.prepared": "" } },
+    );
+    return result.modifiedCount;
+  }
+
   async findByProviderMessageId(
     providerMessageId: string,
   ): Promise<EmailSendRecord | null> {

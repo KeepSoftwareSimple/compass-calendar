@@ -58,8 +58,9 @@ export function nullableProviderEventVersionFromBoundary(
 }
 
 export const NullableProviderEventVersionReadSchema = z.preprocess((value) => {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "string" && value.trim().length === 0) return null;
+  if (typeof value === "string" || value == null) {
+    return nullableProviderEventVersionFromBoundary(value);
+  }
   return value;
 }, ProviderEventVersionSchema.nullable());
 

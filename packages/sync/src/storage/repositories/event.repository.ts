@@ -219,9 +219,6 @@ export class EventRepository {
         EventReadSchema.parse({
           ...current,
           ...input,
-          providerVersion: nullableProviderEventVersionFromBoundary(
-            input.providerVersion,
-          ),
           providerMetadata,
           customizations:
             input.customizations !== undefined
