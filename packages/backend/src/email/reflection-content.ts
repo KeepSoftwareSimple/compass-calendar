@@ -6,16 +6,36 @@ import { reflectionLifeProgress } from "@backend/email/reflection-life-progress"
 import { type ReflectionCadence } from "@backend/email/reflection-schedule";
 import { createHash } from "node:crypto";
 
-const unique = (events: ReflectionEvent[]) => [
-  ...new Map(
-    events.map((event) => [
-      event.uid
-        ? `${event.uid}:${event.schedule.kind === "timed" ? Date.parse(event.schedule.start) : event.schedule.start}`
-        : event.id,
-      event,
-    ]),
-  ).values(),
-];
+const unique = (events: ReflectionEvent[]) => {
+  const occurrences = new Set<string>();
+  const matchingCalendars = new Map<string, string>();
+  return events.filter((event) => {
+    const { schedule } = event;
+    const start =
+      schedule.kind === "timed" ? Date.parse(schedule.start) : schedule.start;
+    const end =
+      schedule.kind === "timed" ? Date.parse(schedule.end) : schedule.end;
+    const occurrence = JSON.stringify([
+      event.windowKey,
+      event.uid ?? event.id,
+      start,
+    ]);
+    const match = JSON.stringify([
+      event.windowKey,
+      event.title.trim().replace(/\s+/g, " ").toLowerCase(),
+      schedule.kind,
+      start,
+      end,
+    ]);
+    const calendar = matchingCalendars.get(match);
+    const duplicate =
+      occurrences.has(occurrence) ||
+      (calendar !== undefined && calendar !== event.calendarId);
+    occurrences.add(occurrence);
+    if (calendar === undefined) matchingCalendars.set(match, event.calendarId);
+    return !duplicate;
+  });
+};
 const rank = (event: ReflectionEvent) =>
   (event.recurring ? 0 : 10) + (event.schedule.kind === "allDay" ? 2 : 0);
 
@@ -121,9 +141,8 @@ export function renderReflectionEmail(input: {
   };
   const sections: { heading: string; lines: string[] }[] = [
     {
-      heading: "Your past week",
+      heading: `Your past week, ${dateRange(input.recentStartDate, input.date)}`,
       lines: [
-        dateRange(input.recentStartDate, input.date),
         ...(input.recent.length
           ? [
               `Your calendar included ${input.recent.length} events.`,
@@ -133,14 +152,13 @@ export function renderReflectionEmail(input: {
       ],
     },
     {
-      heading: "Next week",
+      heading: `Next week, ${dateRange(
+        input.upcomingStartDate,
+        dayjs(input.upcomingStartDate)
+          .add(input.cadence === "weekly" ? 6 : 7, "day")
+          .format("YYYY-MM-DD"),
+      )}`,
       lines: [
-        dateRange(
-          input.upcomingStartDate,
-          dayjs(input.upcomingStartDate)
-            .add(input.cadence === "weekly" ? 6 : 7, "day")
-            .format("YYYY-MM-DD"),
-        ),
         ...(input.upcoming.length
           ? input.upcoming.slice(0, 3).map(label)
           : ["No upcoming events in your calendar."]),
@@ -173,7 +191,7 @@ export function renderReflectionEmail(input: {
     quotes[
       Number.parseInt(digest(input.date).slice(0, 4), 16) % quotes.length
     ] ?? "";
-  const text = `${subject}\n\n${sections.map((section) => `${section.heading}\n${section.lines.join("\n")}`).join("\n\n")}\n\nPlan your week in Compass:\n${input.appUrl}\n\nUnsubscribe: ${input.unsubscribeUrl}\n\n${quote}`;
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><p><strong>${escapeHtml(subject)}</strong></p>${sections.map((section) => `<p><strong>${escapeHtml(section.heading)}</strong><br>${section.lines.map(escapeHtml).join("<br>")}</p>`).join("")}<p>Plan your week in Compass:<br><a href="${escapeHtml(input.appUrl)}">${escapeHtml(input.appUrl)}</a></p><p><a href="${escapeHtml(input.unsubscribeUrl)}">Unsubscribe</a></p><p>${escapeHtml(quote)}</p></body></html>`;
+  const text = `${sections.map((section) => `${section.heading}\n${section.lines.join("\n")}`).join("\n\n")}\n\nPlan next week\n${input.appUrl}\n\nUnsubscribe: ${input.unsubscribeUrl}\n\n${quote}`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${sections.map((section) => `<p><strong>${escapeHtml(section.heading)}</strong><br>${section.lines.map(escapeHtml).join("<br>")}</p>`).join("")}<p>Plan next week<br><a href="${escapeHtml(input.appUrl)}">${escapeHtml(input.appUrl)}</a></p><p><a href="${escapeHtml(input.unsubscribeUrl)}">Unsubscribe</a></p><p>${escapeHtml(quote)}</p></body></html>`;
   return { subject, html, text };
 }
