@@ -197,11 +197,14 @@ final class NativeLaunchTests: XCTestCase {
         let palette = window.descendants(matching: .any)["compass-native-command-palette"]
         XCTAssertTrue(palette.waitForExistence(timeout: 5))
 
-        let todayItem = window.descendants(matching: .any)["compass-native-palette-item-today"]
-        XCTAssertTrue(todayItem.waitForExistence(timeout: 5))
-        todayItem.click()
+        let search = window.textFields["compass-native-command-palette-search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        let today = window.buttons["compass-native-palette-item-today"]
+        XCTAssertTrue(today.waitForExistence(timeout: 5))
+        XCTAssertEqual(today.value as? String, "Selected")
+        search.typeKey(.return, modifierFlags: [])
 
-        XCTAssertFalse(palette.waitForExistence(timeout: 2))
+        XCTAssertTrue(palette.waitForNonExistence(timeout: 2))
         XCTAssertTrue(
             window.staticTexts["Morning standup"].waitForExistence(timeout: 10),
             "Expected demo week grid after Go to Today")
