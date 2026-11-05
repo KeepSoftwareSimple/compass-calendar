@@ -17,7 +17,7 @@ describe("pending-shell-toast", () => {
     resetPendingShellToastForTests();
   });
 
-  it("delivers a queued info toast on flush", async () => {
+  it("delivers a queued info toast on flush", () => {
     queuePendingShellToast({
       variant: "info",
       message: "No problem, nothing was connected. You can sign in anytime.",
@@ -29,8 +29,22 @@ describe("pending-shell-toast", () => {
       "No problem, nothing was connected. You can sign in anytime.",
       expect.any(Object),
     );
+  });
+
+  it("keeps the payload briefly for a StrictMode remount", async () => {
+    queuePendingShellToast({
+      variant: "info",
+      message: "No problem, nothing was connected. You can sign in anytime.",
+    });
+
+    flushPendingShellToast();
+    flushPendingShellToast();
+
+    expect(mocks.info).toHaveBeenCalledTimes(2);
 
     await new Promise((resolve) => setTimeout(resolve, 800));
-    expect(sessionStorage.getItem("compass.shell.pending-toast")).toBeNull();
+    flushPendingShellToast();
+
+    expect(mocks.info).toHaveBeenCalledTimes(2);
   });
 });

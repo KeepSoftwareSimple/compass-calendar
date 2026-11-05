@@ -6,6 +6,7 @@ import dayjs from "@core/util/date/dayjs";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { EmailSendRecordSchema } from "@backend/email/email-send.record";
+import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
   buildUnsubscribeTokenForUser,
   buildUnsubscribeUrls,
@@ -152,13 +153,7 @@ export async function runReflectionCommand(args: string[]) {
             },
           );
           if (action === "disable")
-            await mongoService.emailSend.updateMany(
-              { userId: user._id, sequence: "reflection", status: "queued" },
-              {
-                $set: { status: "canceled", updatedAt: new Date() },
-                $unset: { "reflection.prepared": "" },
-              },
-            );
+            await emailSendRepository.cancelQueuedReflection(user._id);
         }
         console.log(
           `${user._id.toHexString()}: ${action} ${values.apply ? "applied" : "dry run"}`,

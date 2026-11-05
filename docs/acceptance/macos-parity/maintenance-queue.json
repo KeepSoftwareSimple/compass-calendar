@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "stableKey": "native-go-to-date-announcements",
+      "title": "Deliver real NSAccessibility announcements for Go to date status",
+      "priority": 10,
+      "originSha": "290524ec81c252adc567b34d8c0feec290510490",
+      "behaviorIds": [
+        "go-to-date-iso-announcement",
+        "go-to-date-slash-announcement",
+        "go-to-date-month-first-announcement"
+      ],
+      "status": "pending",
+      "issueNumber": 4783,
+      "evidenceHead": null,
+      "notes": "CommandPaletteStore.statusAnnouncement is assigned but no native AX consumer exists yet."
+    }
+  ]
+}

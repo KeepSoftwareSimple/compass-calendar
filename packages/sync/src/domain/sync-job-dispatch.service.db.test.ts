@@ -195,6 +195,32 @@ describe("dispatchSyncJob", () => {
       const real = new ProviderConnectionRepository(storage.db());
       return real.updateDerivedState(tenantId, principalId, id, fields, at);
     },
+    tryTransitionDerivedState: async (
+      tenantId: ProviderConnectionRecord["tenantId"],
+      principalId: ProviderConnectionRecord["principalId"],
+      id: ProviderConnectionRecord["_id"],
+      expected: {
+        state: ProviderConnectionRecord["state"];
+        stateReason: ProviderConnectionRecord["stateReason"];
+      },
+      fields: {
+        state: ProviderConnectionRecord["state"];
+        stateReason: ProviderConnectionRecord["stateReason"];
+        lastSyncedAt: Date | null;
+        lastHealthyAt: Date | null;
+      },
+      at?: Date,
+    ) => {
+      const real = new ProviderConnectionRepository(storage.db());
+      return real.tryTransitionDerivedState(
+        tenantId,
+        principalId,
+        id,
+        expected,
+        fields,
+        at,
+      );
+    },
   } as unknown as SyncJobDispatchDeps["connections"];
 
   const deps = (
@@ -1362,6 +1388,9 @@ describe("dispatchSyncJob", () => {
           return defaultGoogleConnection(tenantId, principalId, id);
         },
         updateDerivedState: async () => {
+          throw new Error("derived-state write failed");
+        },
+        tryTransitionDerivedState: async () => {
           throw new Error("derived-state write failed");
         },
       } as unknown as SyncJobDispatchDeps["connections"],

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { act } from "react";
 import { getHourLabels } from "@web/common/utils/datetime/web.date.util";
 import { CalendarTimeColumn } from "@web/grid/components/CalendarTimeColumn";
 import { GRID_TIME_COLUMN_WIDTH } from "@web/grid/grid.constants";
@@ -11,10 +12,11 @@ import {
   resetTimeTravelStoreForTests,
   setTimeTravelZone,
 } from "@web/timezone/time-travel.store";
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, setSystemTime } from "bun:test";
 
 describe("CalendarTimeColumn", () => {
   afterEach(() => {
+    setSystemTime();
     resetTimeTravelStoreForTests();
     resetEffectiveTimeZoneStoreForTests();
   });
@@ -39,6 +41,22 @@ describe("CalendarTimeColumn", () => {
         `${GRID_TIME_COLUMN_WIDTH}px`,
       );
     }
+  });
+
+  it("hides the colliding hour label when the gutter now label is shown", () => {
+    const at = new Date("2026-04-24T12:00:00-06:00");
+    act(() => {
+      setPinnedTimeZone("America/Denver");
+      setSystemTime(new Date("2026-04-24T16:14:00.000Z"));
+    });
+
+    render(<CalendarTimeColumn at={at} showNowTimeLabel />);
+
+    expect(screen.getByTestId("now-time-label")).toHaveTextContent("10:14 AM");
+    expect(screen.getByText("10 AM")).toHaveAttribute(
+      "data-hour-label-hidden",
+      "true",
+    );
   });
 
   it("uses civil hour labels that match the timed grid on Denver fall-back Sunday", () => {

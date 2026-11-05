@@ -7,4 +7,6 @@
  * line when booking-web starts rendering another @web component.
  */
 @source "../../../apps/calendar-web/src/components/OverlayPanel";
+@source "../../../apps/calendar-web/src/components/Shortcuts";
+@source "../../../apps/calendar-web/src/components/Tooltip";
 @source "../../../apps/calendar-web/src/timezone";

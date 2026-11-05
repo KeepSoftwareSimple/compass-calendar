@@ -22,7 +22,7 @@ import { describe, expect, it } from "bun:test";
 
 describe("reflection historical reads", () => {
   const storage = setupSyncStorage(import.meta.url);
-  it("drains a large canonical history through empty pages without losing old singles or series", async () => {
+  it("prunes unrelated history while retaining old singles, series and empty cursor pages", async () => {
     const db = storage.db();
     const calendar = await seedProviderCalendar(
       new ProviderCalendarRepository(db),
@@ -108,7 +108,8 @@ describe("reflection historical reads", () => {
       pages++;
       expect(pages).toBeLessThan(1000);
     } while (cursor);
-    expect(emptyPages).toBeGreaterThan(0);
+    expect(pages).toBe(1);
+    expect(emptyPages).toBe(0);
     expect(events.map((event) => event.title).sort()).toEqual([
       "Archived event 10000",
       "Archived event 17",
@@ -120,6 +121,177 @@ describe("reflection historical reads", () => {
     expect(
       await db.collection(SYNC_COLLECTIONS.eventOccurrences).countDocuments(),
     ).toBe(0);
+    // Expired series remain candidates until recurrence projection can prove
+    // they have no occurrences. Empty result pages must still advance cursors.
+    await db.collection(SYNC_COLLECTIONS.events).insertMany(
+      Array.from({ length: 51 }, (_, index) =>
+        EventRecordSchema.parse({
+          ...records[0],
+          _id: `stale-${String(index).padStart(4, "0")}`,
+          providerEventId: `stale-${index}`,
+          schedule: {
+            kind: "timed",
+            start: "1990-01-01T17:00:00Z",
+            end: "1990-01-01T18:00:00Z",
+            timeZone: "America/Denver",
+          },
+          recurrence: {
+            kind: "seriesMaster",
+            rules: ["RRULE:FREQ=WEEKLY;COUNT=1"],
+          },
+        }),
+      ),
+    );
+    let staleCursor: string | undefined = "stale-";
+    let stalePages = 0;
+    do {
+      const page = await readReflectionPage(db, calendar, {
+        ...input,
+        cursor: staleCursor,
+      });
+      expect(page.events).toEqual([]);
+      expect(page.nextCursor).not.toBe(staleCursor);
+      staleCursor = page.nextCursor ?? undefined;
+      stalePages++;
+      expect(stalePages).toBeLessThan(5);
+    } while (staleCursor);
+    expect(stalePages).toBe(3);
+  });
+
+  it("paginates interleaved masters and scheduled facts without gaps or duplicates", async () => {
+    const db = storage.db();
+    const calendar = await seedProviderCalendar(
+      new ProviderCalendarRepository(db),
+    );
+    const records: ProviderEvent[] = Array.from({ length: 51 }, (_, index) => ({
+      ...singleEvent(`mixed-${index}`),
+      schedule: {
+        kind: "timed",
+        start: "2010-11-01T17:00:00Z",
+        end: "2010-11-01T18:00:00Z",
+        timeZone: "America/Denver",
+      },
+      recurrence:
+        index % 2
+          ? { kind: "seriesMaster", rules: ["RRULE:FREQ=WEEKLY;COUNT=1"] }
+          : { kind: "single" },
+    }));
+    await importCalendarEvents(
+      {
+        events: new EventRepository(db),
+        occurrences: new EventOccurrenceRepository(db, storage.client()),
+        resources: new SyncResourceRepository(db),
+        custody: fakeTokenSource,
+        reader: {
+          listEventPage: async (input) =>
+            input.window
+              ? pageOf([])
+              : pageOf(records, { nextSyncToken: "mixed" }),
+        },
+      },
+      calendar,
+      () => new Date("2026-11-02T00:00:00Z"),
+    );
+    const expected = await db
+      .collection(SYNC_COLLECTIONS.events)
+      .find({ calendarId: calendar._id })
+      .sort({ _id: 1 })
+      .toArray();
+    const input = ReflectionReadRequestSchema.parse({
+      calendarIds: [calendar._id],
+      selfEmails: [],
+      windows: [
+        {
+          key: "mixed",
+          start: "2010-11-01T00:00:00Z",
+          end: "2010-11-02T00:00:00Z",
+          startDate: "2010-11-01",
+          endDate: "2010-11-02",
+        },
+      ],
+    });
+    const ids: string[] = [];
+    let cursor: string | undefined;
+    let pages = 0;
+    do {
+      const page = await readReflectionPage(db, calendar, {
+        ...input,
+        ...(cursor ? { cursor } : {}),
+      });
+      expect(page.events.length).toBeLessThanOrEqual(25);
+      expect(page.nextCursor).not.toBe(cursor);
+      ids.push(...page.events.map((event) => event.eventId));
+      cursor = page.nextCursor ?? undefined;
+      expect(++pages).toBeLessThan(5);
+    } while (cursor);
+    expect(pages).toBe(3);
+    expect(ids).toEqual(expected.map((event) => event._id));
+    expect(new Set(ids).size).toBe(51);
+  });
+
+  it("preserves all-day and offset start boundaries while pruning unrelated schedules", async () => {
+    const db = storage.db();
+    const calendar = await seedProviderCalendar(
+      new ProviderCalendarRepository(db),
+    );
+    const records: ProviderEvent[] = [
+      {
+        ...singleEvent("long"),
+        schedule: { kind: "allDay", start: "2010-11-01", end: "2010-12-02" },
+      },
+      {
+        ...singleEvent("offset"),
+        schedule: {
+          kind: "timed",
+          start: "2010-10-31T23:30:00-08:00",
+          end: "2010-11-01T00:30:00-08:00",
+          timeZone: "America/Los_Angeles",
+        },
+      },
+      {
+        ...singleEvent("outside"),
+        schedule: { kind: "allDay", start: "2010-09-01", end: "2010-09-02" },
+      },
+    ];
+    await importCalendarEvents(
+      {
+        events: new EventRepository(db),
+        occurrences: new EventOccurrenceRepository(db, storage.client()),
+        resources: new SyncResourceRepository(db),
+        custody: fakeTokenSource,
+        reader: {
+          listEventPage: async (input) =>
+            input.window
+              ? pageOf([])
+              : pageOf(records, { nextSyncToken: "all" }),
+        },
+      },
+      calendar,
+      () => new Date("2026-11-02T00:00:00Z"),
+    );
+    const read = await readReflectionPage(
+      db,
+      calendar,
+      ReflectionReadRequestSchema.parse({
+        calendarIds: [calendar._id],
+        selfEmails: [],
+        windows: [
+          {
+            key: "edge",
+            start: "2010-11-01T00:00:00Z",
+            end: "2010-11-02T00:00:00Z",
+            startDate: "2010-11-01",
+            endDate: "2010-11-02",
+          },
+        ],
+      }),
+    );
+    expect(read.events.map((event) => event.title).sort()).toEqual([
+      "long",
+      "offset",
+    ]);
+    expect(read.truncated).toBe(false);
+    expect(read.nextCursor).toBeNull();
   });
 
   it("reads old singles and series exceptions beyond the interactive horizon without resurrecting cancellations", async () => {

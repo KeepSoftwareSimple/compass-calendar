@@ -1,4 +1,4 @@
-import { type Db } from "mongodb";
+import { type Db, type Filter } from "mongodb";
 import { type DateTime } from "@core/types/domain-primitives";
 import {
   type PrincipalId,
@@ -27,20 +27,18 @@ export async function readReflectionPage(
   const calendars = await new ProviderCalendarRepository(db).listByPrincipal(
     scope.tenantId,
     scope.principalId,
-    { activeOnly: true },
   );
-  const active = new Set(calendars.map((calendar) => String(calendar._id)));
+  const active = new Set(
+    calendars
+      .filter((calendar) => calendar.active)
+      .map((calendar) => String(calendar._id)),
+  );
+  const knownProvider = new Set(
+    calendars.map((calendar) => String(calendar._id)),
+  );
   const resources = await new SyncResourceRepository(db).listEventsByPrincipal(
     scope.tenantId,
     scope.principalId,
-  );
-  const knownProvider = new Set(
-    (
-      await new ProviderCalendarRepository(db).listByPrincipal(
-        scope.tenantId,
-        scope.principalId,
-      )
-    ).map((calendar) => String(calendar._id)),
   );
   const calendarIds = input.calendarIds.filter(
     (id) => !knownProvider.has(id) || active.has(id),
@@ -69,18 +67,71 @@ export async function readReflectionPage(
     .sort({ "schedule.start": 1 })
     .limit(1)
     .next();
-  const rows = input.windows.length
-    ? await collection
-        .find({
-          ...filter,
-          ...(input.cursor
-            ? { _id: { $gt: input.cursor as EventRecord["_id"] } }
-            : {}),
-        })
-        .sort({ _id: 1 })
-        .limit(25)
-        .toArray()
-    : [];
+  // Canonical history can contain decades of unrelated single events. Keep
+  // masters for historical recurrence expansion, but only read single/exception
+  // schedules that could overlap a requested window. Two days of padding keep
+  // these string date comparisons conservative across all-day dates and offsets;
+  // projectOccurrences remains the exact overlap authority.
+  const bounds = input.windows.map((window) => ({
+    start: new Date(
+      Math.min(Date.parse(window.startDate), Date.parse(window.start)) -
+        2 * 86_400_000,
+    )
+      .toISOString()
+      .slice(0, 10),
+    end: new Date(
+      Math.max(Date.parse(window.endDate), Date.parse(window.end)) +
+        2 * 86_400_000,
+    )
+      .toISOString()
+      .slice(0, 10),
+  }));
+  const latestEnd = bounds
+    .map((bound) => bound.end)
+    .sort()
+    .at(-1);
+  const rows: EventRecord[] = [];
+  if (latestEnd) {
+    // Separate masters from scheduled facts so each query can bound the
+    // kind/start index. One union with a page-index hint scans the whole
+    // archive for sparse years; unhinted unions spend the deadline planning.
+    const candidates: Filter<EventRecord>[] = [
+      {
+        "recurrence.kind": "seriesMaster",
+        "schedule.start": { $lt: latestEnd },
+      },
+      {
+        "recurrence.kind": { $in: ["single", "exception"] },
+        $or: bounds.map((bound) => ({
+          "schedule.start": { $gte: bound.start, $lt: bound.end },
+        })),
+      },
+    ];
+    const pages = await Promise.all(
+      candidates.map((candidate) =>
+        collection
+          .find({
+            ...filter,
+            ...candidate,
+            ...(input.cursor
+              ? { _id: { $gt: input.cursor as EventRecord["_id"] } }
+              : {}),
+          })
+          .hint("reflection_principal_kind_start")
+          .sort({ _id: 1 })
+          .limit(25)
+          .toArray(),
+      ),
+    );
+    // Both disjoint streams share the same exclusive cursor. Their first 25
+    // contain the union's first 25. UTF-8 comparison matches Mongo's ID order.
+    rows.push(
+      ...pages
+        .flat()
+        .sort((a, b) => Buffer.compare(Buffer.from(a._id), Buffer.from(b._id)))
+        .slice(0, 25),
+    );
+  }
   const records = rows.map((row) => EventReadSchema.parse(row));
   const exceptions = await new EventRepository(
     db,

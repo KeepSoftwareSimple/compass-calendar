@@ -38,10 +38,17 @@ export const bottomNoticeStackGateActions = {
     });
   },
   enqueue(toast: QueuedBottomNoticeToast) {
-    useBottomNoticeStackGateStore.setState((state) => ({
-      ...state,
-      queue: [...state.queue, toast],
-    }));
+    useBottomNoticeStackGateStore.setState((state) => {
+      const toastId = toast.options?.toastId;
+      const queue =
+        toastId === undefined
+          ? state.queue
+          : state.queue.filter((item) => item.options?.toastId !== toastId);
+      return {
+        ...state,
+        queue: [...queue, toast],
+      };
+    });
   },
   takeQueue(): QueuedBottomNoticeToast[] {
     const queue = useBottomNoticeStackGateStore.getState().queue;

@@ -5,6 +5,10 @@ import { parseUserDate } from "@web/common/utils/datetime/web.date.util";
 import { resolveFormControlJumpIds } from "@web/common/utils/form/form.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
+import {
+  consumeDatePickerKey,
+  focusKeyboardSelectedDay,
+} from "@web/components/DatePicker/date-picker-keyboard-dom.util";
 import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import {
   EVENT_FORM_DATE_INPUT_FORMAT,
@@ -28,13 +32,6 @@ const DATE_FIELD_CLASSNAME =
 
 const stopPropagation = (e: React.MouseEvent<HTMLDivElement>) => {
   e.stopPropagation();
-};
-
-/** Keys the field acts on itself never reach the form's own shortcuts. */
-const consume = (event: React.KeyboardEvent) => {
-  event.preventDefault();
-  event.stopPropagation();
-  event.nativeEvent.stopImmediatePropagation();
 };
 
 export interface EventFormDateFieldProps {
@@ -80,33 +77,6 @@ export const EventFormDateField = ({
   const setPickerCursorSync = (next: Dayjs | null) => {
     pickerCursorRef.current = next;
     setPickerCursor(next);
-  };
-  const keyboardSelectedDaySelector =
-    ".react-datepicker__day--keyboard-selected:not(.react-datepicker__day--disabled)";
-  const findKeyboardSelectedDay = () =>
-    document.querySelector<HTMLElement>(
-      `.react-datepicker-popper ${keyboardSelectedDaySelector}`,
-    ) ??
-    (calendarClassName
-      ? document.querySelector<HTMLElement>(
-          `.calendar.${calendarClassName} ${keyboardSelectedDaySelector}`,
-        )
-      : null);
-
-  const focusKeyboardSelectedDay = () => {
-    requestAnimationFrame(() => {
-      const day = findKeyboardSelectedDay();
-      if (!day) return;
-      const scope =
-        day.closest(".react-datepicker") ?? day.closest(".calendar");
-      scope
-        ?.querySelectorAll<HTMLElement>(".react-datepicker__day[tabindex]")
-        .forEach((element) => {
-          element.tabIndex = -1;
-        });
-      day.tabIndex = 0;
-      day.focus({ preventScroll: true });
-    });
   };
   const [pickerMonth, setPickerMonth] = useState(() =>
     dayjs(selected).startOf("month"),
@@ -228,7 +198,7 @@ export const EventFormDateField = ({
 
     if (!isInputTarget && !isDayTarget && !isGridFocusedRef.current) return;
 
-    consume(event);
+    consumeDatePickerKey(event);
 
     if (
       isInputTarget &&
@@ -238,7 +208,7 @@ export const EventFormDateField = ({
       const anchor = dayjs(selectedRef.current).startOf("day");
       setPickerCursorSync(anchor);
       isGridFocusedRef.current = true;
-      focusKeyboardSelectedDay();
+      focusKeyboardSelectedDay(calendarClassName);
       return;
     }
 
@@ -256,7 +226,7 @@ export const EventFormDateField = ({
           setPickerMonth(next.startOf("month"));
         }
         isGridFocusedRef.current = true;
-        focusKeyboardSelectedDay();
+        focusKeyboardSelectedDay(calendarClassName);
         break;
       }
       case "pickCursor":
@@ -308,13 +278,13 @@ export const EventFormDateField = ({
 
     if (closedAction.kind === "ignore") {
       if (event.key === "Enter" && !modKey) {
-        consume(event);
+        consumeDatePickerKey(event);
         commitOrRevert(target);
       }
       return;
     }
 
-    consume(event);
+    consumeDatePickerKey(event);
 
     if (closedAction.kind === "openCalendar") {
       onCalendarOpen();

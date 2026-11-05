@@ -57,7 +57,70 @@ export async function refreshConnectionState(
     return connection;
   }
 
-  const updated = await deps.connections.updateDerivedState(
+  if (stateChanged) {
+    const transitioned = await deps.connections.tryTransitionDerivedState(
+      connection.tenantId,
+      connection.principalId,
+      connection._id,
+      {
+        state: connection.state,
+        stateReason: connection.stateReason,
+      },
+      {
+        state: derived.state,
+        stateReason: derived.reason,
+        lastSyncedAt,
+        lastHealthyAt,
+      },
+      at,
+    );
+    if (transitioned) {
+      // lastSuccessAt (and therefore lastSyncedAt) moves on every incremental
+      // pass, including idle focus refreshes. The SSE bridge turns a connection
+      // invalidation into eventsChanged, so publishing that tick refetches ranges
+      // that did not change. Wake clients only when the user-visible state or
+      // reason actually changes.
+      if (deps.invalidations) {
+        await deps.invalidations.append({
+          tenantId: connection.tenantId,
+          principalId: connection.principalId,
+          invalidation: {
+            kind: "connection",
+            connectionId: connection._id,
+          },
+          emittedAt: at,
+        });
+      }
+      return transitioned;
+    }
+    const latest = await deps.connections.findById(
+      connection.tenantId,
+      connection.principalId,
+      connection._id,
+    );
+    if (!latest) return connection;
+    if (
+      latest.state === connection.state &&
+      latest.stateReason === connection.stateReason
+    ) {
+      // Another refresh won the transition; persist freshness timestamps only.
+      return deps.connections.updateDerivedState(
+        latest.tenantId,
+        latest.principalId,
+        latest._id,
+        {
+          state: derived.state,
+          stateReason: derived.reason,
+          lastSyncedAt,
+          lastHealthyAt,
+        },
+        at,
+      );
+    }
+    return refreshConnectionState(deps, latest, now);
+  }
+
+  return deps.connections.updateDerivedState(
     connection.tenantId,
     connection.principalId,
     connection._id,
@@ -69,25 +132,6 @@ export async function refreshConnectionState(
     },
     at,
   );
-
-  // lastSuccessAt (and therefore lastSyncedAt) moves on every incremental
-  // pass, including idle focus refreshes. The SSE bridge turns a connection
-  // invalidation into eventsChanged, so publishing that tick refetches ranges
-  // that did not change. Wake clients only when the user-visible state or
-  // reason actually changes.
-  if (deps.invalidations && stateChanged) {
-    await deps.invalidations.append({
-      tenantId: connection.tenantId,
-      principalId: connection.principalId,
-      invalidation: {
-        kind: "connection",
-        connectionId: connection._id,
-      },
-      emittedAt: at,
-    });
-  }
-
-  return updated;
 }
 
 export async function gatherConnectionStateEvidence(

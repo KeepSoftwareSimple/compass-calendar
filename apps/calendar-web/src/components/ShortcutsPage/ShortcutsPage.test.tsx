@@ -8,7 +8,7 @@ import {
 } from "@web/components/ShortcutsPage/ShortcutsCatalogView";
 import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
 import { PUBLIC_SHORTCUT_CATALOG_LAST_UPDATED } from "@web/shortcuts/shortcuts-catalog.data";
-import { formatShortcutsCatalogLastUpdated } from "@web/shortcuts/shortcuts-catalog.meta.util";
+import { formatShortcutsCatalogLastUpdated } from "@web/shortcuts/shortcuts-catalog-last-updated.format";
 import { NotFoundView } from "@web/views/NotFound/NotFound";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 

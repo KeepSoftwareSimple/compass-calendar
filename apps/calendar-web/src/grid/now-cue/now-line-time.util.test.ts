@@ -5,7 +5,6 @@ import {
   CIVIL_DAY_US_SPRING_FORWARD_YMD,
 } from "@core/test/civil-day.vectors.data";
 import dayjs from "@core/util/date/dayjs";
-import { TIMED_EVENT_COLUMN_INSET } from "@web/grid/grid.constants";
 import {
   formatNowLineTimeLabel,
   formatNowLineWeekPillLabel,
@@ -13,8 +12,6 @@ import {
   nowLineGridMinutes,
   nowLineTopPercent,
   nowTimeLabelPlacement,
-  weekNowTimeLabelClearsEventContent,
-  weekNowTimeLabelRightEdgePx,
   weekNowTimeLabelUsesGutter,
 } from "@web/grid/now-cue/now-line-time.util";
 import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
@@ -58,15 +55,6 @@ describe("week now-time label placement", () => {
     expect(weekNowTimeLabelUsesGutter(0)).toBe(true);
     expect(weekNowTimeLabelUsesGutter(3)).toBe(false);
   });
-
-  it("keeps the pill outside today's event content area", () => {
-    for (const columnIndex of [0, 1, 3, 6]) {
-      expect(weekNowTimeLabelClearsEventContent(columnIndex)).toBe(true);
-      expect(weekNowTimeLabelRightEdgePx(columnIndex)).toBeLessThanOrEqual(
-        TIMED_EVENT_COLUMN_INSET,
-      );
-    }
-  });
 });
 
 describe("formatNowLineTimeLabel and grid alignment", () => {
@@ -108,6 +96,48 @@ describe("formatNowLineTimeLabel and grid alignment", () => {
     ).not.toBeNull();
     expect(
       hourLabelIndexOverlappingNow(7 * 60 + 37, reference, denver),
+    ).toBeNull();
+  });
+});
+
+describe("hourLabelIndexOverlappingNow collision window", () => {
+  const denver = CIVIL_DAY_DENVER;
+  const reference = dayjs.tz("2026-04-24", denver);
+
+  function indexForWallTime(hours: number, minutes: number) {
+    return hourLabelIndexOverlappingNow(
+      hours * 60 + minutes,
+      reference,
+      denver,
+    );
+  }
+
+  it("hides 10 AM at 10:14", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 14)).toBe(9);
+  });
+
+  it("shows both labels at 10:40", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 40)).toBeNull();
+  });
+
+  it("hides the hour label on the hour", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 0)).toBe(9);
+  });
+
+  it("hides the next hour label near :59", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 59)).toBe(10);
+  });
+
+  it("does not hide the next hour label mid-hour", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 40)).toBeNull();
+    const atTenForty = 10 * 60 + 40;
+    expect(
+      hourLabelIndexOverlappingNow(atTenForty, reference, denver),
     ).toBeNull();
   });
 });

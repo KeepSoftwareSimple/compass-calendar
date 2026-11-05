@@ -40,6 +40,16 @@ describe("BottomNoticeStack gate", () => {
     bottomNoticeStackGateActions.resetForTests();
   });
 
+  it("coalesces queued app update toasts that share a toast id", () => {
+    bottomNoticeStackGateActions.setSuppressed(true);
+
+    showAppUpdateAvailableToast("1.0.1");
+    showAppUpdateAvailableToast("1.0.2");
+
+    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(useBottomNoticeStackGateStore.getState().queue).toHaveLength(1);
+  });
+
   it("queues the app update toast while suppressed and delivers it after release", async () => {
     bottomNoticeStackGateActions.setSuppressed(true);
 

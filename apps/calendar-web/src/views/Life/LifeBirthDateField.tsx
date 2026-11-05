@@ -4,6 +4,10 @@ import { parseLifeDate } from "@core/life/life-math";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import {
+  consumeDatePickerKey,
+  focusKeyboardSelectedDay,
+} from "@web/components/DatePicker/date-picker-keyboard-dom.util";
+import {
   consumeUiFocusTextInsertSuppress,
   shouldSuppressUiFocusTextInsert,
   stripTrailingLetter,
@@ -22,12 +26,6 @@ import {
   lifeBirthDateGridAnchor,
   parseLifeBirthDateInput,
 } from "@web/views/Life/parseLifeBirthDateInput.util";
-
-const consume = (event: React.KeyboardEvent) => {
-  event.preventDefault();
-  event.stopPropagation();
-  event.nativeEvent.stopImmediatePropagation();
-};
 
 const LIFE_BIRTH_INPUT_CLASSNAME =
   "c-life-input c-life-birth-date-field__input w-full max-w-44";
@@ -239,7 +237,7 @@ export function LifeBirthDateField({
       setGridFocusedSync(true);
     }
     openCalendar();
-    if (anchor) focusKeyboardSelectedDay();
+    if (anchor) focusKeyboardSelectedDay("lifeBirthDatePicker");
   };
 
   const commitOrRevert = (
@@ -284,33 +282,6 @@ export function LifeBirthDateField({
     }
     commitParsedDate(parsed.date);
     return "committed";
-  };
-
-  const keyboardSelectedDaySelector =
-    ".react-datepicker__day--keyboard-selected:not(.react-datepicker__day--disabled)";
-
-  const findKeyboardSelectedDay = () =>
-    document.querySelector<HTMLElement>(
-      `.react-datepicker-popper ${keyboardSelectedDaySelector}`,
-    ) ??
-    document.querySelector<HTMLElement>(
-      `.calendar.lifeBirthDatePicker ${keyboardSelectedDaySelector}`,
-    );
-
-  const focusKeyboardSelectedDay = () => {
-    requestAnimationFrame(() => {
-      const day = findKeyboardSelectedDay();
-      if (!day) return;
-      const scope =
-        day.closest(".react-datepicker") ?? day.closest(".calendar");
-      scope
-        ?.querySelectorAll<HTMLElement>(".react-datepicker__day[tabindex]")
-        .forEach((element) => {
-          element.tabIndex = -1;
-        });
-      day.tabIndex = 0;
-      day.focus({ preventScroll: true });
-    });
   };
 
   const pickFromOpenCalendar = (input: HTMLInputElement) => {
@@ -359,13 +330,13 @@ export function LifeBirthDateField({
     }
 
     if (event.key === "PageDown") {
-      consume(event);
+      consumeDatePickerKey(event);
       if (event.shiftKey) stepCalendarYear(1);
       else stepCalendarMonth(1);
       return;
     }
     if (event.key === "PageUp") {
-      consume(event);
+      consumeDatePickerKey(event);
       if (event.shiftKey) stepCalendarYear(-1);
       else stepCalendarMonth(-1);
       return;
@@ -383,7 +354,7 @@ export function LifeBirthDateField({
 
     if (!isInputTarget && !isDayTarget && !isGridFocusedRef.current) return;
 
-    consume(event);
+    consumeDatePickerKey(event);
 
     if (
       isInputTarget &&
@@ -396,7 +367,7 @@ export function LifeBirthDateField({
         dayjs(committedRef.current ?? today).startOf("day");
       setPickerCursorSync(anchor);
       setGridFocusedSync(true);
-      focusKeyboardSelectedDay();
+      focusKeyboardSelectedDay("lifeBirthDatePicker");
       return;
     }
 
@@ -413,7 +384,7 @@ export function LifeBirthDateField({
           syncPickerMonth(next);
         }
         setGridFocusedSync(true);
-        focusKeyboardSelectedDay();
+        focusKeyboardSelectedDay("lifeBirthDatePicker");
         break;
       }
       case "pickCursor":
@@ -429,7 +400,7 @@ export function LifeBirthDateField({
 
   const handleKeyDownCapture = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (consumeUiFocusTextInsertSuppress(event.key)) {
-      consume(event);
+      consumeDatePickerKey(event);
       return;
     }
 
@@ -458,13 +429,13 @@ export function LifeBirthDateField({
     }
 
     if (event.key === "ArrowDown") {
-      consume(event);
+      consumeDatePickerKey(event);
       openCalendarFromInput(target);
       return;
     }
 
     if (event.key === "Enter") {
-      consume(event);
+      consumeDatePickerKey(event);
       const outcome = commitOrRevert(target);
       if (outcome === "unchanged" || outcome === "year") {
         openCalendarFromInput(target);

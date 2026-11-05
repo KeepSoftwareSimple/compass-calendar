@@ -1101,8 +1101,7 @@ describe("PublicBookingPage", () => {
     ).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("does not open Your details when jump finds no times in the horizon", async () => {
-    const user = userEvent.setup({ delay: null });
+  it("does not open Your details when the horizon has no open times", async () => {
     server.use(pageHandler(), slotsInWindow([]));
 
     renderBookingRoute("/meet/tylerdane");
@@ -1112,14 +1111,13 @@ describe("PublicBookingPage", () => {
       await screen.findByText("No open times this month."),
     ).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "Jump to next available day" }),
-    );
-
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
       "No open times in the next 60 days. Check back later.",
     );
+    expect(
+      screen.queryByRole("button", { name: "Jump to next available day" }),
+    ).not.toBeInTheDocument();
     await waitFor(() => {
       expect(alert).toHaveFocus();
     });
