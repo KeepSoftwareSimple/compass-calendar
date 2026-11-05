@@ -236,13 +236,15 @@ describe("reflection content", () => {
       rendered.text.indexOf("This time in your life"),
     );
     expect(rendered.text).toContain("Tue, Nov 3: Meeting");
-    expect(rendered.text).toContain("This week 2020: A trip");
+    expect(rendered.text).toContain("2020: A trip");
     expect(rendered.text).toContain("42% done (79-year average)");
     expect(rendered.text).not.toContain("America/Denver");
     expect(rendered.text).not.toContain("completed weeks");
     expect(rendered.text).not.toContain("U.S. reference");
     expect(rendered.text).not.toContain("prediction");
     expect(rendered.text).not.toContain("A little perspective");
+    expect(rendered.text).not.toContain("This week 2020");
+    expect(rendered.text).not.toContain("Around this time 2020");
     expect(rendered.text).not.toContain("2026-11-02 to");
     expect(rendered.html).not.toContain("style=");
     expect(rendered.html).not.toContain("font-family");
@@ -279,7 +281,7 @@ describe("reflection content", () => {
     });
     expect(rendered.text).toContain("Oct 29 - Nov 5");
     expect(rendered.text).toContain("Tue, Nov 3 at 9:30 am: Call");
-    expect(rendered.text).toContain("Around this time 2020: A trip");
+    expect(rendered.text).toContain("2020: A trip");
     const crossing = review({
       date: "2027-01-03",
       recentStartDate: "2026-12-28",

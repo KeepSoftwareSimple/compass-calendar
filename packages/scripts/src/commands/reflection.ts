@@ -236,10 +236,10 @@ export async function runReflectionCommand(args: string[]) {
       await mkdir(output, { recursive: true });
       await writeFile(join(output, "reflection.html"), rendered.html);
       await writeFile(join(output, "reflection.txt"), rendered.text);
-      if (rendered.pngBase64)
+      if (rendered.pdfBase64)
         await writeFile(
-          join(output, `compass-life-in-weeks-${date}.png`),
-          Buffer.from(rendered.pngBase64, "base64"),
+          join(output, `compass-life-in-weeks-${date}.pdf`),
+          Buffer.from(rendered.pdfBase64, "base64"),
         );
       console.log(`Unsent reflection preview: ${output}`);
     }

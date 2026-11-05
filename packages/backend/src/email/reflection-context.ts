@@ -18,7 +18,7 @@ import {
   renderReflectionEmail,
   selectReflectionEvents,
 } from "@backend/email/reflection-content";
-import { renderReflectionLifePng } from "@backend/email/reflection-life-image";
+import { renderReflectionLifePdf } from "@backend/email/reflection-life-image";
 import {
   historicalMemoryWindow,
   reflectionExpiresAt,
@@ -162,8 +162,14 @@ export async function prepareReflection(
   const completedWeeks = birthDate
     ? getCompletedLifeWeeks(birthDate, edition.date)
     : null;
-  const pngBase64 = birthDate
-    ? renderReflectionLifePng(birthDate, edition.date).toString("base64")
+  const pdfBase64 = birthDate
+    ? (
+        await renderReflectionLifePdf(
+          birthDate,
+          edition.date,
+          new URL("/life", CONFIG.FRONTEND_URL).toString(),
+        )
+      ).toString("base64")
     : null;
   const appUrl = new URL(
     `/week/${current[1]!.startDate}`,
@@ -183,7 +189,8 @@ export async function prepareReflection(
   });
   return {
     ...content,
-    pngBase64,
+    pdfBase64,
+    pngBase64: null,
     memoryIds: selected.memories.map((event) => event.id),
     calendarIds: context.calendarIds,
     lifeRevision: user.lifePreferences?.revision ?? 0,

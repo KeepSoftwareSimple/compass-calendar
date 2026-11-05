@@ -2,6 +2,16 @@
 
 Status: implementation plan, November 2, 2026. No delivery is enabled by this document.
 
+## Private-trial presentation update, November 5, 2026
+
+The current trial uses a plain email titled `Weekly review (ISO week)`, compact
+section/date headings and year-only memory labels. Counts and highlights deduplicate
+matching cross-calendar facts. The Life View uses Rubik Regular, a restrained
+16/14-point hierarchy, percentage progress and one downloadable PDF containing the
+weekly grid plus a clickable `/life` link. This supersedes the earlier PNG/CID and
+completed-week-count presentation below. Private delivery is daily at 10:30 a.m.
+America/Denver for the bound trial account; public rollout remains disabled.
+
 ## Agreed product behavior
 
 Give users a short, useful reflection they can enjoy entirely in their inbox,
