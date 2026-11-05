@@ -100,6 +100,48 @@ describe("formatNowLineTimeLabel and grid alignment", () => {
   });
 });
 
+describe("hourLabelIndexOverlappingNow collision window", () => {
+  const denver = CIVIL_DAY_DENVER;
+  const reference = dayjs.tz("2026-04-24", denver);
+
+  function indexForWallTime(hours: number, minutes: number) {
+    return hourLabelIndexOverlappingNow(
+      hours * 60 + minutes,
+      reference,
+      denver,
+    );
+  }
+
+  it("hides 10 AM at 10:14", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 14)).toBe(9);
+  });
+
+  it("shows both labels at 10:40", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 40)).toBeNull();
+  });
+
+  it("hides the hour label on the hour", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 0)).toBe(9);
+  });
+
+  it("hides the next hour label near :59", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 59)).toBe(10);
+  });
+
+  it("does not hide the next hour label mid-hour", () => {
+    act(() => setPinnedTimeZone(denver));
+    expect(indexForWallTime(10, 40)).toBeNull();
+    const atTenForty = 10 * 60 + 40;
+    expect(
+      hourLabelIndexOverlappingNow(atTenForty, reference, denver),
+    ).toBeNull();
+  });
+});
+
 describe("DST fall-back minute boundary", () => {
   it("steps from 1:59 AM to 1:00 AM labels across the repeated hour", () => {
     act(() => setPinnedTimeZone(denver));
