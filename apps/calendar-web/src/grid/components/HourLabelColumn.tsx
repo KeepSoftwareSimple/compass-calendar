@@ -2,12 +2,12 @@ import { TIMED_HOUR_SLOT_HEIGHT_CLASS } from "@web/grid/grid.constants";
 
 export function HourLabelColumn({
   colors,
-  fadedHourIndex = null,
+  hiddenHourIndex = null,
   labels,
   width,
 }: {
   colors?: string[];
-  fadedHourIndex?: number | null;
+  hiddenHourIndex?: number | null;
   labels: string[];
   width: number;
 }) {
@@ -26,7 +26,10 @@ export function HourLabelColumn({
         >
           <span
             className="block text-center text-[10px] transition-opacity duration-150"
-            style={fadedHourIndex === hour ? { opacity: 0.2 } : undefined}
+            data-hour-label-hidden={
+              hiddenHourIndex === hour ? "true" : undefined
+            }
+            style={hiddenHourIndex === hour ? { opacity: 0 } : undefined}
           >
             {label}
           </span>
