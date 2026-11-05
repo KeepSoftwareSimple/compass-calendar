@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 
 const SHARDS_PATH = ".github/macos-ui-shards.json";
 const UI_TESTS_DIR = "apps/calendar-macos/CompassUITests";

@@ -6,6 +6,9 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 export ROOT
 cd "$ROOT/apps/calendar-macos"
 
+xcodegen generate
+mkdir -p build
+
 shard="${MACOS_UI_SHARD:?Set MACOS_UI_SHARD to 1-4}"
 
 classes=()
