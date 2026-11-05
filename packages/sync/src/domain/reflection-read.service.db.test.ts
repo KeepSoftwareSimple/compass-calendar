@@ -395,6 +395,76 @@ describe("reflection historical reads", () => {
     expect(other.events).toEqual([]);
   });
 
+  it("keeps certified active history available during a non-destructive refresh", async () => {
+    const db = storage.db();
+    const calendar = await seedProviderCalendar(
+      new ProviderCalendarRepository(db),
+    );
+    const resources = new SyncResourceRepository(db);
+    const record: ProviderEvent = {
+      ...singleEvent("archive"),
+      schedule: { kind: "allDay", start: "2018-11-01", end: "2018-11-02" },
+    };
+    const imported = await importCalendarEvents(
+      {
+        events: new EventRepository(db),
+        occurrences: new EventOccurrenceRepository(db, storage.client()),
+        resources,
+        custody: fakeTokenSource,
+        reader: {
+          supportsFullHistory: true,
+          listEventPage: async (input) =>
+            input.window
+              ? pageOf([])
+              : pageOf([record], { nextSyncToken: "complete-archive" }),
+        },
+      },
+      calendar,
+      () => new Date("2026-11-05T00:00:00Z"),
+    );
+    await resources.setBootstrapState(
+      calendar.tenantId,
+      calendar.principalId,
+      imported.resource._id,
+      "ready",
+    );
+    const input = ReflectionReadRequestSchema.parse({
+      calendarIds: [calendar._id],
+      selfEmails: [],
+      windows: [
+        {
+          key: "archive",
+          start: "2018-11-01T00:00:00Z",
+          end: "2018-11-02T00:00:00Z",
+          startDate: "2018-11-01",
+          endDate: "2018-11-02",
+        },
+      ],
+    });
+    const before = await readReflectionPage(db, calendar, input);
+    expect(before.historyComplete).toBe(true);
+    expect(before.events).toHaveLength(1);
+    const staging = await resources.startNewGeneration(
+      calendar.tenantId,
+      calendar.principalId,
+      imported.resource._id,
+    );
+    expect(staging).toBeGreaterThan(imported.resource.activeGeneration);
+    const during = await readReflectionPage(db, calendar, input);
+    expect(during.events).toEqual(before.events);
+    expect(during.historyComplete).toBe(true);
+    // A verified skipped-read failure still invalidates the certificate.
+    await resources.recordHistoryCoverage(
+      imported.resource,
+      1,
+      true,
+      new Date(),
+    );
+    expect(
+      (await readReflectionPage(db, calendar, input)).historyComplete,
+    ).toBe(false);
+  });
+
   it("does not treat a legacy cursor as proof of historical coverage", async () => {
     const db = storage.db();
     const calendar = await seedProviderCalendar(

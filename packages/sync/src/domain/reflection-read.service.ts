@@ -46,12 +46,13 @@ export async function readReflectionPage(
   const relevant = calendars.filter((calendar) =>
     calendarIds.includes(calendar._id),
   );
+  // A staged refresh retains the already certified active archive. Coverage
+  // changes only when a completed pass records its actual skipped-read result.
   const historyComplete = relevant.every((calendar) =>
     resources.some(
       (resource) =>
         resource.calendarId === calendar._id &&
         resource.historyCoverageVersion === 1 &&
-        resource.activeGeneration === resource.importGeneration &&
         resource.bootstrapState === "ready",
     ),
   );
