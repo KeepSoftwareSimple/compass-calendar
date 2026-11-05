@@ -137,6 +137,64 @@ describe("reflection content", () => {
     });
     expect(selected.memories).toHaveLength(1);
   });
+  it("deduplicates identical cross-calendar facts even with different or missing UIDs before counting and selecting", () => {
+    const holiday = event("holiday-one", "2026-11-03", {
+      title: "Holiday",
+      uid: "provider-one",
+      calendarId: "one",
+      windowKey: "recent",
+    });
+    const selected = selectReflectionEvents({
+      ...input,
+      events: [
+        holiday,
+        {
+          ...holiday,
+          id: "holiday-two",
+          uid: "provider-two",
+          calendarId: "two",
+          title: "  HOLIDAY  ",
+        },
+        { ...holiday, id: "holiday-three", uid: null, calendarId: "three" },
+        event("Lunch", "2026-11-04", { windowKey: "recent" }),
+      ],
+    });
+    expect(selected.recent.map((e) => e.id)).toEqual(["holiday-one", "Lunch"]);
+    const rendered = review({ ...selected });
+    expect(rendered.text).toContain("Your calendar included 2 events.");
+    expect(rendered.text.match(/: Holiday/g)).toHaveLength(1);
+    expect(rendered.text).toContain(": Lunch");
+  });
+  it("preserves distinct dates, durations, same-calendar events and overlapping reflection windows", () => {
+    const first = event("first", "2026-11-03", {
+      title: "Walk",
+      windowKey: "recent",
+    });
+    const sameCalendar = { ...first, id: "second" };
+    const otherDay = event("third", "2026-11-04", {
+      title: "Walk",
+      calendarId: "other",
+      windowKey: "recent",
+    });
+    const longer = {
+      ...first,
+      id: "longer",
+      calendarId: "other",
+      schedule: { ...first.schedule, end: "2026-11-05" },
+    };
+    const selected = selectReflectionEvents({
+      ...input,
+      events: [
+        first,
+        sameCalendar,
+        otherDay,
+        longer,
+        { ...first, windowKey: "upcoming" },
+      ],
+    });
+    expect(selected.recent).toHaveLength(4);
+    expect(selected.upcoming).toHaveLength(1);
+  });
   it("omits empty memories and safely escapes event titles without claiming attendance", () => {
     const rendered = renderReflectionEmail({
       date: "2026-11-08",
@@ -165,8 +223,12 @@ describe("reflection content", () => {
   it("reads like a plain review with upcoming plans immediately after the past week", () => {
     const rendered = review();
     expect(rendered.subject).toBe("Weekly review (45)");
-    expect(rendered.text).toContain("Your past week\nNov 2-8");
-    expect(rendered.text).toContain("Next week\nNov 9-15");
+    expect(rendered.text).not.toContain("Weekly review (45)");
+    expect(rendered.html).not.toContain("Weekly review (45)");
+    expect(rendered.text).toContain("Plan next week\nhttps://");
+    expect(rendered.html).toContain("<strong>Next week, Nov 9-15</strong>");
+    expect(rendered.text).toContain("Your past week, Nov 2-8");
+    expect(rendered.text).toContain("Next week, Nov 9-15");
     expect(rendered.text.indexOf("Your past week")).toBeLessThan(
       rendered.text.indexOf("Next week"),
     );

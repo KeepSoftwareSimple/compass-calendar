@@ -18,7 +18,13 @@ describe("reflection life image", () => {
     expect(png.readUInt32BE(16)).toBe(1200);
     expect(png.length).toBeLessThan(500_000);
     const svg = renderReflectionLifeSvg("1900-01-01", "2026-11-02");
-    expect(svg).toContain("100% done (79-year average)");
+    expect(svg).toContain("100% done</text>");
+    expect(svg).toContain(
+      'font-size="11" fill="#222">(79-year average)</text>',
+    );
+    expect(svg).toContain("Your Life In Weeks");
+    expect(svg).toContain("Each dot is a week of your life.");
+    expect(svg.indexOf("Filled: lived.")).toBeLessThan(svg.indexOf('y="139"'));
     expect(svg).toContain('fill="white"');
     expect(svg).not.toContain("completed weeks");
     expect(svg).not.toContain("U.S. reference");
@@ -36,7 +42,7 @@ describe("reflection life image", () => {
     expect(filled("2000-01-08")).toBe(1);
     expect(filled("2000-01-15")).toBe(2);
     expect(renderReflectionLifeSvg("1993-09-14", "2026-11-05")).toContain(
-      "42% done (79-year average)",
+      "42% done</text>",
     );
   });
 });
