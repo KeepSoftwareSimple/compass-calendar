@@ -14,6 +14,7 @@ import {
 import {
   EventInstanceListQuerySchema,
   EventInstanceListResponseSchema,
+  NullableProviderEventVersionReadSchema,
   nullableProviderEventVersionFromBoundary,
   SyncEventCalendarIdSchema,
   SyncEventInstanceSchema,
@@ -39,6 +40,20 @@ describe("nullableProviderEventVersionFromBoundary", () => {
 
   it("trims and keeps non-empty versions", () => {
     expect(nullableProviderEventVersionFromBoundary("  etag-1  ")).toBe(
+      "etag-1",
+    );
+  });
+});
+
+describe("NullableProviderEventVersionReadSchema", () => {
+  it("maps empty and whitespace-only strings to null", () => {
+    expect(NullableProviderEventVersionReadSchema.parse("")).toBeNull();
+    expect(NullableProviderEventVersionReadSchema.parse("   ")).toBeNull();
+    expect(NullableProviderEventVersionReadSchema.parse(null)).toBeNull();
+  });
+
+  it("trims and keeps non-empty versions", () => {
+    expect(NullableProviderEventVersionReadSchema.parse("  etag-1  ")).toBe(
       "etag-1",
     );
   });

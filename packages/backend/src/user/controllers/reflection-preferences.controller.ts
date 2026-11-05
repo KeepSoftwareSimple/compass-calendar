@@ -99,11 +99,7 @@ export async function putReflectionPreferences(req: Request, res: Response) {
       },
     },
   );
-  await emailSendRepository.cancelQueuedForUserBySequence(id, "reflection");
-  await mongoService.emailSend.updateMany(
-    { userId: id, sequence: "reflection", status: "canceled" },
-    { $unset: { "reflection.prepared": "" } },
-  );
+  await emailSendRepository.cancelQueuedReflection(id);
   res.json({
     preferences: input.data,
     available: available(id.toHexString()),

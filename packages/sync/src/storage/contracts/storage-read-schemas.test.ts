@@ -208,14 +208,23 @@ expectReadStripsWriteRejects("EventReadSchema", {
 });
 
 describe("EventReadSchema nested customizations", () => {
-  it("treats a legacy empty providerVersion as null", () => {
-    const parsed = EventReadSchema.parse({
-      ...eventRecord,
-      connectionId: ID,
-      providerEventId: ID,
-      providerVersion: "",
-    });
-    expect(parsed.providerVersion).toBeNull();
+  it("treats a legacy empty or whitespace providerVersion as null", () => {
+    expect(
+      EventReadSchema.parse({
+        ...eventRecord,
+        connectionId: ID,
+        providerEventId: ID,
+        providerVersion: "",
+      }).providerVersion,
+    ).toBeNull();
+    expect(
+      EventReadSchema.parse({
+        ...eventRecord,
+        connectionId: ID,
+        providerEventId: ID,
+        providerVersion: "   ",
+      }).providerVersion,
+    ).toBeNull();
   });
 
   it("strips an unknown key inside customizations", () => {
@@ -227,16 +236,6 @@ describe("EventReadSchema nested customizations", () => {
       },
     });
     expect(parsed.customizations).toEqual({ title: "Overlay" });
-  });
-});
-
-describe("EventReadSchema providerVersion", () => {
-  it("treats an empty stored providerVersion as null", () => {
-    const parsed = EventReadSchema.parse({
-      ...eventRecord,
-      providerVersion: "",
-    });
-    expect(parsed.providerVersion).toBeNull();
   });
 });
 

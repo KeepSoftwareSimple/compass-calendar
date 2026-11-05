@@ -27,20 +27,18 @@ export async function readReflectionPage(
   const calendars = await new ProviderCalendarRepository(db).listByPrincipal(
     scope.tenantId,
     scope.principalId,
-    { activeOnly: true },
   );
-  const active = new Set(calendars.map((calendar) => String(calendar._id)));
+  const active = new Set(
+    calendars
+      .filter((calendar) => calendar.active)
+      .map((calendar) => String(calendar._id)),
+  );
+  const knownProvider = new Set(
+    calendars.map((calendar) => String(calendar._id)),
+  );
   const resources = await new SyncResourceRepository(db).listEventsByPrincipal(
     scope.tenantId,
     scope.principalId,
-  );
-  const knownProvider = new Set(
-    (
-      await new ProviderCalendarRepository(db).listByPrincipal(
-        scope.tenantId,
-        scope.principalId,
-      )
-    ).map((calendar) => String(calendar._id)),
   );
   const calendarIds = input.calendarIds.filter(
     (id) => !knownProvider.has(id) || active.has(id),
