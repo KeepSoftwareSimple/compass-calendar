@@ -2,6 +2,7 @@ import { LIFE_QUOTES } from "@core/life/life-quotes";
 import { type ReflectionEvent } from "@core/types/sync/reflection.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { escapeHtml } from "@core/util/escape-html.util";
+import { reflectionLifeProgress } from "@backend/email/reflection-life-progress";
 import { type ReflectionCadence } from "@backend/email/reflection-schedule";
 import { createHash } from "node:crypto";
 
@@ -97,28 +98,52 @@ export function renderReflectionEmail(input: {
   appUrl: string;
   unsubscribeUrl: string;
 }) {
-  const heading =
-    input.cadence === "weekly" ? "Your week so far" : "Your past seven days";
+  const reviewDate = dayjs(input.date);
+  // The Thursday determines the ISO week, including December/January boundaries.
+  const thursday = reviewDate.add(3 - ((reviewDate.day() + 6) % 7), "day");
+  const subject = `Weekly review (${Math.ceil(thursday.dayOfYear() / 7)})`;
+  const dateRange = (startDate: string, endDate: string) => {
+    const start = dayjs(startDate),
+      end = dayjs(endDate);
+    if (start.year() !== end.year())
+      return `${start.format("MMM D, YYYY")} - ${end.format("MMM D, YYYY")}`;
+    if (start.month() === end.month())
+      return `${start.format("MMM D")}-${end.format("D")}`;
+    return `${start.format("MMM D")} - ${end.format("MMM D")}`;
+  };
+  const calendarDate = (event: ReflectionEvent) =>
+    event.schedule.kind === "allDay"
+      ? dayjs(event.schedule.start)
+      : dayjs(event.schedule.start).tz(input.timeZone);
   const label = (event: ReflectionEvent) => {
-    const date =
-      event.schedule.kind === "allDay"
-        ? event.schedule.start
-        : dayjs(event.schedule.start)
-            .tz(input.timeZone)
-            .format("YYYY-MM-DD HH:mm");
-    return `${date}: ${event.title}`;
+    const date = calendarDate(event);
+    return `${date.format("ddd, MMM D")}${event.schedule.kind === "timed" ? ` at ${date.format("h:mm a")}` : ""}: ${event.title}`;
   };
   const sections: { heading: string; lines: string[] }[] = [
     {
-      heading: `${heading}: ${input.recentStartDate} to ${input.date}`,
+      heading: "Your past week",
       lines: [
-        `Completed calendar events through 10:30 a.m. (${input.timeZone}) on ${input.date}.`,
+        dateRange(input.recentStartDate, input.date),
         ...(input.recent.length
           ? [
               `Your calendar included ${input.recent.length} events.`,
               ...input.recent.slice(0, 3).map(label),
             ]
-          : ["No completed calendar events to recap in this period."]),
+          : ["No completed events in your calendar this week."]),
+      ],
+    },
+    {
+      heading: "Next week",
+      lines: [
+        dateRange(
+          input.upcomingStartDate,
+          dayjs(input.upcomingStartDate)
+            .add(input.cadence === "weekly" ? 6 : 7, "day")
+            .format("YYYY-MM-DD"),
+        ),
+        ...(input.upcoming.length
+          ? input.upcoming.slice(0, 3).map(label)
+          : ["No upcoming events in your calendar."]),
       ],
     },
   ];
@@ -127,54 +152,28 @@ export function renderReflectionEmail(input: {
       heading: "This time in your life",
       lines: input.memories.map(
         (event) =>
-          `${input.weekMatch(event) ? "This week" : "Around this time"}: ${label(event)}`,
+          `${input.weekMatch(event) ? "This week" : "Around this time"} ${calendarDate(event).year()}: ${event.title}`,
       ),
     });
   if (!input.historyComplete)
     sections.push({
       heading: "Your history is still being prepared",
-      lines: [
-        "This trial reflection uses the calendar history available so far.",
-      ],
+      lines: ["This review uses the calendar history available so far."],
     });
   if (input.completedWeeks !== null)
     sections.push({
       heading: "Your life in weeks",
       lines: [
-        `${input.completedWeeks.toLocaleString("en-US")} completed weeks. Open the attached image for the full view.`,
-        "79-year U.S. reference (CDC, 2024), a visualization assumption rather than a personal prediction.",
+        reflectionLifeProgress(input.completedWeeks),
+        "Life view attached.",
       ],
     });
   const quotes = [LIFE_QUOTES[2], LIFE_QUOTES[13], LIFE_QUOTES[23]];
-  sections.push({
-    heading: "A little perspective",
-    lines: [
-      quotes[
-        Number.parseInt(digest(input.date).slice(0, 4), 16) % quotes.length
-      ] ?? "",
-    ],
-  });
-  sections.push({
-    heading: `Looking ahead: ${input.upcomingStartDate} to ${dayjs(
-      input.upcomingStartDate,
-    )
-      .add(input.cadence === "weekly" ? 6 : 7, "day")
-      .format("YYYY-MM-DD")}`,
-    lines: input.upcoming.length
-      ? input.upcoming.slice(0, 3).map(label)
-      : ["No upcoming events are on these calendars yet."],
-  });
-  sections.push({
-    heading: "What would you like to make time for?",
-    lines: [
-      "Make room for one thing that matters to you in Compass.",
-      input.appUrl,
-    ],
-  });
-  const subject = `Your Compass reflection: ${input.date}`;
-  const text = `${sections
-    .map((section) => `${section.heading}\n\n${section.lines.join("\n")}`)
-    .join("\n\n")}\n\nStop weekly reflections: ${input.unsubscribeUrl}`;
-  const html = `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f3eee2;color:#403a2f;font-family:Arial,sans-serif"><main style="max-width:600px;margin:auto;padding:24px"><h1>Your Compass reflection</h1>${sections.map((section) => `<section><h2>${escapeHtml(section.heading)}</h2>${section.lines.map((line) => (line === input.appUrl ? `<p><a href="${escapeHtml(line)}">${escapeHtml(line)}</a></p>` : `<p>${escapeHtml(line)}</p>`)).join("")}</section>`).join("")}<p><a href="${escapeHtml(input.unsubscribeUrl)}">Stop weekly reflections</a></p></main></body></html>`;
+  const quote =
+    quotes[
+      Number.parseInt(digest(input.date).slice(0, 4), 16) % quotes.length
+    ] ?? "";
+  const text = `${subject}\n\n${sections.map((section) => `${section.heading}\n${section.lines.join("\n")}`).join("\n\n")}\n\nPlan your week in Compass:\n${input.appUrl}\n\nUnsubscribe: ${input.unsubscribeUrl}\n\n${quote}`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><p><strong>${escapeHtml(subject)}</strong></p>${sections.map((section) => `<p><strong>${escapeHtml(section.heading)}</strong><br>${section.lines.map(escapeHtml).join("<br>")}</p>`).join("")}<p>Plan your week in Compass:<br><a href="${escapeHtml(input.appUrl)}">${escapeHtml(input.appUrl)}</a></p><p><a href="${escapeHtml(input.unsubscribeUrl)}">Unsubscribe</a></p><p>${escapeHtml(quote)}</p></body></html>`;
   return { subject, html, text };
 }

@@ -132,6 +132,10 @@ describe("private reflection delivery", () => {
     expect(payload?.attachments?.[0]?.filename).toBe(
       "compass-life-in-weeks-2026-11-01.png",
     );
+    expect(payload?.attachments?.[0]?.contentType).toBe("image/png");
+    expect(payload?.attachments?.[0]?.contentId).toBeUndefined();
+    expect(payload?.html).not.toContain("<img");
+    expect(payload?.html).not.toContain("cid:");
     expect(payload?.personal).toBe(true);
     expect(payload?.text).toContain("/week/2026-11-01");
     const sent = await mongoService.emailSend.findOne({ _id: row._id });
