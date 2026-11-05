@@ -111,6 +111,9 @@ export async function readReflectionPage(
             ? { _id: { $gt: input.cursor as EventRecord["_id"] } }
             : {}),
         })
+        // Atlas multi-plan trials for the window union can exceed the request
+        // deadline even when this ordered page plan executes in milliseconds.
+        .hint("reflection_principal_page")
         .sort({ _id: 1 })
         .limit(25)
         .toArray()
