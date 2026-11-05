@@ -84,7 +84,7 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testNativeLaunchShowsHeaderAndSidebar() {
+    func testDemoFixtureLaunchShowsChromeSidebarAndGridEvents() {
         let app = XCUIApplication.compassUITest()
         // Demo fixture skips the welcome modal; its modal trait hides header/sidebar from XCUITest.
         app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
@@ -96,6 +96,9 @@ final class NativeLaunchTests: XCTestCase {
             window.descendants(matching: .any)["compass-native-header"].waitForExistence(timeout: 5))
         XCTAssertTrue(
             window.descendants(matching: .any)["compass-native-sidebar"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            window.buttons["Morning standup"].waitForExistence(timeout: 10),
+            "Expected demo fixture event title on the native grid")
     }
 
     @MainActor
@@ -121,19 +124,6 @@ final class NativeLaunchTests: XCTestCase {
             "Expected demo fixture week grid after leaving Life view")
         XCTAssertFalse(
             window.descendants(matching: .any)["compass-native-life-grid"].exists)
-    }
-
-    @MainActor
-    func testFixtureLaunchShowsDemoWeekEvents() {
-        let app = XCUIApplication.compassUITest()
-        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
-        app.launch()
-
-        let window = app.windows["Compass"]
-        XCTAssertTrue(window.waitForExistence(timeout: 15))
-        XCTAssertTrue(
-            window.buttons["Morning standup"].waitForExistence(timeout: 10),
-            "Expected demo fixture event title on the native grid")
     }
 
     @MainActor
@@ -166,12 +156,12 @@ final class NativeLaunchTests: XCTestCase {
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
 
-        let pathReady = NSPredicate(format: "label == %@", "/day/2026-10-15")
-        let pathExpectation = expectation(
-            for: pathReady,
-            evaluatedWith: window,
-            handler: nil)
-        wait(for: [pathExpectation], timeout: 45)
+        let pathLabel = window.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@", "/day/2026-10-15")
+        ).firstMatch
+        XCTAssertTrue(
+            pathLabel.waitForExistence(timeout: 20),
+            "Expected day view path label after launch deep link")
     }
 
     @MainActor

@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# XcodeGen + xcodebuild for the Compass macOS app and tests.
-# Uses repo-local DerivedData so CI caches (test-macos.yml) restore cleanly.
+# Local/verify full macOS test pass: build-for-testing, kit tests, then all UI tests.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+bash "$ROOT/.github/scripts/test-macos-build-for-testing.sh"
+
 cd "$ROOT/apps/calendar-macos"
-
-xcodegen generate
-
-mkdir -p build
-
 common_args=(
   -project Compass.xcodeproj
   -scheme Compass
@@ -18,26 +14,11 @@ common_args=(
   -clonedSourcePackagesDirPath build/SourcePackages
 )
 
-parallel_args=()
-if [ "${MACOS_PARALLEL_UI_TESTS:-0}" = "1" ]; then
-  parallel_args+=(
-    -parallel-testing-enabled YES
-    -maximum-parallel-testing-workers "${MACOS_PARALLEL_TEST_WORKERS:-2}"
-  )
-fi
-
-echo "── xcodebuild build-for-testing (Compass scheme) ──"
-xcodebuild build-for-testing "${common_args[@]}"
-
 test_args=("${common_args[@]}")
 if [ -n "${MACOS_XCRESULT_PATH:-}" ]; then
   rm -rf "$MACOS_XCRESULT_PATH"
   test_args+=(-resultBundlePath "$MACOS_XCRESULT_PATH")
 fi
 
-echo "── xcodebuild test-without-building (Compass scheme) ──"
-test_cmd=(xcodebuild test-without-building "${test_args[@]}")
-if ((${#parallel_args[@]} > 0)); then
-  test_cmd+=("${parallel_args[@]}")
-fi
-"${test_cmd[@]}"
+echo "── xcodebuild test-without-building (CompassUITests, full suite) ──"
+xcodebuild test-without-building "${test_args[@]}"
