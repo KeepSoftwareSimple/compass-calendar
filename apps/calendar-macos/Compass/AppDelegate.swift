@@ -65,9 +65,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.setFrameAutosaveName(Self.windowFrameName)
         }
 
-        if let launchDeepLink = UserDefaults.standard.string(forKey: "COMPASS_LAUNCH_DEEP_LINK") {
-            nativeRootController?.receiveDeepLink(urlString: launchDeepLink)
-        }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
