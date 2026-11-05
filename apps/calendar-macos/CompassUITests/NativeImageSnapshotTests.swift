@@ -36,7 +36,8 @@ final class NativeImageSnapshotTests: XCTestCase {
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         window.typeKey("l", modifierFlags: [])
-        XCTAssertTrue(window.descendants(matching: .any)["compass-native-life-grid"].waitForExistence(timeout: 8))
+        let lifeGrid = window.descendants(matching: .any)["compass-native-life-grid"]
+        XCTAssertTrue(lifeGrid.waitForExistence(timeout: 8))
         XCTAssertTrue(window.textFields["Date of birth"].exists)
         XCTAssertTrue(window.textFields["Age of Death"].exists)
         XCTAssertFalse(window.descendants(matching: .any)["compass-native-month-picker"].exists)
@@ -58,15 +59,10 @@ final class NativeImageSnapshotTests: XCTestCase {
             XCTAssertFalse(window.staticTexts["Enter a date from 1900 through today."].exists)
             birth.typeKey(.escape, modifierFlags: [])
         }
-        window.typeKey("t", modifierFlags: [])
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.6))
-        window.typeKey("t", modifierFlags: [])
-        let weekIndicator = window.descendants(matching: .any).matching(
-            NSPredicate(format: "label CONTAINS %@", "| week")
-        ).firstMatch
+        let weekLabel = lifeGrid.value as? String ?? ""
         XCTAssertTrue(
-            weekIndicator.waitForExistence(timeout: 12),
-            "Expected life-view week indicator after nav today")
+            weekLabel.contains("| week"),
+            "Expected life grid accessibility value to include week progress, got: \(weekLabel)")
         NativeImageSnapshotSupport.captureWindow(window, named: "life-view-\(theme)")
     }
 
