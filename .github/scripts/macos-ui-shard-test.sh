@@ -3,13 +3,14 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+export ROOT
 cd "$ROOT/apps/calendar-macos"
 
 shard="${MACOS_UI_SHARD:?Set MACOS_UI_SHARD to 1-4}"
 shard_file="$ROOT/.github/macos-ui-shards.json"
 
 mapfile -t classes < <(
-  MACOS_UI_SHARD="$shard" python3 - <<'PY'
+  MACOS_UI_SHARD="$shard" ROOT="$ROOT" python3 - <<'PY'
 import json
 import os
 import sys
@@ -20,12 +21,12 @@ with open(path, encoding="utf-8") as f:
     data = json.load(f)
 classes = data.get("shards", {}).get(str(shard))
 if not classes:
-    sys.exit(f"Unknown or empty shard {shard!r}")
+    print(f"Unknown or empty shard {shard!r}", file=sys.stderr)
+    sys.exit(1)
 for name in classes:
     print(name)
 PY
 )
-export ROOT
 if ((${#classes[@]} == 0)); then
   echo "Shard $shard has no classes in $shard_file" >&2
   exit 1
