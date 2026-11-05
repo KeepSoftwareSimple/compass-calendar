@@ -158,6 +158,77 @@ describe("reflection historical reads", () => {
     expect(stalePages).toBe(3);
   });
 
+  it("paginates interleaved masters and scheduled facts without gaps or duplicates", async () => {
+    const db = storage.db();
+    const calendar = await seedProviderCalendar(
+      new ProviderCalendarRepository(db),
+    );
+    const records: ProviderEvent[] = Array.from({ length: 51 }, (_, index) => ({
+      ...singleEvent(`mixed-${index}`),
+      schedule: {
+        kind: "timed",
+        start: "2010-11-01T17:00:00Z",
+        end: "2010-11-01T18:00:00Z",
+        timeZone: "America/Denver",
+      },
+      recurrence:
+        index % 2
+          ? { kind: "seriesMaster", rules: ["RRULE:FREQ=WEEKLY;COUNT=1"] }
+          : { kind: "single" },
+    }));
+    await importCalendarEvents(
+      {
+        events: new EventRepository(db),
+        occurrences: new EventOccurrenceRepository(db, storage.client()),
+        resources: new SyncResourceRepository(db),
+        custody: fakeTokenSource,
+        reader: {
+          listEventPage: async (input) =>
+            input.window
+              ? pageOf([])
+              : pageOf(records, { nextSyncToken: "mixed" }),
+        },
+      },
+      calendar,
+      () => new Date("2026-11-02T00:00:00Z"),
+    );
+    const expected = await db
+      .collection(SYNC_COLLECTIONS.events)
+      .find({ calendarId: calendar._id })
+      .sort({ _id: 1 })
+      .toArray();
+    const input = ReflectionReadRequestSchema.parse({
+      calendarIds: [calendar._id],
+      selfEmails: [],
+      windows: [
+        {
+          key: "mixed",
+          start: "2010-11-01T00:00:00Z",
+          end: "2010-11-02T00:00:00Z",
+          startDate: "2010-11-01",
+          endDate: "2010-11-02",
+        },
+      ],
+    });
+    const ids: string[] = [];
+    let cursor: string | undefined;
+    let pages = 0;
+    do {
+      const page = await readReflectionPage(db, calendar, {
+        ...input,
+        ...(cursor ? { cursor } : {}),
+      });
+      expect(page.events.length).toBeLessThanOrEqual(25);
+      expect(page.nextCursor).not.toBe(cursor);
+      ids.push(...page.events.map((event) => event.eventId));
+      cursor = page.nextCursor ?? undefined;
+      expect(++pages).toBeLessThan(5);
+    } while (cursor);
+    expect(pages).toBe(3);
+    expect(ids).toEqual(expected.map((event) => event._id));
+    expect(new Set(ids).size).toBe(51);
+  });
+
   it("preserves all-day and offset start boundaries while pruning unrelated schedules", async () => {
     const db = storage.db();
     const calendar = await seedProviderCalendar(
