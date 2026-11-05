@@ -306,9 +306,78 @@ describe("repairCalendar", () => {
     ).toBeNull();
   });
 
+  it("retains the certified archive while a routine replacement is being read", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedImported(calendar);
+    const old = await seedEvent(calendar, "keep", 0);
+    await resources.setBootstrapState(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+      "ready",
+    );
+    await resources.recordHistoryCoverage(resource, 0, true, now());
+    const reader = Object.assign(
+      new FakeReader([
+        page([single("keep")], { nextSyncToken: "replacement" }),
+      ]),
+      { fullSnapshotOnly: true, supportsFullHistory: true },
+    );
+    const list = reader.listEventPage.bind(reader);
+    let observed = false;
+    reader.listEventPage = async (input) => {
+      const during = await resources.findById(
+        calendar.tenantId,
+        calendar.principalId,
+        resource._id,
+      );
+      expect(during?.historyCoverageVersion).toBe(1);
+      expect(during?.historySkipped).toBe(0);
+      expect(during?.activeGeneration).toBe(0);
+      expect(during?.importGeneration).toBeGreaterThan(0);
+      expect(
+        await events.findById(calendar.tenantId, calendar.principalId, old._id),
+      ).not.toBeNull();
+      observed = true;
+      return list(input);
+    };
+    const result = await repairCalendar(deps(reader), calendar, now);
+    expect(observed).toBe(true);
+    expect(result.status).toBe("repaired");
+    expect(result.resource.historyCoverageVersion).toBe(1);
+  });
+
+  it("retains a prior certificate when a refresh fails before replacing the archive", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedImported(calendar);
+    const old = await seedEvent(calendar, "keep", 0);
+    await resources.recordHistoryCoverage(resource, 0, true, now());
+    const reader = Object.assign(new FakeReader([]), {
+      fullSnapshotOnly: true,
+      supportsFullHistory: true,
+    });
+    reader.listEventPage = async () => {
+      throw new Error("temporary read failure");
+    };
+    await expect(repairCalendar(deps(reader), calendar, now)).rejects.toThrow(
+      "temporary read failure",
+    );
+    const stored = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(stored?.historyCoverageVersion).toBe(1);
+    expect(stored?.activeGeneration).toBe(0);
+    expect(
+      await events.findById(calendar.tenantId, calendar.principalId, old._id),
+    ).not.toBeNull();
+  });
+
   it("does not delete old history when a snapshot skips unusable records", async () => {
     const calendar = await seedCalendar();
-    await seedImported(calendar);
+    const prior = await seedImported(calendar);
+    await resources.recordHistoryCoverage(prior, 0, true, now());
     const old = await seedEvent(calendar, "old", 0);
     const reader = Object.assign(
       new FakeReader([
