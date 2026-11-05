@@ -27,6 +27,7 @@ import { resetNewMeetingsNoticeForTests } from "@web/booking/useNewMeetingsNotic
 import { resetCalendarVisibilityStoreForTests } from "@web/calendars/calendar-visibility.store";
 import { resetCollapsedAccountsStoreForTests } from "@web/calendars/collapsed-accounts.store";
 import { resetDefaultCalendarStoreForTests } from "@web/calendars/default-calendar.store";
+import { resetPendingShellToastForTests } from "@web/common/utils/toast/pending-shell-toast";
 import { bottomNoticeStackGateActions } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.store";
 import { resetRecentCommandsStoreForTests } from "@web/components/CommandPalette/recent-commands.store";
 import { resetConnectCalendarPromptStoreForTests } from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
@@ -116,6 +117,7 @@ const storeResets: StoreReset[] = [
   // before this runs; this just resyncs the module-singleton store to match.
   resetConnectAppleStoreForTests,
   resetMissingPermissionsStoreForTests,
+  resetPendingShellToastForTests,
   resetCalendarVisibilityStoreForTests,
   resetDefaultCalendarStoreForTests,
   resetEffectiveTimeZoneStoreForTests,

@@ -63,12 +63,7 @@ enum HTMLFragmentSanitizer {
         #"(?i)</?(p|br|b|strong|i|em|ul|ol|li|a)(\s[^>]*)?>"#
 
     static func sanitize(_ html: String) -> String {
-        var output = html
-        output = output.replacingOccurrences(
-            of: #"(?is)<script\b[^>]*>.*?</script>"#,
-            with: "",
-            options: .regularExpression
-        )
+        var output = stripScriptElements(html)
         output = output.replacingOccurrences(
             of: #"href\s*=\s*["']javascript:[^"']*["']"#,
             with: "",
@@ -90,6 +85,34 @@ enum HTMLFragmentSanitizer {
             with: "<a>",
             options: .regularExpression
         )
+        return output
+    }
+
+    /// Removes entire `<script>...</script>` blocks (including contents). Tag matching
+    /// is case-insensitive and uses substring search so script bodies are not left behind
+    /// when disallowed tags are stripped later.
+    private static func stripScriptElements(_ html: String) -> String {
+        var output = html
+        while let scriptStart = output.range(of: "<script", options: .caseInsensitive) {
+            let afterName = scriptStart.upperBound
+            guard let openTagEnd = output[afterName...].firstIndex(of: ">") else {
+                output.removeSubrange(scriptStart.lowerBound..<output.endIndex)
+                continue
+            }
+            let contentStart = output.index(after: openTagEnd)
+            if contentStart >= output.endIndex {
+                output.removeSubrange(scriptStart.lowerBound..<output.endIndex)
+                continue
+            }
+            if let closeRange = output[contentStart...].range(
+                of: "</script>",
+                options: .caseInsensitive
+            ) {
+                output.removeSubrange(scriptStart.lowerBound..<closeRange.upperBound)
+            } else {
+                output.removeSubrange(scriptStart.lowerBound..<output.endIndex)
+            }
+        }
         return output
     }
 
