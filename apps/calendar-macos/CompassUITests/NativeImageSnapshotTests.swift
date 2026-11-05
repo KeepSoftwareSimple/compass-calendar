@@ -36,10 +36,22 @@ final class NativeImageSnapshotTests: XCTestCase {
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         window.typeKey("l", modifierFlags: [])
+        let intro = window.descendants(matching: .any)["compass-native-life-view-intro-modal"]
+        if intro.waitForExistence(timeout: 2) {
+            window.typeKey(.return, modifierFlags: [])
+            XCTAssertTrue(intro.waitForNonExistence(timeout: 8))
+        }
         let lifeGrid = window.descendants(matching: .any)["compass-native-life-grid"]
         XCTAssertTrue(lifeGrid.waitForExistence(timeout: 12))
+        let birthField = window.textFields["Date of birth"]
+        if !birthField.waitForExistence(timeout: 4) {
+            for _ in 0 ..< 4 {
+                window.scrollViews.firstMatch.swipeUp()
+                if birthField.waitForExistence(timeout: 2) { break }
+            }
+        }
         XCTAssertTrue(
-            window.textFields["Date of birth"].waitForExistence(timeout: 10),
+            birthField.waitForExistence(timeout: 10),
             "Expected life-view birth date field")
         XCTAssertTrue(
             window.textFields["Age of Death"].waitForExistence(timeout: 10),
@@ -52,7 +64,7 @@ final class NativeImageSnapshotTests: XCTestCase {
                 "Each dot represents one week of your life, and each row represents one year."
             ].waitForExistence(timeout: 10))
         if theme == "light-beach" {
-            let birth = window.textFields["Date of birth"]
+            let birth = birthField
             let originalBirth = birth.value as? String ?? "2000-01-01"
             birth.click()
             birth.typeKey("a", modifierFlags: [.command])

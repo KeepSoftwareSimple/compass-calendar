@@ -16,7 +16,6 @@
     "2": [
       "CommandPaletteKeyboardTests",
       "SettingsKeyboardIsolationTests",
-      "NativeImageSnapshotTests",
       "ClientPolishUITests",
       "GoToDateKeyboardTests",
       "QuickAddDraftIsolationUITests",
@@ -30,6 +29,7 @@
       "EventFormRsvpKeyboardTests",
       "GuestEmailSubmissionTests",
       "LifeBirthDatePickerTests",
+      "NativeImageSnapshotTests",
       "DescriptionListPersistenceTests"
     ],
     "4": [
