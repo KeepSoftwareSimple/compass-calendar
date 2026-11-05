@@ -59,7 +59,9 @@ final class NativeImageSnapshotTests: XCTestCase {
             birth.typeKey(.escape, modifierFlags: [])
         }
         window.typeKey("t", modifierFlags: [])
-        XCTAssertTrue(window.buttons.matching(NSPredicate(format: "label CONTAINS %@", "| week")).firstMatch.exists)
+        XCTAssertTrue(
+            window.buttons.matching(NSPredicate(format: "label CONTAINS %@", "| week")).firstMatch
+                .waitForExistence(timeout: 8))
         NativeImageSnapshotSupport.captureWindow(window, named: "life-view-\(theme)")
     }
 

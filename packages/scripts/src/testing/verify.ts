@@ -305,7 +305,7 @@ export function planVerify(input: {
       }
       for (const macosCheck of MACOS_PACKAGE_CHECKS) {
         if (macosCheck.id === "test:macos" && macosUiTestsShardedInCi()) {
-          skips.push({
+          ciOnly.push({
             id: macosCheck.id,
             reason: MACOS_UI_SHARDED_CI_REASON,
           });
