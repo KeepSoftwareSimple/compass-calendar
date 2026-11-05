@@ -59,10 +59,13 @@ final class NativeImageSnapshotTests: XCTestCase {
             XCTAssertFalse(window.staticTexts["Enter a date from 1900 through today."].exists)
             birth.typeKey(.escape, modifierFlags: [])
         }
-        let weekLabel = lifeGrid.value as? String ?? ""
+        let weekMarker = window.descendants(matching: .any).matching(
+            NSPredicate(format: "label CONTAINS %@", "| week")
+        ).firstMatch
         XCTAssertTrue(
-            weekLabel.contains("| week"),
-            "Expected life grid accessibility value to include week progress, got: \(weekLabel)")
+            weekMarker.waitForExistence(timeout: 12),
+            "Expected life-view week label in accessibility tree, grid value: "
+                + (lifeGrid.value as? String ?? "(nil)"))
         NativeImageSnapshotSupport.captureWindow(window, named: "life-view-\(theme)")
     }
 
