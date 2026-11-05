@@ -1,4 +1,4 @@
-import { type Collection, type Db, ObjectId } from "mongodb";
+import { type Collection, type Db, type Filter, ObjectId } from "mongodb";
 import {
   type ConnectionState,
   type ConnectionStateReason,
@@ -16,6 +16,14 @@ import {
   type ProviderConnectionUpsert,
   ProviderConnectionUpsertSchema,
 } from "@sync/storage/contracts/provider-connection.contracts";
+
+// Fields every derived-state write persists together.
+type DerivedStateFields = {
+  state: ConnectionState;
+  stateReason: ConnectionStateReason | null;
+  lastSyncedAt: Date | null;
+  lastHealthyAt: Date | null;
+};
 
 // Repository for `provider_connections`. Upserts are keyed on the
 // stable provider-account identity so reconnecting the same account updates one
@@ -169,31 +177,18 @@ export class ProviderConnectionRepository {
     tenantId: TenantId,
     principalId: PrincipalId,
     id: ConnectionId,
-    fields: {
-      state: ConnectionState;
-      stateReason: ConnectionStateReason | null;
-      lastSyncedAt: Date | null;
-      lastHealthyAt: Date | null;
-    },
+    fields: DerivedStateFields,
     now: Date = new Date(),
   ): Promise<ProviderConnectionRecord> {
-    const result = await this.collection.findOneAndUpdate(
+    const record = await this.writeDerivedState(
       { _id: id, tenantId, principalId },
-      {
-        $set: {
-          state: fields.state,
-          stateReason: fields.stateReason,
-          lastSyncedAt: fields.lastSyncedAt,
-          lastHealthyAt: fields.lastHealthyAt,
-          updatedAt: now,
-        },
-      },
-      { returnDocument: "after" },
+      fields,
+      now,
     );
-    if (!result) {
+    if (!record) {
       throw new Error("Connection not found while updating derived state");
     }
-    return this.parseRecord(result);
+    return record;
   }
 
   // Persist a derived state transition only when the row still holds the
@@ -207,15 +202,10 @@ export class ProviderConnectionRepository {
       state: ConnectionState;
       stateReason: ConnectionStateReason | null;
     },
-    fields: {
-      state: ConnectionState;
-      stateReason: ConnectionStateReason | null;
-      lastSyncedAt: Date | null;
-      lastHealthyAt: Date | null;
-    },
+    fields: DerivedStateFields,
     now: Date = new Date(),
   ): Promise<ProviderConnectionRecord | null> {
-    const result = await this.collection.findOneAndUpdate(
+    return this.writeDerivedState(
       {
         _id: id,
         tenantId,
@@ -223,6 +213,20 @@ export class ProviderConnectionRepository {
         state: expected.state,
         stateReason: expected.stateReason,
       },
+      fields,
+      now,
+    );
+  }
+
+  // One derived-state write. The filter decides whether the caller is doing an
+  // unconditional update or a compare-and-set transition; null means no match.
+  private async writeDerivedState(
+    filter: Filter<ProviderConnectionRecord>,
+    fields: DerivedStateFields,
+    now: Date,
+  ): Promise<ProviderConnectionRecord | null> {
+    const result = await this.collection.findOneAndUpdate(
+      filter,
       {
         $set: {
           state: fields.state,
