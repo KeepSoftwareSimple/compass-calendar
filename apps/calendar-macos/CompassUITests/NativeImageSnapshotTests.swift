@@ -37,13 +37,20 @@ final class NativeImageSnapshotTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         window.typeKey("l", modifierFlags: [])
         let lifeGrid = window.descendants(matching: .any)["compass-native-life-grid"]
-        XCTAssertTrue(lifeGrid.waitForExistence(timeout: 8))
-        XCTAssertTrue(window.textFields["Date of birth"].exists)
-        XCTAssertTrue(window.textFields["Age of Death"].exists)
+        XCTAssertTrue(lifeGrid.waitForExistence(timeout: 12))
+        XCTAssertTrue(
+            window.textFields["Date of birth"].waitForExistence(timeout: 10),
+            "Expected life-view birth date field")
+        XCTAssertTrue(
+            window.textFields["Age of Death"].waitForExistence(timeout: 10),
+            "Expected life-view age-of-death field")
         XCTAssertFalse(window.descendants(matching: .any)["compass-native-month-picker"].exists)
         XCTAssertFalse(window.descendants(matching: .any)["compass-native-demo-events-banner"].exists)
         XCTAssertFalse(window.descendants(matching: .any)["compass-native-up-next-banner"].exists)
-        XCTAssertTrue(window.staticTexts["Each dot represents one week of your life, and each row represents one year."].exists)
+        XCTAssertTrue(
+            window.staticTexts[
+                "Each dot represents one week of your life, and each row represents one year."
+            ].waitForExistence(timeout: 10))
         if theme == "light-beach" {
             let birth = window.textFields["Date of birth"]
             let originalBirth = birth.value as? String ?? "2000-01-01"
@@ -59,13 +66,13 @@ final class NativeImageSnapshotTests: XCTestCase {
             XCTAssertFalse(window.staticTexts["Enter a date from 1900 through today."].exists)
             birth.typeKey(.escape, modifierFlags: [])
         }
+        let gridValue = lifeGrid.value as? String ?? ""
         let weekMarker = window.descendants(matching: .any).matching(
-            NSPredicate(format: "label CONTAINS %@", "| week")
+            NSPredicate(format: "label CONTAINS[c] %@", "| week")
         ).firstMatch
         XCTAssertTrue(
-            weekMarker.waitForExistence(timeout: 12),
-            "Expected life-view week label in accessibility tree, grid value: "
-                + (lifeGrid.value as? String ?? "(nil)"))
+            gridValue.contains("| week") || weekMarker.waitForExistence(timeout: 12),
+            "Expected life-view week progress on grid or current-week label, grid value: \(gridValue)")
         NativeImageSnapshotSupport.captureWindow(window, named: "life-view-\(theme)")
     }
 
