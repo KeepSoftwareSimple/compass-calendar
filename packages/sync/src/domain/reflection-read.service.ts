@@ -1,4 +1,4 @@
-import { type Db } from "mongodb";
+import { type Db, type Filter } from "mongodb";
 import { type DateTime } from "@core/types/domain-primitives";
 import {
   type PrincipalId,
@@ -92,32 +92,48 @@ export async function readReflectionPage(
     .map((bound) => bound.end)
     .sort()
     .at(-1);
-  const rows = input.windows.length
-    ? await collection
-        .find({
-          ...filter,
-          $or: [
-            {
-              "recurrence.kind": "seriesMaster",
-              "schedule.start": { $lt: latestEnd! },
-            },
-            ...bounds.map((bound) => ({
-              "recurrence.kind": { $in: ["single", "exception"] },
-              "schedule.start": { $lt: bound.end },
-              "schedule.end": { $gte: bound.start },
-            })),
-          ],
-          ...(input.cursor
-            ? { _id: { $gt: input.cursor as EventRecord["_id"] } }
-            : {}),
-        })
-        // Atlas multi-plan trials for the window union can exceed the request
-        // deadline even when this ordered page plan executes in milliseconds.
-        .hint("reflection_principal_page")
-        .sort({ _id: 1 })
-        .limit(25)
-        .toArray()
-    : [];
+  const rows: EventRecord[] = [];
+  if (latestEnd) {
+    // Separate masters from scheduled facts so each query can bound the
+    // kind/start index. One union with a page-index hint scans the whole
+    // archive for sparse years; unhinted unions spend the deadline planning.
+    const candidates: Filter<EventRecord>[] = [
+      {
+        "recurrence.kind": "seriesMaster",
+        "schedule.start": { $lt: latestEnd },
+      },
+      {
+        "recurrence.kind": { $in: ["single", "exception"] },
+        $or: bounds.map((bound) => ({
+          "schedule.start": { $gte: bound.start, $lt: bound.end },
+        })),
+      },
+    ];
+    const pages = await Promise.all(
+      candidates.map((candidate) =>
+        collection
+          .find({
+            ...filter,
+            ...candidate,
+            ...(input.cursor
+              ? { _id: { $gt: input.cursor as EventRecord["_id"] } }
+              : {}),
+          })
+          .hint("reflection_principal_kind_start")
+          .sort({ _id: 1 })
+          .limit(25)
+          .toArray(),
+      ),
+    );
+    // Both disjoint streams share the same exclusive cursor. Their first 25
+    // contain the union's first 25. UTF-8 comparison matches Mongo's ID order.
+    rows.push(
+      ...pages
+        .flat()
+        .sort((a, b) => Buffer.compare(Buffer.from(a._id), Buffer.from(b._id)))
+        .slice(0, 25),
+    );
+  }
   const records = rows.map((row) => EventReadSchema.parse(row));
   const exceptions = await new EventRepository(
     db,
