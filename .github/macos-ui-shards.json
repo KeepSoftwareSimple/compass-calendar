@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "comment": "Hand-balanced by measured CI class durations (2026-11-04 strict logs). Every CompassUITests *Tests class must appear exactly once.",
+  "shards": {
+    "1": [
+      "NativeLaunchTests",
+      "EventFormAllDayTests",
+      "EventJumpDayPrefixUITests",
+      "WelcomeBodyKeyboardTests",
+      "AnonymousCalendarRowTests",
+      "DescriptionLinkCopyShortcutTests",
+      "EventFormFooterLayoutTests",
+      "EventFormSaveButtonTests",
+      "BookedMeetingActionsTests"
+    ],
+    "2": [
+      "CommandPaletteKeyboardTests",
+      "SettingsKeyboardIsolationTests",
+      "ClientPolishUITests",
+      "GoToDateKeyboardTests",
+      "QuickAddDraftIsolationUITests",
+      "EventFormMeetingLinkCopyShortcutTests"
+    ],
+    "3": [
+      "EventFormTitleKeyboardTests",
+      "EventFormRecurrenceTests",
+      "EventFormActionsKeyboardTests",
+      "EventFormCalendarKeyboardTests",
+      "EventFormRsvpKeyboardTests",
+      "GuestEmailSubmissionTests",
+      "LifeBirthDatePickerTests",
+      "NativeImageSnapshotTests",
+      "DescriptionListPersistenceTests"
+    ],
+    "4": [
+      "EventFormDateKeysTests",
+      "EventFormLayoutTests",
+      "EventFormDescriptionKeyboardTests",
+      "WelcomeKeyboardTests",
+      "SidebarResizeKeyboardTests",
+      "EventFormLocationKeyboardTests",
+      "SidebarMonthPickerTests",
+      "EventFormMeetingLinkFocusTests",
+      "WindowChromeLayoutTests",
+      "EventFormGuestsKeyboardTests",
+      "AccessibilityIdentifierAuditTests",
+      "DescriptionBulletSelectionTests",
+      "DescriptionEditorFormattingTests",
+      "NativeParityCaptureTests"
+    ]
+  }
+}

@@ -84,7 +84,7 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testNativeLaunchShowsHeaderAndSidebar() {
+    func testDemoFixtureLaunchShowsChromeSidebarAndGridEvents() {
         let app = XCUIApplication.compassUITest()
         // Demo fixture skips the welcome modal; its modal trait hides header/sidebar from XCUITest.
         app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
@@ -96,6 +96,9 @@ final class NativeLaunchTests: XCTestCase {
             window.descendants(matching: .any)["compass-native-header"].waitForExistence(timeout: 5))
         XCTAssertTrue(
             window.descendants(matching: .any)["compass-native-sidebar"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            window.buttons["Morning standup"].waitForExistence(timeout: 10),
+            "Expected demo fixture event title on the native grid")
     }
 
     @MainActor
@@ -121,19 +124,6 @@ final class NativeLaunchTests: XCTestCase {
             "Expected demo fixture week grid after leaving Life view")
         XCTAssertFalse(
             window.descendants(matching: .any)["compass-native-life-grid"].exists)
-    }
-
-    @MainActor
-    func testFixtureLaunchShowsDemoWeekEvents() {
-        let app = XCUIApplication.compassUITest()
-        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
-        app.launch()
-
-        let window = app.windows["Compass"]
-        XCTAssertTrue(window.waitForExistence(timeout: 15))
-        XCTAssertTrue(
-            window.buttons["Morning standup"].waitForExistence(timeout: 10),
-            "Expected demo fixture event title on the native grid")
     }
 
     @MainActor
@@ -207,11 +197,14 @@ final class NativeLaunchTests: XCTestCase {
         let palette = window.descendants(matching: .any)["compass-native-command-palette"]
         XCTAssertTrue(palette.waitForExistence(timeout: 5))
 
-        let todayItem = window.descendants(matching: .any)["compass-native-palette-item-today"]
-        XCTAssertTrue(todayItem.waitForExistence(timeout: 5))
-        todayItem.click()
+        let search = window.textFields["compass-native-command-palette-search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        let today = window.buttons["compass-native-palette-item-today"]
+        XCTAssertTrue(today.waitForExistence(timeout: 5))
+        XCTAssertEqual(today.value as? String, "Selected")
+        search.typeKey(.return, modifierFlags: [])
 
-        XCTAssertFalse(palette.waitForExistence(timeout: 2))
+        XCTAssertTrue(palette.waitForNonExistence(timeout: 2))
         XCTAssertTrue(
             window.staticTexts["Morning standup"].waitForExistence(timeout: 10),
             "Expected demo week grid after Go to Today")
