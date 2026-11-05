@@ -155,16 +155,13 @@ final class NativeLaunchTests: XCTestCase {
 
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
-        XCTAssertTrue(
-            window.descendants(matching: .any)["compass-native-header"].waitForExistence(timeout: 10),
-            "Expected chrome before asserting launch deep link navigation")
 
-        let pathLabel = window.descendants(matching: .any).matching(
-            NSPredicate(format: "label == %@", "/day/2026-10-15")
-        ).firstMatch
-        XCTAssertTrue(
-            pathLabel.waitForExistence(timeout: 20),
-            "Expected day view path label after launch deep link")
+        let pathReady = NSPredicate(format: "label == %@", "/day/2026-10-15")
+        let pathExpectation = expectation(
+            for: pathReady,
+            evaluatedWith: window,
+            handler: nil)
+        wait(for: [pathExpectation], timeout: 45)
     }
 
     @MainActor

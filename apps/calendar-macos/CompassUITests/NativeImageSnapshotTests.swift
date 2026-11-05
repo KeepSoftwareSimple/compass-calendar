@@ -41,30 +41,15 @@ final class NativeImageSnapshotTests: XCTestCase {
             window.typeKey(.return, modifierFlags: [])
             XCTAssertTrue(intro.waitForNonExistence(timeout: 8))
         }
-        let lifeGrid = window.descendants(matching: .any)["compass-native-life-grid"]
-        XCTAssertTrue(lifeGrid.waitForExistence(timeout: 12))
-        let birthField = window.textFields["Date of birth"]
-        if !birthField.waitForExistence(timeout: 4) {
-            for _ in 0 ..< 4 {
-                window.scrollViews.firstMatch.swipeUp()
-                if birthField.waitForExistence(timeout: 2) { break }
-            }
-        }
-        XCTAssertTrue(
-            birthField.waitForExistence(timeout: 10),
-            "Expected life-view birth date field")
-        XCTAssertTrue(
-            window.textFields["Age of Death"].waitForExistence(timeout: 10),
-            "Expected life-view age-of-death field")
+        XCTAssertTrue(window.descendants(matching: .any)["compass-native-life-grid"].waitForExistence(timeout: 8))
+        XCTAssertTrue(window.textFields["Date of birth"].exists)
+        XCTAssertTrue(window.textFields["Age of Death"].exists)
         XCTAssertFalse(window.descendants(matching: .any)["compass-native-month-picker"].exists)
         XCTAssertFalse(window.descendants(matching: .any)["compass-native-demo-events-banner"].exists)
         XCTAssertFalse(window.descendants(matching: .any)["compass-native-up-next-banner"].exists)
-        XCTAssertTrue(
-            window.staticTexts[
-                "Each dot represents one week of your life, and each row represents one year."
-            ].waitForExistence(timeout: 10))
+        XCTAssertTrue(window.staticTexts["Each dot represents one week of your life, and each row represents one year."].exists)
         if theme == "light-beach" {
-            let birth = birthField
+            let birth = window.textFields["Date of birth"]
             let originalBirth = birth.value as? String ?? "2000-01-01"
             birth.click()
             birth.typeKey("a", modifierFlags: [.command])
@@ -78,13 +63,8 @@ final class NativeImageSnapshotTests: XCTestCase {
             XCTAssertFalse(window.staticTexts["Enter a date from 1900 through today."].exists)
             birth.typeKey(.escape, modifierFlags: [])
         }
-        let gridValue = lifeGrid.value as? String ?? ""
-        let weekMarker = window.descendants(matching: .any).matching(
-            NSPredicate(format: "label CONTAINS[c] %@", "| week")
-        ).firstMatch
-        XCTAssertTrue(
-            gridValue.contains("| week") || weekMarker.waitForExistence(timeout: 12),
-            "Expected life-view week progress on grid or current-week label, grid value: \(gridValue)")
+        window.typeKey("t", modifierFlags: [])
+        XCTAssertTrue(window.buttons.matching(NSPredicate(format: "label CONTAINS %@", "| week")).firstMatch.exists)
         NativeImageSnapshotSupport.captureWindow(window, named: "life-view-\(theme)")
     }
 
