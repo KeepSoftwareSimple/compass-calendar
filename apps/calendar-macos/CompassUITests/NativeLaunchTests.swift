@@ -155,6 +155,9 @@ final class NativeLaunchTests: XCTestCase {
 
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
+        XCTAssertTrue(
+            window.descendants(matching: .any)["compass-native-header"].waitForExistence(timeout: 10),
+            "Expected chrome before asserting launch deep link navigation")
 
         let pathLabel = window.descendants(matching: .any).matching(
             NSPredicate(format: "label == %@", "/day/2026-10-15")

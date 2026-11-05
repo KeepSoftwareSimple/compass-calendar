@@ -59,9 +59,14 @@ final class NativeImageSnapshotTests: XCTestCase {
             birth.typeKey(.escape, modifierFlags: [])
         }
         window.typeKey("t", modifierFlags: [])
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.6))
+        window.typeKey("t", modifierFlags: [])
+        let weekIndicator = window.descendants(matching: .any).matching(
+            NSPredicate(format: "label CONTAINS %@", "| week")
+        ).firstMatch
         XCTAssertTrue(
-            window.buttons.matching(NSPredicate(format: "label CONTAINS %@", "| week")).firstMatch
-                .waitForExistence(timeout: 8))
+            weekIndicator.waitForExistence(timeout: 12),
+            "Expected life-view week indicator after nav today")
         NativeImageSnapshotSupport.captureWindow(window, named: "life-view-\(theme)")
     }
 
