@@ -29,4 +29,10 @@ describe("macOS UI shard assignment", () => {
     expect(workflow).toContain("MACOS_UI_SHARD:");
     expect(workflow).toContain("macos-ui-shard-test.sh");
   });
+
+  it("includes UI test and app sources in the Xcode DerivedData cache key", () => {
+    const workflow = readFileSync(".github/workflows/test-macos.yml", "utf8");
+    expect(workflow).toContain("apps/calendar-macos/CompassUITests/**");
+    expect(workflow).toContain("xcode-sparkle-v2");
+  });
 });

@@ -141,8 +141,9 @@ jobs:
             apps/calendar-macos/build/SourcePackages
           # Bump when SPM binary artifacts (Sparkle) change; stale DerivedData can
           # skip ProcessXCFramework and break the embed copy step.
-          key: ${{ runner.os }}-xcode-sparkle-v1-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved') }}
+          key: ${{ runner.os }}-xcode-sparkle-v2-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved', 'apps/calendar-macos/CompassUITests/**', 'apps/calendar-macos/Compass/**', 'apps/calendar-macos/CompassUI/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassKit/**') }}
           restore-keys: |
+            ${{ runner.os }}-xcode-sparkle-v2-
             ${{ runner.os }}-xcode-
 
       - name: Build for testing and run CompassKitTests
@@ -195,8 +196,9 @@ jobs:
           path: |
             apps/calendar-macos/build/DerivedData
             apps/calendar-macos/build/SourcePackages
-          key: ${{ runner.os }}-xcode-sparkle-v1-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved') }}
+          key: ${{ runner.os }}-xcode-sparkle-v2-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved', 'apps/calendar-macos/CompassUITests/**', 'apps/calendar-macos/Compass/**', 'apps/calendar-macos/CompassUI/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassKit/**') }}
           restore-keys: |
+            ${{ runner.os }}-xcode-sparkle-v2-
             ${{ runner.os }}-xcode-
 
       - name: Run UI test shard
@@ -249,8 +251,9 @@ jobs:
           path: |
             apps/calendar-macos/build/DerivedData
             apps/calendar-macos/build/SourcePackages
-          key: ${{ runner.os }}-xcode-sparkle-v1-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved') }}
+          key: ${{ runner.os }}-xcode-sparkle-v2-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved', 'apps/calendar-macos/CompassUITests/**', 'apps/calendar-macos/Compass/**', 'apps/calendar-macos/CompassUI/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassKit/**') }}
           restore-keys: |
+            ${{ runner.os }}-xcode-sparkle-v2-
             ${{ runner.os }}-xcode-
       - name: Restore SwiftPM build directories
         id: swift-cache
