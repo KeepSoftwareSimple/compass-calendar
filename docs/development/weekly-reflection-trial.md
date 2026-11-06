@@ -107,7 +107,8 @@ when a confirmed birthday exists, the named PDF. The PDF contains the Life View
 image and a clickable link to the configured app's `/life` page. `--output <directory>` selects
 another directory. Use a Sunday date for `--weekly`. Inspect the daily and Sunday
 date windows, factual event titles, week/month memory labels, quote, plain app
-URL, life-grid percentage, and opened PDF at desktop and phone widths.
+URL, the email's life percentage, and the PDF grid and footer link at desktop
+and phone widths.
 Previews may show an incomplete-history notice. General enrollment cannot bypass
 the coverage gate. Previews do not create a real send or call the email provider.
 
