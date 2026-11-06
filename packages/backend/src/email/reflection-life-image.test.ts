@@ -35,8 +35,11 @@ describe("reflection life image", () => {
     expect(svg).toContain("Your Life In Weeks");
     expect(svg).toContain("https://example.com/life");
     expect(svg).not.toMatch(/font-size="(?:18|24)"/);
-    expect(svg).toContain("Each dot is a week of your life.");
-    expect(svg.indexOf("Filled: lived.")).toBeLessThan(svg.indexOf('y="161"'));
+    expect(svg).toContain(
+      "Each square is a week. Filled: lived. Outlined: this week.",
+    );
+    expect(svg.match(/Filled:/g)).toHaveLength(1);
+    expect(svg.indexOf("Filled: lived.")).toBeLessThan(svg.indexOf('y="119"'));
     expect(svg).toContain('fill="white"');
     expect(svg).not.toContain("completed weeks");
     expect(svg).not.toContain("U.S. reference");
