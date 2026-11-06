@@ -23,7 +23,6 @@ export function CalendarNowTimeLabel({
           : "c-now-time-label-pill left-0 -translate-x-full -translate-y-1/2 rounded-full border border-accent/35 bg-background px-0.5 py-px text-center font-medium text-[9px] leading-none shadow-[0_0_0_1px_var(--color-background)]",
       )}
       data-testid="now-time-label"
-      data-now-label-variant={variant}
       style={{
         top: `${topPercent}%`,
         zIndex: ZIndex.LAYER_3,
