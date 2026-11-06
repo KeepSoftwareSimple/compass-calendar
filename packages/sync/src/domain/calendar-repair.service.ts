@@ -84,7 +84,11 @@ export async function repairCalendar(
     resource._id,
     now(),
   );
-  await deps.resources.recordHistoryCoverage(resource, 0, false, now());
+  // A routine replacement retains its previously certified active archive.
+  // Initial/legacy history stays uncertified until the complete pass succeeds.
+  if (resource.historyCoverageVersion !== 1) {
+    await deps.resources.recordHistoryCoverage(resource, 0, false, now());
+  }
 
   // Reuse an in-flight repair generation (a previous attempt bumped it but never
   // activated) instead of starting yet another; otherwise begin a fresh one.
@@ -153,7 +157,19 @@ export async function repairCalendar(
       await deps.resources.setRepairCheckpoint(resource, pageToken, skipped);
     }
   } while (pageToken);
-  skipped += (await applier.finish()).orphans;
+  skipped += (await applier.finish({ fullSnapshot: true })).orphans;
+
+  // One certification decision for the whole pass: a completed, gap-free read
+  // from a reader that serves full history. Anything else revokes the archive
+  // before activation/cleanup, so reads never flip onto an uncertified
+  // generation. A transient failure before completion leaves the old archive.
+  const certified =
+    Boolean(cursor) &&
+    skipped === 0 &&
+    deps.reader.supportsFullHistory === true;
+  if (!certified) {
+    await deps.resources.recordHistoryCoverage(resource, skipped, false, now());
+  }
 
   if (!cursor || (deps.reader.fullSnapshotOnly && skipped > 0)) {
     // An unusable completed pass must restart from the beginning, including
@@ -270,7 +286,7 @@ export async function repairCalendar(
   await deps.resources.recordHistoryCoverage(
     resource,
     skipped,
-    deps.reader.supportsFullHistory === true,
+    certified,
     now(),
   );
 

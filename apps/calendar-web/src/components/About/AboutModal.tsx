@@ -1,11 +1,15 @@
+import { ArticleIcon } from "@phosphor-icons/react/dist/csr/Article";
 import { GithubLogoIcon } from "@phosphor-icons/react/dist/csr/GithubLogo";
 import { LinkedinLogoIcon } from "@phosphor-icons/react/dist/csr/LinkedinLogo";
 import { XLogoIcon } from "@phosphor-icons/react/dist/csr/XLogo";
-import { type FC, useState } from "react";
-import { SOCIAL_LINKS } from "@web/common/constants/social.constants";
+import classNames from "classnames";
+import { type FC, useCallback, useState } from "react";
 import { APP_VERSION } from "@web/common/constants/version.constants";
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
+import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
+import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import { StableLabel } from "@web/components/StableLabel/StableLabel";
 import {
   selectIsAboutOpen,
   settingsActions,
@@ -13,15 +17,22 @@ import {
 } from "@web/settings/settings.store";
 import { usePaletteAwareOverlayDismiss } from "@web/settings/usePaletteAwareOverlayDismiss";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
+import {
+  ABOUT_SOCIAL_LINKS,
+  ABOUT_SOCIAL_SHORTCUTS,
+  COPY_VERSION_SHORTCUT,
+} from "./about-modal.constants";
+import { useAboutModalShortcuts } from "./useAboutModalShortcuts";
 
 const SOCIAL_ICONS = {
   x: XLogoIcon,
   linkedin: LinkedinLogoIcon,
   github: GithubLogoIcon,
+  blog: ArticleIcon,
 } as const;
 
 const OUTLINE_BUTTON_CLASSNAME =
-  "c-focus-ring shrink-0 rounded border border-border bg-surface-overlay px-2 py-1 text-xs text-text transition-colors hover:bg-surface-panel";
+  "c-focus-ring inline-flex shrink-0 items-center rounded border border-border bg-surface-overlay px-2 py-1 text-xs text-text transition-colors hover:bg-surface-panel";
 
 const COPIED_LABEL_DURATION_MS = 2000;
 
@@ -35,15 +46,17 @@ export const AboutModal: FC = () => {
   );
   useAppLockReason("aboutModal", isOpen);
 
-  if (!isOpen) return null;
-
-  const handleCopyVersion = () => {
+  const handleCopyVersion = useCallback(() => {
     void copyText(APP_VERSION).then((didCopy) => {
       if (!didCopy) return;
       setCopied(true);
       window.setTimeout(() => setCopied(false), COPIED_LABEL_DURATION_MS);
     });
-  };
+  }, []);
+
+  useAboutModalShortcuts(isOpen, handleCopyVersion);
+
+  if (!isOpen) return null;
 
   return (
     <OverlayPanel
@@ -63,12 +76,16 @@ export const AboutModal: FC = () => {
             onClick={handleCopyVersion}
             type="button"
           >
-            {copied ? "Copied" : "Copy"}
+            <StableLabel labels={["Copy", "Copied"]}>
+              {copied ? "Copied" : "Copy"}
+            </StableLabel>
+            <ShortcutKeys className="ml-1.5" keys={COPY_VERSION_SHORTCUT} />
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          {SOCIAL_LINKS.map(({ id, label, href }) => {
+        <div className="flex flex-wrap items-center gap-3">
+          {ABOUT_SOCIAL_LINKS.map(({ id, label, href }) => {
             const SocialIcon = SOCIAL_ICONS[id];
+            const shortcut = ABOUT_SOCIAL_SHORTCUTS[id];
             return (
               <a
                 key={id}
@@ -76,9 +93,12 @@ export const AboutModal: FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={label}
-                className="c-focus-ring text-text-muted transition-colors hover:text-text"
+                className={classNames(
+                  "c-focus-ring inline-flex shrink-0 items-center gap-1 text-text-muted transition-colors hover:text-text",
+                )}
               >
                 <SocialIcon size={18} weight="bold" />
+                <ShortcutHint>{shortcut}</ShortcutHint>
               </a>
             );
           })}

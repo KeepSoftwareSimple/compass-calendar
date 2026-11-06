@@ -9,7 +9,9 @@ enum NativeAccessibilityProbes {
 
     @MainActor
     static func publishDeepLinkNavigationPath(_ path: String?, on window: NSWindow?) {
-        window?.setAccessibilityLabel(path)
+        guard let window else { return }
+        window.setAccessibilityLabel(path)
+        NSAccessibility.post(element: window, notification: .valueChanged)
     }
 
     @MainActor

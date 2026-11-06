@@ -103,10 +103,12 @@ bun cli reflection preview --user-id <user-id> --weekly --date 2026-11-08
 ```
 
 The default output is a temporary directory containing HTML, plain text, and,
-when a confirmed birthday exists, the named PNG. `--output <directory>` selects
+when a confirmed birthday exists, the named PDF. The PDF contains the Life View
+image and a clickable link to the configured app's `/life` page. `--output <directory>` selects
 another directory. Use a Sunday date for `--weekly`. Inspect the daily and Sunday
 date windows, factual event titles, week/month memory labels, quote, plain app
-URL, life-grid count, and opened PNG at desktop and phone widths.
+URL, the email's life percentage, and the PDF grid and footer link at desktop
+and phone widths.
 Previews may show an incomplete-history notice. General enrollment cannot bypass
 the coverage gate. Previews do not create a real send or call the email provider.
 
@@ -127,7 +129,7 @@ scheduled for 10:30 a.m. in the saved timezone, with DST observed. A send that
 cannot be attempted by local noon expires instead of replaying old morning
 editions later. There is no automatic immediate-send command.
 
-Verify an actual received email and its PNG attachment in the user's email
+Verify an actual received email and its PDF attachment in the user's email
 client before considering inbox presentation validated. Do not infer inbox
 delivery from a local render or a provider acceptance response.
 

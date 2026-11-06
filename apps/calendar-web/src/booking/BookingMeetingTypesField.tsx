@@ -21,26 +21,67 @@ import {
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { OverlayPanelActionButton } from "@web/components/OverlayPanel/OverlayPanel";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { settingsShortcutAttrs } from "@web/settings/useSettingsShortcuts";
+import {
+  settingsShortcutAttrs,
+  settingsShortcutSelector,
+} from "@web/settings/useSettingsShortcuts";
+import {
+  hasAnyModifier,
+  isPlainEnterKey,
+} from "@web/shortcuts/keyboard-modifiers.util";
 
 export const MEETING_TYPE_ROW_ATTR = "data-meeting-type-row";
+export const MEETING_TYPE_KEYBOARD_HINT_LABEL =
+  "Meeting type keyboard shortcuts";
 const NAME_CAPTION_ID = "booking-meeting-type-name-caption";
 const DURATION_CAPTION_ID = "booking-meeting-type-duration-caption";
 
-const labelInputId = (id: string) => `booking-meeting-type-label-${id}`;
+const LABEL_INPUT_ID_PREFIX = "booking-meeting-type-label-";
+const labelInputId = (id: string) => `${LABEL_INPUT_ID_PREFIX}${id}`;
+const ADD_TYPE_SELECTOR = settingsShortcutSelector("add-meeting-type");
 
 type Focus = { kind: "label" | "row"; id: string } | { kind: "add" };
 
-const hasModifier = (event: KeyboardEvent<HTMLElement>) =>
-  event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
+/** Where keyboard focus sits within the meeting-type list (not Add type). */
+type MeetingTypeKeyboardFocus = "outside" | "row" | "name" | "control";
 
 const isRowDeleteKey = (event: KeyboardEvent<HTMLElement>) =>
-  (event.key === "Delete" || event.key === "Backspace") && !hasModifier(event);
+  (event.key === "Delete" || event.key === "Backspace") &&
+  !hasAnyModifier(event);
 
+// Enter must not commit a name mid-composition (IME candidate selection).
 const isEnterKey = (event: KeyboardEvent<HTMLElement>) =>
-  event.key === "Enter" &&
-  !hasModifier(event) &&
-  !event.nativeEvent.isComposing;
+  isPlainEnterKey(event) && !event.nativeEvent.isComposing;
+
+const isEscapeKey = (event: KeyboardEvent<HTMLElement>) =>
+  event.key === "Escape" && !hasAnyModifier(event);
+
+const meetingTypeKeyboardFocus = (
+  root: HTMLElement | null,
+  target: EventTarget | null,
+): MeetingTypeKeyboardFocus => {
+  const el = target instanceof HTMLElement ? target : null;
+  if (!el || !root?.contains(el)) return "outside";
+  if (el.closest(ADD_TYPE_SELECTOR)) return "outside";
+  const row = el.closest<HTMLElement>(`[${MEETING_TYPE_ROW_ATTR}]`);
+  if (!row) return "outside";
+  if (el === row) return "row";
+  if (el instanceof HTMLInputElement && el.id.startsWith(LABEL_INPUT_ID_PREFIX))
+    return "name";
+  return "control";
+};
+
+const meetingTypeKeyboardHintText = (
+  focus: MeetingTypeKeyboardFocus,
+): string => {
+  if (focus === "name") {
+    return "Enter or Escape returns focus to the type row. Delete and Backspace edit the name only.";
+  }
+  if (focus === "row") {
+    return "Enter edits the name. Delete removes this meeting type.";
+  }
+  return "Focus the type row (Tab), then Enter edits the name and Delete removes the type.";
+};
 
 interface BookingMeetingTypesFieldProps {
   form: Pick<AdminPutBookingPageInput, "durationMinutes" | "meetingTypes">;
@@ -50,9 +91,10 @@ interface BookingMeetingTypesFieldProps {
 
 /**
  * One to three meeting types. T adds one (Settings shortcut). On a focused
- * row, Enter edits its name and Delete removes it; Enter in the name returns
- * to the row. Delete only acts on the row itself, never while typing in its
- * name, so editing text keeps Backspace and Delete.
+ * row, Enter edits its name and Delete removes it; Enter or Escape in the name
+ * returns to the row. Delete only acts on the row itself, never while typing in
+ * its name, so editing text keeps Backspace and Delete. Footer keycaps match
+ * the focused control.
  */
 export function BookingMeetingTypesField({
   form,
@@ -66,6 +108,8 @@ export function BookingMeetingTypesField({
   const errorAnchorIndex = types.findIndex((type) => type.label.trim() === "");
   const rootRef = useRef<HTMLDivElement>(null);
   const [pendingFocus, setPendingFocus] = useState<Focus | null>(null);
+  const [keyboardFocus, setKeyboardFocus] =
+    useState<MeetingTypeKeyboardFocus>("outside");
 
   useLayoutEffect(() => {
     if (!pendingFocus) return;
@@ -74,9 +118,7 @@ export function BookingMeetingTypesField({
     if (!root) return;
     const target =
       pendingFocus.kind === "add"
-        ? root.querySelector<HTMLElement>(
-            '[data-settings-shortcut="add-meeting-type"]',
-          )
+        ? root.querySelector<HTMLElement>(ADD_TYPE_SELECTOR)
         : pendingFocus.kind === "label"
           ? root.querySelector<HTMLElement>(
               `#${CSS.escape(labelInputId(pendingFocus.id))}`,
@@ -104,7 +146,20 @@ export function BookingMeetingTypesField({
   };
 
   return (
-    <div className="flex flex-col gap-2" ref={rootRef}>
+    <div
+      className="flex flex-col gap-2"
+      onBlurCapture={(event) => {
+        const next = event.relatedTarget;
+        if (next instanceof Node && rootRef.current?.contains(next)) return;
+        setKeyboardFocus("outside");
+      }}
+      onFocusCapture={(event) => {
+        setKeyboardFocus(
+          meetingTypeKeyboardFocus(rootRef.current, event.target),
+        );
+      }}
+      ref={rootRef}
+    >
       <div
         aria-hidden="true"
         className="grid grid-cols-[minmax(0,1fr)_8rem_4.5rem] gap-2 px-1"
@@ -155,6 +210,12 @@ export function BookingMeetingTypesField({
                   onChange(setMeetingTypeLabel(form, index, event.target.value))
                 }
                 onKeyDown={(event) => {
+                  if (isEscapeKey(event)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setPendingFocus({ kind: "row", id: type.id });
+                    return;
+                  }
                   if (!isEnterKey(event)) return;
                   event.preventDefault();
                   event.stopPropagation();
@@ -226,11 +287,30 @@ export function BookingMeetingTypesField({
         >
           Add type
         </OverlayPanelActionButton>
-        <p className="flex pointer-coarse:hidden items-center gap-1 text-text-muted text-xs">
-          <ShortcutKeys keys="Enter" />
-          <span>edits</span>
-          <ShortcutKeys className="ml-1" keys="Delete" />
-          <span>removes a focused type</span>
+        <p
+          aria-label={MEETING_TYPE_KEYBOARD_HINT_LABEL}
+          className="flex pointer-coarse:hidden items-center gap-1 text-text-muted text-xs"
+          role="status"
+        >
+          <span className="sr-only">
+            {meetingTypeKeyboardHintText(keyboardFocus)}
+          </span>
+          {keyboardFocus === "name" ? (
+            <>
+              <ShortcutKeys keys="Enter" />
+              <span aria-hidden>or</span>
+              <ShortcutKeys keys="Escape" />
+              <span aria-hidden>returns to row</span>
+            </>
+          ) : (
+            <>
+              {keyboardFocus !== "row" && <span aria-hidden>On row:</span>}
+              <ShortcutKeys keys="Enter" />
+              <span aria-hidden>edits name</span>
+              <ShortcutKeys className="ml-1" keys="Delete" />
+              <span aria-hidden>removes type</span>
+            </>
+          )}
         </p>
       </div>
     </div>

@@ -1,0 +1,102 @@
+name: macOS parity loop
+
+# Scoped maintenance loop for native/web parity. Does not replace AGENT_LOOP.
+# Contract: docs/CI-CD/macos-parity-loop-routine.md
+#
+# Kill switch: repo variable MACOS_PARITY_LOOP_ENABLED (string "true"; default off).
+
+on:
+  workflow_dispatch:
+    inputs:
+      stable_key:
+        description: Stable task key to launch (blank = pick next eligible task)
+        required: false
+        type: string
+  schedule:
+    - cron: "15 * * * *"
+  workflow_run:
+    workflows: ["Release on main"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ingest-merge:
+    name: Record merge delta
+    if: >-
+      vars.MACOS_PARITY_LOOP_ENABLED == 'true' &&
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Preview merge delta on parent issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          FROM_SHA=$(python3 -c 'import json; print(json.load(open("docs/acceptance/macos-parity/incremental-stream.json"))["reviewedWatermark"])')
+          paths_file=$(mktemp)
+          git diff --name-only "$FROM_SHA" "$MERGE_SHA" >"$paths_file"
+          summary=$(python3 -B docs/acceptance/macos-parity/parity_loop.py ingest \
+            --merge-sha "$MERGE_SHA" --paths "$paths_file" --dry-run || true)
+          body_file=$(mktemp)
+          {
+            echo "macos-parity-loop: merge ${MERGE_SHA} since watermark ${FROM_SHA}."
+            echo
+            echo '```'
+            printf '%s\n' "$summary"
+            echo '```'
+            echo
+            echo 'Land reviewed entries by advancing reviewedWatermark in an accounting PR.'
+          } >"$body_file"
+          gh issue comment 4783 --body-file "$body_file"
+
+  kick:
+    name: Pick and launch parity worker
+    if: >-
+      vars.MACOS_PARITY_LOOP_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: macos-parity-loop
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Use dispatched stable key
+        id: given
+        if: github.event_name == 'workflow_dispatch' && inputs.stable_key != ''
+        run: |
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "stable_key=${{ inputs.stable_key }}" >> "$GITHUB_OUTPUT"
+
+      - name: Pick next task
+        id: next
+        if: steps.given.outputs.found != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/macos-parity-loop-next.sh
+
+      - name: Launch dispatched task
+        if: steps.given.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: .github/scripts/macos-parity-loop-launch.sh "${{ steps.given.outputs.stable_key }}"
+
+      - name: Launch selected task
+        if: steps.next.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: .github/scripts/macos-parity-loop-launch.sh "${{ steps.next.outputs.stable_key }}"

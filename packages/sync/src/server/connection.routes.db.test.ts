@@ -1904,6 +1904,60 @@ describe("GET /internal/events/full", () => {
     });
   });
 
+  it("lists full-fidelity instances when a stored event has a legacy empty providerVersion", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const calendarId = objectId() as EventRecord["calendarId"];
+    const connectionId = objectId() as EventRecord["connectionId"];
+    const eventId = objectId() as EventRecord["_id"];
+    await mongo.db.collection<EventRecord>("events").insertOne({
+      _id: eventId,
+      tenantId,
+      principalId,
+      origin: "provider",
+      calendarId,
+      clientEventId: null,
+      connectionId,
+      providerEventId: objectId() as EventRecord["providerEventId"],
+      providerVersion: "",
+      providerUpdatedAt: null,
+      deliveryState: "confirmed",
+      providerMetadata: null,
+      content: {
+        title: "Legacy meeting",
+        description: "No etag on file",
+        location: null,
+        organizer: null,
+        attendees: [],
+        conference: null,
+      },
+      schedule: timed,
+      recurrence: { kind: "single" },
+      lifecycleState: "active",
+      generation: 0,
+      createdAt: new Date("2026-07-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-07-02T00:00:00.000Z"),
+      confirmedAt: new Date("2026-07-02T00:00:00.000Z"),
+    });
+    await seedOccurrence(tenantId, principalId, {
+      eventId,
+      calendarId: calendarId as EventOccurrenceRecord["calendarId"],
+    });
+    await startService();
+
+    const res = await get(
+      tenantId,
+      principalId,
+      `calendarIds=${calendarId}&${wideRange()}`,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      instances: Array<{ eventId: string }>;
+    };
+    expect(body.instances).toHaveLength(1);
+    expect(body.instances[0]?.eventId).toBe(eventId);
+  });
+
   // Express's default "extended" query parser (qs) turns 21+ repeated keys
   // into an object (arrayLimit: 20), which made this route 400 for any user
   // with more than 20 calendars. Guards the "simple" parser in buildSyncApp.

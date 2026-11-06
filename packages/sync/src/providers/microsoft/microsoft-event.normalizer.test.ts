@@ -149,6 +149,21 @@ describe("normalizeMicrosoftEvent", () => {
     expect(read.content.description).toBe("Hello world\n\nLine two");
   });
 
+  it("decodes doubly escaped HTML entities after stripping tags", () => {
+    const read = asProviderEvent(
+      normalizeMicrosoftEvent(
+        mEvent({
+          body: {
+            contentType: "html",
+            content: "<p>&amp;quot;Team&amp;quot;</p>",
+          },
+        }),
+      ),
+    );
+
+    expect(read.content.description).toBe('"Team"');
+  });
+
   it("uses plain text body content when contentType is text", () => {
     const read = asProviderEvent(
       normalizeMicrosoftEvent(

@@ -18,7 +18,18 @@ export function deliverOrQueueBottomNoticeToast(
     bottomNoticeStackGateActions.enqueue({ content, options });
     return queuedBottomNoticeToastId(options);
   }
-  return getToast()(content, options);
+
+  const toast = getToast();
+  const toastId = options?.toastId;
+  if (toastId && toast.isActive?.(toastId)) {
+    toast.update(toastId, {
+      render: content,
+      ...options,
+    });
+    return toastId;
+  }
+
+  return toast(content, options);
 }
 
 export function flushQueuedBottomNoticeToasts(): void {

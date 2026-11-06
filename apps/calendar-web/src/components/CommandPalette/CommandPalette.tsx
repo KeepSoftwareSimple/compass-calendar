@@ -63,6 +63,7 @@ import {
   recordRecentCommand,
   useRecentCommandIds,
 } from "@web/components/CommandPalette/recent-commands.store";
+import { InlineSpinner } from "@web/components/InlineSpinner/InlineSpinner";
 import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
@@ -389,11 +390,7 @@ const CommandPaletteContent = ({
                       aria-busy="true"
                       className="flex min-h-[2.5rem] items-center gap-2 px-3 py-2 text-text-muted"
                     >
-                      <span
-                        aria-label="Searching events"
-                        role="progressbar"
-                        className="inline-block size-4 shrink-0 animate-spin rounded-full border-2 border-border border-t-text motion-reduce:animate-none"
-                      />
+                      <InlineSpinner label="Searching events" />
                       {searchingText}
                     </div>
                   </div>

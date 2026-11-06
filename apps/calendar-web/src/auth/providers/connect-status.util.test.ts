@@ -7,7 +7,10 @@ import {
   useMissingPermissionsStore,
 } from "@web/auth/providers/missing-permissions.store";
 import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
-import { flushPendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
+import {
+  flushPendingShellToast,
+  resetPendingShellToastForTests,
+} from "@web/common/utils/toast/pending-shell-toast";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   applyConnectRedirect,
@@ -29,6 +32,7 @@ describe("connect-status.util", () => {
     mocks.error.mockClear();
     registerToastPort(port);
     resetMissingPermissionsStoreForTests();
+    resetPendingShellToastForTests();
     rafCallbacks = [];
     rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation(((
       callback: FrameRequestCallback,
