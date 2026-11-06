@@ -150,6 +150,29 @@ describe("LifeBirthDateField", () => {
     expect(committed.getDate()).toBeGreaterThan(1);
   });
 
+  it("shows truthful grid keyboard hints after moving focus into the calendar", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    const onCommit = mock(() => {});
+
+    render(
+      <ControlledBirthDateField onCommit={onCommit} storedBirthDate="" />,
+      { wrapper },
+    );
+
+    const input = screen.getByRole("textbox", { name: "Date of birth" });
+    await user.click(input);
+    await user.type(input, "1993-09-14");
+    await user.keyboard("{ArrowDown}");
+
+    await waitFor(() => {
+      expect(screen.getByText("Sep 1993")).toBeInTheDocument();
+    });
+
+    const hint = screen.getByTestId("life-birth-date-calendar-hint");
+    expect(within(hint).getByTestId("arrowright-icon")).toBeInTheDocument();
+    expect(hint.textContent).toContain("year forward");
+  });
+
   it("selects a day from the open grid with a click", async () => {
     const user = userEvent.setup({ skipHover: true });
     const onCommit = mock(() => {});

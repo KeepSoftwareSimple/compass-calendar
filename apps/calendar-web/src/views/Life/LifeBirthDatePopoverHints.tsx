@@ -10,9 +10,11 @@ export type LifeBirthDateHintMode =
 
 function HintRow({ keys, label }: { keys: string | string[]; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-text-muted text-xs">
-      <ShortcutKeys keys={keys} />
-      <span aria-hidden>{label}</span>
+    <span className="inline-flex items-baseline gap-1 text-text-muted text-xs">
+      <ShortcutKeys keys={keys} className="translate-y-px" />
+      <span aria-hidden className="leading-none">
+        {label}
+      </span>
     </span>
   );
 }
@@ -35,7 +37,7 @@ export function LifeBirthDatePopoverHints({
     return (
       <span
         data-testid="life-birth-date-calendar-hint"
-        className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-2 gap-y-0.5"
+        className="flex pointer-coarse:hidden max-w-full flex-wrap items-baseline gap-x-2 gap-y-0.5"
       >
         <HintRow keys="Enter" label="select" />
         <HintRow keys="Esc" label="close" />
@@ -47,10 +49,11 @@ export function LifeBirthDatePopoverHints({
     return (
       <span
         data-testid="life-birth-date-calendar-hint"
-        className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-2 gap-y-0.5"
+        className="flex pointer-coarse:hidden max-w-full flex-wrap items-baseline gap-x-2 gap-y-0.5"
       >
-        <HintRow keys="Enter" label="save" />
-        <HintRow keys="ArrowDown" label="calendar" />
+        <HintRow keys="Enter" label="save typed date" />
+        <HintRow keys="ArrowDown" label="move to calendar" />
+        <HintRow keys="Esc" label="dismiss" />
       </span>
     );
   }
@@ -58,11 +61,19 @@ export function LifeBirthDatePopoverHints({
   return (
     <span
       data-testid="life-birth-date-calendar-hint"
-      className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-2 gap-y-0.5"
+      className="flex pointer-coarse:hidden max-w-full flex-col gap-0.5 text-text-muted text-xs"
     >
-      <HintRow keys={["ArrowUp", "ArrowDown", "ArrowLeft"]} label="day" />
-      <HintRow keys={["PageUp", "PageDown"]} label="month" />
-      <HintRow keys={["Shift", "PageUp"]} label="year" />
+      <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <HintRow keys={["ArrowUp", "ArrowDown"]} label="week" />
+        <HintRow keys={["ArrowLeft", "ArrowRight"]} label="day" />
+        <HintRow keys={["PageUp", "PageDown"]} label="month" />
+        <HintRow keys={["Shift", "PageUp"]} label="year back" />
+        <HintRow keys={["Shift", "PageDown"]} label="year forward" />
+      </span>
+      <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <HintRow keys="Enter" label="select day" />
+        <HintRow keys="Esc" label="close" />
+      </span>
     </span>
   );
 }
