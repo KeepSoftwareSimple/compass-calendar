@@ -18,6 +18,12 @@ import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
+/**
+ * Records per page. Small enough that one page stays well inside the caller's
+ * deadline; the caller pages until `nextCursor` is null.
+ */
+const PAGE_SIZE = 25;
+
 // Read canonical history in small pages; never widen the interactive horizon.
 export async function readReflectionPage(
   db: Db,
@@ -120,17 +126,18 @@ export async function readReflectionPage(
           })
           .hint("reflection_principal_kind_start")
           .sort({ _id: 1 })
-          .limit(25)
+          .limit(PAGE_SIZE)
           .toArray(),
       ),
     );
-    // Both disjoint streams share the same exclusive cursor. Their first 25
-    // contain the union's first 25. UTF-8 comparison matches Mongo's ID order.
+    // Both disjoint streams share the same exclusive cursor, so their first
+    // PAGE_SIZE rows each contain the union's first PAGE_SIZE. UTF-8
+    // comparison matches Mongo's ID order.
     rows.push(
       ...pages
         .flat()
         .sort((a, b) => Buffer.compare(Buffer.from(a._id), Buffer.from(b._id)))
-        .slice(0, 25),
+        .slice(0, PAGE_SIZE),
     );
   }
   const records = rows.map((row) => EventReadSchema.parse(row));
@@ -209,7 +216,7 @@ export async function readReflectionPage(
   const last = records.at(-1);
   return {
     events,
-    nextCursor: records.length === 25 && last ? last._id : null,
+    nextCursor: records.length === PAGE_SIZE && last ? last._id : null,
     oldestYear: oldest ? Number(oldest.schedule.start.slice(0, 4)) : null,
     historyComplete,
     truncated,
