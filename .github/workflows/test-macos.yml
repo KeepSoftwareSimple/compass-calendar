@@ -327,7 +327,12 @@ jobs:
 
   # Web strict verification split like test-unit (web shards) and test-e2e
   # (directory shards). macOS strict already runs type-check, lint, and knip.
-  strict-web-leg:
+  # E2E legs run inside the Playwright Docker image (see test-e2e.yml): a plain
+  # ubuntu-latest leg that runs `playwright install --with-deps` can spend most
+  # of the 15-minute job budget in apt before tests start (observed on strict
+  # BOTH run 42278445367: e2e/timed cancelled after 13 tests while downloading
+  # font packages).
+  strict-web-leg-web:
     if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -336,38 +341,17 @@ jobs:
       matrix:
         include:
           - leg: web-1
-            kind: web
             shard: "1"
           - leg: web-2
-            kind: web
             shard: "2"
           - leg: web-3
-            kind: web
             shard: "3"
           - leg: web-4
-            kind: web
             shard: "4"
           - leg: web-5
-            kind: web
             shard: "5"
           - leg: web-6
-            kind: web
             shard: "6"
-          - leg: e2e-1
-            kind: e2e
-            specs: e2e/accessibility e2e/allday
-          - leg: e2e-2
-            kind: e2e
-            specs: e2e/booking e2e/oauth e2e/auth e2e/billing
-          - leg: e2e-3
-            kind: e2e
-            specs: e2e/timed
-          - leg: e2e-4
-            kind: e2e
-            specs: e2e/onboarding e2e/calendars e2e/life e2e/navigation e2e/attendees
-          - leg: e2e-5
-            kind: e2e
-            specs: e2e/dst e2e/event-form e2e/journey e2e/overlap e2e/parity
     steps:
       - uses: actions/checkout@v7
         with:
@@ -375,17 +359,65 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install
-      - name: Install Playwright Chromium
-        if: matrix.kind == 'e2e'
-        run: bunx playwright install --with-deps chromium
       - name: Run web test shard
-        if: matrix.kind == 'web'
         env:
           WEB_TEST_SHARDS: "6"
           WEB_TEST_SHARD_INDEX: ${{ matrix.shard }}
         run: bun run test:web
+
+  strict-web-leg-e2e:
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: e2e-1
+            specs: e2e/accessibility e2e/allday
+          - leg: e2e-2
+            specs: e2e/booking e2e/oauth e2e/auth e2e/billing
+          - leg: e2e-3
+            specs: e2e/timed
+          - leg: e2e-4
+            specs: e2e/onboarding e2e/calendars e2e/life e2e/navigation e2e/attendees
+          - leg: e2e-5
+            specs: e2e/dst e2e/event-form e2e/journey e2e/overlap e2e/parity
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --ipc=host
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install Bun
+        timeout-minutes: 2
+        run: |
+          npm install --global --no-audit --no-fund bun@1.3.14
+          bun --version
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify Playwright browser install
+        timeout-minutes: 3
+        run: bunx playwright install chromium
+
       - name: Run e2e shard
-        if: matrix.kind == 'e2e'
+        timeout-minutes: 12
         env:
           TZ: Etc/UTC
           GOOGLE_CLIENT_ID: test-client-id
@@ -395,21 +427,25 @@ jobs:
           # shellcheck disable=SC2086
           bunx playwright test $SPECS
 
+      - name: Summarize flaky Playwright tests
+        if: always()
+        run: bash .github/scripts/playwright-flaky-summary.sh
+
   strict-web:
     if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
-    needs: [strict-web-leg]
+    needs: [strict-web-leg-web, strict-web-leg-e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Require every strict web leg to pass
         env:
-          RESULT: ${{ needs.strict-web-leg.result }}
+          WEB_RESULT: ${{ needs.strict-web-leg-web.result }}
+          E2E_RESULT: ${{ needs.strict-web-leg-e2e.result }}
         run: |
-          echo "strict-web legs: ${RESULT}"
-          case "$RESULT" in
-            success) exit 0 ;;
-            *) exit 1 ;;
-          esac
+          echo "strict-web web shards: ${WEB_RESULT}"
+          echo "strict-web e2e shards: ${E2E_RESULT}"
+          case "$WEB_RESULT" in success) ;; *) exit 1 ;; esac
+          case "$E2E_RESULT" in success) ;; *) exit 1 ;; esac
 
   # One required context whether or not the build ran, like `unit` over
   # `unit-leg`. `changes` must succeed too: a failed filter skips `build`,
