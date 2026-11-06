@@ -8,6 +8,22 @@ import { fileURLToPath } from "node:url";
 const fontPath = fileURLToPath(
   new URL("./assets/Rubik-Regular.ttf", import.meta.url),
 );
+const PAGE_WIDTH = 600;
+const LIFE_URL_LEFT = 24;
+const LIFE_URL_BASELINE = 142;
+const LIFE_URL_FONT_SIZE = 14;
+const LIFE_URL_HIT_PAD = 6;
+
+function lifeUrlLinkRect(pageHeight: number) {
+  const top = LIFE_URL_BASELINE - LIFE_URL_FONT_SIZE;
+  const bottom = LIFE_URL_BASELINE + LIFE_URL_HIT_PAD;
+  return [
+    LIFE_URL_LEFT,
+    pageHeight - bottom,
+    PAGE_WIDTH - 25,
+    pageHeight - top,
+  ];
+}
 
 // Keep the Life View grid, with a plain white background for the attachment.
 export function renderReflectionLifeSvg(
@@ -33,14 +49,14 @@ export function renderReflectionLifeSvg(
       }).join("")
     );
   }).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="${height}" viewBox="0 0 600 ${height}">
-    <rect width="600" height="${height}" fill="white"/>
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_WIDTH}" height="${height}" viewBox="0 0 ${PAGE_WIDTH} ${height}">
+    <rect width="${PAGE_WIDTH}" height="${height}" fill="white"/>
     ${text(24, 30, "Your Life In Weeks", 16)}
     ${text(24, 53, "Each dot is a week of your life. Filled dots show the time")}
     ${text(24, 70, "you have lived; the outline marks your current week.")}
     ${text(24, 98, reflectionLifeProgress(completed))}
     ${text(24, 120, "Filled: lived. Outlined: this week.")}
-    ${text(24, 142, lifeUrl)}
+    ${text(LIFE_URL_LEFT, LIFE_URL_BASELINE, lifeUrl)}
     ${grid}
   </svg>`;
 }
@@ -83,7 +99,7 @@ export async function renderReflectionLifePdf(
   const link = document.context.obj({
     Type: "Annot",
     Subtype: "Link",
-    Rect: [24, height - 148, 575, height - 128],
+    Rect: lifeUrlLinkRect(height),
     Border: [0, 0, 0],
     A: { Type: "Action", S: "URI", URI: PDFString.of(lifeUrl) },
   });

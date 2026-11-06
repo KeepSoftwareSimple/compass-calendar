@@ -53,10 +53,7 @@ describe("CalendarTimeColumn", () => {
     render(<CalendarTimeColumn at={at} showNowTimeLabel />);
 
     expect(screen.getByTestId("now-time-label")).toHaveTextContent("10:14 AM");
-    expect(screen.getByText("10 AM")).toHaveAttribute(
-      "data-hour-label-hidden",
-      "true",
-    );
+    expect(screen.getByText("10 AM")).toHaveClass("opacity-0");
   });
 
   it("uses civil hour labels that match the timed grid on Denver fall-back Sunday", () => {

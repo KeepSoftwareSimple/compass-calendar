@@ -12,18 +12,13 @@ export type PendingShellToast = {
 let pendingShellToast: PendingShellToast | null = null;
 let pendingShellToastClearTimer: ReturnType<typeof setTimeout> | null = null;
 
-function readPendingShellToast(): PendingShellToast | null {
-  return pendingShellToast;
-}
-
 function schedulePendingShellToastClear(pending: PendingShellToast) {
-  const serialized = JSON.stringify(pending);
   if (pendingShellToastClearTimer) {
     clearTimeout(pendingShellToastClearTimer);
   }
 
   pendingShellToastClearTimer = setTimeout(() => {
-    if (pendingShellToast && JSON.stringify(pendingShellToast) === serialized) {
+    if (pendingShellToast === pending) {
       pendingShellToast = null;
     }
     pendingShellToastClearTimer = null;
@@ -72,7 +67,7 @@ export function queuePendingShellToast(pending: PendingShellToast): void {
 
 /** Show any toast queued during a route without {@link BottomNoticeToastHost}. */
 export function flushPendingShellToast(): void {
-  const pending = readPendingShellToast();
+  const pending = pendingShellToast;
   if (!pending) return;
 
   if (!isPendingShellToastVisible(pending)) {

@@ -190,7 +190,6 @@ export async function prepareReflection(
   return {
     ...content,
     pdfBase64,
-    pngBase64: null,
     memoryIds: selected.memories.map((event) => event.id),
     calendarIds: context.calendarIds,
     lifeRevision: user.lifePreferences?.revision ?? 0,
