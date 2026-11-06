@@ -1,7 +1,21 @@
 import { isGuestMeetStaticPath } from "../../guest-meet-static-path";
 import { describe, expect, it } from "bun:test";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
+
+function rgListJsMatches(dir: string, pattern: string): string[] {
+  const proc = Bun.spawnSync({
+    cmd: ["rg", "-l", "--glob", "*.js", pattern, dir],
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode === 2) {
+    throw new Error(proc.stderr.toString().trim() || "rg failed");
+  }
+  const out = proc.stdout.toString().trim();
+  if (!out) return [];
+  return out.split("\n");
+}
 
 const WEB_SRC = path.resolve(import.meta.dir, "..");
 const BUILD_OUTDIR = path.resolve(import.meta.dir, "../../../../build/web");
@@ -18,10 +32,6 @@ const GUEST_UI_NEEDLES = [
   "usePublicBookingFlow",
   "Meet with Tyler Dane",
 ];
-
-function boundedNeedle(needle: string): RegExp {
-  return new RegExp(`(?<![A-Za-z0-9_$])${needle}(?![A-Za-z0-9_$])`);
-}
 
 function listModulesRecursively(dir: string): string[] {
   const names: string[] = [];
@@ -58,42 +68,27 @@ describe("calendar-web source", () => {
 });
 
 describe("calendar-web production bundle", () => {
-  it(
-    "does not ship guest PublicBooking UI modules",
-    () => {
-      // Only meaningful where a build exists (a dev who ran `bun run build:web`,
-      // or a job that builds before testing). Skipped, not failed, otherwise.
-      let files: string[];
-      try {
-        files = readdirSync(BUILD_OUTDIR).filter((name) =>
-          name.endsWith(".js"),
-        );
-      } catch {
-        return;
-      }
-      if (files.length === 0) {
-        return;
-      }
+  it("does not ship guest PublicBooking UI modules", () => {
+    // Only meaningful where a build exists (a dev who ran `bun run build:web`,
+    // or a job that builds before testing). Skipped, not failed, otherwise.
+    let files: string[];
+    try {
+      files = readdirSync(BUILD_OUTDIR).filter((name) => name.endsWith(".js"));
+    } catch {
+      return;
+    }
+    if (files.length === 0) {
+      return;
+    }
 
-      // Scan chunk-by-chunk: joining every `.js` in `build/web` allocates a string
-      // as large as the whole bundle. One expect per chunk also explodes work (10k+
-      // expects); collect violations and assert once.
-      const needleRes = GUEST_UI_NEEDLES.map((needle) => ({
-        needle,
-        re: boundedNeedle(needle),
-      }));
-      const violations: string[] = [];
-      for (const name of files) {
-        const text = readFileSync(path.join(BUILD_OUTDIR, name), "utf8");
-        for (const { needle, re } of needleRes) {
-          if (re.test(text)) {
-            violations.push(`${needle} in ${name}`);
-          }
-        }
-      }
-      expect(violations).toEqual([]);
-    },
-    // Scanning every `build/web` chunk is slow on cold disk; default 5s is tight.
-    { timeout: 60_000 },
-  );
+    // Thousands of tiny hashed chunks: one ripgrep pass over the outdir (bounded
+    // word matches) stays under the default test timeout; per-file reads do not.
+    const alt = GUEST_UI_NEEDLES.map((n) =>
+      n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    ).join("|");
+    const rgPattern = String.raw`\b(?:${alt})\b`;
+    const matches = rgListJsMatches(BUILD_OUTDIR, rgPattern);
+    const violations = matches.map((p) => path.basename(p));
+    expect(violations).toEqual([]);
+  });
 });
