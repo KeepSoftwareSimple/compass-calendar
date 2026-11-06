@@ -292,25 +292,26 @@ describe("MonthPicker", () => {
     const user = userEvent.setup({ skipHover: true });
     renderPicker(<MonthPicker onSelectDate={mock()} {...pickerProps} />);
     const picker = screen.getByRole("group", { name: "Date navigation" });
-    expect(picker).toHaveTextContent("I focuses the picker");
+    expect(picker).toHaveTextContent("I");
+    expect(picker).toHaveTextContent("focus");
     expect(picker).not.toHaveTextContent("Arrows");
-    expect(picker).not.toHaveTextContent("move by week");
-    expect(picker).not.toHaveTextContent("opens it");
+    expect(picker).not.toHaveTextContent("week");
+    expect(picker).not.toHaveTextContent("open");
 
     act(() => getTabStopDay()?.focus());
-    expect(picker).toHaveTextContent("move by week");
-    expect(picker).toHaveTextContent("returns to the grid");
-    expect(picker).not.toHaveTextContent("focuses the picker");
+    expect(picker).toHaveTextContent("week");
+    expect(picker).toHaveTextContent("back");
+    expect(picker).not.toHaveTextContent("focus");
     expect(picker).not.toHaveTextContent("Arrows");
     expect(picker.querySelector("[data-testid='arrowup-icon']")).not.toBeNull();
     expect(
       picker.querySelector("[data-testid='arrowdown-icon']"),
     ).not.toBeNull();
-    expect(picker).not.toHaveTextContent("opens it");
+    expect(picker).not.toHaveTextContent("open");
 
     await user.keyboard("{ArrowDown}");
     expect(picker).toHaveTextContent("Enter");
-    expect(picker).toHaveTextContent("opens it");
+    expect(picker).toHaveTextContent("open");
     const enterKeycap = [
       ...picker.querySelectorAll("[aria-hidden='true']"),
     ].find((node) => node.textContent === "Enter");
@@ -327,11 +328,11 @@ describe("MonthPicker", () => {
       />,
     );
     const picker = screen.getByRole("group", { name: "Date navigation" });
-    expect(picker).toHaveTextContent("I focuses the picker");
+    expect(picker).toHaveTextContent("focus");
 
     act(() => getTabStopDay()?.focus());
-    expect(picker).toHaveTextContent("move by day");
-    expect(picker).not.toHaveTextContent("opens it");
+    expect(picker).toHaveTextContent("day");
+    expect(picker).not.toHaveTextContent("open");
   });
 
   it("highlights the visible Sun-Sat window, not adjacent days", () => {
