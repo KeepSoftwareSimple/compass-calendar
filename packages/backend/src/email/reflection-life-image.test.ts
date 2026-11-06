@@ -26,20 +26,24 @@ describe("reflection life image", () => {
     const svg = renderReflectionLifeSvg(
       "1900-01-01",
       "2026-11-02",
-      "https://example.com/life",
+      "https://www.compasscalendar.com/life?utm_source=email",
     );
     expect(svg).toContain("100% done (79-year average)</text>");
     expect(svg).toContain(
       'font-size="14" fill="#222">100% done (79-year average)</text>',
     );
     expect(svg).toContain("Your Life In Weeks");
-    expect(svg).toContain("https://example.com/life");
+    expect(svg).toContain(">compasscalendar.com/life</text>");
+    expect(svg).not.toContain("https://");
+    const visibleText = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)]
+      .map((match) => match[1])
+      .join("\n");
+    expect(visibleText).not.toContain("www.");
+    expect(svg).not.toContain("utm_");
     expect(svg).not.toMatch(/font-size="(?:18|24)"/);
-    expect(svg).toContain(
-      "Each square is a week. Filled: lived. Outlined: this week.",
-    );
-    expect(svg.match(/Filled:/g)).toHaveLength(1);
-    expect(svg.indexOf("Filled: lived.")).toBeLessThan(svg.indexOf('y="119"'));
+    expect(svg).toContain(">Each square is a week</text>");
+    expect(svg).not.toContain("Filled:");
+    expect(svg).not.toContain("Outlined:");
     expect(svg).toContain('fill="white"');
     expect(svg).not.toContain("completed weeks");
     expect(svg).not.toContain("U.S. reference");
@@ -49,7 +53,7 @@ describe("reflection life image", () => {
     expect(svg).not.toContain("weeks remaining");
   });
   it("wraps the image in one PDF page with a direct clickable Life View link", async () => {
-    const url = "https://example.com/life";
+    const url = "https://example.com/life?view=weeks#now";
     const bytes = await renderReflectionLifePdf(
       "1993-09-14",
       "2026-11-05",
@@ -68,7 +72,15 @@ describe("reflection life image", () => {
     );
     const action = link.lookup(PDFName.of("A"), PDFDict);
     expect(action.lookup(PDFName.of("S"), PDFName).toString()).toBe("/URI");
-    expect(action.lookup(PDFName.of("URI"), PDFString).decodeText()).toBe(url);
+    const target = new URL(
+      action.lookup(PDFName.of("URI"), PDFString).decodeText(),
+    );
+    expect(target.origin + target.pathname).toBe("https://example.com/life");
+    expect(target.searchParams.get("view")).toBe("weeks");
+    expect(target.hash).toBe("#now");
+    expect(target.searchParams.get("utm_source")).toBe("email");
+    expect(target.searchParams.get("utm_campaign")).toBe("weekly_review");
+    expect(target.searchParams.get("utm_content")).toBe("life_view_attachment");
   });
   it("fills exactly one additional grid slot after seven days", () => {
     const filled = (date: string) =>
