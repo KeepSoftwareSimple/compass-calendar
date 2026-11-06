@@ -384,7 +384,8 @@ jobs:
           - leg: e2e-5
             specs: e2e/dst e2e/event-form e2e/journey e2e/overlap e2e/parity
     container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      # Match @playwright/test 1.64.1 in bun.lock (OCI index v1.64.1-noble on MCR).
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
       options: --ipc=host
     steps:
       - name: Check out repository
