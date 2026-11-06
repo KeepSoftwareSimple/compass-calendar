@@ -50,6 +50,11 @@ export interface Props extends Omit<ReactDatePickerProps, "autoFocus"> {
     | ((context: { captionView: CaptionPickerView }) => React.ReactNode);
   /** Capture-phase keyboard handler on the popper calendar root (grid popovers portal here). */
   onCalendarKeyDownCapture?: React.KeyboardEventHandler<HTMLDivElement>;
+  /** Fires when `captionPicker` moves between day grid, month list, and year list. */
+  onCaptionViewChange?: (view: CaptionPickerView) => void;
+  /** Focus moved to or from the text field (not the portaled calendar). */
+  onPickerInputFocus?: () => void;
+  onPickerInputBlur?: () => void;
   inputClassName?: string;
   inputColor?: string;
   isOpen?: boolean;
@@ -155,6 +160,9 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     headerClassName,
     headerEndContent,
     onCalendarKeyDownCapture,
+    onCaptionViewChange,
+    onPickerInputFocus,
+    onPickerInputBlur,
     inputClassName,
     inputColor,
     isOpen = true,
@@ -164,6 +172,8 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     portalId = "root",
     view,
     withTodayButton = true,
+    onFocus: onFocusProp,
+    onBlur: onBlurProp,
     ...props
   } = datePickerProps;
   const layerId = useId();
@@ -185,6 +195,10 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     commitCaptionView("day");
     setCaptionFocusDate(undefined);
   }, [commitCaptionView, isOpen]);
+
+  useEffect(() => {
+    onCaptionViewChange?.(captionView);
+  }, [captionView, onCaptionViewChange]);
   // Sidebar month grid stays mounted and visible; only transient grid popovers
   // own Escape (same carve-out the old DOM probe encoded via Month picker).
   useFloatingLayer(`datePicker:${layerId}`, view === "grid" && isOpen);
@@ -358,6 +372,14 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
           }}
           underlineColor={darken(resolvedBgColor, -15)}
           withUnderline={withUnderline}
+          onFocus={(event) => {
+            onPickerInputFocus?.();
+            onFocusProp?.(event as React.FocusEvent<HTMLInputElement, Element>);
+          }}
+          onBlur={(event) => {
+            onPickerInputBlur?.();
+            onBlurProp?.(event as React.FocusEvent<HTMLInputElement, Element>);
+          }}
         />
       }
       dateFormat={"M-d-yyyy"}
@@ -436,10 +458,6 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
           typeof headerEndContent === "function"
             ? headerEndContent({ captionView })
             : headerEndContent;
-        const stackHeaderHints =
-          view === "grid" &&
-          Boolean(resolvedHeaderEndContent) &&
-          !customHeaderCount;
 
         const captionBlock = (
           <div className={classNames("min-w-16 shrink-0 items-start")}>
@@ -539,40 +557,19 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         return (
           <div
             className={classNames(
-              stackHeaderHints
-                ? "flex flex-col gap-1 px-2 pt-0 pb-1.25"
-                : "flex items-center px-2 pt-0 pb-1.25",
+              "flex items-center px-2 py-2",
               headerClassName,
             )}
           >
-            <div
-              className={classNames(
-                "flex min-w-0 items-center",
-                stackHeaderHints && "w-full justify-between gap-2",
-              )}
-            >
-              {stackHeaderHints ? (
-                <div className="flex min-w-0 shrink items-center gap-2">
-                  {captionBlock}
-                  {navBlock}
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {captionBlock}
+              {navBlock}
+              {!customHeaderCount && resolvedHeaderEndContent ? (
+                <div className="ml-auto flex min-w-0 items-center">
+                  {resolvedHeaderEndContent}
                 </div>
-              ) : (
-                <>
-                  {captionBlock}
-                  {navBlock}
-                  {!customHeaderCount && resolvedHeaderEndContent ? (
-                    <div className="ml-auto flex min-w-0 items-center">
-                      {resolvedHeaderEndContent}
-                    </div>
-                  ) : null}
-                </>
-              )}
+              ) : null}
             </div>
-            {stackHeaderHints && resolvedHeaderEndContent ? (
-              <div className="flex w-full min-w-0 justify-start">
-                {resolvedHeaderEndContent}
-              </div>
-            ) : null}
           </div>
         );
       }}

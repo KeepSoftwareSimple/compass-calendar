@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { type PropsWithChildren, useState } from "react";
 import { flushSync } from "react-dom";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
+import { getPartsPlainText } from "@web/shortcuts/tips/shortcut-tips.data";
 import { LifeBirthDateField } from "@web/views/Life/LifeBirthDateField";
 import { describe, expect, it, mock } from "bun:test";
 
@@ -150,7 +151,7 @@ describe("LifeBirthDateField", () => {
     expect(committed.getDate()).toBeGreaterThan(1);
   });
 
-  it("shows truthful grid keyboard hints after moving focus into the calendar", async () => {
+  it("registers grid keyboard hints in the sidebar help store after moving focus into the calendar", async () => {
     const user = userEvent.setup({ skipHover: true });
     const onCommit = mock(() => {});
 
@@ -168,10 +169,14 @@ describe("LifeBirthDateField", () => {
       expect(screen.getByText("Sep 1993")).toBeInTheDocument();
     });
 
-    const hint = screen.getByTestId("life-birth-date-calendar-hint");
-    expect(hint.tagName).toBe("DETAILS");
-    expect(hint.textContent).toContain("expand for Page keys");
-    expect(within(hint).getByText(/move in grid/i)).toBeInTheDocument();
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+    await waitFor(() => {
+      const top = useDatePickerHintStore.getState().stack.at(-1);
+      expect(top?.id).toBe("date-picker-life");
+      expect(getPartsPlainText(top!.parts)).toMatch(/day/i);
+    });
   });
 
   it("selects a day from the open grid with a click", async () => {
