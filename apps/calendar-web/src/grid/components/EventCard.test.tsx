@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import tinycolor from "tinycolor2";
 import * as Track from "@web/auth/posthog/track";
 import { brighten } from "@web/common/styles/color.utils";
 import { getEventPalette } from "@web/common/styles/theme.util";
@@ -12,10 +13,12 @@ import {
   GRID_EVENT_TITLE_FONT_SIZE,
   HIDDEN_EVENT_STRIP_WIDTH,
 } from "@web/grid/grid.constants";
+import { EVENT_CONTENT_ATTRIBUTE } from "@web/grid/interaction/dom";
 import {
   initialEdgeFocusState,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
+import { useThemeStore } from "@web/settings/theme/theme.store";
 import {
   resetEffectiveTimeZoneStoreForTests,
   setPinnedTimeZone,
@@ -468,6 +471,78 @@ describe("EventCard", () => {
     const iconClass = icon?.getAttribute("class") ?? "";
     expect(iconClass).not.toContain("left-1");
     expect(iconClass).not.toContain("text-muted");
+  });
+
+  it("tints the repeat indicator with the same readable foreground as the title in each theme", () => {
+    const restoreTheme = useThemeStore.getState().theme;
+    try {
+      for (const themeName of ["dark-abyss", "light-beach"] as const) {
+        act(() => {
+          useThemeStore.setState({ theme: themeName });
+        });
+
+        const { container, unmount } = render(
+          <TimedEventCard
+            displayMode="saved"
+            event={createEvent({
+              color: "slate",
+              endDate: "2099-01-15T10:00:00.000Z",
+              recurrence: { eventId: "series-1", rule: ["RRULE:FREQ=WEEKLY"] },
+              startDate: "2099-01-15T09:00:00.000Z",
+            })}
+            motionMode="idle"
+            position={position}
+          />,
+        );
+        const content = container.querySelector(
+          `[${EVENT_CONTENT_ATTRIBUTE}="true"]`,
+        );
+        expect(content).not.toBeNull();
+        const icon = container.querySelector(
+          'svg[class*="right-1"]',
+        ) as SVGElement | null;
+        expect(icon).not.toBeNull();
+        // jsdom often reports inherited text as CanvasText on `getComputedStyle`;
+        // the card sets an explicit inline `color` on the content wrapper.
+        expect(
+          tinycolor.equals(
+            (content as HTMLElement).style.color,
+            icon?.getAttribute("fill") ?? "",
+          ),
+        ).toBe(true);
+        unmount();
+
+        const { container: allDayContainer, unmount: unmountAllDay } = render(
+          <AllDayEventCard
+            event={createEvent({
+              color: "slate",
+              endDate: "2099-01-16",
+              isAllDay: true,
+              recurrence: { eventId: "series-1", rule: ["RRULE:FREQ=WEEKLY"] },
+              startDate: "2099-01-15",
+            })}
+            isPlaceholder={false}
+            position={position}
+          />,
+        );
+        const title = screen.getByText("Planning block") as HTMLElement;
+        const allDayIcon = allDayContainer.querySelector(
+          'svg[class*="right-1"]',
+        ) as SVGElement | null;
+        expect(allDayIcon).not.toBeNull();
+        expect(
+          tinycolor.equals(
+            title.style.color,
+            allDayIcon?.getAttribute("fill") ?? "",
+          ),
+        ).toBe(true);
+        unmountAllDay();
+      }
+    } finally {
+      act(() => {
+        useThemeStore.setState({ theme: restoreTheme });
+      });
+    }
   });
 
   it("shows the repeat indicator on a 15-minute recurring event despite its small rendered height", () => {
