@@ -58,25 +58,42 @@ describe("calendar-web source", () => {
 });
 
 describe("calendar-web production bundle", () => {
-  it("does not ship guest PublicBooking UI modules", () => {
-    // Only meaningful where a build exists (a dev who ran `bun run build:web`,
-    // or a job that builds before testing). Skipped, not failed, otherwise.
-    let files: string[];
-    try {
-      files = readdirSync(BUILD_OUTDIR).filter((name) => name.endsWith(".js"));
-    } catch {
-      return;
-    }
-    if (files.length === 0) {
-      return;
-    }
+  it(
+    "does not ship guest PublicBooking UI modules",
+    () => {
+      // Only meaningful where a build exists (a dev who ran `bun run build:web`,
+      // or a job that builds before testing). Skipped, not failed, otherwise.
+      let files: string[];
+      try {
+        files = readdirSync(BUILD_OUTDIR).filter((name) =>
+          name.endsWith(".js"),
+        );
+      } catch {
+        return;
+      }
+      if (files.length === 0) {
+        return;
+      }
 
-    const combined = files
-      .map((name) => readFileSync(path.join(BUILD_OUTDIR, name), "utf8"))
-      .join("\n");
-
-    for (const needle of GUEST_UI_NEEDLES) {
-      expect(boundedNeedle(needle).test(combined)).toBe(false);
-    }
-  });
+      // Scan chunk-by-chunk: joining every `.js` in `build/web` allocates a string
+      // as large as the whole bundle. One expect per chunk also explodes work (10k+
+      // expects); collect violations and assert once.
+      const needleRes = GUEST_UI_NEEDLES.map((needle) => ({
+        needle,
+        re: boundedNeedle(needle),
+      }));
+      const violations: string[] = [];
+      for (const name of files) {
+        const text = readFileSync(path.join(BUILD_OUTDIR, name), "utf8");
+        for (const { needle, re } of needleRes) {
+          if (re.test(text)) {
+            violations.push(`${needle} in ${name}`);
+          }
+        }
+      }
+      expect(violations).toEqual([]);
+    },
+    // Scanning every `build/web` chunk is slow on cold disk; default 5s is tight.
+    { timeout: 60_000 },
+  );
 });
