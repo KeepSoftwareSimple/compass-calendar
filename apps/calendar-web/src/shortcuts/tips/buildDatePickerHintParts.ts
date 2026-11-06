@@ -56,12 +56,6 @@ export function buildDatePickerGridCaptionParts(
   ];
 }
 
-export function buildDatePickerClosedInputParts(
-  label: string,
-): readonly ShortcutTipPart[] {
-  return [{ keys: ["ArrowDown"] }, ` open ${label}`];
-}
-
 export function buildDatePickerOpenInputParts(
   label: string,
 ): readonly ShortcutTipPart[] {
@@ -128,13 +122,16 @@ export function surfaceForPickerContext(params: {
     return { id, parts: buildDatePickerGridCaptionParts("month") };
   }
 
-  if (gridFocused) {
-    return { id, parts: buildDatePickerGridDayParts() };
-  }
-
   if (isInputFocused) {
     return { id, parts: buildDatePickerOpenInputParts(inputPhrase) };
   }
 
-  return { id, parts: buildDatePickerClosedInputParts(inputPhrase) };
+  if (gridFocused) {
+    return { id, parts: buildDatePickerGridDayParts() };
+  }
+
+  // Calendar is open on a grid popover: never advertise the closed-field
+  // "ArrowDown open …" contract while the panel is visible (focus may be on
+  // the popper root, a day cell, or the clear control before ArrowDown).
+  return { id, parts: buildDatePickerGridDayParts() };
 }

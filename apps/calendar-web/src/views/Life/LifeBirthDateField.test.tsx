@@ -151,6 +151,41 @@ describe("LifeBirthDateField", () => {
     expect(committed.getDate()).toBeGreaterThan(1);
   });
 
+  it("registers grid keyboard hints while the calendar is open before the grid is focused", async () => {
+    const onCommit = mock(() => {});
+
+    render(
+      <LifeBirthDateField
+        id="life-birth-date"
+        isOpen
+        maxDate={today}
+        minDate={minDate}
+        onCalendarClose={() => {}}
+        onCalendarOpen={() => {}}
+        onCommit={onCommit}
+        storedBirthDate=""
+        today={today}
+      />,
+      { wrapper },
+    );
+
+    const input = screen.getByRole("textbox", { name: "Date of birth" });
+    act(() => {
+      input.blur();
+    });
+
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+    await waitFor(() => {
+      const top = useDatePickerHintStore.getState().stack.at(-1);
+      expect(top?.id).toBe("date-picker-life");
+      const plain = getPartsPlainText(top!.parts);
+      expect(plain).toContain("PageDown");
+      expect(plain).not.toMatch(/open/i);
+    });
+  });
+
   it("registers grid keyboard hints in the sidebar help store after moving focus into the calendar", async () => {
     const user = userEvent.setup({ skipHover: true });
     const onCommit = mock(() => {});

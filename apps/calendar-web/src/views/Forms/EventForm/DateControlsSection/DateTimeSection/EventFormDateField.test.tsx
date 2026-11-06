@@ -307,7 +307,7 @@ describe("EventFormDateField", () => {
     expect(screen.queryByTestId("event-form-control-hint")).toBeNull();
   });
 
-  it("registers open-input shortcut hints in the picker store while the calendar is open on the text field", async () => {
+  it("registers grid shortcut hints when the calendar is open but focus is not on the input", async () => {
     render(
       <EventFormDateField
         isOpen
@@ -327,6 +327,7 @@ describe("EventFormDateField", () => {
     const input = screen.getByTitle("Pick Start Date");
     act(() => {
       input.focus();
+      input.blur();
     });
 
     const { useDatePickerHintStore } = await import(
@@ -335,7 +336,9 @@ describe("EventFormDateField", () => {
     await waitFor(() => {
       const top = useDatePickerHintStore.getState().stack.at(-1);
       expect(top?.id).toBe("date-picker-event-form");
-      expect(getPartsPlainText(top!.parts)).toMatch(/start date/i);
+      const plain = getPartsPlainText(top!.parts);
+      expect(plain).toContain("PageDown");
+      expect(plain).not.toMatch(/open start date/i);
     });
   });
 

@@ -13,10 +13,11 @@ async function captureSidebarDatePickerHint(
   await page.keyboard.press("ArrowDown");
   await expect(page.locator(".react-datepicker")).toBeVisible();
 
-  await expect(page.getByTestId("date-picker-contextual-hint")).toBeVisible();
-  await expect(
-    page.locator("#sidebar").getByTestId("date-picker-contextual-hint"),
-  ).toBeVisible();
+  const contextual = page
+    .locator("#sidebar")
+    .getByTestId("date-picker-contextual-hint");
+  await expect(contextual).toBeVisible();
+  await expect(contextual).toContainText("PageDown");
 
   await expect(page.getByTestId("event-form-calendar-hint")).toHaveCount(0);
 }

@@ -130,7 +130,7 @@ export function ShortcutsOverlay({ sections, viewLabel }: Props) {
     >
       <div
         className={classNames(
-          "flex h-full flex-col bg-surface/95 px-4 pt-8 pb-8 text-text-muted shadow-2xl backdrop-blur-md",
+          "flex h-full flex-col bg-surface/95 px-4 pt-8 pb-5 text-text-muted shadow-2xl backdrop-blur-md",
           "transition-transform duration-200 ease-out motion-reduce:transition-none",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
