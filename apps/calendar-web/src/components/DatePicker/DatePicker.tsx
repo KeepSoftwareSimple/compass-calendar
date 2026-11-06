@@ -1,3 +1,8 @@
+import {
+  type Modifier,
+  type ModifierArguments,
+  type Obj,
+} from "@popperjs/core";
 import classNames from "classnames";
 import type React from "react";
 import {
@@ -85,6 +90,60 @@ const CAPTION_VIEW_AFTER_SELECT: Record<
   CaptionPickerView,
   CaptionPickerView | null
 > = { year: "month", month: "day", day: null };
+
+/**
+ * Caps popper max-height to the space between the anchor and the viewport edge.
+ * The calendar shell can be taller than the viewport, so without this Popper
+ * never flips and the panel extends past the fold (Life constrained-height E2E).
+ */
+const capGridPopperMaxHeight: Modifier<"capGridPopperMaxHeight", Obj> = {
+  name: "capGridPopperMaxHeight",
+  enabled: true,
+  /** Run before rects so flip/preventOverflow see the capped height. */
+  phase: "read",
+  fn({ state }: ModifierArguments<Obj>) {
+    const el = state.elements.popper;
+    if (!(el instanceof HTMLElement)) return;
+
+    const ref = state.rects.reference;
+    const placement = state.placement;
+    const pad = 8;
+    const min = 80;
+    const bottomSpace = Math.max(
+      0,
+      window.innerHeight - ref.y - ref.height - pad,
+    );
+    const topSpace = Math.max(0, ref.y - pad);
+    const maxH = placement.startsWith("top")
+      ? Math.max(min, topSpace)
+      : Math.max(min, bottomSpace);
+
+    el.style.maxHeight = `${maxH}px`;
+  },
+};
+
+/**
+ * Grid poppers: keep the calendar inside the viewport on short windows so the
+ * last week row and focus outline are not clipped below the fold (Life/E2E).
+ * Sidebar pickers use their own layout; do not override Popper there.
+ */
+const GRID_POPPER_MODIFIERS: ReadonlyArray<Partial<Modifier<string, Obj>>> = [
+  capGridPopperMaxHeight,
+  {
+    name: "flip",
+    options: {
+      boundary: "viewport",
+      fallbackPlacements: ["top-start", "top", "bottom-start", "bottom"],
+    },
+  },
+  {
+    name: "preventOverflow",
+    options: {
+      boundary: "viewport",
+      padding: 8,
+    },
+  },
+];
 
 export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const {
@@ -305,6 +364,9 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
       formatWeekDay={(day) => day[0]}
       open={isOpen}
       {...props}
+      popperModifiers={
+        view === "grid" ? GRID_POPPER_MODIFIERS : props.popperModifiers
+      }
       openToDate={captionFocusDate ?? props.openToDate}
       onCalendarClose={handleCalendarClose}
       onChange={handleChange}

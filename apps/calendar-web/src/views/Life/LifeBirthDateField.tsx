@@ -127,6 +127,14 @@ export function LifeBirthDateField({
   }, [storedBirthDate]);
 
   useEffect(() => {
+    if (!isOpen || pickerCursor === null || !gridFocused) return;
+    const id = window.requestAnimationFrame(() => {
+      focusKeyboardSelectedDay("lifeBirthDatePicker");
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [isOpen, pickerCursor, gridFocused]);
+
+  useEffect(() => {
     if (isOpen) return;
     const input = containerRef.current?.querySelector("input");
     if (!input) return;

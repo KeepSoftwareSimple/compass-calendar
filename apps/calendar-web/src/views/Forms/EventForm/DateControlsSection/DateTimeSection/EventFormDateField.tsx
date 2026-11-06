@@ -96,6 +96,14 @@ export const EventFormDateField = ({
   }, [isOpen, selected]);
 
   useEffect(() => {
+    if (!isOpen || pickerCursor === null || !calendarClassName) return;
+    const id = window.requestAnimationFrame(() => {
+      focusKeyboardSelectedDay(calendarClassName);
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [isOpen, pickerCursor, calendarClassName]);
+
+  useEffect(() => {
     if (isOpen) return;
     const input = containerRef.current?.querySelector("input");
     if (!input) return;

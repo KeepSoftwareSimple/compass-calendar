@@ -915,20 +915,15 @@
  * react-datepicker's unlayered `color: #000`.
  */
 /*
- * Grid poppers: constrain height at the Popper root so short viewports scroll
- * the whole panel instead of clipping the calendar below the fold.
+ * Grid poppers: vertical scroll on the Popper-positioned node; max-height is set
+ * inline by DatePicker's Popper modifiers so the popper cannot extend past the
+ * viewport. Keyboard reveal scrolls this host in date-picker-keyboard-dom.util.ts.
  */
 .c-date-picker-popper-grid.react-datepicker-popper {
-  max-height: min(90dvh, calc(100dvh - 1rem));
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.c-date-picker-popper-grid.react-datepicker-popper
-  .c-date-picker.calendar.calendar--open {
-  max-height: inherit;
-  min-height: 0;
-  overflow: visible;
 }
 
 .c-date-picker {
