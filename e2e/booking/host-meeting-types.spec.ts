@@ -116,4 +116,31 @@ test.describe("host meeting types", () => {
       ]),
     );
   });
+
+  test("footer keycaps follow row vs name focus", async ({ page }) => {
+    await prepareSignedInBookingSettingsPage(page);
+    const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+    const rows = settingsDialog
+      .getByRole("list", { name: "Meeting types" })
+      .getByRole("listitem");
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: /Add type/ }),
+    );
+    await expect(rows).toHaveCount(2);
+
+    const hint = settingsDialog.getByRole("status", {
+      name: "Meeting type keyboard shortcuts",
+    });
+    const name = settingsDialog.getByRole("textbox", {
+      name: "Meeting type 2 name",
+    });
+    await expect(name).toBeFocused();
+    await expect(hint).toContainText("returns to row");
+    await expect(hint).not.toContainText("removes type");
+
+    await page.keyboard.press("Escape");
+    await expect(rows.nth(1)).toBeFocused();
+    await expect(hint).toContainText("removes type");
+    await expect(hint).not.toContainText("returns to row");
+  });
 });
