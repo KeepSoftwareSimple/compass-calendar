@@ -1,4 +1,4 @@
-import { LIFE_QUOTES } from "@core/life/life-quotes";
+import { REFLECTION_EMAIL_QUOTES } from "@core/life/life-quotes";
 import { type ReflectionEvent } from "@core/types/sync/reflection.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { escapeHtml } from "@core/util/escape-html.util";
@@ -142,14 +142,12 @@ export function renderReflectionEmail(input: {
   const sections: { heading: string; lines: string[] }[] = [
     {
       heading: `Your past week, ${dateRange(input.recentStartDate, input.date)}`,
-      lines: [
-        ...(input.recent.length
-          ? [
-              `Your calendar included ${input.recent.length} events.`,
-              ...input.recent.slice(0, 3).map(label),
-            ]
-          : ["No completed events in your calendar this week."]),
-      ],
+      lines: input.recent.length
+        ? [
+            `Your calendar included ${input.recent.length} events.`,
+            ...input.recent.slice(0, 3).map(label),
+          ]
+        : ["No completed events in your calendar this week."],
     },
     {
       heading: `Next week, ${dateRange(
@@ -158,11 +156,9 @@ export function renderReflectionEmail(input: {
           .add(input.cadence === "weekly" ? 6 : 7, "day")
           .format("YYYY-MM-DD"),
       )}`,
-      lines: [
-        ...(input.upcoming.length
-          ? input.upcoming.slice(0, 3).map(label)
-          : ["No upcoming events in your calendar."]),
-      ],
+      lines: input.upcoming.length
+        ? input.upcoming.slice(0, 3).map(label)
+        : ["No upcoming events in your calendar."],
     },
   ];
   if (input.memories.length)
@@ -185,10 +181,10 @@ export function renderReflectionEmail(input: {
         "Life view attached.",
       ],
     });
-  const quotes = [LIFE_QUOTES[2], LIFE_QUOTES[13], LIFE_QUOTES[23]];
   const quote =
-    quotes[
-      Number.parseInt(digest(input.date).slice(0, 4), 16) % quotes.length
+    REFLECTION_EMAIL_QUOTES[
+      Number.parseInt(digest(input.date).slice(0, 4), 16) %
+        REFLECTION_EMAIL_QUOTES.length
     ] ?? "";
   const text = `${sections.map((section) => `${section.heading}\n${section.lines.join("\n")}`).join("\n\n")}\n\nPlan next week\n${input.appUrl}\n\nUnsubscribe: ${input.unsubscribeUrl}\n\n${quote}`;
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${sections.map((section) => `<p><strong>${escapeHtml(section.heading)}</strong><br>${section.lines.map(escapeHtml).join("<br>")}</p>`).join("")}<p>Plan next week<br><a href="${escapeHtml(input.appUrl)}">${escapeHtml(input.appUrl)}</a></p><p><a href="${escapeHtml(input.unsubscribeUrl)}">Unsubscribe</a></p><p>${escapeHtml(quote)}</p></body></html>`;

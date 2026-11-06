@@ -1,9 +1,27 @@
 import { getSecureRandomNumber } from "@core/life/life-math";
 
+const SPEND_OUR_DAYS =
+  "“How we spend our days is, of course, how we spend our lives.” (Annie Dillard)";
+const RIVER_OF_TIME =
+  "“Time is the substance I am made of. Time is a river which sweeps me along, but I am the river.” (Jorge Luis Borges)";
+const UNDERSTOOD_BACKWARDS =
+  "“Life can only be understood backwards; but it must be lived forwards.” (Soren Kierkegaard)";
+
+/**
+ * The quotes the weekly review email rotates through, named so the email keeps
+ * its three regardless of where they sit in (or how they move within)
+ * `LIFE_QUOTES`.
+ */
+export const REFLECTION_EMAIL_QUOTES = [
+  SPEND_OUR_DAYS,
+  RIVER_OF_TIME,
+  UNDERSTOOD_BACKWARDS,
+];
+
 export const LIFE_QUOTES = [
   "“Teach us to number our days, that we may gain a heart of wisdom.” (Psalm 90:12)",
   "“It is not that we have a short time to live, but that we waste a lot of it.” (Seneca)",
-  "“How we spend our days is, of course, how we spend our lives.” (Annie Dillard)",
+  SPEND_OUR_DAYS,
   "“How many more times will you watch the full moon rise? Perhaps twenty. And yet it all seems limitless.” (Paul Bowles)",
   "“Tell me, what is it you plan to do with your one wild and precious life?” (Mary Oliver)",
   "“You could leave life right now. Let that determine what you do and say and think.” (Marcus Aurelius)",
@@ -14,7 +32,7 @@ export const LIFE_QUOTES = [
   "“Your time is limited, so don’t waste it living someone else’s life.” (Steve Jobs)",
   "“The average human lifespan is absurdly, terrifyingly, insultingly short.” (Oliver Burkeman)",
   "“Forever is composed of nows.” (Emily Dickinson)",
-  "“Time is the substance I am made of. Time is a river which sweeps me along, but I am the river.” (Jorge Luis Borges)",
+  RIVER_OF_TIME,
   "“Begin at once to live, and count each separate day as a separate life.” (Seneca)",
   "“While we are postponing, life speeds by.” (Seneca)",
   "“Nothing is ours except time.” (Seneca)",
@@ -24,7 +42,7 @@ export const LIFE_QUOTES = [
   "“Seize the day, put very little trust in tomorrow.” (Horace)",
   "“The Moving Finger writes; and, having writ, moves on.” (Omar Khayyam)",
   "“To every thing there is a season, and a time to every purpose under the heaven.” (Ecclesiastes 3:1)",
-  "“Life can only be understood backwards; but it must be lived forwards.” (Soren Kierkegaard)",
+  UNDERSTOOD_BACKWARDS,
   "“The unexamined life is not worth living.” (Socrates)",
   "“We are always getting ready to live but never living.” (Ralph Waldo Emerson)",
   "“Lost time is never found again.” (Benjamin Franklin)",
