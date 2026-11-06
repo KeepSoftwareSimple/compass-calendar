@@ -96,6 +96,14 @@ export const EventFormDateField = ({
   }, [isOpen, selected]);
 
   useEffect(() => {
+    if (!isOpen || pickerCursor === null || !calendarClassName) return;
+    const id = window.requestAnimationFrame(() => {
+      focusKeyboardSelectedDay(calendarClassName, pickerCursor.toDate());
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [isOpen, pickerCursor, calendarClassName]);
+
+  useEffect(() => {
     if (isOpen) return;
     const input = containerRef.current?.querySelector("input");
     if (!input) return;
@@ -208,7 +216,7 @@ export const EventFormDateField = ({
       const anchor = dayjs(selectedRef.current).startOf("day");
       setPickerCursorSync(anchor);
       isGridFocusedRef.current = true;
-      focusKeyboardSelectedDay(calendarClassName);
+      focusKeyboardSelectedDay(calendarClassName, selectedRef.current);
       return;
     }
 
@@ -226,7 +234,7 @@ export const EventFormDateField = ({
           setPickerMonth(next.startOf("month"));
         }
         isGridFocusedRef.current = true;
-        focusKeyboardSelectedDay(calendarClassName);
+        focusKeyboardSelectedDay(calendarClassName, next.toDate());
         break;
       }
       case "pickCursor":

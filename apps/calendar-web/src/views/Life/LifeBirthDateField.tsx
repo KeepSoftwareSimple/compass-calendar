@@ -119,12 +119,28 @@ export function LifeBirthDateField({
       applyGridAnchor(anchor);
       return;
     }
+    // Opening from the input already ran `applyGridAnchor` before `isOpen`
+    // flipped. The first effect tick can still read an empty input while
+    // react-datepicker catches up, which would incorrectly snap the month
+    // to `today`. If the cursor is already set, keep that month.
+    if (pickerCursorRef.current !== null) {
+      return;
+    }
     syncPickerMonth(dayjs(committedRef.current ?? today));
   }, [isOpen, today]);
 
   useEffect(() => {
     committedRef.current = parseLifeDate(storedBirthDate);
   }, [storedBirthDate]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: caption prev/next can change `pickerMonth` without a new `pickerCursor` reference; we still refocus the keyboard-selected cell.
+  useEffect(() => {
+    if (!isOpen || pickerCursor === null || !gridFocused) return;
+    const id = window.requestAnimationFrame(() => {
+      focusKeyboardSelectedDay("lifeBirthDatePicker", pickerCursor.toDate());
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [isOpen, pickerCursor, gridFocused, pickerMonth]);
 
   useEffect(() => {
     if (isOpen) return;
@@ -192,10 +208,13 @@ export function LifeBirthDateField({
       const current = label ? dayjs(label, "MMM YYYY") : null;
       if (!current?.isValid()) return;
 
-      const delta = pickerMonthRef.current.diff(current, "month");
-      if (delta === 0) return;
+      const targetMonth = pickerMonthRef.current.startOf("month");
+      const currentMonth = current.startOf("month");
+      if (currentMonth.isSame(targetMonth, "month")) return;
 
-      const navLabel = delta > 0 ? "Next month" : "Previous month";
+      const navLabel = currentMonth.isBefore(targetMonth)
+        ? "Next month"
+        : "Previous month";
       document
         .querySelector(".calendar.lifeBirthDatePicker")
         ?.querySelector<HTMLButtonElement>(`button[aria-label="${navLabel}"]`)
@@ -237,7 +256,8 @@ export function LifeBirthDateField({
       setGridFocusedSync(true);
     }
     openCalendar();
-    if (anchor) focusKeyboardSelectedDay("lifeBirthDatePicker");
+    if (anchor)
+      focusKeyboardSelectedDay("lifeBirthDatePicker", anchor.cursor.toDate());
   };
 
   const commitOrRevert = (
@@ -319,7 +339,8 @@ export function LifeBirthDateField({
     const isInputTarget = target instanceof HTMLInputElement;
     const isDayTarget =
       target instanceof HTMLElement &&
-      target.classList.contains("react-datepicker__day");
+      (target.classList.contains("react-datepicker__day") ||
+        target.getAttribute("role") === "option");
 
     if (event.key === "Tab") {
       if (input instanceof HTMLInputElement) commitOrRevert(input);
@@ -361,13 +382,30 @@ export function LifeBirthDateField({
       event.key === "ArrowDown" &&
       pickerCursorRef.current === null
     ) {
-      syncGridFromDraft();
-      const anchor =
-        pickerCursorRef.current ??
-        dayjs(committedRef.current ?? today).startOf("day");
-      setPickerCursorSync(anchor);
+      const inputEl = target as HTMLInputElement;
+      // `draftText`/`draftParse` lag one React commit behind `input.value`
+      // (programmatic `fill`, fast typing). Parse the live value synchronously.
+      setDraftText(inputEl.value);
+      const parsed = parseLifeBirthDateInput(
+        inputEl.value.trim(),
+        parseOptions,
+      );
+      const anchor = lifeBirthDateGridAnchor(parsed);
+      let cursorForFocus: Dayjs;
+      if (anchor) {
+        applyGridAnchor(anchor);
+        cursorForFocus = anchor.cursor;
+      } else {
+        const fallback = dayjs(committedRef.current ?? today).startOf("day");
+        setPickerCursorSync(fallback);
+        cursorForFocus = fallback;
+        if (!fallback.isSame(pickerMonthRef.current, "month")) {
+          syncPickerMonth(fallback);
+          setMonthNudgeTick((tick) => tick + 1);
+        }
+      }
       setGridFocusedSync(true);
-      focusKeyboardSelectedDay("lifeBirthDatePicker");
+      focusKeyboardSelectedDay("lifeBirthDatePicker", cursorForFocus.toDate());
       return;
     }
 
@@ -384,7 +422,7 @@ export function LifeBirthDateField({
           syncPickerMonth(next);
         }
         setGridFocusedSync(true);
-        focusKeyboardSelectedDay("lifeBirthDatePicker");
+        focusKeyboardSelectedDay("lifeBirthDatePicker", next.toDate());
         break;
       }
       case "pickCursor":

@@ -914,6 +914,18 @@
  * declarations, and nesting day colors in that same rule would lose to
  * react-datepicker's unlayered `color: #000`.
  */
+/*
+ * Grid poppers: vertical scroll on the Popper-positioned node; max-height is set
+ * inline by DatePicker's Popper modifiers so the popper cannot extend past the
+ * viewport. Keyboard reveal scrolls this host in date-picker-keyboard-dom.util.ts.
+ */
+.c-date-picker-popper-grid.react-datepicker-popper {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .c-date-picker {
   @apply select-none rounded-xs border-0 shadow-[0_4px_4px_var(--color-shadow-default)];
 }
@@ -950,7 +962,9 @@
   & .react-datepicker__month-container {
     display: flex;
     width: 100%;
-    height: 240px;
+    /* Grid popovers: min-height keeps six-row months sized; height grows with
+       wrapped header content (keyboard hints) instead of clipping the grid. */
+    min-height: 240px;
     flex-direction: column;
     padding: 0 12px;
   }
@@ -968,6 +982,10 @@
     flex: 1;
     flex-direction: column;
     margin: 0;
+  }
+
+  &:not([data-view="sidebar"]) .react-datepicker__month {
+    flex: 0 0 auto;
   }
 
   & .react-datepicker__week {
@@ -1148,9 +1166,8 @@
   }
 
   &.calendar--open {
-    /* Match the month-container height so 6-row months aren't clipped by the
-       overflow:hidden on .calendar. The two heights must stay in sync. */
-    height: 240px;
+    height: auto;
+    min-height: 240px;
   }
 
   &[data-view="sidebar"].calendar--open {

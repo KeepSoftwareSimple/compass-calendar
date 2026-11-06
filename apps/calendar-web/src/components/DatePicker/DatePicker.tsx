@@ -1,6 +1,18 @@
+import {
+  type Modifier,
+  type ModifierArguments,
+  type Obj,
+} from "@popperjs/core";
 import classNames from "classnames";
 import type React from "react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import * as ReactDatePickerModule from "react-datepicker";
 import { type ReactDatePickerProps } from "react-datepicker";
 import dayjs from "@core/util/date/dayjs";
@@ -79,6 +91,60 @@ const CAPTION_VIEW_AFTER_SELECT: Record<
   CaptionPickerView | null
 > = { year: "month", month: "day", day: null };
 
+/**
+ * Caps popper max-height to the space between the anchor and the viewport edge.
+ * The calendar shell can be taller than the viewport, so without this Popper
+ * never flips and the panel extends past the fold (Life constrained-height E2E).
+ */
+const capGridPopperMaxHeight: Modifier<"capGridPopperMaxHeight", Obj> = {
+  name: "capGridPopperMaxHeight",
+  enabled: true,
+  /** Run before rects so flip/preventOverflow see the capped height. */
+  phase: "read",
+  fn({ state }: ModifierArguments<Obj>) {
+    const el = state.elements.popper;
+    if (!(el instanceof HTMLElement)) return;
+
+    const ref = state.rects.reference;
+    const placement = state.placement;
+    const pad = 8;
+    const min = 80;
+    const bottomSpace = Math.max(
+      0,
+      window.innerHeight - ref.y - ref.height - pad,
+    );
+    const topSpace = Math.max(0, ref.y - pad);
+    const maxH = placement.startsWith("top")
+      ? Math.max(min, topSpace)
+      : Math.max(min, bottomSpace);
+
+    el.style.maxHeight = `${maxH}px`;
+  },
+};
+
+/**
+ * Grid poppers: keep the calendar inside the viewport on short windows so the
+ * last week row and focus outline are not clipped below the fold (Life/E2E).
+ * Sidebar pickers use their own layout; do not override Popper there.
+ */
+const GRID_POPPER_MODIFIERS: ReadonlyArray<Partial<Modifier<string, Obj>>> = [
+  capGridPopperMaxHeight,
+  {
+    name: "flip",
+    options: {
+      boundary: "viewport",
+      fallbackPlacements: ["top-start", "top", "bottom-start", "bottom"],
+    },
+  },
+  {
+    name: "preventOverflow",
+    options: {
+      boundary: "viewport",
+      padding: 8,
+    },
+  },
+];
+
 export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const {
     animationOnToggle = true,
@@ -150,7 +216,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const isDarkTheme = useThemeStore(selectTheme) === "dark-abyss";
   const resolvedBgColor =
     bgColor ?? (isDarkTheme ? colors.background : lightColors.background);
-  const datePickerStyle: CSSVariables = {
+  const datePickerStyle: CSSVariables & CSSProperties = {
     // Grid (popover) pickers read as an elevated surface a step above the app
     // background; the sidebar picker overrides this to transparent in CSS.
     "--date-picker-bg": bgColor ?? "var(--surface)",
@@ -257,7 +323,10 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   // Z_INDEX_FLOATING_MENU; keep the literal static so Tailwind can see it.
   return (
     <ReactDatePicker
-      popperClassName="!z-22"
+      popperClassName={classNames(
+        "!z-22",
+        view === "grid" && "c-date-picker-popper-grid",
+      )}
       calendarClassName={classNames("calendar", calendarClassName, {
         "calendar--open": isOpen,
         "calendar--animation": animationOnToggle,
@@ -295,6 +364,9 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
       formatWeekDay={(day) => day[0]}
       open={isOpen}
       {...props}
+      popperModifiers={
+        view === "grid" ? GRID_POPPER_MODIFIERS : props.popperModifiers
+      }
       openToDate={captionFocusDate ?? props.openToDate}
       onCalendarClose={handleCalendarClose}
       onChange={handleChange}
@@ -369,6 +441,101 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
           Boolean(resolvedHeaderEndContent) &&
           !customHeaderCount;
 
+        const captionBlock = (
+          <div className={classNames("min-w-16 shrink-0 items-start")}>
+            {captionPicker && captionView === "day" ? (
+              <button
+                type="button"
+                aria-label="Choose month and year"
+                className={classNames(
+                  "relative cursor-pointer rounded-xs px-0.5 text-left transition-colors hover:bg-text/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  monthTextClassName,
+                )}
+                style={{ color: headerColor }}
+                onClick={openCaptionPicker}
+              >
+                {selectedMonth}
+              </button>
+            ) : (
+              <span
+                className={classNames("relative", monthTextClassName)}
+                style={{ color: headerColor }}
+              >
+                {captionLabel}
+              </span>
+            )}
+          </div>
+        );
+
+        const navBlock = !customHeaderCount && (
+          <div
+            className={classNames("flex items-center", headerActionsClassName)}
+          >
+            <div className="flex items-center gap-1">
+              <MonthNavButton
+                ariaLabel={headerNav.prevLabel}
+                color={headerColor}
+                disabled={headerNav.prevDisabled}
+                isSidebarStyle={view === "sidebar"}
+                onClick={headerNav.prevDisabled ? undefined : headerNav.onPrev}
+                shortcut={
+                  monthChevronShortcuts
+                    ? [...monthChevronShortcuts.prev]
+                    : undefined
+                }
+                shortcutId={
+                  monthChevronShortcuts ? "nav-month-prev" : undefined
+                }
+              >
+                <ChevronLeftIcon />
+              </MonthNavButton>
+              <MonthNavButton
+                ariaLabel={headerNav.nextLabel}
+                color={headerColor}
+                disabled={headerNav.nextDisabled}
+                isSidebarStyle={view === "sidebar"}
+                onClick={headerNav.nextDisabled ? undefined : headerNav.onNext}
+                shortcut={
+                  monthChevronShortcuts
+                    ? [...monthChevronShortcuts.next]
+                    : undefined
+                }
+                shortcutId={
+                  monthChevronShortcuts ? "nav-month-next" : undefined
+                }
+              >
+                <ChevronRightIcon />
+              </MonthNavButton>
+            </div>
+            {withTodayButton && (
+              <TooltipWrapper
+                description="Go to this month"
+                shortcut={
+                  view === "sidebar"
+                    ? [...MONTH_PICKER_CURRENT_KEYCAPS]
+                    : undefined
+                }
+                shortcutId={
+                  view === "sidebar" ? "nav-month-current" : undefined
+                }
+              >
+                <button
+                  type="button"
+                  aria-label="Go to this month"
+                  className={classNames(
+                    "flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-text/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                    currentMonth === selectedMonth && "invisible",
+                  )}
+                  style={{ color: headerColor }}
+                  onClick={jumpToThisMonth}
+                >
+                  <CircleIcon />
+                </button>
+              </TooltipWrapper>
+            )}
+          </div>
+        );
+
         return (
           <div
             className={classNames(
@@ -381,118 +548,28 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
             <div
               className={classNames(
                 "flex min-w-0 items-center",
-                stackHeaderHints && "w-full",
+                stackHeaderHints && "w-full justify-between gap-2",
               )}
             >
-              <div className={classNames("min-w-16 shrink-0 items-start")}>
-                {captionPicker && captionView === "day" ? (
-                  <button
-                    type="button"
-                    aria-label="Choose month and year"
-                    className={classNames(
-                      "relative cursor-pointer rounded-xs px-0.5 text-left transition-colors hover:bg-text/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                      monthTextClassName,
-                    )}
-                    style={{ color: headerColor }}
-                    onClick={openCaptionPicker}
-                  >
-                    {selectedMonth}
-                  </button>
-                ) : (
-                  <span
-                    className={classNames("relative", monthTextClassName)}
-                    style={{ color: headerColor }}
-                  >
-                    {captionLabel}
-                  </span>
-                )}
-              </div>
-
-              {!customHeaderCount && (
-                <div
-                  className={classNames(
-                    "flex items-center",
-                    headerActionsClassName,
-                  )}
-                >
-                  <div className="flex items-center gap-1">
-                    <MonthNavButton
-                      ariaLabel={headerNav.prevLabel}
-                      color={headerColor}
-                      disabled={headerNav.prevDisabled}
-                      isSidebarStyle={view === "sidebar"}
-                      onClick={
-                        headerNav.prevDisabled ? undefined : headerNav.onPrev
-                      }
-                      shortcut={
-                        monthChevronShortcuts
-                          ? [...monthChevronShortcuts.prev]
-                          : undefined
-                      }
-                      shortcutId={
-                        monthChevronShortcuts ? "nav-month-prev" : undefined
-                      }
-                    >
-                      <ChevronLeftIcon />
-                    </MonthNavButton>
-                    <MonthNavButton
-                      ariaLabel={headerNav.nextLabel}
-                      color={headerColor}
-                      disabled={headerNav.nextDisabled}
-                      isSidebarStyle={view === "sidebar"}
-                      onClick={
-                        headerNav.nextDisabled ? undefined : headerNav.onNext
-                      }
-                      shortcut={
-                        monthChevronShortcuts
-                          ? [...monthChevronShortcuts.next]
-                          : undefined
-                      }
-                      shortcutId={
-                        monthChevronShortcuts ? "nav-month-next" : undefined
-                      }
-                    >
-                      <ChevronRightIcon />
-                    </MonthNavButton>
-                  </div>
-                  {withTodayButton && (
-                    <TooltipWrapper
-                      description="Go to this month"
-                      shortcut={
-                        view === "sidebar"
-                          ? [...MONTH_PICKER_CURRENT_KEYCAPS]
-                          : undefined
-                      }
-                      shortcutId={
-                        view === "sidebar" ? "nav-month-current" : undefined
-                      }
-                    >
-                      <button
-                        type="button"
-                        aria-label="Go to this month"
-                        className={classNames(
-                          "flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-text/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                          currentMonth === selectedMonth && "invisible",
-                        )}
-                        style={{ color: headerColor }}
-                        onClick={jumpToThisMonth}
-                      >
-                        <CircleIcon />
-                      </button>
-                    </TooltipWrapper>
-                  )}
+              {stackHeaderHints ? (
+                <div className="flex min-w-0 shrink items-center gap-2">
+                  {captionBlock}
+                  {navBlock}
                 </div>
+              ) : (
+                <>
+                  {captionBlock}
+                  {navBlock}
+                  {!customHeaderCount && resolvedHeaderEndContent ? (
+                    <div className="ml-auto flex min-w-0 items-center">
+                      {resolvedHeaderEndContent}
+                    </div>
+                  ) : null}
+                </>
               )}
-              {!stackHeaderHints &&
-              !customHeaderCount &&
-              resolvedHeaderEndContent ? (
-                <div className="ml-auto flex min-w-0 items-center">
-                  {resolvedHeaderEndContent}
-                </div>
-              ) : null}
             </div>
             {stackHeaderHints && resolvedHeaderEndContent ? (
-              <div className="flex w-full min-w-0 justify-end">
+              <div className="flex w-full min-w-0 justify-start">
                 {resolvedHeaderEndContent}
               </div>
             ) : null}
