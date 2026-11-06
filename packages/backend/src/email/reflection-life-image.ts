@@ -31,6 +31,7 @@ export function renderReflectionLifeSvg(
   date: string,
   lifeUrl: string,
 ) {
+  const visibleUrl = new URL(lifeUrl);
   const completed = getCompletedLifeWeeks(birthDate, date);
   const rows = DEFAULT_LIFESPAN;
   const height = 146 + rows * 8;
@@ -52,9 +53,9 @@ export function renderReflectionLifeSvg(
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_WIDTH}" height="${height}" viewBox="0 0 ${PAGE_WIDTH} ${height}">
     <rect width="${PAGE_WIDTH}" height="${height}" fill="white"/>
     ${text(24, 30, "Your Life In Weeks", 16)}
-    ${text(24, 53, "Each square is a week. Filled: lived. Outlined: this week.")}
+    ${text(24, 53, "Each square is a week")}
     ${text(24, 77, reflectionLifeProgress(completed))}
-    ${text(LIFE_URL_LEFT, LIFE_URL_BASELINE, lifeUrl)}
+    ${text(LIFE_URL_LEFT, LIFE_URL_BASELINE, `${visibleUrl.host.replace(/^www\./, "")}${visibleUrl.pathname}`)}
     ${grid}
   </svg>`;
 }
@@ -83,6 +84,10 @@ export async function renderReflectionLifePdf(
   date: string,
   lifeUrl: string,
 ): Promise<Buffer> {
+  const targetUrl = new URL(lifeUrl);
+  targetUrl.searchParams.set("utm_source", "email");
+  targetUrl.searchParams.set("utm_campaign", "weekly_review");
+  targetUrl.searchParams.set("utm_content", "life_view_attachment");
   const document = await PDFDocument.create();
   document.setTitle("Your Life In Weeks");
   document.setCreationDate(new Date(`${date}T00:00:00Z`));
@@ -99,7 +104,7 @@ export async function renderReflectionLifePdf(
     Subtype: "Link",
     Rect: lifeUrlLinkRect(height),
     Border: [0, 0, 0],
-    A: { Type: "Action", S: "URI", URI: PDFString.of(lifeUrl) },
+    A: { Type: "Action", S: "URI", URI: PDFString.of(targetUrl.toString()) },
   });
   page.node.addAnnot(document.context.register(link));
   return Buffer.from(await document.save());
