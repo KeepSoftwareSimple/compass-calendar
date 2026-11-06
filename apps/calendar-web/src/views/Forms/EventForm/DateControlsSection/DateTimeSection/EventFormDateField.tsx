@@ -4,12 +4,16 @@ import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { parseUserDate } from "@web/common/utils/datetime/web.date.util";
 import { resolveFormControlJumpIds } from "@web/common/utils/form/form.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
-import { DatePicker } from "@web/components/DatePicker/DatePicker";
+import {
+  type CaptionPickerView,
+  DatePicker,
+} from "@web/components/DatePicker/DatePicker";
 import {
   consumeDatePickerKey,
   focusKeyboardSelectedDay,
 } from "@web/components/DatePicker/date-picker-keyboard-dom.util";
 import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
+import { useCaptionableGridDatePickerHint } from "@web/shortcuts/tips/useDatePickerSidebarHints";
 import {
   EVENT_FORM_DATE_INPUT_FORMAT,
   formatEventFormDateLabel,
@@ -21,11 +25,6 @@ import {
   isEventFormDateFieldClosedKey,
   movePickerCursor,
 } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
-import {
-  EventFormCalendarPopoverHints,
-  EventFormHintKeys,
-  EventFormInfieldHint,
-} from "@web/views/Forms/EventForm/EventFormFocusedHint";
 
 const DATE_FIELD_CLASSNAME =
   "c-event-form-date-field flex min-w-0 flex-1 items-center [&_.react-datepicker-wrapper]:w-full [&_.react-datepicker\\_\\_input-container]:w-full [&_input]:w-full [&_input]:min-w-0";
@@ -73,7 +72,10 @@ export const EventFormDateField = ({
   };
   const [pickerCursor, setPickerCursor] = useState<Dayjs | null>(null);
   const pickerCursorRef = useRef<Dayjs | null>(null);
-  const isGridFocusedRef = useRef(false);
+  const [gridFocused, setGridFocused] = useState(false);
+  const setGridFocusedSync = (next: boolean) => {
+    setGridFocused(next);
+  };
   const setPickerCursorSync = (next: Dayjs | null) => {
     pickerCursorRef.current = next;
     setPickerCursor(next);
@@ -83,12 +85,24 @@ export const EventFormDateField = ({
   );
 
   const shownDateRef = useRef<number | null>(null);
+  const [captionView, setCaptionView] = useState<CaptionPickerView>("day");
+
+  const inputPhrase = sideLabel === "start" ? "start date" : "end date";
+  const { onPickerInputFocus, onPickerInputBlur } =
+    useCaptionableGridDatePickerHint({
+      baseId: "date-picker-event-form",
+      isOpen,
+      gridFocused,
+      captionView,
+      inputPhrase,
+    });
 
   useEffect(() => {
     if (!isOpen) {
       pickerCursorRef.current = null;
       setPickerCursor(null);
-      isGridFocusedRef.current = false;
+      setGridFocused(false);
+      setCaptionView("day");
       return;
     }
     calendarCloseRequestedRef.current = false;
@@ -119,6 +133,20 @@ export const EventFormDateField = ({
 
   const revertInput = (target: HTMLInputElement) => {
     target.value = formatEventFormDateLabel(selectedRef.current);
+  };
+
+  const stepCalendarMonth = (deltaMonths: number) => {
+    if (!calendarClassName) return;
+    const label = deltaMonths < 0 ? "Previous month" : "Next month";
+    document
+      .querySelector(`.calendar.${calendarClassName}`)
+      ?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+      ?.click();
+    setPickerMonth((m) => m.add(deltaMonths, "month"));
+  };
+
+  const stepCalendarYear = (deltaYears: number) => {
+    setPickerMonth((m) => m.add(deltaYears, "year"));
   };
 
   /**
@@ -187,10 +215,23 @@ export const EventFormDateField = ({
 
     if (event.key === "Tab") {
       if (input instanceof HTMLInputElement) commitOrRevert(input);
-      isGridFocusedRef.current = false;
+      setGridFocusedSync(false);
       skipBlurCloseRef.current = true;
       requestCalendarClose();
       event.stopPropagation();
+      return;
+    }
+
+    if (event.key === "PageDown") {
+      consumeDatePickerKey(event);
+      if (event.shiftKey) stepCalendarYear(1);
+      else stepCalendarMonth(1);
+      return;
+    }
+    if (event.key === "PageUp") {
+      consumeDatePickerKey(event);
+      if (event.shiftKey) stepCalendarYear(-1);
+      else stepCalendarMonth(-1);
       return;
     }
 
@@ -198,13 +239,13 @@ export const EventFormDateField = ({
 
     if (
       isInputTarget &&
-      !isGridFocusedRef.current &&
+      !gridFocused &&
       (event.key === "ArrowLeft" || event.key === "ArrowRight")
     ) {
       return;
     }
 
-    if (!isInputTarget && !isDayTarget && !isGridFocusedRef.current) return;
+    if (!isInputTarget && !isDayTarget && !gridFocused) return;
 
     consumeDatePickerKey(event);
 
@@ -215,7 +256,7 @@ export const EventFormDateField = ({
     ) {
       const anchor = dayjs(selectedRef.current).startOf("day");
       setPickerCursorSync(anchor);
-      isGridFocusedRef.current = true;
+      setGridFocusedSync(true);
       focusKeyboardSelectedDay(calendarClassName, selectedRef.current);
       return;
     }
@@ -233,7 +274,7 @@ export const EventFormDateField = ({
         if (!next.isSame(pickerMonth, "month")) {
           setPickerMonth(next.startOf("month"));
         }
-        isGridFocusedRef.current = true;
+        setGridFocusedSync(true);
         focusKeyboardSelectedDay(calendarClassName, next.toDate());
         break;
       }
@@ -242,7 +283,7 @@ export const EventFormDateField = ({
         break;
       case "close":
         requestCalendarClose();
-        isGridFocusedRef.current = false;
+        setGridFocusedSync(false);
         input?.focus();
         break;
     }
@@ -316,7 +357,7 @@ export const EventFormDateField = ({
         if (next instanceof Element && next.closest(".react-datepicker"))
           return;
         if (isOpen) {
-          isGridFocusedRef.current = false;
+          setGridFocusedSync(false);
           if (skipBlurCloseRef.current) {
             skipBlurCloseRef.current = false;
           } else {
@@ -347,13 +388,13 @@ export const EventFormDateField = ({
         }}
         onCalendarOpen={onCalendarOpen}
         onChange={() => null}
-        headerEndContent={
-          isOpen ? <EventFormCalendarPopoverHints /> : undefined
-        }
+        onCaptionViewChange={setCaptionView}
+        onPickerInputFocus={onPickerInputFocus}
+        onPickerInputBlur={onPickerInputBlur}
         onInputClick={onCalendarOpen}
         onFocus={(event) => {
           if (event.target instanceof HTMLInputElement) {
-            isGridFocusedRef.current = false;
+            setGridFocusedSync(false);
             event.target.select();
           }
         }}
@@ -379,12 +420,6 @@ export const EventFormDateField = ({
         view="grid"
         withUnderline={false}
       />
-      <EventFormInfieldHint visible={!isOpen}>
-        <EventFormHintKeys
-          keys="ArrowDown"
-          label="Arrow down opens the calendar"
-        />
-      </EventFormInfieldHint>
     </div>
   );
 };

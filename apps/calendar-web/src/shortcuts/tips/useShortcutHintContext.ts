@@ -16,6 +16,7 @@ import {
   selectJumpableDayPrefixes,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { useDatePickerHintStore } from "@web/shortcuts/tips/date-picker-hint.store";
 import {
   selectEventFormFocusInside,
   useEventFormFocusStore,
@@ -51,6 +52,7 @@ export function useShortcutHintContext() {
   const progress = useShortcutHintProgress();
   const tipsMuted = useIsTipsMuted();
   const jumpableDayPrefixes = useEventJumpStore(selectJumpableDayPrefixes);
+  const datePickerHintDepth = useDatePickerHintStore((s) => s.stack.length);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -72,6 +74,10 @@ export function useShortcutHintContext() {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
+
+  if (datePickerHintDepth > 0) {
+    return null;
+  }
 
   return selectShortcutHint(
     {

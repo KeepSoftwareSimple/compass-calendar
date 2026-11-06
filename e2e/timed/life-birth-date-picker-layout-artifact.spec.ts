@@ -258,6 +258,9 @@ test("artifact: life birth date picker layout and grid not clipped", {
     if (await openSidebar.isVisible()) {
       await openSidebar.click();
     }
+    await page
+      .locator("#sidebar")
+      .waitFor({ state: "visible", timeout: 15000 });
 
     await dismissShortcutsDialogIfOpen();
     await dismissBlockingStatusNudges();
@@ -274,9 +277,7 @@ test("artifact: life birth date picker layout and grid not clipped", {
     await birth.press("ArrowDown");
 
     await expect(page.locator(".lifeBirthDatePicker")).toBeVisible();
-    await expect(
-      page.getByTestId("life-birth-date-calendar-hint"),
-    ).toBeVisible();
+    await expect(page.getByTestId("date-picker-contextual-hint")).toBeVisible();
 
     await syncPickerCaptionToSeptember1993();
     await focusLifeBirthDayByExactAriaLabel(page, SEPT_14_1993_LABEL);
@@ -287,16 +288,8 @@ test("artifact: life birth date picker layout and grid not clipped", {
     ).toBeVisible();
   };
 
-  const runCapture = async (suffix: string, hint: "collapsed" | "expanded") => {
+  const runCapture = async (suffix: string) => {
     await openPickerSeptember1993();
-
-    const hintRoot = page.getByTestId("life-birth-date-calendar-hint");
-    if (hint === "expanded") {
-      await hintRoot.locator("summary").click();
-      await expect(
-        page.getByRole("region", { name: "Full calendar keyboard shortcuts" }),
-      ).toBeVisible();
-    }
 
     await syncPickerCaptionToSeptember1993();
     await focusLifeBirthDayByExactAriaLabel(page, SEPT_14_1993_LABEL);
@@ -326,10 +319,8 @@ test("artifact: life birth date picker layout and grid not clipped", {
   };
 
   await page.setViewportSize({ width: 420, height: 520 });
-  await runCapture("normal-collapsed-hint", "collapsed");
-  await runCapture("normal-expanded-hint", "expanded");
+  await runCapture("normal-sidebar-hint");
 
   await page.setViewportSize({ width: 360, height: 320 });
-  await runCapture("constrained-collapsed-hint", "collapsed");
-  await runCapture("constrained-expanded-hint", "expanded");
+  await runCapture("constrained-sidebar-hint");
 });

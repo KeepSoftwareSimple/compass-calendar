@@ -33,6 +33,8 @@ import {
   selectQuickTimeDigits,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { DatePickerContextualHint } from "@web/shortcuts/tips/DatePickerContextualHint";
+import { useDatePickerHintStore } from "@web/shortcuts/tips/date-picker-hint.store";
 import { ShortcutTipIndicator } from "@web/shortcuts/tips/ShortcutTipIndicator";
 import { useShortcutHintContext } from "@web/shortcuts/tips/useShortcutHintContext";
 import { useSseDegraded } from "@web/sse/hooks/useSseDegraded";
@@ -52,6 +54,9 @@ import { useTimeTravelZone } from "@web/timezone/time-travel.store";
  */
 export const SidebarStatusBar: FC = () => {
   const hint = useShortcutHintContext();
+  const datePickerHintActive = useDatePickerHintStore(
+    (s) => s.stack.length > 0,
+  );
   const writeLocked = useShortcutWriteLocked();
   const quickTimeDigits = useEventJumpStore(selectQuickTimeDigits);
   const isEventJump = useEventJumpStore(selectEventJumpActive);
@@ -106,6 +111,8 @@ export const SidebarStatusBar: FC = () => {
   ) : !status ? (
     isTimeTraveling ? (
       <TimeTravelIndicator />
+    ) : datePickerHintActive ? (
+      <DatePickerContextualHint />
     ) : hint ? (
       <ShortcutTipIndicator hint={hint} locked={writeLocked} />
     ) : null

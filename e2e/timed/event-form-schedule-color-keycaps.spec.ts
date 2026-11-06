@@ -36,8 +36,10 @@ test("shows date, time, and color keycaps on the event form", async ({
   const form = page.getByRole("form");
   const startDate = form.getByTitle("Pick Start Date");
   await startDate.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator(".react-datepicker")).toBeVisible();
   await expect(
-    form.locator("#eventFormStartDate").getByTestId("event-form-control-hint"),
+    page.locator("#sidebar").getByTestId("date-picker-contextual-hint"),
   ).toBeVisible();
 
   const endTime = form.getByRole("combobox", { name: "End time" });

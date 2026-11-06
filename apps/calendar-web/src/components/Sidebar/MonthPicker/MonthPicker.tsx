@@ -15,7 +15,7 @@ import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import { restoreSidebarPickerReturnFocus } from "@web/components/Sidebar/util/sidebarFocus.util";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
-import { MonthPickerHint } from "./MonthPickerHint";
+import { SidebarMonthPickerHintEffect } from "@web/shortcuts/tips/useDatePickerSidebarHints";
 import {
   type MonthPickerUnit,
   normalizePickerCursor,
@@ -188,57 +188,56 @@ export const MonthPicker: FC<Props> = ({
       onKeyDownCapture={handlePickerKeyDownCapture}
       {...pageJumpAttrs("month-picker")}
     >
-      <MonthPickerHint unit={unit}>
-        <DatePicker
-          key={jumpGeneration}
-          animationOnToggle={false}
-          calendarClassName={ID_DATEPICKER_SIDEBAR}
-          calendarStartDay={weekStartDay}
-          dayClassName={getDayClassName}
-          headerActionsClassName={headerActionsClassName}
-          headerClassName="!relative !justify-start !px-0 !pb-3"
-          headerEndContent={
-            <div className="flex items-center gap-2">
-              <TrialBadge />
-              {headerEndContent}
-            </div>
-          }
-          inline
-          isOpen={true}
-          locale={monthPickerLocale(weekStartDay)}
-          monthNav={{
-            prevShortcut: MONTH_PICKER_PREV_KEYCAPS,
-            nextShortcut: MONTH_PICKER_NEXT_KEYCAPS,
-            onPrev: goPrevMonth,
-            onNext: goNextMonth,
-            onToday: () => jumpToMonth(dayjs()),
-          }}
-          monthTextClassName="text-[14px] font-medium"
-          monthsShown={monthsShown}
-          onChange={(date) => {
-            if (!date) return;
+      <DatePicker
+        key={jumpGeneration}
+        animationOnToggle={false}
+        calendarClassName={ID_DATEPICKER_SIDEBAR}
+        calendarStartDay={weekStartDay}
+        dayClassName={getDayClassName}
+        headerActionsClassName={headerActionsClassName}
+        headerClassName="!relative !justify-start !px-0 !pb-3"
+        headerEndContent={
+          <div className="flex items-center gap-2">
+            <TrialBadge />
+            {headerEndContent}
+          </div>
+        }
+        inline
+        isOpen={true}
+        locale={monthPickerLocale(weekStartDay)}
+        monthNav={{
+          prevShortcut: MONTH_PICKER_PREV_KEYCAPS,
+          nextShortcut: MONTH_PICKER_NEXT_KEYCAPS,
+          onPrev: goPrevMonth,
+          onNext: goNextMonth,
+          onToday: () => jumpToMonth(dayjs()),
+        }}
+        monthTextClassName="text-[14px] font-medium"
+        monthsShown={monthsShown}
+        onChange={(date) => {
+          if (!date) return;
 
-            const nextDate = normalizePickerCursor(
-              dayjs(date),
-              unit,
-              weekStartDay,
-            );
+          const nextDate = normalizePickerCursor(
+            dayjs(date),
+            unit,
+            weekStartDay,
+          );
 
-            setFocusedDate(nextDate);
-            setDisplayedMonth(nextDate.startOf("month"));
-            onSelectDate(nextDate);
-          }}
-          onMonthChange={(date) => {
-            setDisplayedMonth(dayjs(date).startOf("month"));
-          }}
-          openToDate={displayedMonth.toDate()}
-          selected={focusedDate.toDate()}
-          shouldCloseOnSelect={false}
-          showWeekPicker={unit === "week"}
-          view="sidebar"
-          withTodayButton={true}
-        />
-      </MonthPickerHint>
+          setFocusedDate(nextDate);
+          setDisplayedMonth(nextDate.startOf("month"));
+          onSelectDate(nextDate);
+        }}
+        onMonthChange={(date) => {
+          setDisplayedMonth(dayjs(date).startOf("month"));
+        }}
+        openToDate={displayedMonth.toDate()}
+        selected={focusedDate.toDate()}
+        shouldCloseOnSelect={false}
+        showWeekPicker={unit === "week"}
+        view="sidebar"
+        withTodayButton={true}
+      />
+      <SidebarMonthPickerHintEffect />
     </fieldset>
   );
 };

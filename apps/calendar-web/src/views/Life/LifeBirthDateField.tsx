@@ -2,11 +2,15 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { parseLifeDate } from "@core/life/life-math";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
-import { DatePicker } from "@web/components/DatePicker/DatePicker";
+import {
+  type CaptionPickerView,
+  DatePicker,
+} from "@web/components/DatePicker/DatePicker";
 import {
   consumeDatePickerKey,
   focusKeyboardSelectedDay,
 } from "@web/components/DatePicker/date-picker-keyboard-dom.util";
+import { useCaptionableGridDatePickerHint } from "@web/shortcuts/tips/useDatePickerSidebarHints";
 import {
   consumeUiFocusTextInsertSuppress,
   shouldSuppressUiFocusTextInsert,
@@ -18,8 +22,6 @@ import {
   isEventFormDateFieldClosedKey,
   movePickerCursor,
 } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
-import { EventFormInfieldHint } from "@web/views/Forms/EventForm/EventFormFocusedHint";
-import { LifeBirthDatePopoverHints } from "@web/views/Life/LifeBirthDatePopoverHints";
 import {
   formatLifeBirthDatePreview,
   lifeBirthDateDraftPreview,
@@ -86,9 +88,7 @@ export function LifeBirthDateField({
   const [pickerCursor, setPickerCursor] = useState<Dayjs | null>(null);
   const pickerCursorRef = useRef<Dayjs | null>(null);
   const [gridFocused, setGridFocused] = useState(false);
-  const isGridFocusedRef = useRef(false);
   const setGridFocusedSync = (next: boolean) => {
-    isGridFocusedRef.current = next;
     setGridFocused(next);
   };
   const setPickerCursorSync = (next: Dayjs | null) => {
@@ -100,6 +100,16 @@ export function LifeBirthDateField({
   const shownDateRef = useRef<number | null>(null);
   const draftParseKeyRef = useRef("");
   const [monthNudgeTick, setMonthNudgeTick] = useState(0);
+  const [captionView, setCaptionView] = useState<CaptionPickerView>("day");
+
+  const { onPickerInputFocus, onPickerInputBlur } =
+    useCaptionableGridDatePickerHint({
+      baseId: "date-picker-life",
+      isOpen,
+      gridFocused,
+      captionView,
+      inputPhrase: "birth date",
+    });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reopen picks month from input parse or committed date.
   useEffect(() => {
@@ -107,6 +117,7 @@ export function LifeBirthDateField({
       pickerCursorRef.current = null;
       setPickerCursor(null);
       setGridFocusedSync(false);
+      setCaptionView("day");
       return;
     }
     calendarCloseRequestedRef.current = false;
@@ -367,13 +378,13 @@ export function LifeBirthDateField({
 
     if (
       isInputTarget &&
-      !isGridFocusedRef.current &&
+      !gridFocused &&
       (event.key === "ArrowLeft" || event.key === "ArrowRight")
     ) {
       return;
     }
 
-    if (!isInputTarget && !isDayTarget && !isGridFocusedRef.current) return;
+    if (!isInputTarget && !isDayTarget && !gridFocused) return;
 
     consumeDatePickerKey(event);
 
@@ -486,8 +497,6 @@ export function LifeBirthDateField({
 
   const previewIsError = draftParse.kind === "invalid" && draftTrimmed !== "";
 
-  const popoverHintMode = gridFocused ? "grid" : "typing";
-
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: keyboard routing for the birth-date field matches EventFormDateField.
     <div
@@ -523,21 +532,9 @@ export function LifeBirthDateField({
           calendarClassName="lifeBirthDatePicker"
           captionPicker
           dateFormat="MMM d, yyyy"
-          headerEndContent={
-            isOpen
-              ? ({ captionView }) => (
-                  <LifeBirthDatePopoverHints
-                    mode={
-                      captionView === "year"
-                        ? "year"
-                        : captionView === "month"
-                          ? "month"
-                          : popoverHintMode
-                    }
-                  />
-                )
-              : undefined
-          }
+          onCaptionViewChange={setCaptionView}
+          onPickerInputFocus={onPickerInputFocus}
+          onPickerInputBlur={onPickerInputBlur}
           id={id}
           inputClassName={LIFE_BIRTH_INPUT_CLASSNAME}
           isClearable
@@ -598,12 +595,6 @@ export function LifeBirthDateField({
           withTodayButton={false}
           withUnderline={false}
         />
-        <EventFormInfieldHint
-          testId="life-birth-date-field-hint"
-          visible={!isOpen}
-        >
-          <LifeBirthDatePopoverHints mode="closed" />
-        </EventFormInfieldHint>
       </div>
     </div>
   );

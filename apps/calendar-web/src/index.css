@@ -962,11 +962,12 @@
   & .react-datepicker__month-container {
     display: flex;
     width: 100%;
-    /* Grid popovers: min-height keeps six-row months sized; height grows with
-       wrapped header content (keyboard hints) instead of clipping the grid. */
+    /* Grid popovers: min-height keeps six-row months sized. */
     min-height: 240px;
     flex-direction: column;
-    padding: 0 12px;
+    /* Match top breathing room: header uses padding-top 8px; last row focus
+       rings need space below the grid (Tyler t217u bottom padding feedback). */
+    padding: 0 12px 12px;
   }
 
   &[data-view="sidebar"] .react-datepicker__month-container {
@@ -1000,7 +1001,7 @@
     align-items: start;
     border-bottom: 0;
     background: unset;
-    padding: 8px 0 0 2px;
+    padding: 10px 0 6px 2px;
   }
 
   &[data-view="sidebar"] .react-datepicker__header {
@@ -1073,7 +1074,7 @@
     width: 100%;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
 
   & .react-datepicker__day.react-datepicker__day--selected {
