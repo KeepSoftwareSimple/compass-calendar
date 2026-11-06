@@ -4,8 +4,12 @@ const ARTIFACT_PREFIX = "/opt/cursor/artifacts/life-birth-date-picker";
 
 const OUTLINE_PAD_PX = 6;
 
-/** September 1993: from Tue 14 to Sun 26 is ↓↓←← (two weeks down, two days left). */
-async function keyboardNavigateToBottomRowSeptember1993(
+/** react-datepicker v4: `Choose ` + date-fns `PPPP` in the active locale. */
+const SEPT_26_1993_LABEL = "Choose Sunday, September 26th, 1993";
+const SEPT_14_1993_LABEL = "Choose Tuesday, September 14th, 1993";
+
+/** September 1993: from Tue 14 to Sun 26 in a Sunday-first grid is ↓↓←←. */
+async function keyboardNavigateToSeptember261993(
   page: import("@playwright/test").Page,
 ) {
   await page.keyboard.press("ArrowDown");
@@ -14,119 +18,153 @@ async function keyboardNavigateToBottomRowSeptember1993(
   await page.keyboard.press("ArrowLeft");
 }
 
-/** September 1993: assert the week row that contains Sun 26 (not the grid’s last row, which can be spillover). */
-async function assertCalendarFullyInViewport(
+/**
+ * Month navigation clicks move focus to the caption control. Put keyboard focus
+ * back on the typed cursor day by exact react-datepicker `aria-label` before
+ * exercising grid arrow keys.
+ */
+async function focusLifeBirthDayByExactAriaLabel(
+  page: import("@playwright/test").Page,
+  label: string,
+) {
+  await page.evaluate((l) => {
+    const popper = document.querySelector(
+      ".react-datepicker-popper:has(.lifeBirthDatePicker)",
+    );
+    if (!(popper instanceof HTMLElement)) {
+      throw new Error("Life birth date picker popper not found");
+    }
+    const el = Array.from(popper.querySelectorAll<HTMLElement>("*")).find(
+      (n) => n.getAttribute("aria-label") === l,
+    );
+    if (!el) {
+      throw new Error(`No cell with aria-label: ${l}`);
+    }
+    el.focus({ preventScroll: true });
+  }, label);
+}
+
+async function assertFocusedSept261993FullyVisible(
   page: import("@playwright/test").Page,
 ) {
   await expect
     .poll(
       async () => {
-        const r = await page.evaluate((outlinePad) => {
-          const vpW = window.innerWidth;
-          const vpH = window.innerHeight;
-          const scrollYBefore = window.scrollY;
-          const popper = document.querySelector(".react-datepicker-popper");
-          if (!popper) {
-            return {
-              ok: false as const,
-              reason: "no popper",
+        const r = await page.evaluate(
+          ({ outlinePad, expectedLabel }) => {
+            const vpW = window.innerWidth;
+            const vpH = window.innerHeight;
+            const scrollYBefore = window.scrollY;
+
+            const active = document.activeElement;
+            if (!(active instanceof HTMLElement)) {
+              return { ok: false as const, reason: "no activeElement" };
+            }
+            const isDayLike =
+              active.classList.contains("react-datepicker__day") ||
+              active.getAttribute("role") === "option";
+            if (!isDayLike) {
+              return { ok: false as const, reason: "focus not on day cell" };
+            }
+            const popper = active.closest(".react-datepicker-popper");
+            if (!(popper instanceof HTMLElement)) {
+              return {
+                ok: false as const,
+                reason: "no popper for focused day",
+              };
+            }
+            if (!popper.contains(active)) {
+              return {
+                ok: false as const,
+                reason: "focused day outside popper",
+              };
+            }
+            if (!popper.querySelector(".lifeBirthDatePicker")) {
+              return {
+                ok: false as const,
+                reason: "popper is not the Life birth date picker",
+              };
+            }
+
+            const label = active.getAttribute("aria-label") ?? "";
+            if (label !== expectedLabel) {
+              return {
+                ok: false as const,
+                reason: `expected aria-label ${expectedLabel}, got: ${label}`,
+              };
+            }
+
+            const gridPopper = popper.closest(
+              ".c-date-picker-popper-grid.react-datepicker-popper",
+            );
+            const scrollport =
+              gridPopper instanceof HTMLElement
+                ? gridPopper
+                : ((popper.querySelector(
+                    ".c-date-picker.calendar--open",
+                  ) as HTMLElement) ?? (popper as HTMLElement));
+            const sr = scrollport.getBoundingClientRect();
+
+            const pad = outlinePad;
+
+            const checkVisibleInPopperAndViewport = (
+              el: Element,
+              name: string,
+            ) => {
+              const b = el.getBoundingClientRect();
+              const outline = 3;
+              const expanded = {
+                top: b.top - outline,
+                bottom: b.bottom + outline,
+                left: b.left - outline,
+                right: b.right + outline,
+              };
+              const visTop = Math.max(expanded.top, sr.top, 0);
+              const visBottom = Math.min(expanded.bottom, sr.bottom, vpH);
+              const visLeft = Math.max(expanded.left, sr.left, 0);
+              const visRight = Math.min(expanded.right, sr.right, vpW);
+              if (visTop > visBottom + pad)
+                return `${name} not visible vertically in popper/viewport (vis ${visTop}..${visBottom})`;
+              if (visLeft > visRight + pad)
+                return `${name} not visible horizontally in popper/viewport (vis ${visLeft}..${visRight})`;
+              return null;
             };
-          }
 
-          const dayCells = [
-            ...popper.querySelectorAll(".react-datepicker__day"),
-          ];
-          const day26 = dayCells.find((c) => {
-            const label = c.getAttribute("aria-label") ?? "";
-            return label.includes("September") && label.includes(" 26th,");
-          });
-          if (!day26) {
-            return { ok: false as const, reason: "September 26 not in DOM" };
-          }
+            const row = active.closest(".react-datepicker__week");
+            if (!(row instanceof HTMLElement)) {
+              return {
+                ok: false as const,
+                reason: "no week row for focused day",
+              };
+            }
 
-          const bottomSeptemberWeek = day26.closest(".react-datepicker__week");
-          if (!(bottomSeptemberWeek instanceof HTMLElement)) {
-            return {
-              ok: false as const,
-              reason: "no week row for September 26",
-            };
-          }
+            for (const [el, name] of [
+              [row, "week row with Sept 26"],
+              [active, "Sept 26 focus target"],
+            ] as const) {
+              const err = checkVisibleInPopperAndViewport(el, name);
+              if (err) return { ok: false as const, reason: err, vpW, vpH };
+            }
 
-          // Grid: the Popper node (`.c-date-picker-popper-grid`) is the overflow
-          // host; the inner `.c-date-picker` can be taller and is not the
-          // scrollport after max-height is capped on the popper.
-          const scrollport =
-            popper instanceof HTMLElement &&
-            popper.classList.contains("c-date-picker-popper-grid")
-              ? popper
-              : ((popper.querySelector(
-                  ".c-date-picker.calendar--open",
-                ) as HTMLElement) ?? (popper as HTMLElement));
-          const sr = scrollport.getBoundingClientRect();
+            if (window.scrollY !== scrollYBefore) {
+              return {
+                ok: false as const,
+                reason: `window scrolled ${scrollYBefore} -> ${window.scrollY}`,
+                vpW,
+                vpH,
+              };
+            }
 
-          const keyboardCursor = document.activeElement;
-          if (
-            !(keyboardCursor instanceof HTMLElement) ||
-            !keyboardCursor.classList.contains("react-datepicker__day") ||
-            !popper.contains(keyboardCursor)
-          ) {
-            return {
-              ok: false as const,
-              reason: "keyboard focus not on a day in popper",
-            };
-          }
-
-          const pad = outlinePad;
-
-          const checkVisibleInPopperAndViewport = (
-            el: Element,
-            name: string,
-          ) => {
-            const r = el.getBoundingClientRect();
-            const outline = 3;
-            const expanded = {
-              top: r.top - outline,
-              bottom: r.bottom + outline,
-              left: r.left - outline,
-              right: r.right + outline,
-            };
-            const visTop = Math.max(expanded.top, sr.top, 0);
-            const visBottom = Math.min(expanded.bottom, sr.bottom, vpH);
-            const visLeft = Math.max(expanded.left, sr.left, 0);
-            const visRight = Math.min(expanded.right, sr.right, vpW);
-            if (visTop > visBottom + pad)
-              return `${name} not visible vertically in popper/viewport (vis ${visTop}..${visBottom})`;
-            if (visLeft > visRight + pad)
-              return `${name} not visible horizontally in popper/viewport (vis ${visLeft}..${visRight})`;
-            return null;
-          };
-
-          for (const [el, name] of [
-            [bottomSeptemberWeek, "September week with 26"],
-            [day26, "day 26"],
-            [keyboardCursor, "keyboard cursor"],
-          ] as const) {
-            const err = checkVisibleInPopperAndViewport(el, name);
-            if (err) return { ok: false as const, reason: err, vpW, vpH };
-          }
-
-          if (window.scrollY !== scrollYBefore) {
-            return {
-              ok: false as const,
-              reason: `window scrolled ${scrollYBefore} -> ${window.scrollY}`,
-              vpW,
-              vpH,
-            };
-          }
-
-          return { ok: true as const, vpW, vpH };
-        }, OUTLINE_PAD_PX);
+            return { ok: true as const, vpW, vpH };
+          },
+          { outlinePad: OUTLINE_PAD_PX, expectedLabel: SEPT_26_1993_LABEL },
+        );
         return r;
       },
       {
         timeout: 8_000,
         message:
-          "calendar + focus outline must stay in scrollport and viewport after keyboard reveal",
+          "Sept 26 1993 must be focused, exact label, visible in grid scrollport and viewport (no document scroll)",
       },
     )
     .toMatchObject({ ok: true });
@@ -138,7 +176,79 @@ test("artifact: life birth date picker layout and grid not clipped", {
   await page.addInitScript(() => {
     localStorage.setItem("compass.onboarding.has-seen-life-view-intro", "true");
     localStorage.setItem("compass.view.sidebar-open", "true");
+    localStorage.setItem(
+      "compass.life.preferences",
+      JSON.stringify({
+        birthDate: "",
+        lifespan: 79,
+        variation: "average",
+      }),
+    );
   });
+
+  /** Shortcuts stay mounted; when closed the dialog is `inert` and pointer-events none. */
+  const dismissShortcutsDialogIfOpen = async () => {
+    const shortcutsDialog = page.getByRole("dialog", {
+      name: "Keyboard shortcuts",
+    });
+    const open = await shortcutsDialog
+      .evaluate((el) => !(el as HTMLElement).inert)
+      .catch(() => false);
+    if (open) {
+      await shortcutsDialog
+        .getByRole("button", { name: "Close shortcuts" })
+        .click();
+      await expect
+        .poll(async () =>
+          shortcutsDialog.evaluate((el) => (el as HTMLElement).inert),
+        )
+        .toBe(true);
+    }
+  };
+
+  /**
+   * Only the Life birth field uses `calendarClassName="lifeBirthDatePicker"`.
+   * The popper portals to `document`, so do not scope under the sidebar subtree.
+   */
+  const lifeBirthGridPopper = () =>
+    page.locator(".react-datepicker-popper:has(.lifeBirthDatePicker)");
+
+  const syncPickerCaptionToSeptember1993 = async () => {
+    await dismissShortcutsDialogIfOpen();
+
+    const popper = lifeBirthGridPopper();
+    await expect(popper).toBeVisible();
+
+    const caption = popper.getByRole("button", {
+      name: "Choose month and year",
+    });
+    const prevMonth = popper.getByRole("button", { name: "Previous month" });
+
+    for (let i = 0; i < 420; i++) {
+      if ((await caption.textContent())?.trim() === "Sep 1993") break;
+      await prevMonth.click();
+    }
+
+    await expect(caption).toHaveText("Sep 1993");
+
+    await expect(
+      popper.getByRole("listbox", { name: /1993-09/ }),
+    ).toBeVisible();
+  };
+
+  /** Nudges such as trial timers render in a status region with a Dismiss control. */
+  const dismissBlockingStatusNudges = async () => {
+    const dismissBtns = page.getByRole("status").getByRole("button", {
+      name: "Dismiss",
+    });
+    const n = await dismissBtns.count();
+    for (let i = 0; i < n; i++) {
+      const b = dismissBtns.nth(i);
+      if (await b.isVisible().catch(() => false)) {
+        await b.click();
+      }
+    }
+  };
 
   const openPickerSeptember1993 = async () => {
     await page.goto("/life", { waitUntil: "domcontentloaded" });
@@ -149,16 +259,32 @@ test("artifact: life birth date picker layout and grid not clipped", {
       await openSidebar.click();
     }
 
+    await dismissShortcutsDialogIfOpen();
+    await dismissBlockingStatusNudges();
+
     const birth = page.getByRole("textbox", { name: "Date of birth" });
-    await birth.click();
-    await birth.fill("1993-09-14");
+    // `click()` runs `onInputClick` and opens the calendar before typing. The
+    // grid then stays on "today" until navigation. `focus()` matches a keyboard
+    // path that types first, then opens with ArrowDown.
+    await birth.focus();
+    // `DatePicker` uses month-first parsing; ISO `1993-09-14` does not type
+    // reliably into the formatted field. US-style month/day/year matches the
+    // same committed date as the product preview (`MMM d, yyyy`).
+    await birth.pressSequentially("9/14/1993");
     await birth.press("ArrowDown");
 
     await expect(page.locator(".lifeBirthDatePicker")).toBeVisible();
     await expect(
       page.getByTestId("life-birth-date-calendar-hint"),
     ).toBeVisible();
-    await expect(page.getByText("Sep 1993")).toBeVisible();
+
+    await syncPickerCaptionToSeptember1993();
+    await focusLifeBirthDayByExactAriaLabel(page, SEPT_14_1993_LABEL);
+
+    const popper = lifeBirthGridPopper();
+    await expect(
+      popper.getByRole("option", { name: SEPT_14_1993_LABEL, exact: true }),
+    ).toBeVisible();
   };
 
   const runCapture = async (suffix: string, hint: "collapsed" | "expanded") => {
@@ -172,53 +298,26 @@ test("artifact: life birth date picker layout and grid not clipped", {
       ).toBeVisible();
     }
 
-    const popper = page.locator(
-      ".c-date-picker-popper-grid.react-datepicker-popper",
-    );
-    if (hint === "expanded") {
-      const caption = popper.locator(
-        "button[aria-label='Choose month and year']",
-      );
-      for (let i = 0; i < 12; i++) {
-        if ((await caption.textContent())?.trim() === "Sep 1993") break;
-        await popper.getByRole("button", { name: "Previous month" }).click();
-      }
-      await expect(caption).toHaveText("Sep 1993");
+    await syncPickerCaptionToSeptember1993();
+    await focusLifeBirthDayByExactAriaLabel(page, SEPT_14_1993_LABEL);
 
-      // Expanding Keys moves focus off the grid and Popper can reflow to the next month.
-      await popper
-        .getByRole("option", {
-          name: "Choose Tuesday, September 14th, 1993",
-        })
-        .focus();
-    }
+    const popper = lifeBirthGridPopper();
+    await expect(popper).toBeVisible();
+    await dismissShortcutsDialogIfOpen();
+
     await expect
-      .poll(async () =>
-        page.evaluate(() =>
-          document.activeElement?.classList.contains("react-datepicker__day"),
+      .poll(() =>
+        page.evaluate(
+          (label) =>
+            document.activeElement?.getAttribute("aria-label") === label,
+          SEPT_14_1993_LABEL,
         ),
       )
       .toBe(true);
 
-    await keyboardNavigateToBottomRowSeptember1993(page);
+    await keyboardNavigateToSeptember261993(page);
 
-    await expect
-      .poll(async () =>
-        page.evaluate(() =>
-          document.activeElement?.classList.contains("react-datepicker__day"),
-        ),
-      )
-      .toBe(true);
-
-    // `focusKeyboardSelectedDay` reveals in nested requestAnimationFrame frames.
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-        }),
-    );
-
-    await assertCalendarFullyInViewport(page);
+    await assertFocusedSept261993FullyVisible(page);
 
     await page.screenshot({
       path: `${ARTIFACT_PREFIX}-${suffix}.png`,
