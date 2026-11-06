@@ -159,9 +159,15 @@ export async function repairCalendar(
   } while (pageToken);
   skipped += (await applier.finish({ fullSnapshot: true })).orphans;
 
-  // Revoke before activation/cleanup when a completed pass proves unusable or
-  // incomplete. A transient failure before completion leaves the old archive.
-  if (!cursor || skipped > 0 || deps.reader.supportsFullHistory !== true) {
+  // One certification decision for the whole pass: a completed, gap-free read
+  // from a reader that serves full history. Anything else revokes the archive
+  // before activation/cleanup, so reads never flip onto an uncertified
+  // generation. A transient failure before completion leaves the old archive.
+  const certified =
+    Boolean(cursor) &&
+    skipped === 0 &&
+    deps.reader.supportsFullHistory === true;
+  if (!certified) {
     await deps.resources.recordHistoryCoverage(resource, skipped, false, now());
   }
 
@@ -280,7 +286,7 @@ export async function repairCalendar(
   await deps.resources.recordHistoryCoverage(
     resource,
     skipped,
-    deps.reader.supportsFullHistory === true,
+    certified,
     now(),
   );
 

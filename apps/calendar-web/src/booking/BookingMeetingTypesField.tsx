@@ -21,7 +21,14 @@ import {
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { OverlayPanelActionButton } from "@web/components/OverlayPanel/OverlayPanel";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { settingsShortcutAttrs } from "@web/settings/useSettingsShortcuts";
+import {
+  settingsShortcutAttrs,
+  settingsShortcutSelector,
+} from "@web/settings/useSettingsShortcuts";
+import {
+  hasAnyModifier,
+  isPlainEnterKey,
+} from "@web/shortcuts/keyboard-modifiers.util";
 
 export const MEETING_TYPE_ROW_ATTR = "data-meeting-type-row";
 export const MEETING_TYPE_KEYBOARD_HINT_LABEL =
@@ -29,26 +36,25 @@ export const MEETING_TYPE_KEYBOARD_HINT_LABEL =
 const NAME_CAPTION_ID = "booking-meeting-type-name-caption";
 const DURATION_CAPTION_ID = "booking-meeting-type-duration-caption";
 
-const labelInputId = (id: string) => `booking-meeting-type-label-${id}`;
+const LABEL_INPUT_ID_PREFIX = "booking-meeting-type-label-";
+const labelInputId = (id: string) => `${LABEL_INPUT_ID_PREFIX}${id}`;
+const ADD_TYPE_SELECTOR = settingsShortcutSelector("add-meeting-type");
 
 type Focus = { kind: "label" | "row"; id: string } | { kind: "add" };
 
 /** Where keyboard focus sits within the meeting-type list (not Add type). */
 type MeetingTypeKeyboardFocus = "outside" | "row" | "name" | "control";
 
-const hasModifier = (event: KeyboardEvent<HTMLElement>) =>
-  event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
-
 const isRowDeleteKey = (event: KeyboardEvent<HTMLElement>) =>
-  (event.key === "Delete" || event.key === "Backspace") && !hasModifier(event);
+  (event.key === "Delete" || event.key === "Backspace") &&
+  !hasAnyModifier(event);
 
+// Enter must not commit a name mid-composition (IME candidate selection).
 const isEnterKey = (event: KeyboardEvent<HTMLElement>) =>
-  event.key === "Enter" &&
-  !hasModifier(event) &&
-  !event.nativeEvent.isComposing;
+  isPlainEnterKey(event) && !event.nativeEvent.isComposing;
 
 const isEscapeKey = (event: KeyboardEvent<HTMLElement>) =>
-  event.key === "Escape" && !hasModifier(event);
+  event.key === "Escape" && !hasAnyModifier(event);
 
 const meetingTypeKeyboardFocus = (
   root: HTMLElement | null,
@@ -56,18 +62,12 @@ const meetingTypeKeyboardFocus = (
 ): MeetingTypeKeyboardFocus => {
   const el = target instanceof HTMLElement ? target : null;
   if (!el || !root?.contains(el)) return "outside";
-  if (el.closest('[data-settings-shortcut="add-meeting-type"]')) {
-    return "outside";
-  }
+  if (el.closest(ADD_TYPE_SELECTOR)) return "outside";
   const row = el.closest<HTMLElement>(`[${MEETING_TYPE_ROW_ATTR}]`);
   if (!row) return "outside";
   if (el === row) return "row";
-  if (
-    el instanceof HTMLInputElement &&
-    el.id.startsWith("booking-meeting-type-label-")
-  ) {
+  if (el instanceof HTMLInputElement && el.id.startsWith(LABEL_INPUT_ID_PREFIX))
     return "name";
-  }
   return "control";
 };
 
@@ -118,9 +118,7 @@ export function BookingMeetingTypesField({
     if (!root) return;
     const target =
       pendingFocus.kind === "add"
-        ? root.querySelector<HTMLElement>(
-            '[data-settings-shortcut="add-meeting-type"]',
-          )
+        ? root.querySelector<HTMLElement>(ADD_TYPE_SELECTOR)
         : pendingFocus.kind === "label"
           ? root.querySelector<HTMLElement>(
               `#${CSS.escape(labelInputId(pendingFocus.id))}`,
@@ -304,16 +302,9 @@ export function BookingMeetingTypesField({
               <ShortcutKeys keys="Escape" />
               <span aria-hidden>returns to row</span>
             </>
-          ) : keyboardFocus === "row" ? (
-            <>
-              <ShortcutKeys keys="Enter" />
-              <span aria-hidden>edits name</span>
-              <ShortcutKeys className="ml-1" keys="Delete" />
-              <span aria-hidden>removes type</span>
-            </>
           ) : (
             <>
-              <span aria-hidden>On row:</span>
+              {keyboardFocus !== "row" && <span aria-hidden>On row:</span>}
               <ShortcutKeys keys="Enter" />
               <span aria-hidden>edits name</span>
               <ShortcutKeys className="ml-1" keys="Delete" />
