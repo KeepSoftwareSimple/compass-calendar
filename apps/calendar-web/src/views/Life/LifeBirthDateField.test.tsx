@@ -169,8 +169,9 @@ describe("LifeBirthDateField", () => {
     });
 
     const hint = screen.getByTestId("life-birth-date-calendar-hint");
-    expect(within(hint).getByTestId("arrowright-icon")).toBeInTheDocument();
-    expect(hint.textContent).toContain("year forward");
+    expect(hint.tagName).toBe("DETAILS");
+    expect(hint.textContent).toContain("expand for Page keys");
+    expect(within(hint).getByText(/move in grid/i)).toBeInTheDocument();
   });
 
   it("selects a day from the open grid with a click", async () => {

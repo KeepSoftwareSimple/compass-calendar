@@ -914,6 +914,23 @@
  * declarations, and nesting day colors in that same rule would lose to
  * react-datepicker's unlayered `color: #000`.
  */
+/*
+ * Grid poppers: constrain height at the Popper root so short viewports scroll
+ * the whole panel instead of clipping the calendar below the fold.
+ */
+.c-date-picker-popper-grid.react-datepicker-popper {
+  max-height: min(90dvh, calc(100dvh - 1rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.c-date-picker-popper-grid.react-datepicker-popper
+  .c-date-picker.calendar.calendar--open {
+  max-height: inherit;
+  min-height: 0;
+  overflow: visible;
+}
+
 .c-date-picker {
   @apply select-none rounded-xs border-0 shadow-[0_4px_4px_var(--color-shadow-default)];
 }

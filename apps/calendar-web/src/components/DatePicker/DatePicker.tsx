@@ -264,7 +264,10 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   // Z_INDEX_FLOATING_MENU; keep the literal static so Tailwind can see it.
   return (
     <ReactDatePicker
-      popperClassName="!z-22"
+      popperClassName={classNames(
+        "!z-22",
+        view === "grid" && "c-date-picker-popper-grid",
+      )}
       calendarClassName={classNames("calendar", calendarClassName, {
         "calendar--open": isOpen,
         "calendar--animation": animationOnToggle,
