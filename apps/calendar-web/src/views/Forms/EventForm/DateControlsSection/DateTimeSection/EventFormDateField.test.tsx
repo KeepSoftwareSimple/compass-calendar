@@ -327,9 +327,13 @@ describe("EventFormDateField", () => {
     ).not.toBeInTheDocument();
     const hintRow = screen.getByTestId("event-form-calendar-hint");
     expect(hintRow.className).toMatch(/flex-wrap/);
-    expect(hintRow.closest(".react-datepicker__header")?.children.length).toBe(
-      2,
-    );
+    const header = hintRow.closest(".react-datepicker__header");
+    expect(header).toBeTruthy();
+    expect(
+      header?.contains(
+        screen.getByRole("button", { name: "Choose month and year" }),
+      ),
+    ).toBe(true);
   });
 
   it("moves focus into the grid on ArrowDown and steps by day and week", async () => {
