@@ -14,7 +14,6 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
-        XCTAssertTrue(window.waitForExistence(timeout: 8))
         let rawValue = MeetingLinkViewportXCUITestSupport.waitForGeometryPayload(on: window, timeout: 8)
         let titleProbe = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleProbe.waitForExistence(timeout: 12))
