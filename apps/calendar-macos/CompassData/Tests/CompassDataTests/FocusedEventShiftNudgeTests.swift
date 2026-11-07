@@ -13,7 +13,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -33,7 +33,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowUp", shiftKey: true, altKey: false))
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -53,7 +53,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: true
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowRight", shiftKey: true, altKey: false))
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         guard case .allDay(let schedule) = stored.schedule else {
@@ -73,7 +73,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -93,12 +93,62 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
         await model.undoLastChangeAndWait()
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         XCTAssertEqual(stored.schedule, original.schedule)
+    }
+
+    func testUndoDuringPendingNudgeWriteEventuallyRestoresSchedule() async throws {
+        let (model, environment, original) = try await makeWritableTimedEvent()
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: false
+        )
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        await model.undoLastChangeAndWait()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+
+        let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
+        XCTAssertEqual(stored.schedule, original.schedule)
+    }
+
+    func testShiftNudgeRejectedInLifeView() async throws {
+        let (model, environment, original) = try await makeWritableTimedEvent()
+        model.viewStore.view = .life
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: false
+        )
+        XCTAssertFalse(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
+        XCTAssertEqual(stored.schedule, original.schedule)
+    }
+
+    func testSignedInNudgeSendsScheduleOnRemoteReplace() async throws {
+        let (model, _, original, captured) = try await makeSignedInRemoteTimedEvent()
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: false
+        )
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        let input = try XCTUnwrap(captured.input)
+        XCTAssertNotNil(input.schedule)
+        if case .timed(let timed) = input.schedule {
+            XCTAssertTrue(timed.start.rawValue.hasPrefix("2026-01-01T10:15:00"))
+        } else {
+            XCTFail("Expected timed schedule in replace payload")
+        }
     }
 
     func testReadOnlyFocusedEventRejectsShiftNudge() async throws {
@@ -110,7 +160,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertFalse(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         XCTAssertEqual(stored.schedule, original.schedule)
     }
@@ -218,5 +268,107 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         await model.bootstrapLocalEventsForTests()
         model.focusEvent(eventId: event.id.rawValue)
         return (model, environment, event)
+    }
+
+    private func makeSignedInRemoteTimedEvent() async throws
+        -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event, ReplaceInputCapture)
+    {
+        let capture = ReplaceInputCapture()
+        let previous = EffectiveTimeZone.identifier
+        let session = StubURLProtocol.makeSession()
+        let front = Data(#"{"uid":"account-a"}"#.utf8).base64EncodedString()
+        let environment = try NativeCalendarEnvironment(
+            appURL: URL(string: "https://compass.invalid")!,
+            inMemoryDatabase: true,
+            sessionStore: MemorySessionStore(tokens: .init(
+                accessToken: "access",
+                refreshToken: "refresh",
+                frontToken: front
+            )),
+            urlSession: session
+        )
+        try AuthRememberedState.markUserHasAuthenticated(repository: environment.userMetadataRepository)
+        try environment.userMetadataRepository.upsert(key: DemoDataSeeder.migrationKey, value: true)
+        try AccountCacheIdentity.record(userId: "account-a", repository: environment.userMetadataRepository)
+        let event = try StoreSampleEvents.timedEvent(id: "remote-shift-nudge")
+        let calendar = CompassCalendar(
+            access: .owner,
+            backgroundColor: "#ffffff",
+            capabilities: .init(
+                canInviteAttendees: false,
+                canManage: false,
+                canReadAvailability: true,
+                canReadDetails: true,
+                canWatchEvents: false,
+                canWrite: true,
+                conferenceKinds: []
+            ),
+            description: "",
+            foregroundColor: "#000000",
+            id: event.calendarId.rawValue,
+            isActive: true,
+            isPrimary: true,
+            isVisible: true,
+            name: "Remote",
+            provider: "google",
+            timeZone: "UTC"
+        )
+        try environment.calendarRepository.upsert(calendars: [calendar])
+        try EventRepository(database: environment.database).upsert(events: [event], isLocal: false)
+        let model = NativeCalendarRootModel(environment: environment)
+        model.viewStore.setPinnedTimeZone("UTC")
+        model.viewStore.anchorDate = try XCTUnwrap(
+            CompassDateParsing.parseInEffectiveTimeZone("2026-01-01T12:00:00.000Z")
+        )
+        let range = CalendarWindowMath.weekEventQueryRange(anchor: model.viewStore.anchorDate)
+        try RangeCache(database: environment.database).markLoaded(
+            key: .init(scope: .week, source: .remote, start: range.startDate, end: range.endDate),
+            fetchedAt: Date(timeIntervalSince1970: 0)
+        )
+        StubURLProtocol.Handler.requestHandler = { request in
+            if request.httpMethod == "PUT",
+                request.url?.path == "/api/event/\(event.id.rawValue)"
+            {
+                let body = HTTPBodyCapture.data(from: request)
+                if let input = try? JSONDecoder().decode(ReplaceEventInput.self, from: body) {
+                    capture.store(input)
+                }
+                let response = EventResponse(event: try StoreSampleEvents.response(from: event))
+                return .init(statusCode: 200, body: try JSONEncoder().encode(response))
+            }
+            throw URLError(.notConnectedToInternet)
+        }
+        addTeardownBlock {
+            StubURLProtocol.Handler.requestHandler = nil
+            session.invalidateAndCancel()
+            EffectiveTimeZone.identifier = previous
+        }
+        await model.start()
+        model.authStore.closeModal()
+        model.focusEvent(eventId: event.id.rawValue)
+        return (model, environment, event, capture)
+    }
+}
+
+private final class ReplaceInputCapture: @unchecked Sendable {
+    private let lock = NSLock()
+    private(set) var input: ReplaceEventInput?
+    func store(_ value: ReplaceEventInput) { lock.withLock { input = value } }
+}
+
+private enum HTTPBodyCapture {
+    static func data(from request: URLRequest) -> Data {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return Data() }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while true {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count > 0 else { break }
+            data.append(contentsOf: buffer.prefix(count))
+        }
+        return data
     }
 }

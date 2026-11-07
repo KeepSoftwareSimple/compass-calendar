@@ -18,7 +18,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         XCTAssertTrue(try router.shiftArrow(.down))
 
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
         )
@@ -28,6 +28,28 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         } else {
             XCTFail("Expected timed schedule in repository")
         }
+    }
+
+    func testRouterShiftArrowRightNudgesFocusedAllDayStartEdge() async throws {
+        _ = NSApplication.shared
+        let (model, environment, original) = try await localAllDayFixture()
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: true
+        )
+        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
+        XCTAssertTrue(try router.shiftArrow(.right))
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+
+        let stored = try XCTUnwrap(
+            environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
+        )
+        guard case .allDay(let schedule) = stored.schedule else {
+            return XCTFail("Expected all-day schedule in repository")
+        }
+        XCTAssertEqual(schedule.start, "2026-01-02")
     }
 
     func testRouterShiftArrowUpNudgesFocusedTimedEndEdge() async throws {
@@ -41,7 +63,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         XCTAssertTrue(try router.shiftArrow(.up))
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
 
         let stored = try XCTUnwrap(model.event(for: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -62,11 +84,30 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         _ = try router.shiftArrow(.down)
-        await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
         )
         XCTAssertEqual(stored.schedule, original.schedule)
+    }
+
+    private static func decodeAllDayEvent(id: String) throws -> Event {
+        let json = """
+        {
+          "id": "\(id)",
+          "calendarId": "cal-1",
+          "content": { "kind": "details", "title": "Offsite", "description": "" },
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "updatedAt": "2026-01-01T00:00:00.000Z",
+          "recurrence": { "kind": "single" },
+          "schedule": {
+            "kind": "allDay",
+            "start": "2026-01-01",
+            "end": "2026-01-02"
+          }
+        }
+        """
+        return try JSONDecoder().decode(Event.self, from: Data(json.utf8))
     }
 
     private static func decodeTimedEvent(id: String) throws -> Event {
@@ -89,7 +130,19 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         return try JSONDecoder().decode(Event.self, from: Data(json.utf8))
     }
 
+    private func localAllDayFixture() async throws
+        -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
+    {
+        try await localFixture(sample: try Self.decodeAllDayEvent(id: "router-local-allday"))
+    }
+
     private func localTimedFixture(canWrite: Bool = true) async throws
+        -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
+    {
+        try await localFixture(sample: try Self.decodeTimedEvent(id: "router-local-event"), canWrite: canWrite)
+    }
+
+    private func localFixture(sample: Event, canWrite: Bool = true) async throws
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
     {
         let environment = try NativeCalendarEnvironment(
@@ -98,7 +151,6 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             sessionStore: MemorySessionStore(tokens: nil)
         )
         try environment.userMetadataRepository.upsert(key: DemoDataSeeder.migrationKey, value: true)
-        let sample = try Self.decodeTimedEvent(id: "router-local-event")
         let calendar = CompassCalendar(
             access: canWrite ? .owner : .reader,
             backgroundColor: "#ffffff",

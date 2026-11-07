@@ -77,9 +77,10 @@ extension NativeCalendarRootModel {
             }
         }
 
+        let predecessor = focusedEventNudgePersistTask
         let revision = sessionRevision
         focusedEventNudgePersistTask = Task { [weak self] in
-            await self?.focusedEventNudgePersistTask?.value
+            await predecessor?.value
             guard let self, revision == self.sessionRevision else { return }
             await self.replaceEvent(with: nudged, scheduleBaseline: baseline)
         }
@@ -87,11 +88,32 @@ extension NativeCalendarRootModel {
     }
 
     /// Lets unit tests wait for async replace without reaching into internal task state.
-    public func waitForPendingFocusedEventNudgeForTests() async {
-        await focusedEventNudgePersistTask?.value
+    @discardableResult
+    public func waitForPendingFocusedEventNudgeForTests(
+        timeout: Duration = .seconds(3)
+    ) async -> Bool {
+        if let task = focusedEventNudgePersistTask {
+            let completed = await withTaskGroup(of: Bool.self) { group in
+                group.addTask {
+                    await task.value
+                    return true
+                }
+                group.addTask {
+                    try? await Task.sleep(for: timeout)
+                    return false
+                }
+                let first = await group.next() ?? false
+                group.cancelAll()
+                return first
+            }
+            if !completed { return false }
+        }
+        let deadline = ContinuousClock.now + timeout
         while eventsStore.inFlightMutations > 0 {
+            if ContinuousClock.now >= deadline { return false }
             try? await Task.sleep(for: .milliseconds(25))
         }
+        return true
     }
 
     func isFocusedSavedEventScheduleLocked(_ event: Event) -> Bool {
