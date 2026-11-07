@@ -426,6 +426,10 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
+        if isEditableNonDescriptionTextInputFocused() {
+            return false
+        }
+
         if handleDraftKeys(keyEvent) {
             return true
         }
@@ -453,7 +457,7 @@ final class NativeGridKeyboardRouter {
         if let id = dispatcher.dispatch(keyEvent) {
             model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
             if id == .editMoveEdge {
-                return false
+                return attemptShiftArrowEdgeNudge(keyEvent)
             }
             performShortcut(id)
             if viewSwitchIds.contains(id) {
@@ -710,6 +714,29 @@ final class NativeGridKeyboardRouter {
             return false
         }
         return textView.accessibilityIdentifier() != "compass-event-form-description"
+    }
+
+    private func shiftArrowKeyboardName(for keyEvent: KeyEvent) -> String? {
+        switch keyEvent.key {
+        case .named(.arrowUp): return "ArrowUp"
+        case .named(.arrowDown): return "ArrowDown"
+        case .named(.arrowLeft): return "ArrowLeft"
+        case .named(.arrowRight): return "ArrowRight"
+        default: return nil
+        }
+    }
+
+    private func attemptShiftArrowEdgeNudge(_ keyEvent: KeyEvent) -> Bool {
+        guard keyEvent.modifiers.contains(.shift), !isEditableNonDescriptionTextInputFocused() else {
+            return false
+        }
+        guard let arrow = shiftArrowKeyboardName(for: keyEvent) else { return false }
+        let moved = model.nudgeDraftOrPlace(
+            key: arrow,
+            shiftKey: true,
+            altKey: keyEvent.modifiers.contains(.option)
+        )
+        return moved
     }
 
     private func matchesBinding(_ keyEvent: KeyEvent, id: ShortcutId) -> Bool {
