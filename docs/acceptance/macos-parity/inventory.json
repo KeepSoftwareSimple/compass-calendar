@@ -804,10 +804,10 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkWideViewportTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
-      "status": "passing",
-      "evidence": "Head dd38a56ca run42364873057 macos-meeting-link-wide (macos-26-intel): NSScreen visible=1920x959, vmware-resolutionSet absent; testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow passed 183.371s with nominal 1440x960 (±2 pt via probe) and full-bounds window+scroll assertions.",
-      "reason": "Intel job rebuilds for x86_64; arm64 macos-latest 1024x674 does not run the wide leg. actionlint 1.7.12 validates macos-26-intel.",
-      "review": "2026-11-07 agent: wide job runs after UI shards even if a shard fails; scroll clip width residual is not window-size equivalence."
+      "status": "unreviewed",
+      "evidence": "Single Intel green dd38a56ca run42364873057 183.371s (±2 pt, full bounds). Recurrent macos-meeting-link-wide failures on same source: run42367020444 (034802f9e inventory), run42371044750 (69180c3e6), run42374326933 (cadd3468a); root cause bounded to demo-layout/AX snapshot flake on macos-26-intel, not arm64 shard.",
+      "reason": "Wide leg mandatory on macos-26-intel; one green does not prove stability. Latest head targets window-value geometry mirror without child-tree query first.",
+      "review": "2026-11-07 agent: parent review before queue; do not treat inventory pass from dd38a56ca alone as head green."
     },
     {
       "id": "booking-description-open",

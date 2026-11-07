@@ -4,6 +4,7 @@ import XCTest
 final class EventFormMeetingLinkWideViewportTests: XCTestCase {
     @MainActor
     func testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow() {
+        continueAfterFailure = false
         let app = XCUIApplication.compassUITest()
         app.launchArguments += [
             "-COMPASS_FIXTURE", "demo",

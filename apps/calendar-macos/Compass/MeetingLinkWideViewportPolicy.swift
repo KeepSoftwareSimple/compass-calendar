@@ -9,6 +9,7 @@ enum MeetingLinkWideViewportPolicy {
     static func applyIfNeeded(to window: NSWindow?) {
         guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
         let target = contentSize
+        MainWindowGeometryProbe.publishWindowMirror(target: target, on: window)
         let contentRect = NSRect(origin: .zero, size: target)
         var frame = window.frameRect(forContentRect: contentRect)
         let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
