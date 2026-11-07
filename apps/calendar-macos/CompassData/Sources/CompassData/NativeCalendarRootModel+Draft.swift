@@ -64,9 +64,9 @@ extension NativeCalendarRootModel {
             let calendar = calendars.first(where: { $0.id == calendarId.rawValue }),
             calendar.capabilities.canWrite
         else { return }
-        let calendar = EffectiveTimeZone.calendar
-        let day = calendar.startOfDay(for: draftTargetDay())
-        guard let end = calendar.date(byAdding: .day, value: 1, to: day) else { return }
+        let dateCalendar = EffectiveTimeZone.calendar
+        let day = dateCalendar.startOfDay(for: draftTargetDay())
+        guard let end = dateCalendar.date(byAdding: .day, value: 1, to: day) else { return }
         let draft = GridEventDraft(
             clientId: GridEventDraftFactory.makeClientEventId(),
             schedule: DraftSchedule(start: day, end: end, kind: .allDay),
