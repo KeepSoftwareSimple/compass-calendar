@@ -144,7 +144,8 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        XCTAssertTrue(await hold.waitUntilFirstPutObserved())
+        let firstPutObserved = await hold.waitUntilFirstPutObserved()
+        XCTAssertTrue(firstPutObserved)
         async let undo: Void = model.undoLastChangeAndWait()
         try await Task.sleep(for: .milliseconds(100))
         hold.releaseFirst()
