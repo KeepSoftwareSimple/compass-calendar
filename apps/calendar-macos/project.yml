@@ -78,6 +78,7 @@ targets:
     dependencies:
       - package: CompassKit
       - package: CompassData
+      - package: CompassUI
   CompassUITests:
     type: bundle.ui-testing
     platform: macOS

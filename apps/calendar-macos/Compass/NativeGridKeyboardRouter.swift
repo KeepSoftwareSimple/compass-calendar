@@ -567,21 +567,6 @@ final class NativeGridKeyboardRouter {
             if opened { model.recordShortcut(.editOpenDescriptionLink) }
             return opened
         }
-        if model.isEventFormVisible,
-           DescriptionTextView.linkDigitHintsActiveInKeyWindow(),
-           !isDescriptionFormEditorFocused(),
-           keyEvent.modifiers.isEmpty,
-           case .character(let char) = keyEvent.key,
-           char.isNumber,
-           let digit = Int(String(char)),
-           (1...9).contains(digit),
-           let editor = DescriptionTextView.findInKeyWindow()
-        {
-            let index = digit - 1
-            if index < editor.orderedLinkHrefs().count, editor.openDescriptionLink(at: index) {
-                return true
-            }
-        }
         if handleColorSwatchKeys(keyEvent) {
             return true
         }
@@ -620,6 +605,10 @@ final class NativeGridKeyboardRouter {
                 model.formFieldDigitHintsVisible = false
                 return true
             }
+        }
+
+        if handleDescriptionLinkDigitKeys(keyEvent) {
+            return true
         }
 
         // RSVP radio-style controls own arrows and activation before grid shortcuts.
@@ -717,6 +706,34 @@ final class NativeGridKeyboardRouter {
             return false
         }
         return textView.accessibilityIdentifier() != "compass-event-form-description"
+    }
+
+    /// Bare `1…9` opens document-order description links only while hint overlay is active
+    /// and no text field, color picker, or Mod+digit form jump owns the key.
+    private func handleDescriptionLinkDigitKeys(_ keyEvent: KeyEvent) -> Bool {
+        guard shouldBareDigitOpenDescriptionLink(keyEvent) else { return false }
+        guard case .character(let char) = keyEvent.key,
+              let digit = Int(String(char))
+        else { return false }
+        return DescriptionLinkKeyboard.openNumberedLinkIfHintsActive(digit: digit) != nil
+    }
+
+    private func shouldBareDigitOpenDescriptionLink(_ keyEvent: KeyEvent) -> Bool {
+        guard model.isEventFormVisible,
+              DescriptionLinkKeyboard.linkDigitHintsActiveInKeyWindow(),
+              keyEvent.modifiers.isEmpty,
+              case .character(let char) = keyEvent.key,
+              char.isNumber
+        else { return false }
+        guard !isDescriptionFormEditorFocused() else { return false }
+        guard !isEditableNonDescriptionTextInputFocused() else { return false }
+        guard !model.formFieldDigitHintsVisible else { return false }
+        switch model.eventFormFocusedField {
+        case .title, .location, .description, .conference, .color:
+            return false
+        default:
+            return true
+        }
     }
 
     private func matchesBinding(_ keyEvent: KeyEvent, id: ShortcutId) -> Bool {
