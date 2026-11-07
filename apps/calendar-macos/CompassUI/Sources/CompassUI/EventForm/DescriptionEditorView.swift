@@ -346,7 +346,9 @@ public final class DescriptionTextView: NSTextView {
     }
 
     static func findInKeyWindow() -> DescriptionTextView? {
-        find(in: NSApp.keyWindow?.contentView)
+        let lookupWindow = DescriptionLinkKeyboard.keyWindowForDigitHintLookupWhenTesting
+            ?? NSApp.keyWindow
+        return find(in: lookupWindow?.contentView)
     }
 
     private static func find(in root: NSView?) -> DescriptionTextView? {

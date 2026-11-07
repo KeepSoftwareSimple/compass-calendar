@@ -8,12 +8,12 @@ private final class KeyableDescriptionHintTestWindow: NSWindow {
     override var canBecomeMain: Bool { true }
 }
 
-/// XCTest hosts need an explicit keyable window plus activation before `NSApp.keyWindow` is set.
+/// XCTest-in-bundle hosts often never assign `NSApp.keyWindow` (see CI run 42422375015).
+/// Prefer the real key window; otherwise publish the fixture window that owns the editor (hostWindow pattern).
 @MainActor
 enum DescriptionLinkHintKeyWindowFixture {
     private static var configuredApplication = false
 
-    @MainActor
     static func configureApplicationForWindowTests() {
         guard !configuredApplication else { return }
         configuredApplication = true
@@ -26,28 +26,71 @@ enum DescriptionLinkHintKeyWindowFixture {
         }
     }
 
-    @MainActor
-    static func activateKeyWindow(_ window: NSWindow, file: StaticString = #filePath, line: UInt = #line) {
+    /// Production path when possible; otherwise explicit host window for digit-hint lookup only.
+    static func publishDigitHintLookupWindow(
+        _ window: NSWindow,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
         configureApplicationForWindowTests()
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        window.makeMain()
         window.orderFrontRegardless()
-        let deadline = Date().addingTimeInterval(2.0)
-        while Date() < deadline, NSApp.keyWindow !== window {
-            window.makeKeyAndOrderFront(nil)
-            RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+
+        if NSApp.keyWindow === window {
+            DescriptionLinkKeyboard.keyWindowForDigitHintLookupWhenTesting = nil
+            return
         }
-        XCTAssertIdentical(
-            NSApp.keyWindow,
-            window,
-            "NSApp.keyWindow must own the description fixture (matches router focus guards)",
+
+        let editor = findDescriptionEditor(in: window.contentView)
+        XCTAssertNotNil(
+            editor,
+            "Fixture window must host compass-event-form-description before lookup publish",
             file: (file),
             line: line
         )
+        DescriptionLinkKeyboard.keyWindowForDigitHintLookupWhenTesting = window
     }
 
-    @MainActor
+    static func resetDigitHintLookupWindow() {
+        DescriptionLinkKeyboard.keyWindowForDigitHintLookupWhenTesting = nil
+    }
+
+    static func assertLinkDigitHintsActiveInKeyWindow(
+        container: DescriptionEditorContainerView,
+        preferredWindow: NSWindow,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        if DescriptionLinkKeyboard.keyWindowForDigitHintLookupWhenTesting == nil {
+            XCTAssertIdentical(
+                NSApp.keyWindow,
+                preferredWindow,
+                "NSApp.keyWindow must own description digit hints (router focus guards use NSApp.keyWindow)",
+                file: (file),
+                line: line
+            )
+        } else {
+            XCTAssertIdentical(
+                DescriptionLinkKeyboard.keyWindowForDigitHintLookupWhenTesting,
+                preferredWindow,
+                "Published lookup window must be the editor host",
+                file: (file),
+                line: line
+            )
+            XCTAssertNil(
+                NSApp.keyWindow,
+                "XCTest host constraint: use published host window, not a fabricated key window",
+                file: (file),
+                line: line
+            )
+        }
+        XCTAssertTrue(container.descriptionLinkDigitHintsVisible, file: (file), line: line)
+        XCTAssertNotNil(DescriptionTextView.findInKeyWindow(), file: (file), line: line)
+        XCTAssertTrue(DescriptionTextView.linkDigitHintsActiveInKeyWindow(), file: (file), line: line)
+    }
+
     static func makeBlurredDescriptionLinkHints(
         html: String,
         resetKey: String,
@@ -69,7 +112,8 @@ enum DescriptionLinkHintKeyWindowFixture {
         coordinator.syncPresentationOnFocusChange(isFocused: false, html: html, resetKey: resetKey)
         XCTAssertTrue(
             coordinator.shouldShowLinkHintOverlay(isFocused: false, html: html, isEditable: true),
-            file: (file), line: line
+            file: (file),
+            line: line
         )
 
         let window = KeyableDescriptionHintTestWindow(
@@ -80,13 +124,23 @@ enum DescriptionLinkHintKeyWindowFixture {
         )
         window.isReleasedWhenClosed = false
         window.contentView = container
-        activateKeyWindow(window, file: file, line: line)
         container.updateLinkHintOverlay(visible: true)
         container.layoutSubtreeIfNeeded()
-
-        XCTAssertTrue(container.descriptionLinkDigitHintsVisible, file: (file), line: line)
-        XCTAssertNotNil(DescriptionTextView.findInKeyWindow(), file: (file), line: line)
-        XCTAssertTrue(DescriptionTextView.linkDigitHintsActiveInKeyWindow(), file: (file), line: line)
+        publishDigitHintLookupWindow(window, file: file, line: line)
+        assertLinkDigitHintsActiveInKeyWindow(container: container, preferredWindow: window, file: file, line: line)
         return (container, window, coordinator)
+    }
+
+    private static func findDescriptionEditor(in root: NSView?) -> DescriptionTextView? {
+        guard let root else { return nil }
+        if let editor = root as? DescriptionTextView,
+           editor.accessibilityIdentifier() == "compass-event-form-description"
+        {
+            return editor
+        }
+        for subview in root.subviews {
+            if let found = findDescriptionEditor(in: subview) { return found }
+        }
+        return nil
     }
 }

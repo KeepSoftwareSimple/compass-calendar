@@ -17,6 +17,7 @@ final class DescriptionLinkDigitKeyboardRouterTests: XCTestCase {
 
     override func tearDown() async throws {
         DescriptionLinkKeyboard.openURLForTests = nil
+        DescriptionLinkHintKeyWindowFixture.resetDigitHintLookupWindow()
         openedURL = nil
     }
 

@@ -6,6 +6,11 @@ public enum DescriptionLinkKeyboard {
     /// Injected in unit tests to avoid opening real URLs.
     static var openURLForTests: ((URL) -> Void)?
 
+    /// XCTest bundle hosts often keep `NSApp.keyWindow` nil. Tests set this only after the
+    /// description editor and digit-hint overlay are hosted in that specific window
+    /// (same ownership model as `CommandPaletteStatusAccessibilityProbe.publish(hostWindow:)`).
+    static var keyWindowForDigitHintLookupWhenTesting: NSWindow?
+
     public static func linkDigitHintsActiveInKeyWindow() -> Bool {
         DescriptionTextView.linkDigitHintsActiveInKeyWindow()
     }

@@ -158,6 +158,7 @@ final class DescriptionEditorTests: XCTestCase {
             resetKey: "event",
             frame: NSRect(x: 0, y: 0, width: 400, height: 120)
         )
+        defer { DescriptionLinkHintKeyWindowFixture.resetDigitHintLookupWindow() }
         window.close()
     }
 
