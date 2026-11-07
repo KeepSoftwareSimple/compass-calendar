@@ -1117,16 +1117,49 @@
     color: var(--text-muted);
   }
 
+  & .react-datepicker__year-wrapper {
+    display: grid;
+    width: 100%;
+    max-width: none;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    margin: 0;
+  }
+
+  & .react-datepicker__year {
+    margin: 0;
+    width: 100%;
+    text-align: left;
+  }
+
+  & .react-datepicker__month.react-datepicker__monthPicker {
+    margin: 0;
+    width: 100%;
+    text-align: left;
+  }
+
+  &
+    .react-datepicker__month.react-datepicker__monthPicker
+    .react-datepicker__month-wrapper {
+    display: grid;
+    width: 100%;
+    max-width: none;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
   & .react-datepicker__year-text,
   & .react-datepicker__month-text {
     display: inline-flex;
-    width: 3rem;
-    height: 1.75rem;
+    width: auto;
+    min-width: 0;
+    min-height: 2rem;
     align-items: center;
     justify-content: center;
-    border-radius: 9999px;
+    border-radius: 4px;
     color: var(--text);
-    line-height: 1.75rem;
+    line-height: 1.25rem;
+    margin: 0;
   }
 
   &[data-dark="false"] .react-datepicker__year-text,

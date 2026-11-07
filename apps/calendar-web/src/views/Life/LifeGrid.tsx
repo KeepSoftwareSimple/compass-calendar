@@ -5,6 +5,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@web/components/Tooltip/Tooltip";
+import { pageJumpChipAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 
 interface LifeGridProps {
   showCurrentWeek: boolean;
@@ -90,6 +91,7 @@ export function LifeGrid({
                         aria-label={currentWeekLabel}
                         className="flex min-w-0 appearance-none items-center justify-center border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         ref={currentWeekRef}
+                        {...pageJumpChipAttrs("life-grid")}
                       >
                         {dot}
                       </button>
