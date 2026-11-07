@@ -34,6 +34,11 @@ export const PAGE_JUMP_ATTRIBUTE = "data-page-jump";
 
 /** Optional element inside a jump anchor where hold-Mod chips should paint. */
 export const PAGE_JUMP_CHIP_ATTRIBUTE = "data-page-jump-chip";
+export const PAGE_JUMP_CHIP_PLACEMENT_ATTRIBUTE =
+  "data-page-jump-chip-placement";
+
+/** Where the digit chip sits relative to the chip marker's visible box. */
+export type PageJumpChipPlacement = "inset-trailing" | "outside-trailing";
 
 export const DAY_COLUMN_JUMP_ID_PREFIX = "day-column:" as const;
 
@@ -188,8 +193,15 @@ export const pageJumpAttrs = (
 /** Marks the control users land on so digit chips sit beside it, not the section edge. */
 export const pageJumpChipAttrs = (
   id: PageJumpTargetId,
-): { [PAGE_JUMP_CHIP_ATTRIBUTE]: PageJumpTargetId } => ({
+  options?: { placement?: PageJumpChipPlacement },
+): {
+  [PAGE_JUMP_CHIP_ATTRIBUTE]: PageJumpTargetId;
+  [PAGE_JUMP_CHIP_PLACEMENT_ATTRIBUTE]?: PageJumpChipPlacement;
+} => ({
   [PAGE_JUMP_CHIP_ATTRIBUTE]: id,
+  ...(options?.placement
+    ? { [PAGE_JUMP_CHIP_PLACEMENT_ATTRIBUTE]: options.placement }
+    : {}),
 });
 
 /**

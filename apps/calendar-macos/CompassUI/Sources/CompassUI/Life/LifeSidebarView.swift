@@ -109,6 +109,11 @@ struct LifeSidebarView: View {
       .padding(20)
     }
     .onKeyPress(.escape) {
+      if showsBirthDatePicker {
+        showsBirthDatePicker = false
+        focusedField = .birthDate
+        return .handled
+      }
       focusedField = nil
       return .handled
     }
@@ -152,6 +157,7 @@ struct LifeSidebarView: View {
         invalidBirthDate = !model.lifeStore.updateBirthDate(LifeDateFormat.stored(from: picked))
         refreshInputs()
         showsBirthDatePicker = false
+        focusedField = .birthDate
       },
       today: model.referenceNow,
       daysAreClickable: true,

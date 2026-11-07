@@ -101,25 +101,35 @@ export function LifeSidebarContent({
         {...pageJumpAttrs("life-variation")}
       >
         <div className="flex w-full items-center gap-1">
-          <div
-            className="flex min-w-0 items-center gap-1"
-            {...pageJumpChipAttrs("life-variation")}
-          >
-            <TooltipWrapper description="Previous life variation" shortcut="J">
-              <ArrowButton
-                direction="left"
-                label="Previous life variation in sidebar"
-                onClick={() => onCycleVariation(-1)}
-              />
-            </TooltipWrapper>
-            <TooltipWrapper description="Next life variation" shortcut="K">
-              <ArrowButton
-                direction="right"
-                label="Next life variation in sidebar"
-                onClick={() => onCycleVariation(1)}
-              />
-            </TooltipWrapper>
-            <h2 className="font-semibold text-text">
+          <div className="flex min-w-0 items-center gap-1">
+            <div
+              className="flex shrink-0 items-center gap-1"
+              {...pageJumpChipAttrs("life-variation", {
+                placement: "outside-trailing",
+              })}
+            >
+              <TooltipWrapper
+                description="Previous life variation"
+                shortcut="J"
+              >
+                <ArrowButton
+                  direction="left"
+                  label="Previous life variation in sidebar"
+                  onClick={() => onCycleVariation(-1)}
+                />
+              </TooltipWrapper>
+              <TooltipWrapper description="Next life variation" shortcut="K">
+                <ArrowButton
+                  direction="right"
+                  label="Next life variation in sidebar"
+                  onClick={() => onCycleVariation(1)}
+                />
+              </TooltipWrapper>
+            </div>
+            {/* Portaled Mod chips do not affect layout; reserve space so chip 3
+                sits between the arrows and the title without covering the label. */}
+            <span aria-hidden className="inline-block w-7 shrink-0" />
+            <h2 className="min-w-0 font-semibold text-text">
               {LIFE_VARIATIONS[preferences.variation].label}
             </h2>
           </div>
