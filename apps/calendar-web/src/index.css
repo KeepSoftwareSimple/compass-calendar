@@ -1412,14 +1412,13 @@
  * as .c-time-picker above: it must override react-select's unlayered CSS.
  */
 .c-attendee-field {
-  @apply relative w-full min-w-0;
-  font-size: var(--font-size-m);
+  @apply relative w-full min-w-0 text-sm leading-5;
   & span[aria-live="polite"],
   & .attendee-field__indicators {
     display: none;
   }
   & .attendee-field__control {
-    min-height: 30px;
+    min-height: 1.25rem;
     border: 0;
     border-radius: var(--radius-default);
     background: transparent;
@@ -1431,7 +1430,15 @@
   }
   & .attendee-field__value-container {
     padding: 0;
+    margin: 0;
     gap: 4px;
+  }
+  & .attendee-field__input-container,
+  & .attendee-field__input,
+  & .attendee-field__placeholder {
+    margin: 0;
+    padding: 0;
+    line-height: 1.25rem;
   }
   & .attendee-field__menu {
     min-width: 220px;
