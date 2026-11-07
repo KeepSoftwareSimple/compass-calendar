@@ -856,17 +856,15 @@ public final class NativeCalendarRootModel {
             focusStore.focusedEventId != nil
         else { return }
         didApplyUITestFocusedEventForm = true
-        DispatchQueue.main.async { [self] in
-            openKeyboardEditForFocusedEvent()
-            openEventFormForCurrentDraft()
-            if let title = UITestLaunchPolicy.presetEventFormTitle {
-                updateDraftFromForm(title: title)
-                onEventFormTitleAccessibilityProbeTitleSync?(title)
-            }
-            publishEventFormTitleAccessibilityProbe()
-            if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
-                Task { await saveDraftWithInvitationGate() }
-            }
+        openKeyboardEditForFocusedEvent()
+        openEventFormForCurrentDraft()
+        if let title = UITestLaunchPolicy.presetEventFormTitle {
+            updateDraftFromForm(title: title)
+            onEventFormTitleAccessibilityProbeTitleSync?(title)
+        }
+        publishEventFormTitleAccessibilityProbe()
+        if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+            Task { await saveDraftWithInvitationGate() }
         }
     }
 

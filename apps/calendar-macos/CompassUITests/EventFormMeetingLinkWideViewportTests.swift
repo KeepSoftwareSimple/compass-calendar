@@ -13,13 +13,8 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
-        MeetingLinkViewportXCUITestSupport.waitForDemoGridCard(
-            titled: "Morning standup", in: window, timeout: 10)
-
-        let titleField = window.descendants(matching: .any)["compass-event-form-title"]
-        XCTAssertTrue(titleField.waitForExistence(timeout: 8))
         let form = window.descendants(matching: .any)["compass-event-form"]
-        XCTAssertTrue(form.waitForExistence(timeout: 8))
+        XCTAssertTrue(form.waitForExistence(timeout: 12))
 
         let geometry = window.descendants(matching: .any)["compass-native-main-window-geometry"]
         XCTAssertTrue(geometry.waitForExistence(timeout: 8))

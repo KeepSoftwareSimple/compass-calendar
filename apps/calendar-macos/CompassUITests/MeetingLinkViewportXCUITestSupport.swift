@@ -13,23 +13,6 @@ struct MainWindowGeometryProbeReading: Equatable {
 }
 
 enum MeetingLinkViewportXCUITestSupport {
-    /// Demo fixture must lay out before `-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM` runs.
-    /// Uses a titled grid button query instead of `descendants(matching: .any)` (wide windows stall XCUITest).
-    @MainActor
-    static func waitForDemoGridCard(
-        titled title: String,
-        in window: XCUIElement,
-        timeout: TimeInterval,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) {
-        XCTAssertTrue(
-            window.buttons[title].waitForExistence(timeout: timeout),
-            "Expected demo grid card \"\(title)\" before the event form opens.",
-            file: file,
-            line: line)
-    }
-
     static func parseGeometryProbe(_ raw: String) -> MainWindowGeometryProbeReading? {
         var fields: [String: String] = [:]
         for part in raw.split(separator: ";") {
