@@ -16,7 +16,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
 
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        _ = try router.shiftArrow(.down)
+        XCTAssertTrue(try router.shiftArrow(.down))
 
         await model.waitForPendingFocusedEventNudgeForTests()
         let stored = try XCTUnwrap(
@@ -40,7 +40,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             isAllDay: false
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        _ = try router.shiftArrow(.up)
+        XCTAssertTrue(try router.shiftArrow(.up))
         await model.waitForPendingFocusedEventNudgeForTests()
 
         let stored = try XCTUnwrap(model.event(for: original.id))

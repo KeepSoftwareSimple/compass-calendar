@@ -1145,4 +1145,11 @@ public final class NativeCalendarRootModel {
             )
         }
     }
+
+    /// Unsigned fixtures upsert calendars/events before `start()`; switching to `.local` must reload metadata.
+    public func bootstrapLocalEventsForTests() async {
+        eventsStore.setSource(.local)
+        await reloadCalendars()
+        await refreshVisibleRange()
+    }
 }
