@@ -30,16 +30,18 @@ final class MainWindowGeometryProbeView: AccessibilityProbeView {
         setAccessibilityHidden(false)
         setAccessibilityRole(.staticText)
         setAccessibilityIdentifier("compass-native-main-window-geometry")
-        setAccessibilityValue(
+        let payload =
             "target=\(Int(target.width))x\(Int(target.height));"
-                + "achieved=\(Int(achieved.width))x\(Int(achieved.height));"
-                + "screen=\(Int(visible.width))x\(Int(visible.height));"
-                + "fitsScreen=\(fitsScreen ? 1 : 0);achievedTarget=\(achievedTarget ? 1 : 0);"
-                + "onScreen=\(onScreen ? 1 : 0)")
+            + "achieved=\(Int(achieved.width))x\(Int(achieved.height));"
+            + "screen=\(Int(visible.width))x\(Int(visible.height));"
+            + "fitsScreen=\(fitsScreen ? 1 : 0);achievedTarget=\(achievedTarget ? 1 : 0);"
+            + "onScreen=\(onScreen ? 1 : 0)"
+        setAccessibilityValue(payload)
+        window.setAccessibilityValue(payload)
         frame = NSRect(x: 0, y: 0, width: 1, height: 1)
         syncAccessibilityFrame()
-        // Avoid window-level layoutChanged here; it can re-enter XCTest full-tree snapshots on wide windows.
-        NSAccessibility.post(element: self, notification: .valueChanged)
+        // Window mirror lets XCTest read geometry without descending the SwiftUI tree.
+        NSAccessibility.post(element: window, notification: .valueChanged)
     }
 }
 
