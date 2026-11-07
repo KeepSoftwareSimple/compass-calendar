@@ -672,7 +672,7 @@
         "apps/calendar-macos/CompassUITests/NativeLaunchTests.swift#testQuestionMarkTogglesShortcutsLegend"
       ],
       "status": "passing",
-      "evidence": "Stale failing row reconciled 2026-11-07: prior evidence head c6354219a run40981800450 not reproduced on current main c936b14a2. Merge-queue macOS run42331015525 shard macos-ui-shard (1) CompassUITests.NativeLaunchTests testQuestionMarkTogglesShortcutsLegend passed 13.896s. CompassNativeTests ShortcutsLegendEscapeKeyboardTests locks overlay Escape routing without XCTest.",
+      "evidence": "Stale failing row reconciled 2026-11-07: prior evidence head c6354219a run40981800450 not reproduced on current main c936b14a2. Merge-queue macOS run42331015525 and PR head run42334055012: NativeLaunchTests testQuestionMarkTogglesShortcutsLegend passed; CompassKitTests ShortcutsLegendEscapeKeyboardTests testEscapeClosesShortcutsLegendWhenOpen passed 0.210s.",
       "reason": "Inventory still cited pre-reconciliation failure; behavior passes on current main with no product router change since c6354219a.",
       "review": "2026-11-07 agent: compared NativeGridKeyboardRouter handleOverlayKeyDown Escape path to XCTest; GitHub Mac evidence at c936b14a2; added native unit regression only."
     },
