@@ -1,6 +1,7 @@
 import XCTest
 @testable import CompassData
 
+@MainActor
 final class CommandPaletteStatusAnnouncementDeliveryTests: XCTestCase {
     func testProductionLaunchEmitsAnnouncementWithoutMirror() {
         let delivery = CommandPaletteStatusAnnouncementPlanner.deliver(
