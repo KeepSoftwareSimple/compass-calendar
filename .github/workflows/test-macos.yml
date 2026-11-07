@@ -168,7 +168,9 @@ jobs:
   # Intel images may expose VMware resolutionSet (actions/runner-images#8606).
   macos-meeting-link-wide:
     needs: [changes, macos-build, macos-ui-shard]
-    if: needs.changes.outputs.macos == 'true'
+    if: >-
+      always() && needs.changes.outputs.macos == 'true'
+      && needs.macos-build.result == 'success'
     runs-on: macos-26-intel
     timeout-minutes: 20
     defaults:
