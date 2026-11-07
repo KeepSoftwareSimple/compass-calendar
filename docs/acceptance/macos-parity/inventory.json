@@ -1439,12 +1439,15 @@
       "behavior": "After 2026-12-15 navigation, announce the chosen week through native accessibility",
       "web": ["e2e/navigation/go-to-date.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors",
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testISODateNavigatesFromBareG",
+        "apps/calendar-macos/CompassData/Tests/CompassDataTests/CommandPaletteStatusAnnouncementDeliveryTests.swift",
+        "apps/calendar-macos/CompassNativeTests/CommandPaletteStatusAccessibilityProbePublishTests.swift"
       ],
-      "status": "missing",
-      "reason": "Pure vectors assert the announcement string, but CommandPaletteStore.statusAnnouncement has no native UI/AX consumer found. Passing keyboard selection does not prove a native accessibility announcement. Require real notification integration and meaningful observation rather than fake visible status text.",
-      "evidence": "",
-      "review": "2026-11-04 agent: full frozen cf5 source and new native UI assertions reviewed; downloaded verdicts and each capture inspected. Navigation and announcement split without excluding either requirement."
+      "status": "passing",
+      "reason": "Production CommandPaletteStatusAccessibilityProbe.publish posts NSAccessibility.announcementRequested on the host window without -COMPASS_UI_TEST probe attach; shipping publish regression and planner tests guard that boundary. UI-test mirror asserts status region text. Spoken VoiceOver output is not automated and does not pass broad #4783 acceptance.",
+      "evidence": "Merged #5114 c936b14a23943048dcbd6cddde96cb0d02324467; exact-source strict42329280430 at0746db0a5cf4304ab1ab5779bbbc1d1e3c9a1951 PASS/VERDICT PASS; CompassKitTests CommandPaletteStatusAccessibilityProbePublishTests passed on GitHub Mac.",
+      "review": "2026-11-07 agent: accounting after protected-queue merge; API emission only, not audio."
     },
     {
       "id": "go-to-date-slash",
@@ -1463,12 +1466,15 @@
       "behavior": "After 2026/10/29 navigation, announce the chosen week through native accessibility",
       "web": ["e2e/navigation/go-to-date.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors",
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testSlashSeparatedDateNavigatesFromBareG",
+        "apps/calendar-macos/CompassData/Tests/CompassDataTests/CommandPaletteStatusAnnouncementDeliveryTests.swift",
+        "apps/calendar-macos/CompassNativeTests/CommandPaletteStatusAccessibilityProbePublishTests.swift"
       ],
-      "status": "missing",
-      "reason": "Pure vectors assert the announcement string, but CommandPaletteStore.statusAnnouncement has no native UI/AX consumer found. Passing keyboard selection does not prove a native accessibility announcement. Require real notification integration and meaningful observation rather than fake visible status text.",
-      "evidence": "",
-      "review": "2026-11-04 agent: full frozen cf5 source and new native UI assertions reviewed; downloaded verdicts and each capture inspected. Navigation and announcement split without excluding either requirement."
+      "status": "passing",
+      "reason": "Same native announcement emission and regression coverage as go-to-date-iso-announcement; slash path covered in GoToDateKeyboardTests. Spoken VoiceOver output remains a human residual under #4783.",
+      "evidence": "Merged #5114 c936b14a; strict42329280430 at0746db0a5 PASS.",
+      "review": "2026-11-07 agent: accounting after merge; API emission only."
     },
     {
       "id": "go-to-date-month-first",
@@ -1487,12 +1493,15 @@
       "behavior": "After 10/29 navigation, announce the chosen week through native accessibility",
       "web": ["e2e/navigation/go-to-date.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors",
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testMonthFirstDateUsesDemoReferenceYear",
+        "apps/calendar-macos/CompassData/Tests/CompassDataTests/CommandPaletteStatusAnnouncementDeliveryTests.swift",
+        "apps/calendar-macos/CompassNativeTests/CommandPaletteStatusAccessibilityProbePublishTests.swift"
       ],
-      "status": "missing",
-      "reason": "Pure vectors assert the announcement string, but CommandPaletteStore.statusAnnouncement has no native UI/AX consumer found. Passing keyboard selection does not prove a native accessibility announcement. Require real notification integration and meaningful observation rather than fake visible status text.",
-      "evidence": "",
-      "review": "2026-11-04 agent: full frozen cf5 source and new native UI assertions reviewed; downloaded verdicts and each capture inspected. Navigation and announcement split without excluding either requirement."
+      "status": "passing",
+      "reason": "Same native announcement emission and regression coverage as other go-to-date announcement rows; month-first path covered in GoToDateKeyboardTests. Spoken VoiceOver output remains a human residual under #4783.",
+      "evidence": "Merged #5114 c936b14a; strict42329280430 at0746db0a5 PASS.",
+      "review": "2026-11-07 agent: accounting after merge; API emission only."
     },
     {
       "id": "shortcut-badge-initial",

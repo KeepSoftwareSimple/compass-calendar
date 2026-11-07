@@ -17,14 +17,15 @@ native41835411040 passed. All three retained captures were inspected in
 `/tmp/compass-gdate-d7c-shots`: palette closed and chosen date visible, with a
 matching month-picker selection. These are sampled light-theme captures.
 
-Announcement rows stay missing: parser vectors prove strings, but the native
-statusAnnouncement store value has no UI/AX consumer found. Review proper native
-accessibility notification integration and meaningful observation; never substitute
-fake visible test text or infer an announcement from successful navigation.
-
-No product/test changes in this accounting package. Visual, signed-in, supported
-geometry, startup/performance and final-build gates remain open under #4783.
-Future web propagation remains deferred. Human-closed #5037 stays closed.
+Post-#5114 (landed `c936b14a23943048dcbd6cddde96cb0d02324467` on `main`):
+production Go to date status posts `announcementRequested` on the host window
+without UI-test probe attach (#5114). Inventory announcement rows marked
+`passing` for API emission and shipping `publish` regression only
+(`CommandPaletteStatusAccessibilityProbePublishTests`, strict42329280430 at
+`0746db0a5`). Maintenance queue task `native-go-to-date-announcements` is
+`done`; residual `native-go-to-date-voiceover-residual` is `blocked` (human
+VoiceOver on signed build, not unattended automation). Parent #4783 and broad
+visual, signed-in, final-build gates stay open.
 
 Post-#5173 (landed `bccdf2793` on `main`): `main` was merged into this branch at
 exact head `f7ab84008d53dd5b57ea2537e55b2e0720f63d75` (includes `bccdf2793`). One
