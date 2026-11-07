@@ -173,6 +173,10 @@ struct LifeSidebarView: View {
     .padding(12)
     .background(theme.surfacePanelColor)
     .accessibilityIdentifier("compass-life-birth-date-picker")
+    .onExitCommand {
+      showsBirthDatePicker = false
+      focusedField = .birthDate
+    }
   }
 
   private func variationButton(_ label: String, symbol: String, direction: Int) -> some View {
