@@ -7,29 +7,27 @@ describe("surfaceForPickerContext", () => {
     const closed = surfaceForPickerContext({
       id: "date-picker-event-form",
       isOpen: false,
-      gridFocused: false,
       captionView: "day",
       isInputFocused: false,
       inputPhrase: "start date",
     });
     expect(closed).toBeNull();
 
-    const closedSidebar = surfaceForPickerContext({
-      id: "date-picker-sidebar-month",
-      isOpen: false,
-      gridFocused: false,
-      captionView: "day",
-      isInputFocused: false,
-      inputPhrase: "month",
-    });
-    expect(getPartsPlainText(closedSidebar!.parts)).toContain("Enter");
+    expect(
+      surfaceForPickerContext({
+        id: "date-picker-sidebar-month",
+        isOpen: false,
+        captionView: "day",
+        isInputFocused: false,
+        inputPhrase: "month",
+      }),
+    ).toBeNull();
   });
 
   it("never returns the closed open-phrase while the calendar is open and the input is not focused", () => {
     const openNoInputFocus = surfaceForPickerContext({
       id: "date-picker-event-form",
       isOpen: true,
-      gridFocused: false,
       captionView: "day",
       isInputFocused: false,
       inputPhrase: "start date",
@@ -43,7 +41,6 @@ describe("surfaceForPickerContext", () => {
     const typing = surfaceForPickerContext({
       id: "date-picker-event-form",
       isOpen: true,
-      gridFocused: true,
       captionView: "day",
       isInputFocused: true,
       inputPhrase: "start date",
@@ -51,5 +48,25 @@ describe("surfaceForPickerContext", () => {
     const plain = getPartsPlainText(typing!.parts);
     expect(plain).toMatch(/save start date/i);
     expect(plain).not.toContain("PageDown");
+  });
+
+  it("uses caption parts on the given id while year or month view is open", () => {
+    const year = surfaceForPickerContext({
+      id: "date-picker-event-form-caption",
+      isOpen: true,
+      captionView: "year",
+      isInputFocused: true,
+      inputPhrase: "start date",
+    });
+    expect(getPartsPlainText(year!.parts)).toMatch(/move years/i);
+
+    const month = surfaceForPickerContext({
+      id: "date-picker-life-caption",
+      isOpen: true,
+      captionView: "month",
+      isInputFocused: false,
+      inputPhrase: "birth date",
+    });
+    expect(getPartsPlainText(month!.parts)).toMatch(/select/i);
   });
 });

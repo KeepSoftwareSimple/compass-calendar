@@ -8,11 +8,15 @@ export function shouldDeferSidebarMonthHint(
   stack: readonly { id: DatePickerHintId }[],
 ): boolean {
   return stack.some((s) => {
-    const id = s.id as string;
-    return (
-      id.startsWith("date-picker-life") ||
-      id.startsWith("date-picker-event-form") ||
-      id === "date-picker-recurrence-until"
-    );
+    switch (s.id) {
+      case "date-picker-sidebar-month":
+        return false;
+      case "date-picker-life":
+      case "date-picker-life-caption":
+      case "date-picker-event-form":
+      case "date-picker-event-form-caption":
+      case "date-picker-recurrence-until":
+        return true;
+    }
   });
 }

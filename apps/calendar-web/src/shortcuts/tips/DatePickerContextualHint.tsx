@@ -38,7 +38,6 @@ export const DatePickerContextualHint: FC = () => {
         )}
         role="status"
         data-testid="date-picker-contextual-hint"
-        data-date-picker-hint-id={surface.id}
       >
         <ShortcutTipParts hintId={syntheticId} parts={surface.parts} />
       </span>

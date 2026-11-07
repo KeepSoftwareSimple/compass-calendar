@@ -50,11 +50,6 @@ export const datePickerHintActions = {
       { type: "datePickerHint/pop", id },
     );
   },
-  clearAll: () => {
-    useDatePickerHintStore.setState(initialState, false, {
-      type: "datePickerHint/clearAll",
-    });
-  },
 };
 
 export function resetDatePickerHintStoreForTests(): void {

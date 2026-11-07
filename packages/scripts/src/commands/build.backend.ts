@@ -3,7 +3,6 @@
  *
  * Bundles the Express app into a single Bun-native file.
  * All JS/TS dependencies (including @compass/core) are inlined.
- * All dependencies are inlined.
  *
  * Usage:
  *   bun run build:backend

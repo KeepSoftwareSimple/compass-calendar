@@ -928,9 +928,6 @@
 
 .c-date-picker {
   @apply select-none rounded-xs border-0 shadow-[0_4px_4px_var(--color-shadow-default)];
-}
-
-.c-date-picker {
   background-color: var(--date-picker-bg);
   font-size: 11px;
   --date-picker-hover-bg: color-mix(

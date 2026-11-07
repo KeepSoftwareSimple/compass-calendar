@@ -1,4 +1,5 @@
 import {
+  clickDatePickerMonthNav,
   findKeyboardSelectedDay,
   focusKeyboardSelectedDay,
 } from "@web/components/DatePicker/date-picker-keyboard-dom.util";
@@ -131,5 +132,33 @@ describe("focusKeyboardSelectedDay", () => {
     expect(r.bottom).toBeLessThanOrEqual(hr.bottom + 1);
     expect(r.top).toBeGreaterThanOrEqual(hr.top - 1);
     expect(window.scrollY).toBe(beforeWinScroll);
+  });
+});
+
+describe("clickDatePickerMonthNav", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("clicks the matching month chevron on the named calendar", () => {
+    document.body.innerHTML = `
+      <div class="calendar lifeBirthDatePicker">
+        <button type="button" aria-label="Previous month" id="prev"></button>
+        <button type="button" aria-label="Next month" id="next"></button>
+      </div>
+      <div class="calendar otherPicker">
+        <button type="button" aria-label="Next month" id="other"></button>
+      </div>
+    `;
+    const clicks: string[] = [];
+    for (const id of ["prev", "next", "other"]) {
+      document
+        .getElementById(id)
+        ?.addEventListener("click", () => clicks.push(id));
+    }
+    clickDatePickerMonthNav("lifeBirthDatePicker", 1);
+    clickDatePickerMonthNav("lifeBirthDatePicker", -1);
+    clickDatePickerMonthNav("lifeBirthDatePicker", 0);
+    expect(clicks).toEqual(["next", "prev"]);
   });
 });

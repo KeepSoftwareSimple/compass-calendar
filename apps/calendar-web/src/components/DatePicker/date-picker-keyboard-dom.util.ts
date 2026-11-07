@@ -110,6 +110,19 @@ export function consumeDatePickerKey(event: React.KeyboardEvent) {
   event.nativeEvent.stopImmediatePropagation();
 }
 
+/** Click react-datepicker's month chevron on the named calendar root. */
+export function clickDatePickerMonthNav(
+  calendarClassName: string,
+  deltaMonths: number,
+) {
+  if (deltaMonths === 0) return;
+  const label = deltaMonths < 0 ? "Previous month" : "Next month";
+  document
+    .querySelector(`.calendar.${calendarClassName}`)
+    ?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+    ?.click();
+}
+
 /** Matches react-datepicker v4 + date-fns `PPPP` on each day cell (`Choose Tuesday, …`). */
 function expectedDayAriaLabel(cursorDate: Date): string {
   return `Choose ${format(cursorDate, "PPPP")}`;

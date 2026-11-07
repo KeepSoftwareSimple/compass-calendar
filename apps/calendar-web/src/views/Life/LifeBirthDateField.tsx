@@ -7,6 +7,7 @@ import {
   DatePicker,
 } from "@web/components/DatePicker/DatePicker";
 import {
+  clickDatePickerMonthNav,
   consumeDatePickerKey,
   focusKeyboardSelectedDay,
 } from "@web/components/DatePicker/date-picker-keyboard-dom.util";
@@ -106,7 +107,6 @@ export function LifeBirthDateField({
     useCaptionableGridDatePickerHint({
       baseId: "date-picker-life",
       isOpen,
-      gridFocused,
       captionView,
       inputPhrase: "birth date",
     });
@@ -223,13 +223,10 @@ export function LifeBirthDateField({
       const currentMonth = current.startOf("month");
       if (currentMonth.isSame(targetMonth, "month")) return;
 
-      const navLabel = currentMonth.isBefore(targetMonth)
-        ? "Next month"
-        : "Previous month";
-      document
-        .querySelector(".calendar.lifeBirthDatePicker")
-        ?.querySelector<HTMLButtonElement>(`button[aria-label="${navLabel}"]`)
-        ?.click();
+      clickDatePickerMonthNav(
+        "lifeBirthDatePicker",
+        currentMonth.isBefore(targetMonth) ? 1 : -1,
+      );
       requestAnimationFrame(step);
     };
 
@@ -330,11 +327,7 @@ export function LifeBirthDateField({
   };
 
   const stepCalendarMonth = (deltaMonths: number) => {
-    const label = deltaMonths < 0 ? "Previous month" : "Next month";
-    document
-      .querySelector(".calendar.lifeBirthDatePicker")
-      ?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
-      ?.click();
+    clickDatePickerMonthNav("lifeBirthDatePicker", deltaMonths);
     syncPickerMonth(pickerMonthRef.current.add(deltaMonths, "month"));
   };
 
