@@ -63,7 +63,7 @@ describe("UpNextBanner", () => {
       events: [timedEvent(SOON_EVENT_ID, "Soon Event", 2)],
     });
 
-    expect(screen.getByText("Starts in 2 minutes")).toBeInTheDocument();
+    expect(screen.getByText("Starts in 2 min")).toBeInTheDocument();
     expect(screen.getByText("Soon Event")).toBeInTheDocument();
     const openButton = screen.getByRole("button", { name: "Open" });
     expect(openButton).toBeInTheDocument();

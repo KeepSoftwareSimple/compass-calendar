@@ -74,7 +74,7 @@ final class UpcomingNotifierLogicTests: XCTestCase {
             for: event,
             reminderMinutes: 5,
             now: now)
-        XCTAssertEqual(payload.body, "Starts in 3 minutes (3:03 AM)")
+        XCTAssertEqual(payload.body, "Starts in 3 min (3:03 AM)")
     }
 
     func testNotifiableEventQueryRangeIncludesLeadIntoTomorrow() {

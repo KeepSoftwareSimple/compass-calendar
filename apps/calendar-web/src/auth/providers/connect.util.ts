@@ -122,9 +122,7 @@ export const formatLastSyncedLabel = (
 
   const deltaMin = Math.floor(deltaSec / 60);
   if (deltaMin < 60) {
-    return deltaMin === 1
-      ? "Updated 1 minute ago"
-      : `Updated ${deltaMin} minutes ago`;
+    return `Updated ${deltaMin} min ago`;
   }
 
   const deltaHr = Math.floor(deltaMin / 60);
