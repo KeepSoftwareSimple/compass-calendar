@@ -48,6 +48,8 @@ final class DescriptionEditorContainerView: NSView {
             self?.updateControls()
             self?.updateDescriptionPlaceholder()
         }
+        textView.setAccessibilityIdentifier("compass-event-form-description")
+        textView.setAccessibilityLabel("Description")
         placeholderLabel.isEditable = false
         placeholderLabel.isBordered = false
         placeholderLabel.drawsBackground = false
