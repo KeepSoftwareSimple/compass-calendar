@@ -1,5 +1,12 @@
 import XCTest
 
+/// Go to date keyboard navigation plus native status accessibility mirrors.
+///
+/// `CommandPaletteStatusAccessibilityProbe` exposes a status region in the
+/// accessibility tree (web `role="status"` parity) and posts
+/// `NSAccessibility.Notification.announcementRequested`. XCUITest can read the
+/// probe identifiers and labels, but cannot observe whether VoiceOver actually
+/// spoke an announcement; manual VoiceOver spot-check remains outside CI.
 final class GoToDateKeyboardTests: XCTestCase {
     @MainActor
     func testISODateNavigatesFromBareG() {
@@ -59,9 +66,14 @@ final class GoToDateKeyboardTests: XCTestCase {
         XCTAssertFalse(search.exists)
         let day = window.descendants(matching: .any)["compass-grid-column-\(date)"]
         XCTAssertTrue(day.waitForExistence(timeout: 8))
-        let status = window.staticTexts["compass-native-command-palette-status-announcement"]
-        XCTAssertTrue(status.waitForExistence(timeout: 5))
-        XCTAssertEqual(status.label, announcement)
+        let statusRegion = window.descendants(matching: .any)["compass-native-command-palette-status"]
+        XCTAssertTrue(statusRegion.waitForExistence(timeout: 5))
+        XCTAssertEqual(statusRegion.label, "Status")
+        let statusAnnouncement = statusRegion.descendants(matching: .any)[
+            "compass-native-command-palette-status-announcement"
+        ]
+        XCTAssertTrue(statusAnnouncement.waitForExistence(timeout: 2))
+        XCTAssertEqual(statusAnnouncement.label, announcement)
         XCTAssertTrue(day.isHittable, "Chosen day must be visible in the calendar")
         XCTAssertGreaterThan(day.frame.width, 0)
         XCTAssertGreaterThan(day.frame.height, 0)
