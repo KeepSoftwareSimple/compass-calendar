@@ -519,6 +519,12 @@ final class NativeGridKeyboardRouter {
     }
 
     private func handleEventFormKeys(_ keyEvent: KeyEvent) -> Bool {
+        if keyEvent.modifiers.contains(.shift),
+            case .named(let named) = keyEvent.key,
+            [.arrowUp, .arrowDown, .arrowLeft, .arrowRight].contains(named)
+        {
+            return false
+        }
         if model.eventFormTimeKeyOwner != nil, keyEvent.modifiers.isEmpty,
             (isSpaceKey(keyEvent.key)
                 || [KeyToken.named(.enter), .named(.arrowUp), .named(.arrowDown)].contains(keyEvent.key)) {
