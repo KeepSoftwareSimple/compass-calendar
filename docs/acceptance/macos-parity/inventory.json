@@ -776,7 +776,7 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
       "status": "passing",
-      "evidence": "Head d9d9c44dd run42350110523 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed 18.431s with full-bounds scroll+window containment and hittable keycaps. audit.py check PASS on same head.",
+      "evidence": "Head dd38a56ca run42364873057 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed with full-bounds scroll+window containment and hittable keycaps.",
       "reason": "Product chips unchanged; XCTest probes under -COMPASS_UI_TEST only.",
       "review": "2026-11-07 agent: no clipboard or layout product change in this row."
     },
@@ -805,9 +805,9 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
       "status": "passing",
-      "evidence": "Head d9d9c44dd run42350110523 macos-meeting-link-wide (macos-26-intel x86_64): NSScreen visible=1920x959 pre-test, vmware-resolutionSet absent; testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow passed 127.322s with geometry probe achievedTarget=1440x960 and full-bounds window+scroll assertions.",
-      "reason": "Wide leg rebuilds on Intel (arm64 DerivedData incompatible). arm64 macos-latest 1024x674 cannot host 1440x960; wide coverage is Intel job only.",
-      "review": "2026-11-07 agent: audit.py check PASS; scroll clip width residual not web window equivalence."
+      "evidence": "Head dd38a56ca run42364873057 macos-meeting-link-wide (macos-26-intel): NSScreen visible=1920x959, vmware-resolutionSet absent; testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow passed 183.371s with nominal 1440x960 (±2 pt via probe) and full-bounds window+scroll assertions.",
+      "reason": "Intel job rebuilds for x86_64; arm64 macos-latest 1024x674 does not run the wide leg. actionlint 1.7.12 validates macos-26-intel.",
+      "review": "2026-11-07 agent: wide job runs after UI shards even if a shard fails; scroll clip width residual is not window-size equivalence."
     },
     {
       "id": "booking-description-open",
