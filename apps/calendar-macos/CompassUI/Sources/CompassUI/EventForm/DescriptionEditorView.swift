@@ -268,14 +268,24 @@ public final class DescriptionTextView: NSTextView {
         return true
     }
 
-    func orderedLinkHrefs() -> [String] {
+    struct OrderedLinkAttributeEntry {
+        let range: NSRange
+        let href: String
+    }
+
+    func orderedLinkAttributeEntries() -> [OrderedLinkAttributeEntry] {
         guard let storage = textStorage, storage.length > 0 else { return [] }
-        var hrefs: [String] = []
-        storage.enumerateAttribute(.link, in: NSRange(location: 0, length: storage.length)) { value, _, _ in
+        var entries: [OrderedLinkAttributeEntry] = []
+        storage.enumerateAttribute(.link, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
             let href = (value as? URL)?.absoluteString ?? value as? String
-            if let href, !href.isEmpty { hrefs.append(href) }
+            guard let href, !href.isEmpty else { return }
+            entries.append(OrderedLinkAttributeEntry(range: range, href: href))
         }
-        return hrefs
+        return entries
+    }
+
+    func orderedLinkHrefs() -> [String] {
+        orderedLinkAttributeEntries().map(\.href)
     }
 
     func applyHostLinkPresentation() {
@@ -332,12 +342,8 @@ public final class DescriptionTextView: NSTextView {
         }
         guard reserved, storage.length > 0 else { return }
 
-        var linkRanges: [NSRange] = []
-        storage.enumerateAttribute(.link, in: NSRange(location: 0, length: storage.length)) { _, range, _ in
-            linkRanges.append(range)
-        }
-        for range in linkRanges.sorted(by: { $0.location > $1.location }) {
-            let insertAt = range.location + range.length
+        for entry in orderedLinkAttributeEntries().sorted(by: { $0.range.location > $1.range.location }) {
+            let insertAt = entry.range.location + entry.range.length
             let attachment = DescriptionLinkHintSlotAttachment()
             let slot = NSMutableAttributedString(attachment: attachment)
             slot.addAttribute(HTMLFragmentAppKit.linkHintSlotKey, value: true, range: NSRange(location: 0, length: 1))

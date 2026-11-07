@@ -5,12 +5,18 @@ final class DescriptionLinkHintOverlayView: NSView {
     weak var textView: DescriptionTextView?
     var hintsVisible = false {
         didSet {
-            laidOutLinkHintCount = -1
+            laidOutFingerprint = nil
             needsLayout = true
         }
     }
     private var isLayingOutLinkHints = false
-    private var laidOutLinkHintCount = -1
+    private var laidOutFingerprint: LayoutFingerprint?
+
+    private struct LayoutFingerprint: Equatable {
+        let hrefsKey: String
+        let overlayBoundsSize: NSSize
+        let textContainerWidth: CGFloat
+    }
 
     override var isFlipped: Bool { true }
 
@@ -27,25 +33,26 @@ final class DescriptionLinkHintOverlayView: NSView {
             if !subviews.isEmpty {
                 subviews.forEach { $0.removeFromSuperview() }
             }
-            laidOutLinkHintCount = -1
+            laidOutFingerprint = nil
             return
         }
 
-        let storage = textView.textStorage
-        let length = storage?.length ?? 0
-        guard length > 0 else {
+        let linkEntries = textView.orderedLinkAttributeEntries()
+        guard !linkEntries.isEmpty else {
             if !subviews.isEmpty {
                 subviews.forEach { $0.removeFromSuperview() }
             }
-            laidOutLinkHintCount = -1
+            laidOutFingerprint = nil
+            setAccessibilityIdentifier("")
             return
         }
 
-        var linkCount = 0
-        storage?.enumerateAttribute(.link, in: NSRange(location: 0, length: length)) { _, _, _ in
-            linkCount += 1
-        }
-        if linkCount == laidOutLinkHintCount, subviews.count == linkCount, linkCount > 0 {
+        let fingerprint = LayoutFingerprint(
+            hrefsKey: linkEntries.map(\.href).joined(separator: "\u{1e}"),
+            overlayBoundsSize: bounds.size,
+            textContainerWidth: textContainer.containerSize.width
+        )
+        if fingerprint == laidOutFingerprint, subviews.count == linkEntries.count {
             return
         }
 
@@ -53,14 +60,12 @@ final class DescriptionLinkHintOverlayView: NSView {
         defer { isLayingOutLinkHints = false }
 
         subviews.forEach { $0.removeFromSuperview() }
-        laidOutLinkHintCount = linkCount
-        guard linkCount > 0 else { return }
 
         var linkIndex = 0
-        storage?.enumerateAttribute(.link, in: NSRange(location: 0, length: length)) { _, range, _ in
-            guard linkIndex < 9 else { return }
+        for entry in linkEntries {
+            guard linkIndex < 9 else { break }
             let glyphRange = layoutManager.glyphRange(
-                forCharacterRange: range,
+                forCharacterRange: entry.range,
                 actualCharacterRange: nil
             )
             let linkRect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
@@ -84,6 +89,8 @@ final class DescriptionLinkHintOverlayView: NSView {
             addSubview(chip)
             linkIndex += 1
         }
+
+        laidOutFingerprint = fingerprint
         if hintsVisible, linkIndex > 0 {
             setAccessibilityIdentifier("compass-description-link-digit-hints")
         } else {
