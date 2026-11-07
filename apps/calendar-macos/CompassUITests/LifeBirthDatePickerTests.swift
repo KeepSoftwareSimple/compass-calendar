@@ -51,10 +51,11 @@ final class LifeBirthDatePickerTests: XCTestCase {
         window.typeKey("l", modifierFlags: [])
         let birth = window.textFields["Date of birth"]
         XCTAssertTrue(birth.waitForExistence(timeout: 10))
+        birth.click()
         window.buttons["Open calendar"].click()
         let picker = app.descendants(matching: .any)["compass-life-birth-date-picker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
-        window.typeKey(.escape, modifierFlags: [])
+        birth.typeKey(.escape, modifierFlags: [])
         XCTAssertFalse(picker.waitForExistence(timeout: 2))
         XCTAssertTrue(
             app.descendants(matching: .any)["compass-life-birth-date-focused"].waitForExistence(timeout: 3))

@@ -149,6 +149,7 @@ struct LifeSidebarView: View {
 
   private func openBirthDatePicker() {
     pickerMonth = storedBirthDate ?? model.referenceNow
+    focusedField = .birthDate
     showsBirthDatePicker = true
   }
 
