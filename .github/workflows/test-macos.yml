@@ -184,16 +184,9 @@ jobs:
       - name: Render app icon
         run: bash ../../.github/scripts/render-macos-icon.sh
 
-      - name: Restore SwiftPM and derived data
-        uses: actions/cache/restore@v6
-        with:
-          path: |
-            apps/calendar-macos/build/DerivedData
-            apps/calendar-macos/build/SourcePackages
-          key: ${{ runner.os }}-xcode-sparkle-v2-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved', 'apps/calendar-macos/CompassUITests/**', 'apps/calendar-macos/Compass/**', 'apps/calendar-macos/CompassUI/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassKit/**') }}
-          restore-keys: |
-            ${{ runner.os }}-xcode-sparkle-v2-
-            ${{ runner.os }}-xcode-
+      # DerivedData from macos-build (arm64 macos-latest) must not run on Intel; rebuild here.
+      - name: Build for testing on Intel
+        run: bash ../../.github/scripts/test-macos-build-for-testing.sh
 
       - name: Configure guest display for wide viewport
         run: bash ../../.github/scripts/macos-ci-display-setup.sh
