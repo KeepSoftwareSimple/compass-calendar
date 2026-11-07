@@ -3,22 +3,16 @@ import { type CaptionPickerView } from "@web/components/DatePicker/DatePicker";
 import {
   buildRecurrenceUntilParts,
   buildSidebarMonthPickerParts,
-  surfaceForPickerContext,
+  datePickerHintSurface,
 } from "@web/shortcuts/tips/buildDatePickerHintParts";
 import {
+  captionHintId,
   type DatePickerHintId,
   datePickerHintActions,
+  type GridDatePickerHintId,
   useDatePickerHintStore,
 } from "@web/shortcuts/tips/date-picker-hint.store";
 import { shouldDeferSidebarMonthHint } from "@web/shortcuts/tips/datePickerHintPriority";
-
-type GridDatePickerHintId = "date-picker-life" | "date-picker-event-form";
-
-function captionHintId(base: GridDatePickerHintId): DatePickerHintId {
-  return base === "date-picker-life"
-    ? "date-picker-life-caption"
-    : "date-picker-event-form-caption";
-}
 
 /**
  * Grid popover date fields (Life birth, event form): sidebar shows the active
@@ -47,18 +41,19 @@ export function useCaptionableGridDatePickerHint(args: {
       return;
     }
 
-    const isCaption = captionView === "year" || captionView === "month";
-    const activeId = isCaption ? captionHintId(baseId) : baseId;
-    datePickerHintActions.pop(isCaption ? baseId : captionHintId(baseId));
-    const surface = surfaceForPickerContext({
-      id: activeId,
-      isOpen: true,
+    const surface = datePickerHintSurface({
+      baseId,
       captionView,
       isInputFocused: inputFocused,
       inputPhrase,
     });
-    if (surface) datePickerHintActions.push(surface);
-    return () => datePickerHintActions.pop(activeId);
+    // Only one of the pair publishes at a time; drop whichever the new view
+    // is not using so a day-grid line never sits under a caption line.
+    datePickerHintActions.pop(
+      surface.id === baseId ? captionHintId(baseId) : baseId,
+    );
+    datePickerHintActions.push(surface);
+    return () => datePickerHintActions.pop(surface.id);
   }, [baseId, captionView, inputFocused, inputPhrase, isOpen]);
 
   return {

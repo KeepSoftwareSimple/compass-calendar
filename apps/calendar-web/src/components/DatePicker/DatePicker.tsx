@@ -447,11 +447,11 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         monthStepHandlersRef.current = {
           onPrev: headerNav.onPrev,
           onNext: headerNav.onNext,
-          onGoToThisMonth:
-            (view === "sidebar" && monthNav?.onToday) ||
-            (withTodayButton && isCaptionDayGrid)
-              ? jumpToThisMonth
-              : undefined,
+          // Same rule that decides whether the shortcut is offered at all;
+          // spelling it twice let the two drift.
+          onGoToThisMonth: canGoToThisMonthInPicker
+            ? jumpToThisMonth
+            : undefined,
         };
 
         const resolvedHeaderEndContent =
@@ -460,7 +460,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
             : headerEndContent;
 
         const captionBlock = (
-          <div className={classNames("min-w-16 shrink-0 items-start")}>
+          <div className="min-w-16 shrink-0 items-start">
             {captionPicker && captionView === "day" ? (
               <button
                 type="button"
@@ -557,19 +557,17 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         return (
           <div
             className={classNames(
-              "flex items-center px-2 py-2",
+              "flex min-w-0 items-center gap-2 px-2 py-2",
               headerClassName,
             )}
           >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              {captionBlock}
-              {navBlock}
-              {!customHeaderCount && resolvedHeaderEndContent ? (
-                <div className="ml-auto flex min-w-0 items-center">
-                  {resolvedHeaderEndContent}
-                </div>
-              ) : null}
-            </div>
+            {captionBlock}
+            {navBlock}
+            {!customHeaderCount && resolvedHeaderEndContent ? (
+              <div className="ml-auto flex min-w-0 items-center">
+                {resolvedHeaderEndContent}
+              </div>
+            ) : null}
           </div>
         );
       }}

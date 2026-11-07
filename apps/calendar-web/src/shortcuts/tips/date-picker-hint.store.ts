@@ -11,6 +11,18 @@ export type DatePickerHintId =
   | "date-picker-recurrence-until"
   | "date-picker-sidebar-month";
 
+/** Grid popover date fields; each also has a `-caption` id for its subviews. */
+export type GridDatePickerHintId =
+  | "date-picker-life"
+  | "date-picker-event-form";
+
+/** The id a grid field publishes under while the month or year list is open. */
+export function captionHintId(base: GridDatePickerHintId): DatePickerHintId {
+  return base === "date-picker-life"
+    ? "date-picker-life-caption"
+    : "date-picker-event-form-caption";
+}
+
 export type DatePickerHintSurface = {
   id: DatePickerHintId;
   parts: readonly ShortcutTipPart[];
