@@ -110,8 +110,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Window > Compass reopens it, so AppKit's own window list would repeat it.
         window.isExcludedFromWindowsMenu = true
         window.setContentSize(contentSize)
+        if UITestLaunchPolicy.attachesAccessibilityProbes {
+            window.setAccessibilityIdentifier("Compass")
+        }
         window.center()
         window.makeKeyAndOrderFront(nil)
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            MeetingLinkWideViewportPolicy.applyIfNeeded(to: window)
+        }
         return window
     }
 
