@@ -671,10 +671,10 @@
       "native": [
         "apps/calendar-macos/CompassUITests/NativeLaunchTests.swift#testQuestionMarkTogglesShortcutsLegend"
       ],
-      "status": "failing",
-      "evidence": "Exact head c6354219a, run40981800450 native strict log line13698: XCTAssertFalse failed after Escape. Normal40981345021 passed. Artifact inspection pending. Failure video inspected: actual legend visible. Native-only exact-head retry dispatched run40981800450 attempt2 after inspecting event attachment and keyboard routing; web passing job retained. No fix or stability claimed.",
-      "reason": "",
-      "review": "Failure triage, not proved attributable to icon changes. Web automated baseline mapping pending."
+      "status": "passing",
+      "evidence": "Stale failing row reconciled 2026-11-07: prior evidence head c6354219a run40981800450 not reproduced on current main c936b14a2. Merge-queue macOS run42331015525 and PR head run42334055012: NativeLaunchTests testQuestionMarkTogglesShortcutsLegend passed; CompassKitTests ShortcutsLegendEscapeKeyboardTests testEscapeClosesShortcutsLegendWhenOpen passed 0.210s.",
+      "reason": "Inventory still cited pre-reconciliation failure; behavior passes on current main with no product router change since c6354219a.",
+      "review": "2026-11-07 agent: compared NativeGridKeyboardRouter handleOverlayKeyDown Escape path to XCTest; GitHub Mac evidence at c936b14a2; added native unit regression only."
     },
     {
       "id": "title-edit",
