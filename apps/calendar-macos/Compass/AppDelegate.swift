@@ -85,8 +85,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func makeMainWindow() -> NSWindow {
+        let contentSize = Self.defaultMainWindowContentSize
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
+            contentRect: NSRect(x: 0, y: 0, width: contentSize.width, height: contentSize.height),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false)
@@ -98,10 +99,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         // Window > Compass reopens it, so AppKit's own window list would repeat it.
         window.isExcludedFromWindowsMenu = true
-        window.setContentSize(NSSize(width: 1280, height: 820))
+        window.setContentSize(contentSize)
         window.center()
         window.makeKeyAndOrderFront(nil)
         return window
+    }
+
+    private static var defaultMainWindowContentSize: NSSize {
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            return NSSize(width: 1440, height: 960)
+        }
+        return NSSize(width: 1280, height: 820)
     }
 
     private func installRootContent(on window: NSWindow) {
