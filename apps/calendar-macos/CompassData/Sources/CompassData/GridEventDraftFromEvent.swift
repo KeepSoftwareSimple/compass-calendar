@@ -81,6 +81,10 @@ public enum GridEventDraftFromEvent {
         }
     }
 
+    public static func draftSchedule(from event: Event) -> DraftSchedule? {
+        draftSchedule(from: event.schedule)
+    }
+
     private static func draftSchedule(from schedule: EventSchedule) -> DraftSchedule? {
         switch schedule {
         case .timed(let timed):

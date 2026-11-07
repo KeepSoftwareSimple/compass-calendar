@@ -325,7 +325,7 @@ extension NativeCalendarRootModel {
         }
     }
 
-    private func replaceEvent(with event: Event) async {
+    func replaceEvent(with event: Event) async {
         guard case .details(let details) = event.content else { return }
         let current = loadedEvents.first { $0.id == event.id }
         let scheduleUnchanged =

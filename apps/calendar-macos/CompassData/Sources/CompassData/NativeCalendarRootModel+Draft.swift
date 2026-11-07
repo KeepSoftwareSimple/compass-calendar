@@ -89,35 +89,73 @@ extension NativeCalendarRootModel {
 
         if shiftKey {
             if draftStore.gridDraft != nil {
-                let moved = nudgeDraft(key: key, altKey: altKey)
+                let moved = nudgeDraft(key: key, altKey: altKey, shiftKey: true)
                 if moved { rebuildPresentation() }
                 return moved
             }
-            if focusStore.focusedEventId != nil { return false }
+            if focusStore.focusedEventId != nil {
+                let moved = nudgeFocusedSavedEvent(key: key, altKey: altKey)
+                if moved { rebuildPresentation() }
+                return moved
+            }
             placeTimedDraft()
             return true
         }
 
         if draftStore.gridDraft != nil {
-            let moved = nudgeDraft(key: key, altKey: altKey)
+            let moved = nudgeDraft(key: key, altKey: altKey, shiftKey: false)
             if moved { rebuildPresentation() }
             return moved
         }
         return false
     }
 
-    private func nudgeDraft(key: String, altKey: Bool) -> Bool {
+    private func nudgeDraft(key: String, altKey: Bool, shiftKey: Bool) -> Bool {
         guard let draft = draftStore.gridDraft, !isScheduleLocked(for: draft) else { return false }
+
+        let isStartAllowed: (Date) -> Bool = { nextStart in
+            let calendar = EffectiveTimeZone.calendar
+            let start = calendar.startOfDay(for: nextStart)
+            let viewStart = calendar.startOfDay(for: self.startOfView)
+            let viewEnd = calendar.startOfDay(for: self.endOfView)
+            return start >= viewStart && start <= viewEnd
+        }
+
+        let scheduleEdge: DraftNudge.ScheduleEdge? = {
+            guard shiftKey, let edge = focusStore.edge else { return nil }
+            guard draft.kind == .edit,
+                  let persisted = draft.persistedEventId,
+                  focusStore.focusedEventId == persisted
+            else { return nil }
+            return edge.scheduleEdge
+        }()
+
+        if let scheduleEdge, let schedule = draft.schedule {
+            let step = DraftNudge.nudgeStepFromKeyboard(altKey: altKey)
+            guard let result = DraftNudge.nudgeScheduleEdgeByKeyboard(
+                schedule: schedule,
+                edge: scheduleEdge,
+                key: key,
+                step: step
+            ) else {
+                return false
+            }
+            draftStore.setGridSchedule(result.schedule)
+            if let persisted = draft.persistedEventId {
+                focusStore.setEdge(
+                    eventId: persisted,
+                    edge: EventEdge(result.edge),
+                    announcement: focusStore.edgeAnnouncement,
+                    isAllDay: focusStore.edgeFocusIsAllDay
+                )
+            }
+            return true
+        }
+
         return draftStore.nudgeByKeyboard(
             key: key,
             altKey: altKey,
-            isStartAllowed: { nextStart in
-                let calendar = EffectiveTimeZone.calendar
-                let start = calendar.startOfDay(for: nextStart)
-                let viewStart = calendar.startOfDay(for: self.startOfView)
-                let viewEnd = calendar.startOfDay(for: self.endOfView)
-                return start >= viewStart && start <= viewEnd
-            }
+            isStartAllowed: isStartAllowed
         ) != nil
     }
 
