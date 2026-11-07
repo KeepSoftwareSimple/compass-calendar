@@ -268,11 +268,11 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         if canWrite {
             XCTAssertFalse(model.isReadOnly(event: event))
         }
-        XCTAssertTrue(
-            model.loadedEvents.contains { $0.id == event.id },
+        XCTAssertNotNil(
+            model.event(for: event.id),
             "bootstrap must load local event into model"
         )
-        model.focusEvent(eventId: event.id.rawValue)
+        model.focusGridEvent(eventId: event.id.rawValue)
         return (model, environment, event)
     }
 }
