@@ -13,33 +13,19 @@ struct MainWindowGeometryProbeReading: Equatable {
 }
 
 enum MeetingLinkViewportXCUITestSupport {
-    /// Matches `NativeLaunchTests` focus gating: the auto-opened event form only runs after grid focus.
+    /// Demo fixture must lay out before `-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM` runs.
+    /// Uses a titled grid button query instead of `descendants(matching: .any)` (wide windows stall XCUITest).
     @MainActor
-    static func waitForFocusedGridEvent(
-        title: String,
+    static func waitForDemoGridCard(
+        titled title: String,
         in window: XCUIElement,
         timeout: TimeInterval,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        let probe = window.descendants(matching: .any)["compass-grid-event-focused"]
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if probe.exists {
-                if probe.label == title { return }
-                if probe.value as? String == title { return }
-            }
-            if window.value as? String == title {
-                return
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        }
-        let probeLabel = probe.exists ? probe.label : "(missing)"
-        let probeValue = probe.exists ? String(describing: probe.value) : "(missing)"
-        let windowValue = String(describing: window.value)
-        XCTFail(
-            "Expected focused grid event \"\(title)\"; "
-                + "probe label=\(probeLabel), probe value=\(probeValue), window value=\(windowValue)",
+        XCTAssertTrue(
+            window.buttons[title].waitForExistence(timeout: timeout),
+            "Expected demo grid card \"\(title)\" before the event form opens.",
             file: file,
             line: line)
     }
