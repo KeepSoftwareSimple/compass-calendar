@@ -1,3 +1,4 @@
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import {
   type Modifier,
   type ModifierArguments,
@@ -95,6 +96,9 @@ const CAPTION_VIEW_AFTER_SELECT: Record<
   CaptionPickerView,
   CaptionPickerView | null
 > = { year: "month", month: "day", day: null };
+
+/** Years per hold-Mod caption page; keep in sync with `DatePickerCaption.yearsPerPage` on macOS. */
+const CAPTION_YEARS_PER_PAGE = 20;
 
 /**
  * Caps popper max-height to the space between the anchor and the viewport edge.
@@ -349,6 +353,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         <div
           ref={calendarRef}
           className={classNames("c-date-picker", className)}
+          data-caption-view={captionPicker ? captionView : undefined}
           data-dark={usesThemeText ? "true" : "false"}
           data-view={view}
           style={datePickerStyle}
@@ -399,7 +404,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
       showFourColumnMonthYearPicker={isCaptionMonthView}
       showMonthYearPicker={isCaptionMonthView}
       showYearPicker={isCaptionYearView}
-      yearItemNumber={12}
+      yearItemNumber={CAPTION_YEARS_PER_PAGE}
       // Close the picker when the user clicks away (react-datepicker has no
       // onCalendarClose for outside-clicks). onCalendarOpen/onCalendarClose/
       // onSelect flow straight through {...props}. Kept as a fallback for
@@ -460,23 +465,27 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
             : headerEndContent;
 
         const captionBlock = (
-          <div className="min-w-16 shrink-0 items-start">
+          <div className="min-w-0 shrink-0 items-start">
             {captionPicker && captionView === "day" ? (
               <button
                 type="button"
                 aria-label="Choose month and year"
                 className={classNames(
-                  "relative cursor-pointer rounded-xs px-0.5 text-left transition-colors hover:bg-text/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "relative inline-flex cursor-pointer items-center gap-0.5 rounded-sm border border-text/15 bg-text/5 px-1.5 py-0.5 text-left font-medium transition-colors hover:border-text/25 hover:bg-text/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                   monthTextClassName,
                 )}
                 style={{ color: headerColor }}
                 onClick={openCaptionPicker}
               >
                 {selectedMonth}
+                <CaretDownIcon aria-hidden size={12} weight="bold" />
               </button>
             ) : (
               <span
-                className={classNames("relative", monthTextClassName)}
+                className={classNames(
+                  "relative font-medium",
+                  monthTextClassName,
+                )}
                 style={{ color: headerColor }}
               >
                 {captionLabel}
@@ -487,7 +496,10 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
 
         const navBlock = !customHeaderCount && (
           <div
-            className={classNames("flex items-center", headerActionsClassName)}
+            className={classNames(
+              "flex shrink-0 items-center",
+              headerActionsClassName,
+            )}
           >
             <div className="flex items-center gap-1">
               <MonthNavButton
@@ -557,17 +569,17 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         return (
           <div
             className={classNames(
-              "flex min-w-0 items-center gap-2 px-2 py-2",
+              "flex w-full min-w-0 items-center justify-between gap-2 px-2 py-2",
               headerClassName,
             )}
           >
             {captionBlock}
-            {navBlock}
-            {!customHeaderCount && resolvedHeaderEndContent ? (
-              <div className="ml-auto flex min-w-0 items-center">
-                {resolvedHeaderEndContent}
-              </div>
-            ) : null}
+            <div className="ml-auto flex min-w-0 items-center gap-2">
+              {navBlock}
+              {!customHeaderCount && resolvedHeaderEndContent
+                ? resolvedHeaderEndContent
+                : null}
+            </div>
           </div>
         );
       }}

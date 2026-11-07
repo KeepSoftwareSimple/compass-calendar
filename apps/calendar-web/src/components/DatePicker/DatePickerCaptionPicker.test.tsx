@@ -121,12 +121,18 @@ describe("DatePicker captionPicker", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Choose month and year" }),
-    );
+    const captionButton = screen.getByRole("button", {
+      name: "Choose month and year",
+    });
+    expect(captionButton.className).toMatch(/border/);
+
+    await user.click(captionButton);
 
     expect(screen.getByText("Select year")).toBeInTheDocument();
     expect(screen.getByText("2000")).toBeInTheDocument();
+    expect(screen.getAllByText(/^(19|20)\d{2}$/).length).toBeGreaterThanOrEqual(
+      20,
+    );
 
     await user.click(screen.getByText("1995"));
 

@@ -334,7 +334,7 @@ public struct SidebarMonthPicker: View {
         let calendar = EffectiveTimeZone.calendar
         let columns = Array(
             repeating: GridItem(.flexible(), spacing: 4),
-            count: captionView == .year ? 3 : 4)
+            count: 4)
         return LazyVGrid(columns: columns, spacing: 4) {
             if captionView == .year {
                 ForEach(DatePickerCaption.yearPage(containing: yearPageYear), id: \.self) { year in

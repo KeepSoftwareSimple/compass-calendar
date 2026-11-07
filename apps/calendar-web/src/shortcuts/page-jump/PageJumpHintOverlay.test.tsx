@@ -7,6 +7,7 @@ import {
   dayColumnJumpId,
   LIFE_PAGE_JUMP_TARGETS,
   PAGE_JUMP_ATTRIBUTE,
+  PAGE_JUMP_CHIP_ATTRIBUTE,
   type PageJumpTargetId,
 } from "@web/shortcuts/page-jump/page-jump.targets";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -125,6 +126,29 @@ describe("PageJumpHintOverlay", () => {
     expect(status.textContent).toContain("1 for view dropdown");
     expect(status.textContent).toContain("2 for month picker");
     expect(chipsWrapper()?.getAttribute("aria-hidden")).not.toBeNull();
+  });
+
+  it("anchors chips to data-page-jump-chip markers instead of the section edge", () => {
+    const section = addAnchor("life-details", { focusable: true });
+    stubRect(section, box(0, 0, 400, 300));
+    const chipHost = document.createElement("div");
+    chipHost.setAttribute(PAGE_JUMP_CHIP_ATTRIBUTE, "life-details");
+    stubRect(chipHost, box(120, 140, 160, 170));
+    const input = document.createElement("input");
+    chipHost.append(input);
+    section.append(chipHost);
+
+    render(
+      <PageJumpHintOverlay
+        targets={[{ digit: "4", id: "life-details", label: "Life details" }]}
+        visible={true}
+      />,
+    );
+
+    const chip = chipsWrapper()?.firstElementChild as HTMLElement | undefined;
+    expect(chip?.textContent).toBe("4");
+    expect(chip?.style.left).toBe("148px");
+    expect(chip?.style.top).toBe("122px");
   });
 
   it("renders a custom target list, e.g. Life's, skipping absent targets", () => {

@@ -18,8 +18,8 @@ public enum DatePickerCaption {
         }
     }
 
-    /// react-datepicker `yearItemNumber={12}`: pages of 12 years starting at a multiple of 12.
-    public static let yearsPerPage = 12
+    /// react-datepicker `yearItemNumber={20}`: pages of 20 years starting at a multiple of 20.
+    public static let yearsPerPage = 20
 
     public static func yearPage(containing year: Int) -> [Int] {
         let start = year - ((year % yearsPerPage) + yearsPerPage) % yearsPerPage
