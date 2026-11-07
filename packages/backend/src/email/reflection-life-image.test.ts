@@ -7,7 +7,7 @@ import {
   PDFString,
 } from "pdf-lib";
 import { getCompletedLifeWeeks } from "@core/life/life-math";
-import { LIFE_QUOTES } from "@core/life/life-quotes";
+import { LIFE_PDF_QUOTE } from "@core/life/life-quotes";
 import {
   renderReflectionLifePdf,
   renderReflectionLifePng,
@@ -44,7 +44,7 @@ describe("reflection life image", () => {
     const quoteText = [...svg.matchAll(/<text x="270"[^>]*>([^<]*)<\/text>/g)]
       .map((match) => match[1])
       .join(" ");
-    expect(quoteText).toBe(LIFE_QUOTES[2]);
+    expect(quoteText).toBe(LIFE_PDF_QUOTE);
     expect(svg).toContain('x="300" y="781"');
     expect(svg).toContain('text-anchor="middle"');
     expect(svg).toContain(">compasscalendar.com/life</text>");

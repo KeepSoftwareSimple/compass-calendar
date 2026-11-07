@@ -1,7 +1,7 @@
 import { Resvg } from "@resvg/resvg-js";
 import { PDFDocument, PDFString } from "pdf-lib";
 import { DEFAULT_LIFESPAN, getCompletedLifeWeeks } from "@core/life/life-math";
-import { LIFE_QUOTES } from "@core/life/life-quotes";
+import { LIFE_PDF_QUOTE } from "@core/life/life-quotes";
 import { escapeHtml } from "@core/util/escape-html.util";
 import { fileURLToPath } from "node:url";
 
@@ -10,15 +10,23 @@ const fontPaths = ["Rubik-Regular.ttf", "Rubik-SemiBold.ttf"].map((name) =>
 );
 const PAGE_WIDTH = 600;
 const GRID_TOP = 119;
+const ROW_PITCH = 8;
+const WEEK_COL_PITCH = 10.3;
+const DOT_SIZE = 6;
+const FOOTER_RESERVE = 48;
+const QUOTE_WRAP_CHARS = 35;
+const GRID_INK = "#222";
+const GRID_EMPTY = "#e5e5e5";
+const LIFE_URL_INSET_X = 24;
 const LIFE_URL_BASELINE_FROM_BOTTOM = 18;
 const LIFE_URL_FONT_SIZE = 12;
 const LIFE_URL_HIT_PAD = 6;
 
 function lifeUrlLinkRect() {
   return [
-    24,
+    LIFE_URL_INSET_X,
     LIFE_URL_BASELINE_FROM_BOTTOM - LIFE_URL_HIT_PAD,
-    PAGE_WIDTH - 24,
+    PAGE_WIDTH - LIFE_URL_INSET_X,
     LIFE_URL_BASELINE_FROM_BOTTOM + LIFE_URL_FONT_SIZE,
   ];
 }
@@ -32,7 +40,7 @@ export function renderReflectionLifeSvg(
   const visibleUrl = new URL(lifeUrl);
   const completed = getCompletedLifeWeeks(birthDate, date);
   const rows = DEFAULT_LIFESPAN;
-  const height = GRID_TOP + rows * 8 + 48;
+  const height = GRID_TOP + rows * ROW_PITCH + FOOTER_RESERVE;
   const text = (
     x: number,
     y: number,
@@ -41,24 +49,24 @@ export function renderReflectionLifeSvg(
     weight = 400,
     anchor = "start",
   ) =>
-    `<text x="${x}" y="${y}" font-family="Rubik" font-weight="${weight}" font-size="${size}" text-anchor="${anchor}" fill="#222">${escapeHtml(content)}</text>`;
+    `<text x="${x}" y="${y}" font-family="Rubik" font-weight="${weight}" font-size="${size}" text-anchor="${anchor}" fill="${GRID_INK}">${escapeHtml(content)}</text>`;
   const quoteLines: string[] = [];
-  for (const word of LIFE_QUOTES[2].split(/\s+/)) {
+  for (const word of LIFE_PDF_QUOTE.split(/\s+/)) {
     const last = quoteLines.length - 1;
-    if (last < 0 || `${quoteLines[last]} ${word}`.length > 35)
+    if (last < 0 || `${quoteLines[last]} ${word}`.length > QUOTE_WRAP_CHARS)
       quoteLines.push(word);
     else quoteLines[last] += ` ${word}`;
   }
   const grid = Array.from({ length: rows }, (_, year) => {
     const label =
       year === 0 || (year + 1) % 10 === 0
-        ? text(12, GRID_TOP + 7 + year * 8, String(year + 1), 9)
+        ? text(12, GRID_TOP + 7 + year * ROW_PITCH, String(year + 1), 9)
         : "";
     return (
       label +
       Array.from({ length: 52 }, (_, week) => {
         const index = year * 52 + week;
-        return `<rect x="${38 + week * 10.3}" y="${GRID_TOP + year * 8}" width="6" height="6" rx="1" fill="${index < completed ? "#222" : "#e5e5e5"}"${index === completed ? ' stroke="#222" stroke-width="1.5"' : ""}/>`;
+        return `<rect x="${38 + week * WEEK_COL_PITCH}" y="${GRID_TOP + year * ROW_PITCH}" width="${DOT_SIZE}" height="${DOT_SIZE}" rx="1" fill="${index < completed ? GRID_INK : GRID_EMPTY}"${index === completed ? ` stroke="${GRID_INK}" stroke-width="1.5"` : ""}/>`;
       }).join("")
     );
   }).join("");

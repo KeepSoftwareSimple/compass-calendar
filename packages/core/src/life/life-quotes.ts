@@ -18,6 +18,9 @@ export const REFLECTION_EMAIL_QUOTES = [
   UNDERSTOOD_BACKWARDS,
 ];
 
+/** Life PDF header quote. Named so a catalog reorder cannot change the attachment. */
+export const LIFE_PDF_QUOTE = SPEND_OUR_DAYS;
+
 export const LIFE_QUOTES = [
   "“Teach us to number our days, that we may gain a heart of wisdom.” (Psalm 90:12)",
   "“It is not that we have a short time to live, but that we waste a lot of it.” (Seneca)",
