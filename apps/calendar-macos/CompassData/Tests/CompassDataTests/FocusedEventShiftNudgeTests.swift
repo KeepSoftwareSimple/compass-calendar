@@ -4,8 +4,8 @@ import XCTest
 
 @MainActor
 final class FocusedEventShiftNudgeTests: XCTestCase {
-    func testFocusedSavedEventStartEdgeNudgePersists() async throws {
-        let (model, _, original) = try await makeWritableTimedEvent()
+    func testFocusedSavedEventStartEdgeNudgePersistsToRepository() async throws {
+        let (model, environment, original) = try await makeWritableTimedEvent()
         model.focusStore.setEdge(
             eventId: original.id,
             edge: .startDate,
@@ -13,8 +13,9 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        await waitForFocusedNudgeSettlement(model)
 
-        let stored = try XCTUnwrap(model.event(for: original.id))
+        let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         if case .timed(let timed) = stored.schedule {
             XCTAssertTrue(timed.start.rawValue.hasPrefix("2026-01-01T10:15:00"))
             XCTAssertTrue(timed.end.rawValue.hasPrefix("2026-01-01T11:00:00"))
@@ -23,8 +24,85 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         }
     }
 
+    func testFocusedSavedEventEndEdgeNudgePersistsToRepository() async throws {
+        let (model, environment, original) = try await makeWritableTimedEvent()
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .endDate,
+            announcement: "Editing end time",
+            isAllDay: false
+        )
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowUp", shiftKey: true, altKey: false))
+        await waitForFocusedNudgeSettlement(model)
+
+        let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
+        if case .timed(let timed) = stored.schedule {
+            XCTAssertTrue(timed.start.rawValue.hasPrefix("2026-01-01T10:00:00"))
+            XCTAssertTrue(timed.end.rawValue.hasPrefix("2026-01-01T10:45:00"))
+        } else {
+            XCTFail("Expected timed schedule")
+        }
+    }
+
+    func testFocusedAllDayStartEdgeNudgePersistsToRepository() async throws {
+        let (model, environment, original) = try await makeWritableAllDayEvent()
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: true
+        )
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowRight", shiftKey: true, altKey: false))
+        await waitForFocusedNudgeSettlement(model)
+
+        let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
+        guard case .allDay(let schedule) = stored.schedule else {
+            return XCTFail("Expected all-day schedule")
+        }
+        XCTAssertEqual(schedule.start, "2026-01-02")
+        XCTAssertEqual(schedule.end, "2026-01-03")
+    }
+
+    func testTwoRapidNudgesPersistFinalSchedule() async throws {
+        let (model, environment, original) = try await makeWritableTimedEvent()
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: false
+        )
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        await waitForFocusedNudgeSettlement(model)
+
+        let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
+        if case .timed(let timed) = stored.schedule {
+            XCTAssertTrue(timed.start.rawValue.hasPrefix("2026-01-01T10:30:00"))
+            XCTAssertTrue(timed.end.rawValue.hasPrefix("2026-01-01T11:00:00"))
+        } else {
+            XCTFail("Expected timed schedule")
+        }
+    }
+
+    func testNudgeThenUndoRestoresPersistedSchedule() async throws {
+        let (model, environment, original) = try await makeWritableTimedEvent()
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: false
+        )
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        await waitForFocusedNudgeSettlement(model)
+        await model.undoLastChangeAndWait()
+        await waitForFocusedNudgeSettlement(model)
+
+        let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
+        XCTAssertEqual(stored.schedule, original.schedule)
+    }
+
     func testReadOnlyFocusedEventRejectsShiftNudge() async throws {
-        let (model, _, original) = try await makeWritableTimedEvent(canWrite: false)
+        let (model, environment, original) = try await makeWritableTimedEvent(canWrite: false)
         model.focusStore.setEdge(
             eventId: original.id,
             edge: .startDate,
@@ -32,7 +110,8 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertFalse(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        let stored = try XCTUnwrap(model.event(for: original.id))
+        await waitForFocusedNudgeSettlement(model)
+        let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         XCTAssertEqual(stored.schedule, original.schedule)
     }
 
@@ -51,7 +130,45 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         XCTAssertEqual(draft.schedule.end, endBefore)
     }
 
+    func testDraftEndEdgeNudgeOnAllDayDraft() async throws {
+        let (model, _, event) = try await makeWritableAllDayEvent()
+        model.openKeyboardEditForFocusedEvent()
+        model.focusStore.setEdge(
+            eventId: event.id,
+            edge: .endDate,
+            announcement: "Editing end time",
+            isAllDay: true
+        )
+        let startBefore = model.draftStore.gridDraft?.schedule.start
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowRight", shiftKey: true, altKey: false))
+        let draft = try XCTUnwrap(model.draftStore.gridDraft)
+        XCTAssertEqual(draft.schedule.start, startBefore)
+    }
+
+    private func waitForFocusedNudgeSettlement(_ model: NativeCalendarRootModel) async {
+        await model.focusedEventNudgePersistTask?.value
+        for _ in 0 ..< 80 where model.eventsStore.inFlightMutations > 0 {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+    }
+
+    private func persistedEvent(_ environment: NativeCalendarEnvironment, id: EventId) throws -> Event? {
+        try environment.localEventRepository.fetchAll().first { $0.id == id }?.event
+    }
+
     private func makeWritableTimedEvent(canWrite: Bool = true) async throws
+        -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
+    {
+        try await makeWritableEvent(canWrite: canWrite, timed: true)
+    }
+
+    private func makeWritableAllDayEvent(canWrite: Bool = true) async throws
+        -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
+    {
+        try await makeWritableEvent(canWrite: canWrite, timed: false)
+    }
+
+    private func makeWritableEvent(canWrite: Bool, timed: Bool) async throws
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
     {
         let previous = EffectiveTimeZone.identifier
@@ -61,7 +178,9 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             sessionStore: MemorySessionStore(tokens: nil)
         )
         try environment.userMetadataRepository.upsert(key: DemoDataSeeder.migrationKey, value: true)
-        let sample = try StoreSampleEvents.timedEvent(id: "shift-nudge-event")
+        let sample = try timed
+            ? StoreSampleEvents.timedEvent(id: "shift-nudge-event")
+            : StoreSampleEvents.allDayEvent(id: "shift-nudge-allday")
         let event = Event(
             calendarId: sample.calendarId,
             content: sample.content,

@@ -23,7 +23,7 @@ extension NativeCalendarRootModel {
             return start >= viewStart && start <= viewEnd
         }
 
-        let before = event
+        let baseline = event
         let nextSchedule: DraftSchedule
         let nextEdge: EventEdge?
 
@@ -52,8 +52,8 @@ extension NativeCalendarRootModel {
         }
 
         let nudged = LocalEventExpansion.copy(
-            event,
-            schedule: EventScheduleDraftMapping.eventSchedule(from: nextSchedule, event: event)
+            baseline,
+            schedule: EventScheduleDraftMapping.eventSchedule(from: nextSchedule, event: baseline)
         )
 
         if let index = loadedEvents.firstIndex(where: { $0.id == nudged.id }) {
@@ -70,16 +70,18 @@ extension NativeCalendarRootModel {
         }
 
         if !undoStore.isRestoringHistory() {
-            if UndoStore.isUndoableRecurrence(before), UndoStore.isUndoableRecurrence(nudged) {
-                undoStore.record(.edit(id: before.id, before: before, after: nudged))
+            if UndoStore.isUndoableRecurrence(baseline), UndoStore.isUndoableRecurrence(nudged) {
+                undoStore.record(.edit(id: baseline.id, before: baseline, after: nudged))
             } else {
                 undoStore.record(.unrecorded)
             }
         }
 
         let revision = sessionRevision
-        Task {
-            await self.replaceEventSchedule(nudged, revision: revision)
+        focusedEventNudgePersistTask = Task { [weak self] in
+            await self?.focusedEventNudgePersistTask?.value
+            guard let self, revision == self.sessionRevision else { return }
+            await self.replaceEvent(with: nudged, scheduleBaseline: baseline)
         }
         return true
     }
@@ -96,10 +98,5 @@ extension NativeCalendarRootModel {
             isBusy: isBusy,
             isProviderManaged: event.providerManaged == true
         )
-    }
-
-    private func replaceEventSchedule(_ event: Event, revision: Int) async {
-        guard revision == sessionRevision else { return }
-        await replaceEvent(with: event)
     }
 }

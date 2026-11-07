@@ -130,7 +130,8 @@ extension NativeCalendarRootModel {
             return edge.scheduleEdge
         }()
 
-        if let scheduleEdge, let schedule = draft.schedule {
+        if let scheduleEdge {
+            let schedule = draft.schedule
             let step = DraftNudge.nudgeStepFromKeyboard(altKey: altKey)
             guard let result = DraftNudge.nudgeScheduleEdgeByKeyboard(
                 schedule: schedule,

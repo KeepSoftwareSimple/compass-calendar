@@ -325,11 +325,11 @@ extension NativeCalendarRootModel {
         }
     }
 
-    func replaceEvent(with event: Event) async {
+    func replaceEvent(with event: Event, scheduleBaseline: Event? = nil) async {
         guard case .details(let details) = event.content else { return }
-        let current = loadedEvents.first { $0.id == event.id }
+        let reference = scheduleBaseline ?? loadedEvents.first { $0.id == event.id }
         let scheduleUnchanged =
-            current.map { EventScheduleEqual.matches(event.schedule, $0.schedule) } ?? false
+            reference.map { EventScheduleEqual.matches(event.schedule, $0.schedule) } ?? false
         let input = ReplaceEventInput(
             calendarId: eventsStore.source == .local ? event.calendarId : nil,
             content: .init(
