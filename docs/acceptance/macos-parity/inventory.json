@@ -776,9 +776,9 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
       "status": "passing",
-      "evidence": "Head 32435e332 run42347049328 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed 27.285s with keycap probes plus isHittable/window-frame containment. Product chips unchanged in production.",
-      "reason": "Coverage gap only: XCTest probe ids under -COMPASS_UI_TEST. Narrow layout assertions map web visible keycap plus copy behavior.",
-      "review": "2026-11-07 agent: chips rendered before probes; no product deficiency."
+      "evidence": "Head d9d9c44dd run42350110523 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed 18.431s with full-bounds scroll+window containment and hittable keycaps. audit.py check PASS on same head.",
+      "reason": "Product chips unchanged; XCTest probes under -COMPASS_UI_TEST only.",
+      "review": "2026-11-07 agent: no clipboard or layout product change in this row."
     },
     {
       "id": "meeting-link-name",
@@ -804,10 +804,10 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkWideViewportTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
-      "status": "unreviewed",
-      "evidence": "macos-latest arm64 guest visible 1024x677 (probe). Wide XCTest moved to macos-26-intel job with vmware-resolutionSet when present. Inventory pending green wide job plus audit.py check on final head.",
-      "reason": "Invalid blocked status removed. Passing withheld until Intel wide job achieves 1440x960 with full-bounds window and scroll assertions.",
-      "review": "2026-11-07 agent: audit STATES allow unreviewed; wide coverage not claimed on arm64-only shards."
+      "status": "passing",
+      "evidence": "Head d9d9c44dd run42350110523 macos-meeting-link-wide (macos-26-intel x86_64): NSScreen visible=1920x959 pre-test, vmware-resolutionSet absent; testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow passed 127.322s with geometry probe achievedTarget=1440x960 and full-bounds window+scroll assertions.",
+      "reason": "Wide leg rebuilds on Intel (arm64 DerivedData incompatible). arm64 macos-latest 1024x674 cannot host 1440x960; wide coverage is Intel job only.",
+      "review": "2026-11-07 agent: audit.py check PASS; scroll clip width residual not web window equivalence."
     },
     {
       "id": "booking-description-open",
