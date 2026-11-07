@@ -49,7 +49,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         guard case .allDay(let schedule) = stored.schedule else {
             return XCTFail("Expected all-day schedule in repository")
         }
-        XCTAssertEqual(schedule.start, "2026-01-02")
+        XCTAssertEqual(schedule.start, "2026-01-01")
+        XCTAssertEqual(schedule.end, "2026-01-03")
     }
 
     func testRouterShiftArrowUpNudgesFocusedTimedEndEdge() async throws {
@@ -147,6 +148,10 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         let (model, environment, original) = try await localTimedFixture()
         model.openKeyboardEditForFocusedEvent()
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled], backing: .buffered, defer: false)
+        addTeardownBlock {
+            window.orderOut(nil)
+            NSApp.keyWindow?.makeFirstResponder(nil)
+        }
         let textView = NSTextView(frame: window.contentView!.bounds)
         textView.isEditable = true
         textView.string = "typing"

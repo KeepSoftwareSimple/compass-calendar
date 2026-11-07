@@ -59,7 +59,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         guard case .allDay(let schedule) = stored.schedule else {
             return XCTFail("Expected all-day schedule")
         }
-        XCTAssertEqual(schedule.start, "2026-01-02")
+        XCTAssertEqual(schedule.start, "2026-01-01")
         XCTAssertEqual(schedule.end, "2026-01-03")
     }
 

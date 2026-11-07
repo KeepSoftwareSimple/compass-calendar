@@ -426,6 +426,10 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
+        if isEditableNonDescriptionTextInputFocused() {
+            return false
+        }
+
         if handleDraftKeys(keyEvent) {
             return true
         }
