@@ -65,12 +65,23 @@ class AccessibilityProbeView: NSView {
         create: () -> T
     ) -> T? {
         guard UITestLaunchPolicy.attachesAccessibilityProbes else { return nil }
-        if let existing, existing.superview === hostView {
+        let placement = probePlacementContainer(for: hostView)
+        if let existing, existing.superview === placement.container {
             return existing
         }
         existing?.removeFromSuperview()
         let view = create()
-        hostView.addSubview(view, positioned: .above, relativeTo: nil)
+        placement.container.addSubview(view, positioned: .above, relativeTo: placement.aboveSibling)
         return view
+    }
+
+    /// SwiftUI logs that probe subviews of `NSHostingView` break the hierarchy and
+    /// can produce invalid-geometry layout failures during Intel wide XCTest.
+    private static func probePlacementContainer(for hostView: NSView) -> (container: NSView, aboveSibling: NSView?) {
+        let typeName = String(describing: type(of: hostView))
+        if typeName.contains("HostingView"), let container = hostView.superview {
+            return (container, hostView)
+        }
+        return (hostView, nil)
     }
 }
