@@ -57,6 +57,9 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             }
             GridFocusAccessibilityProbe.publish(label: label)
             NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(label, on: window)
+            if UITestLaunchPolicy.meetingLinkWideViewport, let window {
+                MeetingLinkWideViewportPolicy.applyIfNeeded(to: window)
+            }
         }
         model.onEventFormTitleAccessibilityProbeChanged = { [weak self] visible in
             guard let self else { return }

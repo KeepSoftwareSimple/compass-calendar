@@ -28,6 +28,7 @@ final class MainWindowGeometryProbeView: AccessibilityProbeView {
         isHidden = false
         setAccessibilityElement(true)
         setAccessibilityHidden(false)
+        setAccessibilityRole(.staticText)
         setAccessibilityIdentifier("compass-native-main-window-geometry")
         setAccessibilityValue(
             "target=\(Int(target.width))x\(Int(target.height));"
@@ -37,7 +38,8 @@ final class MainWindowGeometryProbeView: AccessibilityProbeView {
                 + "onScreen=\(onScreen ? 1 : 0)")
         frame = NSRect(x: 0, y: 0, width: 1, height: 1)
         syncAccessibilityFrame()
-        postLayoutChanged()
+        // Avoid window-level layoutChanged here; it can re-enter XCTest full-tree snapshots on wide windows.
+        NSAccessibility.post(element: self, notification: .valueChanged)
     }
 }
 

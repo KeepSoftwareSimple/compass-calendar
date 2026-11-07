@@ -13,7 +13,13 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
-        let geometry = window.descendants(matching: .any)["compass-native-main-window-geometry"]
+        // Window `value` mirrors grid focus without a descendants query (see NativeAccessibilityProbes).
+        let gridReady = expectation(
+            for: NSPredicate(format: "value == %@", "Morning standup"),
+            evaluatedWith: window,
+            handler: nil)
+        wait(for: [gridReady], timeout: 10)
+        let geometry = window.staticTexts["compass-native-main-window-geometry"]
         XCTAssertTrue(geometry.waitForExistence(timeout: 8))
         let titleProbe = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleProbe.waitForExistence(timeout: 12))
