@@ -214,7 +214,8 @@ final class NativeGridKeyboardRouter {
             return false
         }
         // Native controls own editing shortcuts, including undo and redo.
-        let editingText = (NSApp.keyWindow?.firstResponder as? NSTextView)?.isEditable == true
+        let eventWindow = keyboardEventWindow(for: event.windowNumber)
+        let editingText = (eventWindow?.firstResponder as? NSTextView)?.isEditable == true
         let modalOwnsKeyboard = model.settingsStore.isPresented || model.authStore.isModalPresented
         if modalOwnsKeyboard && !model.overlayKeyboardCaptureActive {
             guard let key = KeyEvent(nsEvent: event) else { return false }
@@ -262,15 +263,17 @@ final class NativeGridKeyboardRouter {
             }
             return false
         }
-        if editingText, model.viewStore.view == .life, !model.isLifeViewIntroActive,
-            !model.overlayKeyboardCaptureActive
-        {
+        if editingText, !model.overlayKeyboardCaptureActive, !modalOwnsKeyboard {
             if let key = KeyEvent(nsEvent: event),
                 key.matches(KeyChord(modifiers: [.command], token: .character("k"))) {
                 model.toggleCommandPalette()
                 return true
             }
-            return false
+            if model.viewStore.view == .life {
+                if !model.isLifeViewIntroActive { return false }
+            } else {
+                return false
+            }
         }
         if editingText, event.modifierFlags.contains(.command),
             event.charactersIgnoringModifiers?.lowercased() == "z" {
@@ -433,6 +436,22 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        let isShiftArrow = keyEvent.modifiers.contains(.shift)
+            && shiftArrowKeyboardName(for: keyEvent) != nil
+
+        if isShiftArrow,
+            !model.isEventFormVisible,
+            model.draftStore.gridDraft == nil,
+            model.focusStore.focusedEventId != nil
+        {
+            if attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber) {
+                return true
+            }
+            if let focused = model.focusedEvent(), model.isReadOnly(event: focused) {
+                return false
+            }
+        }
+
         if handleDraftKeys(keyEvent) {
             return true
         }
@@ -441,7 +460,7 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
-        if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
+        if isShiftArrow {
             return attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber)
         }
 

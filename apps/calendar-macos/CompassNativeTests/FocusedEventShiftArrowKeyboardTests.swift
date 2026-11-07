@@ -15,6 +15,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             isAllDay: false
         )
 
+        XCTAssertEqual(model.focusStore.focusedEventId, original.id)
         XCTAssertNotNil(model.focusedEvent(), "fixture must load event before router nudge")
         let router = try makeGridRouter(model: model)
         XCTAssertTrue(router.shiftArrow(.down))
@@ -40,6 +41,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing start time",
             isAllDay: true
         )
+        XCTAssertEqual(model.focusStore.focusedEventId, original.id)
         XCTAssertNotNil(model.focusedEvent(), "fixture must load event before router nudge")
         let router = try makeGridRouter(model: model)
         XCTAssertTrue(router.shiftArrow(.right))
@@ -64,6 +66,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing end time",
             isAllDay: false
         )
+        XCTAssertEqual(model.focusStore.focusedEventId, original.id)
         XCTAssertNotNil(model.focusedEvent(), "fixture must load event before router nudge")
         let router = try makeGridRouter(model: model)
         XCTAssertTrue(router.shiftArrow(.up))
@@ -87,6 +90,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing start time",
             isAllDay: false
         )
+        XCTAssertEqual(model.focusStore.focusedEventId, original.id)
+        XCTAssertTrue(model.isReadOnly(event: original))
         let router = try makeGridRouter(model: model)
         XCTAssertFalse(router.shiftArrow(.down))
         await assertFinishedNudgePersistence(model)
@@ -276,7 +281,9 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             model.event(for: event.id),
             "bootstrap must load local event into model"
         )
+        model.updateContentTrackWidth(800)
         model.focusGridEvent(eventId: event.id.rawValue)
+        XCTAssertEqual(model.focusStore.focusedEventId, event.id)
         return (model, environment, event)
     }
 }
