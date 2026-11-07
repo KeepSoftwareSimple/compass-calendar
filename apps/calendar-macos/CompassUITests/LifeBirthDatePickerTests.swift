@@ -20,11 +20,12 @@ final class LifeBirthDatePickerTests: XCTestCase {
         picker.buttons["Choose month and year"].click()
         XCTAssertTrue(
             picker.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Years '")).firstMatch
-                .waitForExistence(timeout: 3))
-        // The year page is a 12-year grid; step back until 1990 is on it.
-        for _ in 0 ..< 4 where !picker.buttons["1990"].exists {
+                .waitForExistence(timeout: 10))
+        // Twenty-year react-aligned pages; step back until 1990 is on it.
+        for _ in 0 ..< 6 where !picker.buttons["1990"].exists {
             picker.buttons["Previous years"].click()
         }
+        XCTAssertTrue(picker.buttons["1990"].waitForExistence(timeout: 3))
         picker.buttons["1990"].click()
         XCTAssertTrue(picker.staticTexts["Select month, 1990"].waitForExistence(timeout: 3))
         picker.buttons["Jun"].click()

@@ -1,3 +1,4 @@
+import CompassKit
 import XCTest
 @testable import CompassData
 

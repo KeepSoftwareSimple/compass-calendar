@@ -295,7 +295,8 @@ public struct SidebarMonthPicker: View {
             view: captionView, monthTitle: monthTitle, year: pageYear)
         if captionPicker, captionView == .day {
             Button {
-                yearPageYear = displayedYear
+                yearPageYear = DatePickerCaption.reactYearPage(containing: displayedYear).first
+                    ?? displayedYear
                 captionView = .year
             } label: {
                 HStack(spacing: 2) {
@@ -324,6 +325,7 @@ public struct SidebarMonthPicker: View {
                 .foregroundStyle(theme.textColor)
                 .fixedSize()
                 .frame(minWidth: 64, alignment: .leading)
+                .accessibilityLabel(label)
         }
     }
 
@@ -335,7 +337,8 @@ public struct SidebarMonthPicker: View {
         case .day:
             shiftMonth(direction)
         case .year:
-            yearPageYear += direction * DatePickerCaption.yearsPerPage
+            let pageStart = DatePickerCaption.reactYearPage(containing: yearPageYear).first ?? yearPageYear
+            yearPageYear = pageStart + direction * DatePickerCaption.yearsPerPage
         case .month:
             if let next = calendar.date(byAdding: .year, value: direction, to: displayedMonth) {
                 displayedMonth = next
