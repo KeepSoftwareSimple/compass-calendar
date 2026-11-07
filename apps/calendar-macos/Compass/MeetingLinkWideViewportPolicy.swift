@@ -44,10 +44,7 @@ enum MeetingLinkWideViewportPolicy {
 
     @MainActor
     static func scheduleReapply(to window: NSWindow?) {
-        guard UITestLaunchPolicy.meetingLinkWideViewport, window != nil else { return }
+        guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
         applyIfNeeded(to: window)
-        DispatchQueue.main.async {
-            applyIfNeeded(to: window)
-        }
     }
 }

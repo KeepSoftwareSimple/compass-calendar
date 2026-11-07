@@ -13,14 +13,12 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
-        // AppKit title probe is exposed before the full SwiftUI form subtree is AX-stable on wide windows.
+        let geometry = window.descendants(matching: .any)["compass-native-main-window-geometry"]
+        XCTAssertTrue(geometry.waitForExistence(timeout: 8))
         let titleProbe = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleProbe.waitForExistence(timeout: 12))
         let form = window.descendants(matching: .any)["compass-event-form"]
         XCTAssertTrue(form.exists)
-
-        let geometry = window.descendants(matching: .any)["compass-native-main-window-geometry"]
-        XCTAssertTrue(geometry.waitForExistence(timeout: 8))
         let rawValue = geometry.value as? String ?? ""
         guard let reading = MeetingLinkViewportXCUITestSupport.parseGeometryProbe(rawValue) else {
             XCTFail("Unparseable geometry probe: \(rawValue)")
