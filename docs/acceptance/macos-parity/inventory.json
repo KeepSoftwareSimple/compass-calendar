@@ -801,13 +801,13 @@
         "e2e/timed/event-form-meeting-link-keycaps.spec.ts#shows meeting-link copy keycaps and copies with Mod+Shift+L"
       ],
       "native": [
-        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
+        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkWideViewportTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
-      "status": "blocked",
-      "evidence": "Head 32435e332 run42347049328: geometry probe screen=1024x677 fitsScreen=0 achieved=1024x677; wide test XCTSkip (not failure). Requires fitsScreen=1 host to assert achievedTarget=1440x960 and on-screen hittable link/keycaps.",
-      "reason": "Web 1440x960 viewport parity cannot be asserted on current GitHub Mac runner geometry. Scroll clip ~313px sidebar residual stays separate. Wide test enforces achievedTarget when fitsScreen=1.",
-      "review": "2026-11-07 agent: honest runner limitation; not marked passing without 1440x960 achieved content and on-screen hittable link/keycaps."
+      "status": "unreviewed",
+      "evidence": "macos-latest arm64 guest visible 1024x677 (probe). Wide XCTest moved to macos-26-intel job with vmware-resolutionSet when present. Inventory pending green wide job plus audit.py check on final head.",
+      "reason": "Invalid blocked status removed. Passing withheld until Intel wide job achieves 1440x960 with full-bounds window and scroll assertions.",
+      "review": "2026-11-07 agent: audit STATES allow unreviewed; wide coverage not claimed on arm64-only shards."
     },
     {
       "id": "booking-description-open",

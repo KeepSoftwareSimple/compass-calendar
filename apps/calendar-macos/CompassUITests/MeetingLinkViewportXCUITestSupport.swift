@@ -62,7 +62,7 @@ enum MeetingLinkViewportXCUITestSupport {
         testcase.add(text)
     }
 
-    static func assertVisibleInWindow(
+    static func assertFullyVisibleInWindow(
         _ element: XCUIElement,
         window: XCUIElement,
         label: String,
@@ -72,14 +72,27 @@ enum MeetingLinkViewportXCUITestSupport {
         XCTAssertGreaterThan(element.frame.width, 0, "\(label) needs positive width", file: file, line: line)
         XCTAssertGreaterThan(element.frame.height, 0, "\(label) needs positive height", file: file, line: line)
         XCTAssertTrue(element.isHittable, "\(label) must be on-screen and unobscured", file: file, line: line)
-        let center = CGPoint(x: element.frame.midX, y: element.frame.midY)
+        let windowFrame = window.frame
         XCTAssertTrue(
-            window.frame.contains(center),
-            "\(label) center must lie inside the window frame; window=\(window.frame) element=\(element.frame)",
+            windowFrame.contains(element.frame),
+            "\(label) full bounds must lie inside the window frame; window=\(windowFrame) element=\(element.frame)",
             file: file,
             line: line)
-        let overlap = element.frame.intersection(window.frame)
-        XCTAssertGreaterThan(overlap.width, 0, file: file, line: line)
-        XCTAssertGreaterThan(overlap.height, 0, file: file, line: line)
+    }
+
+    static func assertFullyVisibleInScrollViewport(
+        _ element: XCUIElement,
+        viewport: CGRect,
+        label: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertGreaterThan(element.frame.width, 0, file: file, line: line)
+        XCTAssertGreaterThan(element.frame.height, 0, file: file, line: line)
+        XCTAssertTrue(
+            viewport.contains(element.frame),
+            "\(label) full bounds must lie inside the form scroll viewport; viewport=\(viewport) element=\(element.frame)",
+            file: file,
+            line: line)
     }
 }
