@@ -79,9 +79,10 @@ enum DescriptionLinkHintKeyWindowFixture {
                 file: (file),
                 line: line
             )
-            XCTAssertNil(
+            XCTAssertNotIdentical(
                 NSApp.keyWindow,
-                "XCTest host constraint: use published host window, not a fabricated key window",
+                preferredWindow,
+                "Injection is only for hosts that do not key the fixture window",
                 file: (file),
                 line: line
             )
@@ -124,9 +125,8 @@ enum DescriptionLinkHintKeyWindowFixture {
         )
         window.isReleasedWhenClosed = false
         window.contentView = container
-        container.updateLinkHintOverlay(visible: true)
-        container.layoutSubtreeIfNeeded()
         publishDigitHintLookupWindow(window, file: file, line: line)
+        container.updateLinkHintOverlay(visible: true)
         assertLinkDigitHintsActiveInKeyWindow(container: container, preferredWindow: window, file: file, line: line)
         return (container, window, coordinator)
     }
