@@ -79,12 +79,29 @@ extension NativeCalendarRootModel {
 
         let predecessor = focusedEventNudgePersistTask
         let revision = sessionRevision
+        focusedEventNudgePersistSerial += 1
+        let persistSerial = focusedEventNudgePersistSerial
         focusedEventNudgePersistTask = Task { [weak self] in
             await predecessor?.value
-            guard let self, revision == self.sessionRevision else { return }
+            guard let self else { return }
+            guard !Task.isCancelled,
+                revision == self.sessionRevision,
+                persistSerial == self.focusedEventNudgePersistSerial
+            else { return }
             await self.replaceEvent(with: nudged, scheduleBaseline: baseline)
+            if persistSerial == self.focusedEventNudgePersistSerial {
+                self.focusedEventNudgePersistTask = nil
+            }
         }
         return true
+    }
+
+    /// Undoes must not validate against stale repository rows while a nudge write is still queued.
+    func awaitOrCancelPendingFocusedEventNudgeForUndo() async {
+        focusedEventNudgePersistSerial += 1
+        let pending = focusedEventNudgePersistTask
+        focusedEventNudgePersistTask = nil
+        pending?.cancel()
     }
 
     /// Lets unit tests wait for async replace without reaching into internal task state.
@@ -92,28 +109,14 @@ extension NativeCalendarRootModel {
     public func waitForPendingFocusedEventNudgeForTests(
         timeout: Duration = .seconds(3)
     ) async -> Bool {
-        if let task = focusedEventNudgePersistTask {
-            let completed = await withTaskGroup(of: Bool.self) { group in
-                group.addTask {
-                    await task.value
-                    return true
-                }
-                group.addTask {
-                    try? await Task.sleep(for: timeout)
-                    return false
-                }
-                let first = await group.next() ?? false
-                group.cancelAll()
-                return first
-            }
-            if !completed { return false }
-        }
         let deadline = ContinuousClock.now + timeout
-        while eventsStore.inFlightMutations > 0 {
-            if ContinuousClock.now >= deadline { return false }
+        while ContinuousClock.now < deadline {
+            if focusedEventNudgePersistTask == nil, eventsStore.inFlightMutations == 0 {
+                return true
+            }
             try? await Task.sleep(for: .milliseconds(25))
         }
-        return true
+        return false
     }
 
     func isFocusedSavedEventScheduleLocked(_ event: Event) -> Bool {

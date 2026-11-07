@@ -13,7 +13,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -33,7 +33,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowUp", shiftKey: true, altKey: false))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -53,7 +53,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: true
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowRight", shiftKey: true, altKey: false))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         guard case .allDay(let schedule) = stored.schedule else {
@@ -73,7 +73,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -93,9 +93,9 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
         await model.undoLastChangeAndWait()
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         XCTAssertEqual(stored.schedule, original.schedule)
@@ -111,7 +111,8 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
         await model.undoLastChangeAndWait()
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        XCTAssertNotEqual(model.statusToastStore.message, "Event changed since your last edit")
+        await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         XCTAssertEqual(stored.schedule, original.schedule)
@@ -127,8 +128,27 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertFalse(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
+        XCTAssertEqual(stored.schedule, original.schedule)
+    }
+
+    func testUndoWhileRemoteReplaceIsBlockedRestoresWithoutConflict() async throws {
+        let hold = HeldRemoteReplace()
+        hold.block()
+        let (model, environment, original, _) = try await makeSignedInRemoteTimedEvent(replaceHold: hold)
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: false
+        )
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        await model.undoLastChangeAndWait()
+        XCTAssertNotEqual(model.statusToastStore.message, "Event changed since your last edit")
+        hold.unblock()
+        await assertFinishedNudgePersistence(model)
+        let stored = try XCTUnwrap(EventRepository(database: environment.database).fetch(id: original.id))
         XCTAssertEqual(stored.schedule, original.schedule)
     }
 
@@ -141,7 +161,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
         let input = try XCTUnwrap(captured.input)
         XCTAssertNotNil(input.schedule)
         if case .timed(let timed) = input.schedule {
@@ -160,7 +180,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertFalse(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(persistedEvent(environment, id: original.id))
         XCTAssertEqual(stored.schedule, original.schedule)
     }
@@ -193,6 +213,15 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowRight", shiftKey: true, altKey: false))
         let draft = try XCTUnwrap(model.draftStore.gridDraft)
         XCTAssertEqual(draft.schedule.start, startBefore)
+    }
+
+    private func assertFinishedNudgePersistence(
+        _ model: NativeCalendarRootModel,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) async {
+        let finished = await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(finished, file: file, line: line)
     }
 
     private func persistedEvent(_ environment: NativeCalendarEnvironment, id: EventId) throws -> Event? {
@@ -270,7 +299,9 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         return (model, environment, event)
     }
 
-    private func makeSignedInRemoteTimedEvent() async throws
+    private func makeSignedInRemoteTimedEvent(
+        replaceHold: HeldRemoteReplace? = nil
+    ) async throws
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event, ReplaceInputCapture)
     {
         let capture = ReplaceInputCapture()
@@ -329,6 +360,11 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             if request.httpMethod == "PUT",
                 request.url?.path == "/api/event/\(event.id.rawValue)"
             {
+                if let replaceHold {
+                    while replaceHold.isBlocked() {
+                        Thread.sleep(forTimeInterval: 0.005)
+                    }
+                }
                 let body = HTTPBodyCapture.data(from: request)
                 if let input = try? JSONDecoder().decode(ReplaceEventInput.self, from: body) {
                     capture.store(input)
@@ -348,6 +384,15 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         model.focusEvent(eventId: event.id.rawValue)
         return (model, environment, event, capture)
     }
+}
+
+private final class HeldRemoteReplace: @unchecked Sendable {
+    private let lock = NSLock()
+    private var blocked = false
+
+    func block() { lock.withLock { blocked = true } }
+    func unblock() { lock.withLock { blocked = false } }
+    func isBlocked() -> Bool { lock.withLock { blocked } }
 }
 
 private final class ReplaceInputCapture: @unchecked Sendable {

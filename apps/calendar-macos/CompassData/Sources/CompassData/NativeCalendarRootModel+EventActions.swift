@@ -227,6 +227,7 @@ extension NativeCalendarRootModel {
     }
 
     public func undoLastChangeAndWait() async {
+        await awaitOrCancelPendingFocusedEventNudgeForUndo()
         let revision = sessionRevision
         guard !undoStore.isRestoringHistory() else { return }
         guard let entry = undoStore.peekUndo() else {
@@ -271,10 +272,17 @@ extension NativeCalendarRootModel {
         recordShortcut(.otherRedo)
     }
 
+    private func eventForUndoConsistencyCheck(id: EventId) -> Event? {
+        if let loaded = loadedEvents.first(where: { $0.id == id }) {
+            return loaded
+        }
+        return try? eventsStore.fetchAllEvents().first(where: { $0.id == id })
+    }
+
     private func canReplayEdit(_ entry: UndoHistoryEntry, undo: Bool) -> Bool {
         guard case let .edit(id, before, after) = entry else { return true }
         let expected = undo ? after : before
-        guard let current = try? eventsStore.fetchAllEvents().first(where: { $0.id == id }),
+        guard let current = eventForUndoConsistencyCheck(id: id),
               current.calendarId == expected.calendarId,
               EventScheduleEqual.matches(current.schedule, expected.schedule),
               EventDetailsEqualForUndo.matches(current.content, expected.content)
@@ -326,6 +334,7 @@ extension NativeCalendarRootModel {
     }
 
     func replaceEvent(with event: Event, scheduleBaseline: Event? = nil) async {
+        if Task.isCancelled { return }
         guard case .details(let details) = event.content else { return }
         let reference = scheduleBaseline ?? loadedEvents.first { $0.id == event.id }
         let scheduleUnchanged =

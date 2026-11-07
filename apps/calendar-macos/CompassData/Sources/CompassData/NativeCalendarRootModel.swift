@@ -151,6 +151,7 @@ public final class NativeCalendarRootModel {
     var blockPartyModHoldTask: Task<Void, Never>?
     var eventJumpCommitTask: Task<Void, Never>?
     var focusedEventNudgePersistTask: Task<Void, Never>?
+    var focusedEventNudgePersistSerial = 0
     /// Digits typed after a day pick, for web's typed-time create on that column.
     @ObservationIgnored var eventJumpTimeBurstDigits = ""
     /// When the last digit handler finished; gaps measure idle time between key events.

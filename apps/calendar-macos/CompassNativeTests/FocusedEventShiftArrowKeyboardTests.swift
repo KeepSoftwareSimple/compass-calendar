@@ -18,7 +18,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         XCTAssertTrue(try router.shiftArrow(.down))
 
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
         )
@@ -41,7 +41,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         XCTAssertTrue(try router.shiftArrow(.right))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
@@ -63,7 +63,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         XCTAssertTrue(try router.shiftArrow(.up))
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(model.event(for: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -84,7 +84,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         _ = try router.shiftArrow(.down)
-        XCTAssertTrue(await model.waitForPendingFocusedEventNudgeForTests())
+        await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
         )
@@ -140,6 +140,43 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
     {
         try await localFixture(sample: try Self.decodeTimedEvent(id: "router-local-event"), canWrite: canWrite)
+    }
+
+    func testRouterIgnoresShiftArrowWhenEditableTextViewIsFirstResponder() async throws {
+        _ = NSApplication.shared
+        let (model, environment, original) = try await localTimedFixture()
+        model.openKeyboardEditForFocusedEvent()
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled], backing: .buffered, defer: false)
+        let textView = NSTextView(frame: window.contentView!.bounds)
+        textView.isEditable = true
+        textView.string = "typing"
+        window.contentView?.addSubview(textView)
+        window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(textView)
+        XCTAssertTrue((window.firstResponder as? NSTextView)?.isEditable == true)
+
+        model.focusStore.setEdge(
+            eventId: original.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: false
+        )
+        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
+        XCTAssertFalse(try router.shiftArrow(.down))
+        await assertFinishedNudgePersistence(model)
+        let stored = try XCTUnwrap(
+            environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
+        )
+        XCTAssertEqual(stored.schedule, original.schedule)
+    }
+
+    private func assertFinishedNudgePersistence(
+        _ model: NativeCalendarRootModel,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) async {
+        let finished = await model.waitForPendingFocusedEventNudgeForTests()
+        XCTAssertTrue(finished, file: file, line: line)
     }
 
     private func localFixture(sample: Event, canWrite: Bool = true) async throws
