@@ -26,12 +26,19 @@ No product/test changes in this accounting package. Visual, signed-in, supported
 geometry, startup/performance and final-build gates remain open under #4783.
 Future web propagation remains deferred. Human-closed #5037 stays closed.
 
-Exact-head 290524ec81c252adc567b34d8c0feec290510490 strict BOTH: web strict41906964440
-PASS (downloaded log VERDICT PASS). Normal macOS PR41877000312 PASS at same head.
-Native strict legs41876996986 and41906964440 were cancelled at the 30 minute job
-limit during xcodebuild (PRE-EXISTING infra timeout, not a new test failure). PR5123
-extends the limit; after it merges, dispatch `test-macos.yml` with strict_verify on
-this branch once, then mark #5109 ready and auto-merge.
+Post-#5173 (landed `bccdf2793` on `main`): `main` was merged into this branch at
+exact head `f7ab84008d53dd5b57ea2537e55b2e0720f63d75` (includes `bccdf2793`). One
+intentional `workflow_dispatch` of `test-macos.yml` with `strict_verify=true` on
+that head: run **42315716184**
+(https://github.com/KeepSoftwareSimple/compass-calendar/actions/runs/42315716184).
+Native job `strict`: downloaded artifact `compass-macos-strict-log` shows
+`VERDICT: PASS` in `macos-strict.log`. Web: matrix legs `strict-web-leg-web` (6) and
+`strict-web-leg-e2e` (5) and aggregate job `strict-web` all **success**; aggregate
+log confirms `WEB_RESULT: success` and `E2E_RESULT: success`. Only **swift-packages**
+was **skipped**, which is expected when `strict_verify` is true (`if: ... &&
+!inputs.strict_verify` in the workflow). No required checks skipped for strict
+native or strict web. Parent may mark #5109 ready after evidence review; this note
+does not change #5114.
 
 ## Verified history, do not repeat
 
