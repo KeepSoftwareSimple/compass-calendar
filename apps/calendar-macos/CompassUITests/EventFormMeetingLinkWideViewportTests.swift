@@ -13,7 +13,6 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
-        XCTAssertTrue(window.waitForExistence(timeout: 15))
         MeetingLinkViewportXCUITestSupport.waitForFocusedGridEvent(
             title: "Morning standup", in: window, timeout: 10)
 

@@ -30,12 +30,8 @@ enum MeetingLinkWideViewportPolicy {
             origin.x = max(visible.minX, min(visible.maxX - frame.width, visible.midX - frame.width / 2))
             origin.y = max(visible.minY, visible.maxY - frame.height)
         }
-        if fitsScreen {
-            window.minSize = frame.size
-            window.maxSize = frame.size
-        } else {
-            window.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        }
+        // Do not pin min/max here; ParityCapture pins for screenshots but locking a 1440×960
+        // frame on a 959px-tall runner can stall AppKit accessibility in XCUITest.
         window.setFrame(NSRect(origin: origin, size: frame.size), display: true, animate: false)
         window.setContentSize(appliedContent)
         window.contentView?.setFrameSize(appliedContent)
