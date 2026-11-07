@@ -25,14 +25,16 @@ public enum WideViewportUITestTrace {
         else { return }
         let url = URL(fileURLWithPath: tracePath)
         let lineData = (line + "\n").data(using: .utf8) ?? Data()
-        if FileManager.default.fileExists(atPath: tracePath) {
-            if let handle = try? FileHandle(forWritingTo: url) {
-                defer { try? handle.close() }
-                try? handle.seekToEnd()
-                try? handle.write(contentsOf: lineData)
+        DispatchQueue.global(qos: .utility).async {
+            if FileManager.default.fileExists(atPath: tracePath) {
+                if let handle = try? FileHandle(forWritingTo: url) {
+                    defer { try? handle.close() }
+                    try? handle.seekToEnd()
+                    try? handle.write(contentsOf: lineData)
+                }
+            } else {
+                try? lineData.write(to: url, options: .atomic)
             }
-        } else {
-            try? lineData.write(to: url, options: .atomic)
         }
     }
 }
