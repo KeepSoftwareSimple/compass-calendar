@@ -776,7 +776,7 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
       "status": "passing",
-      "evidence": "Head 9ebcf95c0 run42345729992 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed 26.973s with keycap probes plus isHittable/window-frame containment. Product chips unchanged in production.",
+      "evidence": "Head 32435e332 run42347049328 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed 27.285s with keycap probes plus isHittable/window-frame containment. Product chips unchanged in production.",
       "reason": "Coverage gap only: XCTest probe ids under -COMPASS_UI_TEST. Narrow layout assertions map web visible keycap plus copy behavior.",
       "review": "2026-11-07 agent: chips rendered before probes; no product deficiency."
     },
@@ -805,7 +805,7 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
       "status": "blocked",
-      "evidence": "Head 9ebcf95c0 run42345729992: compass-native-main-window-geometry reports screen=1024x677 fitsScreen=0 achieved=1024x677 on GitHub macos-latest; testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow XCTSkip's. Policy no longer pins oversized min/max off-screen.",
+      "evidence": "Head 32435e332 run42347049328: geometry probe screen=1024x677 fitsScreen=0 achieved=1024x677; wide test XCTSkip (not failure). Requires fitsScreen=1 host to assert achievedTarget=1440x960 and on-screen hittable link/keycaps.",
       "reason": "Web 1440x960 viewport parity cannot be asserted on current GitHub Mac runner geometry. Scroll clip ~313px sidebar residual stays separate. Wide test enforces achievedTarget when fitsScreen=1.",
       "review": "2026-11-07 agent: honest runner limitation; not marked passing without 1440x960 achieved content and on-screen hittable link/keycaps."
     },
