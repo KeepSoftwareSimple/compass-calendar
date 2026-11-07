@@ -18,7 +18,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         XCTAssertTrue(try router.shiftArrow(.down))
 
-        await waitForSettlement(model)
+        await model.waitForPendingFocusedEventNudgeForTests()
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
         )
@@ -41,7 +41,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         XCTAssertTrue(try router.shiftArrow(.up))
-        await waitForSettlement(model)
+        await model.waitForPendingFocusedEventNudgeForTests()
 
         let stored = try XCTUnwrap(model.event(for: original.id))
         if case .timed(let timed) = stored.schedule {
@@ -62,18 +62,11 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         XCTAssertFalse(try router.shiftArrow(.down))
-        await waitForSettlement(model)
+        await model.waitForPendingFocusedEventNudgeForTests()
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
         )
         XCTAssertEqual(stored.schedule, original.schedule)
-    }
-
-    private func waitForSettlement(_ model: NativeCalendarRootModel) async {
-        await model.focusedEventNudgePersistTask?.value
-        for _ in 0 ..< 80 where model.eventsStore.inFlightMutations > 0 {
-            try? await Task.sleep(for: .milliseconds(25))
-        }
     }
 
     private static func decodeTimedEvent(id: String) throws -> Event {
@@ -136,7 +129,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             CompassDateParsing.parseInEffectiveTimeZone("2026-01-01T12:00:00.000Z")
         )
         await model.start()
-        model.focusEvent(eventId: sample.id.rawValue)
+        model.focusGridEvent(eventId: sample.id.rawValue)
         return (model, environment, sample)
     }
 }

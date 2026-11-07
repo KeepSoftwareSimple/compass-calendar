@@ -86,6 +86,14 @@ extension NativeCalendarRootModel {
         return true
     }
 
+    /// Lets unit tests wait for async replace without reaching into internal task state.
+    public func waitForPendingFocusedEventNudgeForTests() async {
+        await focusedEventNudgePersistTask?.value
+        while eventsStore.inFlightMutations > 0 {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+    }
+
     func isFocusedSavedEventScheduleLocked(_ event: Event) -> Bool {
         let isBusy: Bool = {
             if case .busy = event.content { return true }
