@@ -856,30 +856,17 @@ public final class NativeCalendarRootModel {
             focusStore.focusedEventId != nil
         else { return }
         didApplyUITestFocusedEventForm = true
-        if UITestLaunchPolicy.meetingLinkWideViewport {
-            // Let Intel wide XCTest read the window geometry mirror before the form AX subtree mounts.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(900))
-                openFocusedEventFormForUITest()
-            }
-            return
-        }
         Task { @MainActor in
-            openFocusedEventFormForUITest()
-        }
-    }
-
-    @MainActor
-    private func openFocusedEventFormForUITest() {
-        openKeyboardEditForFocusedEvent()
-        openEventFormForCurrentDraft()
-        if let title = UITestLaunchPolicy.presetEventFormTitle {
-            updateDraftFromForm(title: title)
-            onEventFormTitleAccessibilityProbeTitleSync?(title)
-        }
-        publishEventFormTitleAccessibilityProbe()
-        if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
-            Task { await saveDraftWithInvitationGate() }
+            openKeyboardEditForFocusedEvent()
+            openEventFormForCurrentDraft()
+            if let title = UITestLaunchPolicy.presetEventFormTitle {
+                updateDraftFromForm(title: title)
+                onEventFormTitleAccessibilityProbeTitleSync?(title)
+            }
+            publishEventFormTitleAccessibilityProbe()
+            if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+                await saveDraftWithInvitationGate()
+            }
         }
     }
 

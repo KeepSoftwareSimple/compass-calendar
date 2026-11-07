@@ -20,33 +20,25 @@ enum MeetingLinkWideViewportPolicy {
         let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
         let targetFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
         let fitsScreen = targetFrame.width <= visible.width + 2 && targetFrame.height <= visible.height + 2
-        var appliedContent = target
-        if !fitsScreen {
-            // Do not pin an oversized min/max when the runner display is smaller than web's 1440×960.
-            let maxContent = window.contentRect(
-                forFrameRect: NSRect(
-                    origin: .zero,
-                    size: NSSize(width: max(visible.width, 1), height: max(visible.height, 1))))
-            appliedContent = NSSize(
-                width: min(target.width, maxContent.size.width),
-                height: min(target.height, maxContent.size.height))
-            frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: appliedContent))
-        }
+        // Intel wide runners often report 1920×959 visible; clamp to hostable content before pinning.
+        let maxContent = window.contentRect(
+            forFrameRect: NSRect(origin: visible.origin, size: visible.size))
+        let appliedContent = NSSize(
+            width: min(target.width, maxContent.width),
+            height: min(target.height, maxContent.height))
+        frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: appliedContent))
         var origin = frame.origin
         if visible.width > 0, visible.height > 0 {
             origin.x = max(visible.minX, min(visible.maxX - frame.width, visible.midX - frame.width / 2))
             origin.y = max(visible.minY, visible.maxY - frame.height)
         }
         if fitsScreen {
-            // Pin content, not the decorated frame. Frame min/max fights 960pt content
-            // on a 959pt visible height and spams AppKit invalid geometry during AX snapshots.
-            window.contentMinSize = appliedContent
-            window.contentMaxSize = appliedContent
+            window.minSize = frame.size
+            window.maxSize = frame.size
         } else {
-            window.contentMinSize = .zero
-            window.contentMaxSize = appliedContent
             window.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         }
+        window.setAccessibilityIdentifier("Compass")
         window.setFrame(NSRect(origin: origin, size: frame.size), display: true, animate: false)
         window.setContentSize(appliedContent)
         window.contentView?.setFrameSize(appliedContent)

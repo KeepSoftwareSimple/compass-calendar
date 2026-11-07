@@ -128,9 +128,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         super.viewDidAppear()
         WideViewportUITestTrace.record("native_root_viewDidAppear")
         ParityCaptureWindowPolicy.scheduleReapply(to: view.window)
-        if !UITestLaunchPolicy.meetingLinkWideViewport {
-            MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window)
-        }
+        MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window)
         // AppKit hands launch focus to the first key view, the header Previous
         // button, which then draws a ring and swallows Space and typing. The
         // grid owns the keyboard through the router, so start with no control
@@ -139,10 +137,6 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         DispatchQueue.main.async { [weak self] in
             guard let self, !self.model.isEventFormVisible else { return }
             self.view.window?.makeFirstResponder(nil)
-        }
-        if UITestLaunchPolicy.meetingLinkWideViewport {
-            WideViewportUITestTrace.record("wide_probe_attach_skipped_viewDidAppear")
-            return
         }
         guard let window = view.window else { return }
         GridFocusAccessibilityProbe.attach(to: window)
