@@ -13,6 +13,37 @@ struct MainWindowGeometryProbeReading: Equatable {
 }
 
 enum MeetingLinkViewportXCUITestSupport {
+    /// Matches `NativeLaunchTests` focus gating: the auto-opened event form only runs after grid focus.
+    @MainActor
+    static func waitForFocusedGridEvent(
+        title: String,
+        in window: XCUIElement,
+        timeout: TimeInterval,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let probe = window.descendants(matching: .any)["compass-grid-event-focused"]
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if probe.exists {
+                if probe.label == title { return }
+                if probe.value as? String == title { return }
+            }
+            if window.value as? String == title {
+                return
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        let probeLabel = probe.exists ? probe.label : "(missing)"
+        let probeValue = probe.exists ? String(describing: probe.value) : "(missing)"
+        let windowValue = String(describing: window.value)
+        XCTFail(
+            "Expected focused grid event \"\(title)\"; "
+                + "probe label=\(probeLabel), probe value=\(probeValue), window value=\(windowValue)",
+            file: file,
+            line: line)
+    }
+
     static func parseGeometryProbe(_ raw: String) -> MainWindowGeometryProbeReading? {
         var fields: [String: String] = [:]
         for part in raw.split(separator: ";") {

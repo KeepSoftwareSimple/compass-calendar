@@ -13,8 +13,9 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
-        let form = window.descendants(matching: .any)["compass-event-form"]
-        XCTAssertTrue(form.waitForExistence(timeout: 12))
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        MeetingLinkViewportXCUITestSupport.waitForFocusedGridEvent(
+            title: "Morning standup", in: window, timeout: 10)
 
         let geometry = window.descendants(matching: .any)["compass-native-main-window-geometry"]
         XCTAssertTrue(geometry.waitForExistence(timeout: 8))
@@ -23,15 +24,20 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
             XCTFail("Unparseable geometry probe: \(rawValue)")
             return
         }
-        XCTAssertEqual(reading.targetWidth, 1440)
-        XCTAssertEqual(reading.targetHeight, 960)
+        XCTAssertEqual(reading.targetWidth, 1440, "Nominal web viewport width")
+        XCTAssertEqual(reading.targetHeight, 960, "Nominal web viewport height")
         XCTAssertTrue(
             reading.fitsScreen,
             "NSScreen visible \(reading.screenWidth)×\(reading.screenHeight) must host 1440×960 (achieved \(reading.achievedWidth)×\(reading.achievedHeight)).")
         XCTAssertTrue(
             reading.achievedTarget,
-            "MeetingLinkWideViewportPolicy must achieve 1440×960 content (got \(reading.achievedWidth)×\(reading.achievedHeight)).")
-        XCTAssertTrue(reading.onScreen, "Main window must sit fully inside the visible screen frame.")
+            "Content size must match 1440×960 within ±2 pt (got \(reading.achievedWidth)×\(reading.achievedHeight) on visible \(reading.screenWidth)×\(reading.screenHeight)).")
+        XCTAssertTrue(reading.onScreen, "Main window must sit fully inside the visible screen frame (±2 pt).")
+
+        let titleField = window.descendants(matching: .any)["compass-event-form-title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 8))
+        let form = window.descendants(matching: .any)["compass-event-form"]
+        XCTAssertTrue(form.exists)
 
         window.typeKey("=", modifierFlags: [.command])
         let conference = form.descendants(matching: .any)["compass-event-form-conference"]
