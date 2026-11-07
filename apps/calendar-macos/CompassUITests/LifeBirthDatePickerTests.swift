@@ -56,7 +56,8 @@ final class LifeBirthDatePickerTests: XCTestCase {
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
         window.typeKey(.escape, modifierFlags: [])
         XCTAssertFalse(picker.waitForExistence(timeout: 2))
-        XCTAssertTrue(birth.hasFocus)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["compass-life-birth-date-focused"].waitForExistence(timeout: 3))
     }
 
     @MainActor
