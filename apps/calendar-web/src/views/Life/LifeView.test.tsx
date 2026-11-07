@@ -275,7 +275,7 @@ describe("LifeView", () => {
     ) as HTMLElement | null;
     expect(calendar).not.toBeNull();
 
-    expect(within(calendar!).getByText("Select year")).toBeInTheDocument();
+    expect(within(calendar!).getByText(/Years \d+ to \d+/)).toBeInTheDocument();
     expect(
       calendar!.querySelector(".react-datepicker__year-text"),
     ).toBeInTheDocument();

@@ -18,7 +18,9 @@ final class LifeBirthDatePickerTests: XCTestCase {
         let picker = app.descendants(matching: .any)["compass-life-birth-date-picker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
         picker.buttons["Choose month and year"].click()
-        XCTAssertTrue(picker.staticTexts["Select year"].waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            picker.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Years '")).firstMatch
+                .waitForExistence(timeout: 3))
         // The year page is a 12-year grid; step back until 1990 is on it.
         for _ in 0 ..< 4 where !picker.buttons["1990"].exists {
             picker.buttons["Previous years"].click()

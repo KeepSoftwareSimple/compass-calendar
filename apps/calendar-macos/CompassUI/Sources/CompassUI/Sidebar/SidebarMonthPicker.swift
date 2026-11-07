@@ -290,18 +290,31 @@ public struct SidebarMonthPicker: View {
 
     @ViewBuilder
     private var captionTitle: some View {
-        let label = DatePickerCaption.caption(view: captionView, monthTitle: monthTitle, year: displayedYear)
+        let pageYear = captionView == .year ? yearPageYear : displayedYear
+        let label = DatePickerCaption.caption(
+            view: captionView, monthTitle: monthTitle, year: pageYear)
         if captionPicker, captionView == .day {
             Button {
                 yearPageYear = displayedYear
                 captionView = .year
             } label: {
-                Text(label)
-                    .font(.rubik(14, weight: .medium))
-                    .foregroundStyle(theme.textColor)
-                    .fixedSize()
-                    .padding(.horizontal, 2)
-                    .frame(minWidth: 64, alignment: .leading)
+                HStack(spacing: 2) {
+                    Text(label)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .font(.rubik(14, weight: .medium))
+                .foregroundStyle(theme.textColor)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(theme.textColor.opacity(0.05))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(theme.textColor.opacity(0.15), lineWidth: 1)
+                }
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Choose month and year")

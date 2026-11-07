@@ -128,7 +128,7 @@ describe("DatePicker captionPicker", () => {
 
     await user.click(captionButton);
 
-    expect(screen.getByText("Select year")).toBeInTheDocument();
+    expect(screen.getByText("Years 1981 to 2000")).toBeInTheDocument();
     expect(screen.getByText("2000")).toBeInTheDocument();
     expect(screen.getAllByText(/^(19|20)\d{2}$/).length).toBeGreaterThanOrEqual(
       20,
@@ -148,5 +148,31 @@ describe("DatePicker captionPicker", () => {
 
     fireEvent.click(screen.getByText("15"));
     expect(onSelect).toHaveBeenCalled();
+  });
+
+  it("updates the year-range caption when paging backward", async () => {
+    const user = userEvent.setup();
+    render(
+      <DatePicker
+        captionPicker
+        isOpen
+        maxDate={new Date(2026, 0, 1)}
+        minDate={new Date(1900, 0, 1)}
+        onCalendarClose={() => {}}
+        onChange={() => {}}
+        open
+        selected={new Date(2000, 0, 15)}
+        view="grid"
+        withTodayButton={false}
+      />,
+      { wrapper },
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Choose month and year" }),
+    );
+    expect(screen.getByText("Years 1981 to 2000")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Previous years" }));
+    expect(screen.getByText("Years 1961 to 1980")).toBeInTheDocument();
   });
 });

@@ -21,6 +21,10 @@ import { darken, isDark } from "@web/common/styles/color.utils";
 import { colors, lightColors } from "@web/common/styles/colors";
 import { type CSSVariables } from "@web/common/styles/css.types";
 import { theme } from "@web/common/styles/theme";
+import {
+  CAPTION_YEARS_PER_PAGE,
+  reactDatepickerYearRangeCaption,
+} from "@web/components/DatePicker/caption-picker-year-page";
 import { MonthNavButton } from "@web/components/DatePicker/MonthNavButton";
 import { ChevronLeftIcon } from "@web/components/Icons/ChevronLeftIcon";
 import { ChevronRightIcon } from "@web/components/Icons/ChevronRightIcon";
@@ -96,9 +100,6 @@ const CAPTION_VIEW_AFTER_SELECT: Record<
   CaptionPickerView,
   CaptionPickerView | null
 > = { year: "month", month: "day", day: null };
-
-/** Years per hold-Mod caption page; keep in sync with `DatePickerCaption.yearsPerPage` on macOS. */
-const CAPTION_YEARS_PER_PAGE = 20;
 
 /**
  * Caps popper max-height to the space between the anchor and the viewport edge.
@@ -194,10 +195,13 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     setCaptionView(next);
   }, []);
   const [captionFocusDate, setCaptionFocusDate] = useState<Date | undefined>();
+  /** react-datepicker year paging does not always move `monthDate`; track page end. */
+  const [yearPageEndYear, setYearPageEndYear] = useState<number | null>(null);
   useEffect(() => {
     if (isOpen) return;
     commitCaptionView("day");
     setCaptionFocusDate(undefined);
+    setYearPageEndYear(null);
   }, [commitCaptionView, isOpen]);
 
   useEffect(() => {
@@ -306,17 +310,40 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const handleCalendarClose = () => {
     commitCaptionView("day");
     setCaptionFocusDate(undefined);
+    setYearPageEndYear(null);
     datePickerProps.onCalendarClose?.();
   };
 
   const openCaptionPicker = () => {
     const selectedDate = datePickerProps.selected;
-    setCaptionFocusDate(
+    const anchor =
       selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime())
         ? selectedDate
-        : new Date(),
-    );
+        : new Date();
+    setCaptionFocusDate(anchor);
+    setYearPageEndYear(dayjs(anchor).year());
     commitCaptionView("year");
+  };
+
+  const stepYearPage = (
+    headerProps: Parameters<
+      NonNullable<ReactDatePickerProps["renderCustomHeader"]>
+    >[0],
+    direction: -1 | 1,
+  ) => {
+    if (direction < 0) {
+      headerProps.decreaseYear();
+    } else {
+      headerProps.increaseYear();
+    }
+    setYearPageEndYear((current) => {
+      const base =
+        current ??
+        (captionFocusDate
+          ? dayjs(captionFocusDate).year()
+          : dayjs(headerProps.monthDate).year());
+      return base + direction * CAPTION_YEARS_PER_PAGE;
+    });
   };
 
   const handleChange: ReactDatePickerProps["onChange"] = (date, event) => {
@@ -419,16 +446,17 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         const selectedMonth = dayjs(monthDate).format("MMM YYYY");
         const selectedYear = dayjs(monthDate).format("YYYY");
         const currentMonth = dayjs().format("MMM YYYY");
+        const yearPageEnd = yearPageEndYear ?? dayjs(monthDate).year();
         const captionLabel = isCaptionYearView
-          ? "Select year"
+          ? reactDatepickerYearRangeCaption(yearPageEnd, CAPTION_YEARS_PER_PAGE)
           : isCaptionMonthView
             ? `Select month, ${selectedYear}`
             : selectedMonth;
         const useYearNavigation = isCaptionYearView || isCaptionMonthView;
         const headerNav = useYearNavigation
           ? {
-              onPrev: () => headerProps.decreaseYear(),
-              onNext: () => headerProps.increaseYear(),
+              onPrev: () => stepYearPage(headerProps, -1),
+              onNext: () => stepYearPage(headerProps, 1),
               prevDisabled: headerProps.prevYearButtonDisabled,
               nextDisabled: headerProps.nextYearButtonDisabled,
               prevLabel: "Previous years",

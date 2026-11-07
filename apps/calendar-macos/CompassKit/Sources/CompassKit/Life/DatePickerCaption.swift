@@ -31,10 +31,17 @@ public enum DatePickerCaption {
     ]
 
     /// Web caption text: the month and year, or the prompt for the open grid.
+    public static func yearRangeCaption(pageAnchorYear: Int) -> String {
+        let years = yearPage(containing: pageAnchorYear)
+        guard let first = years.first, let last = years.last else { return "Select year" }
+        if first == last { return "Year \(first)" }
+        return "Years \(first) to \(last)"
+    }
+
     public static func caption(view: View, monthTitle: String, year: Int) -> String {
         switch view {
         case .day: monthTitle
-        case .year: "Select year"
+        case .year: yearRangeCaption(pageAnchorYear: year)
         case .month: "Select month, \(year)"
         }
     }
