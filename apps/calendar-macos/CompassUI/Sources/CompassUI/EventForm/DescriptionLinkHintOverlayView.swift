@@ -4,27 +4,59 @@ import AppKit
 final class DescriptionLinkHintOverlayView: NSView {
     weak var textView: DescriptionTextView?
     var hintsVisible = false {
-        didSet { needsLayout = true }
+        didSet {
+            laidOutLinkHintCount = -1
+            needsLayout = true
+        }
     }
+    private var isLayingOutLinkHints = false
+    private var laidOutLinkHintCount = -1
 
     override var isFlipped: Bool { true }
 
     override func layout() {
         super.layout()
-        subviews.forEach { $0.removeFromSuperview() }
+        guard !isLayingOutLinkHints else { return }
         guard hintsVisible,
               let textView,
               textView.window != nil,
               textView.window === window,
               let layoutManager = textView.layoutManager,
               let textContainer = textView.textContainer
-        else { return }
+        else {
+            if !subviews.isEmpty {
+                subviews.forEach { $0.removeFromSuperview() }
+            }
+            laidOutLinkHintCount = -1
+            return
+        }
 
-        var linkIndex = 0
         let storage = textView.textStorage
         let length = storage?.length ?? 0
-        guard length > 0 else { return }
+        guard length > 0 else {
+            if !subviews.isEmpty {
+                subviews.forEach { $0.removeFromSuperview() }
+            }
+            laidOutLinkHintCount = -1
+            return
+        }
 
+        var linkCount = 0
+        storage?.enumerateAttribute(.link, in: NSRange(location: 0, length: length)) { _, _, _ in
+            linkCount += 1
+        }
+        if linkCount == laidOutLinkHintCount, subviews.count == linkCount, linkCount > 0 {
+            return
+        }
+
+        isLayingOutLinkHints = true
+        defer { isLayingOutLinkHints = false }
+
+        subviews.forEach { $0.removeFromSuperview() }
+        laidOutLinkHintCount = linkCount
+        guard linkCount > 0 else { return }
+
+        var linkIndex = 0
         storage?.enumerateAttribute(.link, in: NSRange(location: 0, length: length)) { _, range, _ in
             guard linkIndex < 9 else { return }
             let glyphRange = layoutManager.glyphRange(
