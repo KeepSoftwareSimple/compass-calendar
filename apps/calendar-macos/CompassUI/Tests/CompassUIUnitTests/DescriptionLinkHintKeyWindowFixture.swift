@@ -9,6 +9,7 @@ private final class KeyableDescriptionHintTestWindow: NSWindow {
 }
 
 /// XCTest hosts need an explicit keyable window plus activation before `NSApp.keyWindow` is set.
+@MainActor
 enum DescriptionLinkHintKeyWindowFixture {
     private static var configuredApplication = false
 
