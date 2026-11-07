@@ -49,6 +49,19 @@ final class CommandPaletteStatusAccessibilityProbeView: AccessibilityProbeView {
 enum CommandPaletteStatusAccessibilityProbe {
     private static weak var probe: CommandPaletteStatusAccessibilityProbeView?
 
+    /// When true, `publish` records host-window announcement posts instead of calling AppKit.
+    /// Used by CompassKitTests to guard the production path when probes stay detached.
+    static var interceptAnnouncementPostForTesting = false
+
+    static private(set) var interceptedAnnouncementPostsForTesting: [
+        (hostWindowID: ObjectIdentifier, notification: NSAccessibility.Notification, announcement: String)
+    ] = []
+
+    static func resetAnnouncementPostInterceptForTesting() {
+        interceptAnnouncementPostForTesting = false
+        interceptedAnnouncementPostsForTesting = []
+    }
+
     static func attach(to window: NSWindow) {
         guard let host = window.contentView else { return }
         attach(to: host)
@@ -72,12 +85,22 @@ enum CommandPaletteStatusAccessibilityProbe {
         }
 
         if let payload = delivery.announcementRequestedPayload, let window {
-            NSAccessibility.post(
-                element: window,
-                notification: .announcementRequested,
-                userInfo: [.announcement: payload]
-            )
+            postAnnouncementRequested(on: window, payload: payload)
         }
+    }
+
+    private static func postAnnouncementRequested(on window: NSWindow, payload: String) {
+        if interceptAnnouncementPostForTesting {
+            interceptedAnnouncementPostsForTesting.append(
+                (ObjectIdentifier(window), .announcementRequested, payload)
+            )
+            return
+        }
+        NSAccessibility.post(
+            element: window,
+            notification: .announcementRequested,
+            userInfo: [.announcement: payload]
+        )
     }
 
     private static func syncProbeMirror(

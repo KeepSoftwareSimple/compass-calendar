@@ -70,6 +70,7 @@ targets:
       - Compass/NSEvent+KeyEvent.swift
       - Compass/NativeGridKeyboardRouter.swift
       - Compass/AccessibilityProbeView.swift
+      - Compass/CommandPaletteStatusAccessibilityProbeView.swift
       - Compass/EventFormAccessibilityProbeView.swift
     resources:
       - path: CompassKitTests/Fixtures
