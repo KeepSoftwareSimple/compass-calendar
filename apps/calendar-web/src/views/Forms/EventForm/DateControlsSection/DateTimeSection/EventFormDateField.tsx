@@ -74,9 +74,6 @@ export const EventFormDateField = ({
   const [pickerCursor, setPickerCursor] = useState<Dayjs | null>(null);
   const pickerCursorRef = useRef<Dayjs | null>(null);
   const [gridFocused, setGridFocused] = useState(false);
-  const setGridFocusedSync = (next: boolean) => {
-    setGridFocused(next);
-  };
   const setPickerCursorSync = (next: Dayjs | null) => {
     pickerCursorRef.current = next;
     setPickerCursor(next);
@@ -211,7 +208,7 @@ export const EventFormDateField = ({
 
     if (event.key === "Tab") {
       if (input instanceof HTMLInputElement) commitOrRevert(input);
-      setGridFocusedSync(false);
+      setGridFocused(false);
       skipBlurCloseRef.current = true;
       requestCalendarClose();
       event.stopPropagation();
@@ -252,7 +249,7 @@ export const EventFormDateField = ({
     ) {
       const anchor = dayjs(selectedRef.current).startOf("day");
       setPickerCursorSync(anchor);
-      setGridFocusedSync(true);
+      setGridFocused(true);
       focusKeyboardSelectedDay(calendarClassName, selectedRef.current);
       return;
     }
@@ -270,7 +267,7 @@ export const EventFormDateField = ({
         if (!next.isSame(pickerMonth, "month")) {
           setPickerMonth(next.startOf("month"));
         }
-        setGridFocusedSync(true);
+        setGridFocused(true);
         focusKeyboardSelectedDay(calendarClassName, next.toDate());
         break;
       }
@@ -279,7 +276,7 @@ export const EventFormDateField = ({
         break;
       case "close":
         requestCalendarClose();
-        setGridFocusedSync(false);
+        setGridFocused(false);
         input?.focus();
         break;
     }
@@ -353,7 +350,7 @@ export const EventFormDateField = ({
         if (next instanceof Element && next.closest(".react-datepicker"))
           return;
         if (isOpen) {
-          setGridFocusedSync(false);
+          setGridFocused(false);
           if (skipBlurCloseRef.current) {
             skipBlurCloseRef.current = false;
           } else {
@@ -390,7 +387,7 @@ export const EventFormDateField = ({
         onInputClick={onCalendarOpen}
         onFocus={(event) => {
           if (event.target instanceof HTMLInputElement) {
-            setGridFocusedSync(false);
+            setGridFocused(false);
             event.target.select();
           }
         }}

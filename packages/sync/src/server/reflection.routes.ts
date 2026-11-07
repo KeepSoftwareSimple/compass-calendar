@@ -13,6 +13,7 @@ import {
   respondInternalError,
 } from "@sync/server/internal-http";
 import { resourceJob } from "@sync/storage/contracts/job.contracts";
+import { hasCertifiedHistoryCoverage } from "@sync/storage/contracts/sync-resource.contracts";
 import { JobRepository } from "@sync/storage/repositories/job.repository";
 import { ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
@@ -54,7 +55,7 @@ export function registerReflectionRoutes(
           if (
             !resource.calendarId ||
             !parsed.data.calendarIds.includes(resource.calendarId) ||
-            resource.historyCoverageVersion === 1
+            hasCertifiedHistoryCoverage(resource)
           )
             continue;
           const connection = connections.find(

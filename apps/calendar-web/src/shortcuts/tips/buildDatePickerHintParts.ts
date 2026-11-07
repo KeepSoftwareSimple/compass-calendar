@@ -1,4 +1,9 @@
-import { type DatePickerHintId } from "@web/shortcuts/tips/date-picker-hint.store";
+import { type CaptionPickerView } from "@web/components/DatePicker/DatePicker";
+import {
+  captionHintId,
+  type DatePickerHintSurface,
+  type GridDatePickerHintId,
+} from "@web/shortcuts/tips/date-picker-hint.store";
 import { type ShortcutTipPart } from "@web/shortcuts/tips/shortcut-tips.data";
 
 const sep: ShortcutTipPart = " · ";
@@ -97,27 +102,33 @@ export function buildRecurrenceUntilParts(): readonly ShortcutTipPart[] {
   ];
 }
 
-export function surfaceForPickerContext(params: {
-  id: DatePickerHintId;
-  isOpen: boolean;
-  captionView?: "day" | "month" | "year";
+/**
+ * The surface an open grid popover publishes: the caption subviews answer on
+ * the field's `-caption` id, so the id and the parts are chosen from
+ * `captionView` in one place and cannot disagree about which view is showing.
+ * Callers pop this instead of calling with a closed picker.
+ */
+export function datePickerHintSurface(params: {
+  baseId: GridDatePickerHintId;
+  captionView: CaptionPickerView;
   isInputFocused: boolean;
   inputPhrase: string;
-}): { id: DatePickerHintId; parts: readonly ShortcutTipPart[] } | null {
-  const { id, isOpen, captionView, isInputFocused, inputPhrase } = params;
-
-  if (!isOpen) return null;
+}): DatePickerHintSurface {
+  const { baseId, captionView, isInputFocused, inputPhrase } = params;
 
   if (captionView === "year" || captionView === "month") {
-    return { id, parts: buildDatePickerGridCaptionParts(captionView) };
+    return {
+      id: captionHintId(baseId),
+      parts: buildDatePickerGridCaptionParts(captionView),
+    };
   }
 
   if (isInputFocused) {
-    return { id, parts: buildDatePickerOpenInputParts(inputPhrase) };
+    return { id: baseId, parts: buildDatePickerOpenInputParts(inputPhrase) };
   }
 
   // Calendar is open on a grid popover: never advertise the closed-field
   // "ArrowDown open …" contract while the panel is visible (focus may be on
   // the popper root, a day cell, or the clear control before ArrowDown).
-  return { id, parts: buildDatePickerGridDayParts() };
+  return { id: baseId, parts: buildDatePickerGridDayParts() };
 }
