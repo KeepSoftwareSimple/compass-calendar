@@ -286,7 +286,10 @@ final class NativeGridKeyboardRouter {
             return true
         }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
+        return handleNormalizedKeyDown(keyEvent)
+    }
 
+    func handleNormalizedKeyDown(_ keyEvent: KeyEvent) -> Bool {
         if model.isWelcomeModalActive, handleWelcomeKeyDown(keyEvent) {
             return true
         }

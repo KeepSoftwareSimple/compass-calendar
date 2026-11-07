@@ -15,8 +15,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             isAllDay: false
         )
 
-        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertTrue(try router.shiftArrow(.down))
+        let router = try makeGridRouter(model: model)
+        XCTAssertTrue(router.shiftArrow(.down))
 
         await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(
@@ -39,8 +39,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing start time",
             isAllDay: true
         )
-        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertTrue(try router.shiftArrow(.right))
+        let router = try makeGridRouter(model: model)
+        XCTAssertTrue(router.shiftArrow(.right))
         await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(
@@ -62,8 +62,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing end time",
             isAllDay: false
         )
-        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertTrue(try router.shiftArrow(.up))
+        let router = try makeGridRouter(model: model)
+        XCTAssertTrue(router.shiftArrow(.up))
         await assertFinishedNudgePersistence(model)
 
         let stored = try XCTUnwrap(model.event(for: original.id))
@@ -83,8 +83,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing start time",
             isAllDay: false
         )
-        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertFalse(try router.shiftArrow(.down))
+        let router = try makeGridRouter(model: model)
+        XCTAssertFalse(router.shiftArrow(.down))
         await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
@@ -98,8 +98,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         model.openKeyboardEditForFocusedEvent()
         model.openEventFormForCurrentDraft()
         XCTAssertTrue(model.isEventFormVisible)
-        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertFalse(try router.shiftArrow(.down))
+        let router = try makeGridRouter(model: model)
+        XCTAssertFalse(router.shiftArrow(.down))
         await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
@@ -134,13 +134,19 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing start time",
             isAllDay: false
         )
-        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertFalse(try router.shiftArrow(.down))
+        let router = try makeGridRouter(model: model)
+        XCTAssertFalse(router.shiftArrow(.down, windowNumber: window.windowNumber))
         await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
         )
         XCTAssertEqual(stored.schedule, original.schedule)
+    }
+
+    private func makeGridRouter(model: NativeCalendarRootModel) throws -> NativeGridKeyboardRouter {
+        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
+        router.dispatcher.pushScope(.grid)
+        return router
     }
 
     private static func decodeAllDayEvent(id: String) throws -> Event {
@@ -260,27 +266,36 @@ private extension NativeGridKeyboardRouter {
         case up, down, left, right
     }
 
-    func shiftArrow(_ arrow: Arrow) throws -> Bool {
-        let keyCode: UInt16 = switch arrow {
-        case .up: 126
-        case .down: 125
-        case .left: 123
-        case .right: 124
+    func shiftArrow(_ arrow: Arrow, windowNumber: Int = 0) -> Bool {
+        let named: NamedKey = switch arrow {
+        case .up: .arrowUp
+        case .down: .arrowDown
+        case .left: .arrowLeft
+        case .right: .arrowRight
         }
-        let keyDown = try XCTUnwrap(
-            NSEvent.keyEvent(
+        if windowNumber != 0 {
+            let keyCode: UInt16 = switch arrow {
+            case .up: 126
+            case .down: 125
+            case .left: 123
+            case .right: 124
+            }
+            if let keyDown = NSEvent.keyEvent(
                 with: .keyDown,
                 location: .zero,
                 modifierFlags: .shift,
                 timestamp: 0,
-                windowNumber: 0,
+                windowNumber: windowNumber,
                 context: nil,
                 characters: "",
                 charactersIgnoringModifiers: "",
                 isARepeat: false,
                 keyCode: keyCode
-            )
-        )
-        return handleKeyDown(keyDown)
+            ) {
+                return handleKeyDown(keyDown)
+            }
+        }
+        let keyEvent = KeyEvent(named: named, modifiers: [.shift])
+        return handleNormalizedKeyDown(keyEvent)
     }
 }
