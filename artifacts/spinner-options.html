@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Compass loading spinner options</title>
+    <style>
+      /* Theme tokens mirror apps/calendar-web/src/index.css (Light Beach + Dark Abyss) */
+      :root,
+      [data-theme="light-beach"] {
+        color-scheme: light;
+        --background: #f3eee2;
+        --surface: #ece6d7;
+        --surface-panel: #e7e0cf;
+        --border-strong: #a89c81;
+        --text: #403a2f;
+        --text-muted: #5e5847;
+        --text-subtle: #948b74;
+        --accent: #2b2a27;
+        --accent-secondary: #6d6b65;
+        --on-accent: #f6f3ea;
+        --info: #8a8475;
+        --water: #6d8f9e;
+        --water-light: #8aa8b5;
+      }
+
+      [data-theme="dark-abyss"] {
+        color-scheme: dark;
+        --background: #06090f;
+        --surface: #0c1219;
+        --surface-panel: #121a23;
+        --border-strong: #4e6374;
+        --text: #c6d0d9;
+        --text-muted: #88939d;
+        --text-subtle: #4e5a66;
+        --accent: #7cc6e4;
+        --accent-secondary: #608197;
+        --on-accent: #05121a;
+        --info: #6e97be;
+        --water: #3d5a6e;
+        --water-light: #608197;
+      }
+
+      /* Pixel pirate palette (shared) */
+      :root {
+        --p-skin: #f4d7b5;
+        --p-dark: #0d1017;
+        --p-beard: #8b5e3c;
+        --p-white: #e6edf3;
+        --p-shirt: #c2c6cc;
+        --p-metal: #5a6570;
+        --p-lens: #1a2330;
+        --p-gold: #c2a578;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Rubik,
+          ui-sans-serif,
+          system-ui,
+          sans-serif;
+        background: #1a1a1a;
+        color: #eee;
+        line-height: 1.4;
+      }
+
+      header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #333;
+      }
+
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: 1.125rem;
+        font-weight: 600;
+      }
+
+      header p {
+        margin: 0;
+        font-size: 0.8125rem;
+        color: #aaa;
+        max-width: 52rem;
+      }
+
+      .themes {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.5rem;
+      }
+
+      .theme-block {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #444;
+      }
+
+      .theme-label {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: #222;
+        color: #ccc;
+      }
+
+      .parchment {
+        background: var(--background);
+        color: var(--text);
+        padding: 1.25rem 1rem 1.5rem;
+      }
+
+      .grid-bg {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0;
+        min-height: 140px;
+        background: var(--background);
+        background-image:
+          linear-gradient(to right, color-mix(in srgb, var(--text-subtle) 18%, transparent) 1px, transparent 1px),
+          linear-gradient(to bottom, color-mix(in srgb, var(--text-subtle) 18%, transparent) 1px, transparent 1px);
+        background-size: calc(100% / 7) 28px;
+        border: 1px solid color-mix(in srgb, var(--border-strong) 40%, transparent);
+        border-radius: 4px;
+        position: relative;
+      }
+
+      .grid-bg::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: color-mix(in srgb, var(--surface-panel) 55%, transparent);
+        width: calc(100% / 7 * 2);
+        left: calc(100% / 7);
+        pointer-events: none;
+      }
+
+      .options-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      @media (max-width: 900px) {
+        .options-row {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .option-card {
+        background: var(--surface);
+        border: 1px solid color-mix(in srgb, var(--border-strong) 35%, transparent);
+        border-radius: 6px;
+        padding: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.65rem;
+      }
+
+      .option-name {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text);
+        text-align: center;
+      }
+
+      .option-desc {
+        font-size: 0.6875rem;
+        color: var(--text-muted);
+        text-align: center;
+        min-height: 2.5em;
+      }
+
+      /* Production footprint: EventGrid overrides to h-10 w-10 (40px) */
+      .spinner-slot {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .spinner-slot svg {
+        width: 32px;
+        height: 32px;
+        shape-rendering: crispEdges;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      .zoom-label {
+        font-size: 0.625rem;
+        color: var(--text-subtle);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .spinner-slot--zoom {
+        width: 160px;
+        height: 160px;
+        background: var(--background);
+        border: 1px dashed color-mix(in srgb, var(--border-strong) 50%, transparent);
+        border-radius: 4px;
+      }
+
+      .spinner-slot--zoom svg {
+        width: 128px;
+        height: 128px;
+      }
+
+      .reference-row {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid color-mix(in srgb, var(--border-strong) 30%, transparent);
+      }
+
+      .reference-row h3 {
+        margin: 0 0 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      /* Current production ring (scaled to 40px slot) */
+      .current-ring {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid color-mix(in srgb, var(--text) 20%, transparent);
+        border-left-color: var(--text);
+        animation: ringSpin 1.1s linear infinite;
+      }
+
+      @keyframes ringSpin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ——— Option 1: Wobbly Compass ——— */
+      @keyframes compassSpinWobble {
+        0% {
+          transform: rotate(-28deg);
+        }
+        35% {
+          transform: rotate(18deg);
+        }
+        55% {
+          transform: rotate(8deg);
+        }
+        100% {
+          transform: rotate(332deg);
+        }
+      }
+
+      .anim-compass .needle {
+        transform-origin: 8px 8px;
+        animation: compassSpinWobble 1.4s ease-in-out infinite;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .anim-compass .needle {
+          animation: none;
+          transform: rotate(-12deg);
+        }
+      }
+
+      /* ——— Option 2: Helm Spin ——— */
+      @keyframes helmSpin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .anim-helm .wheel {
+        transform-origin: 8px 8px;
+        animation: helmSpin 2s linear infinite;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .anim-helm .wheel {
+          animation: none;
+        }
+      }
+
+      /* ——— Option 3: Gentle Seas ——— */
+      @keyframes waveShift {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(1px);
+        }
+      }
+
+      @keyframes shipBob {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-2deg);
+        }
+        50% {
+          transform: translateY(-2px) rotate(2deg);
+        }
+      }
+
+      .anim-ship .waves {
+        animation: waveShift 1.2s ease-in-out infinite;
+      }
+
+      .anim-ship .waves-2 {
+        animation: waveShift 1.2s ease-in-out infinite 0.15s;
+      }
+
+      .anim-ship .hull {
+        transform-origin: 8px 10px;
+        animation: shipBob 1.2s ease-in-out infinite;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .anim-ship .waves,
+        .anim-ship .waves-2,
+        .anim-ship .hull {
+          animation: none;
+        }
+      }
+
+      /* ——— Option 4: Lookout sweep ——— */
+      @keyframes glassSweep {
+        0%,
+        100% {
+          transform: rotate(-22deg);
+        }
+        50% {
+          transform: rotate(22deg);
+        }
+      }
+
+      @keyframes scoutPeek {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        50% {
+          transform: translateX(0.5px);
+        }
+      }
+
+      .anim-lookout .glass {
+        transform-origin: 6px 7px;
+        animation: glassSweep 1.8s ease-in-out infinite;
+      }
+
+      .anim-lookout .peek {
+        animation: scoutPeek 1.8s ease-in-out infinite;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .anim-lookout .glass {
+          animation: none;
+          transform: rotate(0deg);
+        }
+        .anim-lookout .peek {
+          animation: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .current-ring {
+          animation: none;
+          opacity: 0.85;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Compass loading spinner exploration</h1>
+      <p>
+        Four nautical pixel options at the production 40×40px footprint (32px art), plus 4× zoom.
+        Palette matches <code>PixelPirate</code> (16×16 grid). Toggle reduced motion in OS settings to
+        preview static fallbacks.
+      </p>
+    </header>
+
+    <div class="themes">
+      <section class="theme-block" data-theme="light-beach">
+        <div class="theme-label">Light Beach (parchment)</div>
+        <div class="parchment">
+          <div class="grid-bg" aria-hidden="true"></div>
+          <div class="options-row">
+            <article class="option-card">
+              <div class="option-name">True North</div>
+              <div class="spinner-slot anim-compass" role="img" aria-label="True North spinner preview">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="10" height="10" fill="none" stroke="var(--border-strong)" stroke-width="1" />
+                  <rect x="7" y="4" width="2" height="1" fill="var(--accent)" />
+                  <rect x="7" y="11" width="2" height="1" fill="var(--p-dark)" opacity="0.5" />
+                  <rect x="4" y="7" width="1" height="2" fill="var(--text-subtle)" />
+                  <rect x="11" y="7" width="1" height="2" fill="var(--text-subtle)" />
+                  <g class="needle">
+                    <rect x="7" y="5" width="2" height="3" fill="var(--accent)" />
+                    <rect x="7" y="8" width="2" height="3" fill="var(--p-beard)" />
+                    <rect x="7" y="7" width="2" height="2" fill="var(--p-gold)" />
+                  </g>
+                </svg>
+              </div>
+              <div class="zoom-label">4× zoom</div>
+              <div class="spinner-slot spinner-slot--zoom anim-compass" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="10" height="10" fill="none" stroke="var(--border-strong)" stroke-width="1" />
+                  <rect x="7" y="4" width="2" height="1" fill="var(--accent)" />
+                  <rect x="7" y="11" width="2" height="1" fill="var(--p-dark)" opacity="0.5" />
+                  <rect x="4" y="7" width="1" height="2" fill="var(--text-subtle)" />
+                  <rect x="11" y="7" width="1" height="2" fill="var(--text-subtle)" />
+                  <g class="needle">
+                    <rect x="7" y="5" width="2" height="3" fill="var(--accent)" />
+                    <rect x="7" y="8" width="2" height="3" fill="var(--p-beard)" />
+                    <rect x="7" y="7" width="2" height="2" fill="var(--p-gold)" />
+                  </g>
+                </svg>
+              </div>
+              <p class="option-desc">Compass needle hunts north with a wobble before each sweep.</p>
+            </article>
+
+            <article class="option-card">
+              <div class="option-name">Helm Spin</div>
+              <div class="spinner-slot anim-helm" role="img" aria-label="Helm Spin spinner preview">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="wheel">
+                    <rect x="7" y="2" width="2" height="12" fill="var(--p-beard)" />
+                    <rect x="2" y="7" width="12" height="2" fill="var(--p-beard)" />
+                    <rect x="4" y="4" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="10" y="4" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="4" y="10" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="10" y="10" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="6" y="6" width="4" height="4" fill="var(--p-dark)" />
+                    <rect x="7" y="7" width="2" height="2" fill="var(--accent)" />
+                  </g>
+                </svg>
+              </div>
+              <div class="zoom-label">4× zoom</div>
+              <div class="spinner-slot spinner-slot--zoom anim-helm" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="wheel">
+                    <rect x="7" y="2" width="2" height="12" fill="var(--p-beard)" />
+                    <rect x="2" y="7" width="12" height="2" fill="var(--p-beard)" />
+                    <rect x="4" y="4" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="10" y="4" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="4" y="10" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="10" y="10" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="6" y="6" width="4" height="4" fill="var(--p-dark)" />
+                    <rect x="7" y="7" width="2" height="2" fill="var(--accent)" />
+                  </g>
+                </svg>
+              </div>
+              <p class="option-desc">Ship&apos;s wheel turns steadily; hub uses theme accent.</p>
+            </article>
+
+            <article class="option-card">
+              <div class="option-name">Gentle Seas</div>
+              <div class="spinner-slot anim-ship" role="img" aria-label="Gentle Seas spinner preview">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="hull">
+                    <rect x="4" y="6" width="1" height="3" fill="var(--accent)" />
+                    <rect x="5" y="5" width="6" height="1" fill="var(--p-white)" />
+                    <rect x="5" y="6" width="6" height="3" fill="var(--p-dark)" />
+                    <rect x="6" y="7" width="4" height="1" fill="var(--p-beard)" />
+                  </g>
+                  <g class="waves">
+                    <rect x="2" y="11" width="3" height="1" fill="var(--water-light)" />
+                    <rect x="6" y="11" width="4" height="1" fill="var(--water)" />
+                    <rect x="11" y="11" width="3" height="1" fill="var(--water-light)" />
+                  </g>
+                  <g class="waves waves-2">
+                    <rect x="3" y="13" width="4" height="1" fill="var(--water)" />
+                    <rect x="8" y="13" width="5" height="1" fill="var(--water-light)" />
+                  </g>
+                </svg>
+              </div>
+              <div class="zoom-label">4× zoom</div>
+              <div class="spinner-slot spinner-slot--zoom anim-ship" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="hull">
+                    <rect x="4" y="6" width="1" height="3" fill="var(--accent)" />
+                    <rect x="5" y="5" width="6" height="1" fill="var(--p-white)" />
+                    <rect x="5" y="6" width="6" height="3" fill="var(--p-dark)" />
+                    <rect x="6" y="7" width="4" height="1" fill="var(--p-beard)" />
+                  </g>
+                  <g class="waves">
+                    <rect x="2" y="11" width="3" height="1" fill="var(--water-light)" />
+                    <rect x="6" y="11" width="4" height="1" fill="var(--water)" />
+                    <rect x="11" y="11" width="3" height="1" fill="var(--water-light)" />
+                  </g>
+                  <g class="waves waves-2">
+                    <rect x="3" y="13" width="4" height="1" fill="var(--water)" />
+                    <rect x="8" y="13" width="5" height="1" fill="var(--water-light)" />
+                  </g>
+                </svg>
+              </div>
+              <p class="option-desc">Sloop bobs on two staggered pixel wave rows.</p>
+            </article>
+
+            <article class="option-card">
+              <div class="option-name">Lookout</div>
+              <div class="spinner-slot anim-lookout" role="img" aria-label="Lookout spinner preview">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="peek">
+                    <rect x="5" y="8" width="6" height="4" fill="var(--p-skin)" />
+                    <rect x="5" y="12" width="6" height="1" fill="var(--p-beard)" />
+                    <rect x="4" y="4" width="8" height="1" fill="var(--accent)" />
+                    <rect x="5" y="5" width="6" height="1" fill="var(--accent)" />
+                  </g>
+                  <g class="glass">
+                    <rect x="8" y="5" width="4" height="2" fill="var(--p-metal)" />
+                    <rect x="11" y="5" width="2" height="2" fill="var(--p-lens)" />
+                    <rect x="11" y="5" width="1" height="1" fill="var(--p-white)" />
+                    <rect x="7" y="6" width="2" height="1" fill="var(--p-metal)" />
+                  </g>
+                </svg>
+              </div>
+              <div class="zoom-label">4× zoom</div>
+              <div class="spinner-slot spinner-slot--zoom anim-lookout" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="peek">
+                    <rect x="5" y="8" width="6" height="4" fill="var(--p-skin)" />
+                    <rect x="5" y="12" width="6" height="1" fill="var(--p-beard)" />
+                    <rect x="4" y="4" width="8" height="1" fill="var(--accent)" />
+                    <rect x="5" y="5" width="6" height="1" fill="var(--accent)" />
+                  </g>
+                  <g class="glass">
+                    <rect x="8" y="5" width="4" height="2" fill="var(--p-metal)" />
+                    <rect x="11" y="5" width="2" height="2" fill="var(--p-lens)" />
+                    <rect x="11" y="5" width="1" height="1" fill="var(--p-white)" />
+                    <rect x="7" y="6" width="2" height="1" fill="var(--p-metal)" />
+                  </g>
+                </svg>
+              </div>
+              <p class="option-desc">Pirate hat + spyglass sweeps the horizon (scout cousin).</p>
+            </article>
+          </div>
+
+          <div class="reference-row">
+            <h3>Current production ring (reference)</h3>
+            <div class="spinner-slot">
+              <div class="current-ring" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="theme-block" data-theme="dark-abyss">
+        <div class="theme-label">Dark Abyss</div>
+        <div class="parchment">
+          <div class="grid-bg" aria-hidden="true"></div>
+          <div class="options-row">
+            <article class="option-card">
+              <div class="option-name">True North</div>
+              <div class="spinner-slot anim-compass" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="10" height="10" fill="none" stroke="var(--border-strong)" stroke-width="1" />
+                  <rect x="7" y="4" width="2" height="1" fill="var(--accent)" />
+                  <rect x="7" y="11" width="2" height="1" fill="var(--p-dark)" opacity="0.5" />
+                  <rect x="4" y="7" width="1" height="2" fill="var(--text-subtle)" />
+                  <rect x="11" y="7" width="1" height="2" fill="var(--text-subtle)" />
+                  <g class="needle">
+                    <rect x="7" y="5" width="2" height="3" fill="var(--accent)" />
+                    <rect x="7" y="8" width="2" height="3" fill="var(--p-beard)" />
+                    <rect x="7" y="7" width="2" height="2" fill="var(--p-gold)" />
+                  </g>
+                </svg>
+              </div>
+              <div class="zoom-label">4× zoom</div>
+              <div class="spinner-slot spinner-slot--zoom anim-compass" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="3" width="10" height="10" fill="none" stroke="var(--border-strong)" stroke-width="1" />
+                  <rect x="7" y="4" width="2" height="1" fill="var(--accent)" />
+                  <rect x="7" y="11" width="2" height="1" fill="var(--p-dark)" opacity="0.5" />
+                  <rect x="4" y="7" width="1" height="2" fill="var(--text-subtle)" />
+                  <rect x="11" y="7" width="1" height="2" fill="var(--text-subtle)" />
+                  <g class="needle">
+                    <rect x="7" y="5" width="2" height="3" fill="var(--accent)" />
+                    <rect x="7" y="8" width="2" height="3" fill="var(--p-beard)" />
+                    <rect x="7" y="7" width="2" height="2" fill="var(--p-gold)" />
+                  </g>
+                </svg>
+              </div>
+            </article>
+
+            <article class="option-card">
+              <div class="option-name">Helm Spin</div>
+              <div class="spinner-slot anim-helm" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="wheel">
+                    <rect x="7" y="2" width="2" height="12" fill="var(--p-beard)" />
+                    <rect x="2" y="7" width="12" height="2" fill="var(--p-beard)" />
+                    <rect x="4" y="4" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="10" y="4" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="4" y="10" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="10" y="10" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="6" y="6" width="4" height="4" fill="var(--p-dark)" />
+                    <rect x="7" y="7" width="2" height="2" fill="var(--accent)" />
+                  </g>
+                </svg>
+              </div>
+              <div class="zoom-label">4× zoom</div>
+              <div class="spinner-slot spinner-slot--zoom anim-helm" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="wheel">
+                    <rect x="7" y="2" width="2" height="12" fill="var(--p-beard)" />
+                    <rect x="2" y="7" width="12" height="2" fill="var(--p-beard)" />
+                    <rect x="4" y="4" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="10" y="4" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="4" y="10" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="10" y="10" width="2" height="2" fill="var(--p-dark)" />
+                    <rect x="6" y="6" width="4" height="4" fill="var(--p-dark)" />
+                    <rect x="7" y="7" width="2" height="2" fill="var(--accent)" />
+                  </g>
+                </svg>
+              </div>
+            </article>
+
+            <article class="option-card">
+              <div class="option-name">Gentle Seas</div>
+              <div class="spinner-slot anim-ship" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="hull">
+                    <rect x="4" y="6" width="1" height="3" fill="var(--accent)" />
+                    <rect x="5" y="5" width="6" height="1" fill="var(--p-white)" />
+                    <rect x="5" y="6" width="6" height="3" fill="var(--p-dark)" />
+                    <rect x="6" y="7" width="4" height="1" fill="var(--p-beard)" />
+                  </g>
+                  <g class="waves">
+                    <rect x="2" y="11" width="3" height="1" fill="var(--water-light)" />
+                    <rect x="6" y="11" width="4" height="1" fill="var(--water)" />
+                    <rect x="11" y="11" width="3" height="1" fill="var(--water-light)" />
+                  </g>
+                  <g class="waves waves-2">
+                    <rect x="3" y="13" width="4" height="1" fill="var(--water)" />
+                    <rect x="8" y="13" width="5" height="1" fill="var(--water-light)" />
+                  </g>
+                </svg>
+              </div>
+              <div class="zoom-label">4× zoom</div>
+              <div class="spinner-slot spinner-slot--zoom anim-ship" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="hull">
+                    <rect x="4" y="6" width="1" height="3" fill="var(--accent)" />
+                    <rect x="5" y="5" width="6" height="1" fill="var(--p-white)" />
+                    <rect x="5" y="6" width="6" height="3" fill="var(--p-dark)" />
+                    <rect x="6" y="7" width="4" height="1" fill="var(--p-beard)" />
+                  </g>
+                  <g class="waves">
+                    <rect x="2" y="11" width="3" height="1" fill="var(--water-light)" />
+                    <rect x="6" y="11" width="4" height="1" fill="var(--water)" />
+                    <rect x="11" y="11" width="3" height="1" fill="var(--water-light)" />
+                  </g>
+                  <g class="waves waves-2">
+                    <rect x="3" y="13" width="4" height="1" fill="var(--water)" />
+                    <rect x="8" y="13" width="5" height="1" fill="var(--water-light)" />
+                  </g>
+                </svg>
+              </div>
+            </article>
+
+            <article class="option-card">
+              <div class="option-name">Lookout</div>
+              <div class="spinner-slot anim-lookout" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="peek">
+                    <rect x="5" y="8" width="6" height="4" fill="var(--p-skin)" />
+                    <rect x="5" y="12" width="6" height="1" fill="var(--p-beard)" />
+                    <rect x="4" y="4" width="8" height="1" fill="var(--accent)" />
+                    <rect x="5" y="5" width="6" height="1" fill="var(--accent)" />
+                  </g>
+                  <g class="glass">
+                    <rect x="8" y="5" width="4" height="2" fill="var(--p-metal)" />
+                    <rect x="11" y="5" width="2" height="2" fill="var(--p-lens)" />
+                    <rect x="11" y="5" width="1" height="1" fill="var(--p-white)" />
+                    <rect x="7" y="6" width="2" height="1" fill="var(--p-metal)" />
+                  </g>
+                </svg>
+              </div>
+              <div class="zoom-label">4× zoom</div>
+              <div class="spinner-slot spinner-slot--zoom anim-lookout" aria-hidden="true">
+                <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <g class="peek">
+                    <rect x="5" y="8" width="6" height="4" fill="var(--p-skin)" />
+                    <rect x="5" y="12" width="6" height="1" fill="var(--p-beard)" />
+                    <rect x="4" y="4" width="8" height="1" fill="var(--accent)" />
+                    <rect x="5" y="5" width="6" height="1" fill="var(--accent)" />
+                  </g>
+                  <g class="glass">
+                    <rect x="8" y="5" width="4" height="2" fill="var(--p-metal)" />
+                    <rect x="11" y="5" width="2" height="2" fill="var(--p-lens)" />
+                    <rect x="11" y="5" width="1" height="1" fill="var(--p-white)" />
+                    <rect x="7" y="6" width="2" height="1" fill="var(--p-metal)" />
+                  </g>
+                </svg>
+              </div>
+            </article>
+          </div>
+
+          <div class="reference-row">
+            <h3>Current production ring (reference)</h3>
+            <div class="spinner-slot">
+              <div class="current-ring" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
