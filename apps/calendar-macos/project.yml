@@ -67,6 +67,7 @@ targets:
     sources:
       - CompassKitTests
       - CompassNativeTests
+      - path: CompassUI/Tests/CompassUIUnitTests/DescriptionLinkHintKeyWindowFixture.swift
       - Compass/NSEvent+KeyEvent.swift
       - Compass/NativeGridKeyboardRouter.swift
       - Compass/AccessibilityProbeView.swift

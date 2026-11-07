@@ -63,27 +63,12 @@ final class DescriptionLinkDigitKeyboardRouterTests: XCTestCase {
         router.dispatcher.pushScope(.grid)
 
         let html = model.draftStore.gridDraft?.description ?? ""
-        var bound = html
-        let coordinator = DescriptionEditorView.Coordinator(html: Binding(get: { bound }, set: { bound = $0 }))
-        let container = DescriptionEditorContainerView(frame: NSRect(x: 0, y: 0, width: 420, height: 140))
-        let editor = container.textView
-        coordinator.textView = editor
-        coordinator.container = container
-        editor.delegate = coordinator
-        coordinator.load(html: html, resetKey: "demo-morning-standup")
-        coordinator.wasDescriptionFocused = true
-        coordinator.syncPresentationOnFocusChange(isFocused: false, html: html, resetKey: "demo-morning-standup")
-        XCTAssertTrue(coordinator.shouldShowLinkHintOverlay(isFocused: false, html: html, isEditable: true))
-
-        let window = NSWindow(contentRect: container.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = container
-        window.makeKeyAndOrderFront(nil)
-        container.updateLinkHintOverlay(visible: true)
-        container.layoutSubtreeIfNeeded()
+        let fixture = try DescriptionLinkHintKeyWindowFixture.makeBlurredDescriptionLinkHints(
+            html: html,
+            resetKey: "demo-morning-standup"
+        )
         XCTAssertTrue(DescriptionLinkKeyboard.linkDigitHintsActiveInKeyWindow())
-
-        addTeardownBlock { window.close() }
+        addTeardownBlock { fixture.window.close() }
         return (model, router)
     }
 

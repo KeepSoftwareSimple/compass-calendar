@@ -151,26 +151,13 @@ final class DescriptionEditorTests: XCTestCase {
         XCTAssertEqual(opened, ["https://example.com/second"])
     }
 
-    func testBlurredDescriptionShowsLinkDigitHintOverlay() {
-        var html = "<p><a href=\"https://example.com/path\">https://example.com/path</a></p>"
-        let coordinator = DescriptionEditorView.Coordinator(html: Binding(get: { html }, set: { html = $0 }))
-        let container = DescriptionEditorContainerView(frame: NSRect(x: 0, y: 0, width: 400, height: 120))
-        let editor = container.textView
-        coordinator.textView = editor
-        coordinator.container = container
-        editor.delegate = coordinator
-        coordinator.load(html: html, resetKey: "event")
-        coordinator.wasDescriptionFocused = true
-        coordinator.syncPresentationOnFocusChange(isFocused: false, html: html, resetKey: "event")
-        XCTAssertTrue(coordinator.shouldShowLinkHintOverlay(isFocused: false, html: html, isEditable: true))
-        let window = NSWindow(contentRect: container.frame, styleMask: [.titled], backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.contentView = container
-        window.makeKeyAndOrderFront(nil)
-        container.updateLinkHintOverlay(visible: true)
-        container.layoutSubtreeIfNeeded()
-        XCTAssertTrue(container.descriptionLinkDigitHintsVisible)
-        XCTAssertTrue(DescriptionTextView.linkDigitHintsActiveInKeyWindow())
+    func testBlurredDescriptionShowsLinkDigitHintOverlay() throws {
+        let html = "<p><a href=\"https://example.com/path\">https://example.com/path</a></p>"
+        let (_, window, _) = try DescriptionLinkHintKeyWindowFixture.makeBlurredDescriptionLinkHints(
+            html: html,
+            resetKey: "event",
+            frame: NSRect(x: 0, y: 0, width: 400, height: 120)
+        )
         window.close()
     }
 
