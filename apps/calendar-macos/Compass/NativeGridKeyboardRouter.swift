@@ -402,6 +402,9 @@ final class NativeGridKeyboardRouter {
         }
 
         if model.isEventFormVisible {
+            if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
+                return false
+            }
             if handleUITestEventFormTyping(keyEvent) {
                 return true
             }
@@ -443,29 +446,20 @@ final class NativeGridKeyboardRouter {
         let isShiftArrow = keyEvent.modifiers.contains(.shift)
             && shiftArrowKeyboardName(for: keyEvent) != nil
 
-        if isShiftArrow,
-            !model.isEventFormVisible,
-            model.draftStore.gridDraft == nil,
-            model.focusStore.focusedEventId != nil
-        {
-            if attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber) {
-                return true
-            }
-            if let focused = model.focusedEvent(), model.isReadOnly(event: focused) {
+        if isShiftArrow {
+            if model.draftStore.gridDraft != nil {
+                if handleDraftKeys(keyEvent) { return true }
                 return false
             }
+            if model.focusStore.focusedEventId != nil {
+                return attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber)
+            }
+            if handleDraftKeys(keyEvent) { return true }
+            return false
         }
 
         if handleDraftKeys(keyEvent) {
             return true
-        }
-
-        if model.isEventFormVisible {
-            return false
-        }
-
-        if isShiftArrow {
-            return attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber)
         }
 
         if modHold.handleKeyDown(keyEvent) {
@@ -484,6 +478,9 @@ final class NativeGridKeyboardRouter {
 
         dispatcher.shortcutContext = model.shortcutContext
         syncEditSequenceFieldGating()
+        if isShiftArrow {
+            return false
+        }
         if let id = dispatcher.dispatch(keyEvent) {
             model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
             performShortcut(id)
@@ -493,6 +490,10 @@ final class NativeGridKeyboardRouter {
             return true
         }
         model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
+
+        if isShiftArrow {
+            return false
+        }
 
         if let field = dispatcher.lastResolvedLeaderField {
             handleEditSequenceField(field)

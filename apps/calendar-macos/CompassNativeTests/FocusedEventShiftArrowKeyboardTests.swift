@@ -246,7 +246,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             foregroundColor: "#000000",
             id: sample.calendarId.rawValue,
             isActive: true,
-            isPrimary: false,
+            isPrimary: true,
             isVisible: true,
             name: "Shared",
             provider: "local",
@@ -294,35 +294,26 @@ private extension NativeGridKeyboardRouter {
     }
 
     func shiftArrow(_ arrow: Arrow, windowNumber: Int = 0) -> Bool {
-        let named: NamedKey = switch arrow {
-        case .up: .arrowUp
-        case .down: .arrowDown
-        case .left: .arrowLeft
-        case .right: .arrowRight
+        let keyCode: UInt16 = switch arrow {
+        case .up: 126
+        case .down: 125
+        case .left: 123
+        case .right: 124
         }
-        if windowNumber != 0 {
-            let keyCode: UInt16 = switch arrow {
-            case .up: 126
-            case .down: 125
-            case .left: 123
-            case .right: 124
-            }
-            if let keyDown = NSEvent.keyEvent(
-                with: .keyDown,
-                location: .zero,
-                modifierFlags: .shift,
-                timestamp: 0,
-                windowNumber: windowNumber,
-                context: nil,
-                characters: "",
-                charactersIgnoringModifiers: "",
-                isARepeat: false,
-                keyCode: keyCode
-            ) {
-                return handleKeyDown(keyDown)
-            }
+        guard let keyDown = NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: .shift,
+            timestamp: 0,
+            windowNumber: windowNumber,
+            context: nil,
+            characters: "",
+            charactersIgnoringModifiers: "",
+            isARepeat: false,
+            keyCode: keyCode
+        ) else {
+            return false
         }
-        let keyEvent = KeyEvent(named: named, modifiers: [.shift])
-        return handleNormalizedKeyDown(keyEvent)
+        return handleKeyDown(keyDown)
     }
 }
