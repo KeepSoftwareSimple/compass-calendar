@@ -149,6 +149,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         nativeRootController = nativeController
         window.contentViewController = nativeController
         NativeAccessibilityProbes.prepareNativeRootWindowForXCUITest(window)
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            MeetingLinkWideViewportPolicy.applyIfNeeded(to: window)
+        }
         WideViewportUITestTrace.record(
             "installRootContent_end",
             fields: ["hasNativeRootController": nativeRootController == nil ? "0" : "1"])

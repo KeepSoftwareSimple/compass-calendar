@@ -55,10 +55,14 @@ final class MainWindowGeometryProbeView: AccessibilityProbeView {
 
 @MainActor
 enum MainWindowGeometryProbe {
+    private static weak var probe: MainWindowGeometryProbeView?
+
     @MainActor
     static func publish(target: NSSize, on window: NSWindow?) {
-        guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
-        let view = MainWindowGeometryProbeView(frame: .zero)
-        view.publish(target: target, on: window)
+        guard UITestLaunchPolicy.meetingLinkWideViewport, let window, let host = window.contentView else { return }
+        probe = AccessibilityProbeView.attach(existing: probe, to: host) {
+            MainWindowGeometryProbeView(frame: .zero)
+        }
+        probe?.publish(target: target, on: window)
     }
 }

@@ -18,6 +18,8 @@ enum NativeAccessibilityProbes {
     @MainActor
     static func prepareNativeRootWindowForXCUITest(_ window: NSWindow?) {
         window?.setAccessibilityIdentifier("Compass")
+        // Wide viewport keeps geometry payload on the window value mirror.
+        guard !UITestLaunchPolicy.meetingLinkWideViewport else { return }
         window?.setAccessibilityValue("")
     }
 

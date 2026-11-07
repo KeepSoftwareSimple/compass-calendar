@@ -13,6 +13,27 @@ struct MainWindowGeometryProbeReading: Equatable {
 }
 
 enum MeetingLinkViewportXCUITestSupport {
+    /// Polls window mirror first, then the staticText probe, avoiding a heavy initial `descendants` sweep.
+    @MainActor
+    static func waitForGeometryPayload(on window: XCUIElement, timeout: TimeInterval) -> String {
+        let probe = window.descendants(matching: .staticText)["compass-native-main-window-geometry"]
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let raw = window.value as? String, parseGeometryProbe(raw) != nil {
+                return raw
+            }
+            if probe.exists, let raw = probe.value as? String, parseGeometryProbe(raw) != nil {
+                return raw
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        let windowValue = String(describing: window.value)
+        let probeValue = probe.exists ? String(describing: probe.value) : "(missing)"
+        XCTFail(
+            "Geometry probe not readable within \(timeout)s; window value=\(windowValue), probe value=\(probeValue)")
+        return ""
+    }
+
     static func parseGeometryProbe(_ raw: String) -> MainWindowGeometryProbeReading? {
         var fields: [String: String] = [:]
         for part in raw.split(separator: ";") {

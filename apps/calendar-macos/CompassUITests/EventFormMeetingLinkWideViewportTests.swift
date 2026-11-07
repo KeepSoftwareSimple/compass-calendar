@@ -14,16 +14,12 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
-        let geometryReady = expectation(
-            for: NSPredicate(format: "value CONTAINS %@", "target=1440"),
-            evaluatedWith: window,
-            handler: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [geometryReady], timeout: 8), .completed)
+        XCTAssertTrue(window.waitForExistence(timeout: 8))
+        let rawValue = MeetingLinkViewportXCUITestSupport.waitForGeometryPayload(on: window, timeout: 8)
         let titleProbe = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleProbe.waitForExistence(timeout: 12))
         let form = window.descendants(matching: .any)["compass-event-form"]
         XCTAssertTrue(form.exists)
-        let rawValue = window.value as? String ?? ""
         guard let reading = MeetingLinkViewportXCUITestSupport.parseGeometryProbe(rawValue) else {
             XCTFail("Unparseable geometry probe: \(rawValue)")
             return
