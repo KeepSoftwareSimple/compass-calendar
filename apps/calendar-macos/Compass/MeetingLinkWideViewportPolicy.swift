@@ -38,9 +38,13 @@ enum MeetingLinkWideViewportPolicy {
             origin.y = max(visible.minY, visible.maxY - frame.height)
         }
         if fitsScreen {
-            window.minSize = frame.size
-            window.maxSize = frame.size
+            // Pin content, not the decorated frame. Frame min/max fights 960pt content
+            // on a 959pt visible height and spams AppKit invalid geometry during AX snapshots.
+            window.contentMinSize = appliedContent
+            window.contentMaxSize = appliedContent
         } else {
+            window.contentMinSize = .zero
+            window.contentMaxSize = appliedContent
             window.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         }
         window.setFrame(NSRect(origin: origin, size: frame.size), display: true, animate: false)

@@ -57,7 +57,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updater.onUpdateReady = { [weak self] version in
             self?.nativeRootController?.model.desktopUpdateReadyVersion = version
         }
-        updater.start()
+        if !UITestLaunchPolicy.attachesAccessibilityProbes {
+            updater.start()
+        }
 
         let window = makeMainWindow()
         self.window = window

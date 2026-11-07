@@ -28,10 +28,22 @@ watchdog_loop() {
     stamp=$(date -u +%Y%m%dT%H%M%SZ)
     screencapture -x "build/wide-uitest-watchdog/desktop-${stamp}-${seq}.png" 2>/dev/null || true
     if pid=$(pgrep -x Compass | head -1); then
-      sample "$pid" 1 -mayDie -file "build/wide-uitest-watchdog/compass-${stamp}-${seq}.txt" 2>/dev/null || true
+      sample "$pid" 2 -mayDie -file "build/wide-uitest-watchdog/compass-${stamp}-${seq}.txt" \
+        >"build/wide-uitest-watchdog/compass-sample-${stamp}-${seq}.meta" 2>&1 \
+        || echo "sample_exit=$?" >>"build/wide-uitest-watchdog/compass-sample-${stamp}-${seq}.meta"
     fi
-    if pid=$(pgrep -x CompassUITests-Runner | head -1); then
-      sample "$pid" 1 -mayDie -file "build/wide-uitest-watchdog/runner-${stamp}-${seq}.txt" 2>/dev/null || true
+    runner_pid=""
+    if runner_pid=$(pgrep -if 'CompassUITests-Runner' | head -1); then
+      :
+    elif runner_pid=$(pgrep -if 'xctest.*Compass' | head -1); then
+      :
+    fi
+    if [[ -n "$runner_pid" ]]; then
+      sample "$runner_pid" 2 -mayDie -file "build/wide-uitest-watchdog/runner-${stamp}-${seq}.txt" \
+        >"build/wide-uitest-watchdog/runner-sample-${stamp}-${seq}.meta" 2>&1 \
+        || echo "sample_exit=$?" >>"build/wide-uitest-watchdog/runner-sample-${stamp}-${seq}.meta"
+    else
+      pgrep -if 'xctest|CompassUITests' >"build/wide-uitest-watchdog/runner-pgrep-${stamp}-${seq}.txt" 2>&1 || true
     fi
     if [[ -f "$TRACE_PATH" ]]; then
       cp "$TRACE_PATH" "build/wide-uitest-watchdog/trace-${stamp}-${seq}.ndjson"

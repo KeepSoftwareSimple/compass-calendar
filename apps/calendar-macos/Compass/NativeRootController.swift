@@ -128,7 +128,9 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         super.viewDidAppear()
         WideViewportUITestTrace.record("native_root_viewDidAppear")
         ParityCaptureWindowPolicy.scheduleReapply(to: view.window)
-        MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window)
+        if !UITestLaunchPolicy.meetingLinkWideViewport {
+            MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window)
+        }
         // AppKit hands launch focus to the first key view, the header Previous
         // button, which then draws a ring and swallows Space and typing. The
         // grid owns the keyboard through the router, so start with no control
@@ -138,17 +140,18 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             guard let self, !self.model.isEventFormVisible else { return }
             self.view.window?.makeFirstResponder(nil)
         }
-        if let window = view.window {
+        let attachAccessibilityProbes = { [weak self] in
+            guard let self, let window = self.view.window else { return }
             GridFocusAccessibilityProbe.attach(to: window)
-            GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
+            GridFocusAccessibilityProbe.publish(label: self.model.gridFocusAccessibilityLabel)
             NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(
-                model.gridFocusAccessibilityLabel,
+                self.model.gridFocusAccessibilityLabel,
                 on: window
             )
             EventFormAccessibilityProbe.attach(to: window)
             EventFormAccessibilityProbe.publish(
-                visible: model.isEventFormVisible,
-                title: model.draftStore.gridDraft?.title,
+                visible: self.model.isEventFormVisible,
+                title: self.model.draftStore.gridDraft?.title,
                 onTitleChanged: { [weak model] newTitle in
                     model?.updateDraftFromForm(title: newTitle)
                 }
@@ -156,7 +159,13 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             NativeOverlayProbes.statusToast.attach(to: window)
             NativeOverlayProbes.shortcutsLegend.attach(to: window)
             EventJumpChipsAccessibilityProbe.attach(to: window)
-            EventJumpChipsAccessibilityProbe.publish(hints: model.timeGridState.eventJumpHints)
+            EventJumpChipsAccessibilityProbe.publish(hints: self.model.timeGridState.eventJumpHints)
+        }
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            WideViewportUITestTrace.record("wide_probe_attach_deferred")
+            DispatchQueue.main.async(execute: attachAccessibilityProbes)
+        } else {
+            attachAccessibilityProbes()
         }
     }
 
