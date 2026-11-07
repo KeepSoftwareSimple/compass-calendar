@@ -14,6 +14,7 @@ import {
   EventReadSchema,
   type EventRecord,
 } from "@sync/storage/contracts/event.contracts";
+import { hasCertifiedHistoryCoverage } from "@sync/storage/contracts/sync-resource.contracts";
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
@@ -58,7 +59,7 @@ export async function readReflectionPage(
     resources.some(
       (resource) =>
         resource.calendarId === calendar._id &&
-        resource.historyCoverageVersion === 1 &&
+        hasCertifiedHistoryCoverage(resource) &&
         resource.bootstrapState === "ready",
     ),
   );
