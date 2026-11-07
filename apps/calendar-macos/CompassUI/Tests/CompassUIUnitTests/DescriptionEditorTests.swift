@@ -138,6 +138,42 @@ final class DescriptionEditorTests: XCTestCase {
         XCTAssertEqual(html, "<p><a href=\"https://example.com/path\">https://example.com/path</a></p>")
     }
 
+    func testOpenDescriptionLinkAtCaretOpensURLUnderSelection() {
+        let editor = DescriptionTextView()
+        let text = NSMutableAttributedString(string: "First Second")
+        let string = text.string as NSString
+        text.addAttribute(.link, value: URL(string: "https://example.com/first")!, range: string.range(of: "First"))
+        text.addAttribute(.link, value: URL(string: "https://example.com/second")!, range: string.range(of: "Second"))
+        editor.textStorage?.setAttributedString(text)
+        editor.setSelectedRange(string.range(of: "Second"))
+        var opened: [String] = []
+        XCTAssertTrue(editor.openDescriptionLinkAtCaret { url in opened.append(url.absoluteString) })
+        XCTAssertEqual(opened, ["https://example.com/second"])
+    }
+
+    func testBlurredDescriptionShowsLinkDigitHintOverlay() {
+        var html = "<p><a href=\"https://example.com/path\">https://example.com/path</a></p>"
+        let coordinator = DescriptionEditorView.Coordinator(html: Binding(get: { html }, set: { html = $0 }))
+        let container = DescriptionEditorContainerView(frame: NSRect(x: 0, y: 0, width: 400, height: 120))
+        let editor = container.textView
+        coordinator.textView = editor
+        coordinator.container = container
+        editor.delegate = coordinator
+        coordinator.load(html: html, resetKey: "event")
+        coordinator.wasDescriptionFocused = true
+        coordinator.syncPresentationOnFocusChange(isFocused: false, html: html, resetKey: "event")
+        XCTAssertTrue(coordinator.shouldShowLinkHintOverlay(isFocused: false, html: html, isEditable: true))
+        let window = NSWindow(contentRect: container.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = container
+        window.makeKeyAndOrderFront(nil)
+        container.updateLinkHintOverlay(visible: true)
+        container.layoutSubtreeIfNeeded()
+        XCTAssertTrue(container.descriptionLinkDigitHintsVisible)
+        XCTAssertTrue(DescriptionTextView.linkDigitHintsActiveInKeyWindow())
+        window.close()
+    }
+
     func testOpenDescriptionLinkUsesDocumentOrder() {
         let editor = DescriptionTextView()
         editor.textStorage?.setAttributedString(

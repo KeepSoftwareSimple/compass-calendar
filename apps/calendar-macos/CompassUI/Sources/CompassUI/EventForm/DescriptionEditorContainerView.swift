@@ -62,6 +62,8 @@ final class DescriptionEditorContainerView: NSView {
         addSubview(linkHintOverlay)
     }
 
+    var descriptionLinkDigitHintsVisible: Bool { linkHintOverlay.hintsVisible }
+
     func updateLinkHintOverlay(visible: Bool) {
         guard window != nil else {
             teardownLinkHintOverlay()

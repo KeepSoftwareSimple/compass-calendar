@@ -1,6 +1,7 @@
 import AppKit
 import CompassData
 import CompassKit
+import CompassUI
 
 @MainActor
 final class NativeGridKeyboardRouter {
@@ -565,6 +566,21 @@ final class NativeGridKeyboardRouter {
             )
             if opened { model.recordShortcut(.editOpenDescriptionLink) }
             return opened
+        }
+        if model.isEventFormVisible,
+           DescriptionTextView.linkDigitHintsActiveInKeyWindow(),
+           !isDescriptionFormEditorFocused(),
+           keyEvent.modifiers.isEmpty,
+           case .character(let char) = keyEvent.key,
+           char.isNumber,
+           let digit = Int(String(char)),
+           (1...9).contains(digit),
+           let editor = DescriptionTextView.findInKeyWindow()
+        {
+            let index = digit - 1
+            if index < editor.orderedLinkHrefs().count, editor.openDescriptionLink(at: index) {
+                return true
+            }
         }
         if handleColorSwatchKeys(keyEvent) {
             return true

@@ -90,8 +90,9 @@ struct DescriptionEditorView: NSViewRepresentable {
         }
 
         func shouldShowLinkHintOverlay(isFocused: Bool, html: String, isEditable: Bool) -> Bool {
-            _ = (isFocused, html, isEditable)
-            return false
+            guard isEditable, !isFocused, !suppressLinkHintSlots else { return false }
+            guard let textView, descriptionHasNonBookingLinks(in: textView) else { return false }
+            return !DescriptionLinkPresentation.linkHrefs(in: html).isEmpty
         }
 
         func applyTheme(_ theme: NativeWebTheme) {
@@ -137,8 +138,8 @@ struct DescriptionEditorView: NSViewRepresentable {
         }
 
         private func linkHintSlotsReserved(for textView: DescriptionTextView) -> Bool {
-            _ = (textView, suppressLinkHintSlots)
-            return false
+            guard !suppressLinkHintSlots else { return false }
+            return descriptionHasNonBookingLinks(in: textView)
         }
 
         private func descriptionHasNonBookingLinks(in textView: DescriptionTextView) -> Bool {
@@ -232,7 +233,7 @@ public final class DescriptionTextView: NSTextView {
     }
 
     @objc public func openDescriptionLinkAtCaret(_ sender: Any?) {
-        _ = openDescriptionLinkAtCaret()
+        _ = openDescriptionLinkAtCaret(openURL: { NSWorkspace.shared.open($0) })
     }
 
     @objc public func openDescriptionLinkDigit(_ sender: Any?) {
@@ -241,10 +242,21 @@ public final class DescriptionTextView: NSTextView {
     }
 
     @discardableResult
-    public func openDescriptionLinkAtCaret() -> Bool {
+    public func openDescriptionLinkAtCaret(
+        openURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }
+    ) -> Bool {
         guard let href = descriptionLinkToCopy(), let url = URL(string: href) else { return false }
-        NSWorkspace.shared.open(url)
+        openURL(url)
         return true
+    }
+
+    /// True when description link digit overlays are active on the key window (web keycap 1…9).
+    static func linkDigitHintsActiveInKeyWindow() -> Bool {
+        guard let editor = findInKeyWindow(),
+              let scroll = editor.enclosingScrollView,
+              let container = scroll.superview as? DescriptionEditorContainerView
+        else { return false }
+        return container.descriptionLinkDigitHintsVisible
     }
 
     @discardableResult
