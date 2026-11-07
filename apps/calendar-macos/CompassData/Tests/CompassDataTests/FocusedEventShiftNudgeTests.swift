@@ -133,10 +133,10 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         XCTAssertEqual(stored.schedule, original.schedule)
     }
 
-    func testUndoWhileRemoteReplaceIsBlockedRestoresWithoutConflict() async throws {
-        let hold = HeldRemoteReplace()
-        hold.block()
-        let (model, environment, original, _) = try await makeSignedInRemoteTimedEvent(replaceHold: hold)
+    func testUndoAfterFirstRemoteReplaceBlockedSettlesToOriginalSchedule() async throws {
+        let hold = FirstRemoteReplaceHold()
+        hold.arm()
+        let (model, environment, original, capture) = try await makeSignedInRemoteTimedEvent(replaceHold: hold)
         model.focusStore.setEdge(
             eventId: original.id,
             edge: .startDate,
@@ -144,12 +144,22 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
             isAllDay: false
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
-        await model.undoLastChangeAndWait()
+        XCTAssertTrue(await hold.waitUntilFirstPutObserved())
+        async let undo: Void = model.undoLastChangeAndWait()
+        try await Task.sleep(for: .milliseconds(100))
+        hold.releaseFirst()
+        await undo
         XCTAssertNotEqual(model.statusToastStore.message, "Event changed since your last edit")
-        hold.unblock()
         await assertFinishedNudgePersistence(model)
+        XCTAssertGreaterThanOrEqual(hold.observedPutCount(), 2)
+        await model.refreshVisibleRange()
         let stored = try XCTUnwrap(EventRepository(database: environment.database).fetch(id: original.id))
         XCTAssertEqual(stored.schedule, original.schedule)
+        if case .timed(let timed) = capture.lastInput?.schedule {
+            XCTAssertTrue(timed.start.rawValue.hasPrefix("2026-01-01T10:00:00"))
+        } else {
+            XCTFail("Expected undo replace payload with original start")
+        }
     }
 
     func testSignedInNudgeSendsScheduleOnRemoteReplace() async throws {
@@ -162,7 +172,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         )
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
         await assertFinishedNudgePersistence(model)
-        let input = try XCTUnwrap(captured.input)
+        let input = try XCTUnwrap(captured.lastInput)
         XCTAssertNotNil(input.schedule)
         if case .timed(let timed) = input.schedule {
             XCTAssertTrue(timed.start.rawValue.hasPrefix("2026-01-01T10:15:00"))
@@ -300,7 +310,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
     }
 
     private func makeSignedInRemoteTimedEvent(
-        replaceHold: HeldRemoteReplace? = nil
+        replaceHold: FirstRemoteReplaceHold? = nil
     ) async throws
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event, ReplaceInputCapture)
     {
@@ -361,9 +371,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
                 request.url?.path == "/api/event/\(event.id.rawValue)"
             {
                 if let replaceHold {
-                    while replaceHold.isBlocked() {
-                        Thread.sleep(forTimeInterval: 0.005)
-                    }
+                    replaceHold.gateFirstPutIfNeeded()
                 }
                 let body = HTTPBodyCapture.data(from: request)
                 if let input = try? JSONDecoder().decode(ReplaceEventInput.self, from: body) {
@@ -386,19 +394,51 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
     }
 }
 
-private final class HeldRemoteReplace: @unchecked Sendable {
+private final class FirstRemoteReplaceHold: @unchecked Sendable {
     private let lock = NSLock()
-    private var blocked = false
+    private var armed = false
+    private var holdingFirst = false
+    private var firstPutObserved = false
+    private var putCount = 0
 
-    func block() { lock.withLock { blocked = true } }
-    func unblock() { lock.withLock { blocked = false } }
-    func isBlocked() -> Bool { lock.withLock { blocked } }
+    func arm() { lock.withLock { armed = true } }
+
+    func gateFirstPutIfNeeded() {
+        let shouldSpin: Bool = lock.withLock {
+            putCount += 1
+            if armed, putCount == 1 {
+                holdingFirst = true
+                firstPutObserved = true
+                return true
+            }
+            return false
+        }
+        if shouldSpin {
+            while lock.withLock({ holdingFirst }) {
+                Thread.sleep(forTimeInterval: 0.005)
+            }
+        }
+    }
+
+    func waitUntilFirstPutObserved(timeout: Duration = .seconds(3)) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if lock.withLock({ firstPutObserved }) { return true }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        return false
+    }
+
+    func releaseFirst() { lock.withLock { holdingFirst = false } }
+
+    func observedPutCount() -> Int { lock.withLock { putCount } }
 }
 
 private final class ReplaceInputCapture: @unchecked Sendable {
     private let lock = NSLock()
-    private(set) var input: ReplaceEventInput?
-    func store(_ value: ReplaceEventInput) { lock.withLock { input = value } }
+    private var inputs: [ReplaceEventInput] = []
+    var lastInput: ReplaceEventInput? { lock.withLock { inputs.last } }
+    func store(_ value: ReplaceEventInput) { lock.withLock { inputs.append(value) } }
 }
 
 private enum HTTPBodyCapture {

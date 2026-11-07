@@ -227,7 +227,7 @@ extension NativeCalendarRootModel {
     }
 
     public func undoLastChangeAndWait() async {
-        await awaitOrCancelPendingFocusedEventNudgeForUndo()
+        await awaitFocusedEventNudgePersistenceBeforeUndo()
         let revision = sessionRevision
         guard !undoStore.isRestoringHistory() else { return }
         guard let entry = undoStore.peekUndo() else {
@@ -272,17 +272,13 @@ extension NativeCalendarRootModel {
         recordShortcut(.otherRedo)
     }
 
-    private func eventForUndoConsistencyCheck(id: EventId) -> Event? {
-        if let loaded = loadedEvents.first(where: { $0.id == id }) {
-            return loaded
-        }
-        return try? eventsStore.fetchAllEvents().first(where: { $0.id == id })
-    }
-
     private func canReplayEdit(_ entry: UndoHistoryEntry, undo: Bool) -> Bool {
         guard case let .edit(id, before, after) = entry else { return true }
         let expected = undo ? after : before
-        guard let current = eventForUndoConsistencyCheck(id: id),
+        let current =
+            pendingFocusedEventNudgeConsistencyEvent(id: id, matching: expected)
+            ?? (try? eventsStore.fetchAllEvents().first(where: { $0.id == id }))
+        guard let current,
               current.calendarId == expected.calendarId,
               EventScheduleEqual.matches(current.schedule, expected.schedule),
               EventDetailsEqualForUndo.matches(current.content, expected.content)
@@ -291,6 +287,16 @@ extension NativeCalendarRootModel {
             return false
         }
         return true
+    }
+
+    /// While a focused nudge persist is queued, the grid holds the optimistic `after` state before the repository catches up.
+    private func pendingFocusedEventNudgeConsistencyEvent(id: EventId, matching expected: Event) -> Event? {
+        guard focusedEventNudgePersistTask != nil,
+              let loaded = loadedEvents.first(where: { $0.id == id }),
+              EventScheduleEqual.matches(loaded.schedule, expected.schedule),
+              EventDetailsEqualForUndo.matches(loaded.content, expected.content)
+        else { return nil }
+        return loaded
     }
 
     private func replayUndoEntry(_ entry: UndoHistoryEntry) async {
@@ -334,7 +340,6 @@ extension NativeCalendarRootModel {
     }
 
     func replaceEvent(with event: Event, scheduleBaseline: Event? = nil) async {
-        if Task.isCancelled { return }
         guard case .details(let details) = event.content else { return }
         let reference = scheduleBaseline ?? loadedEvents.first { $0.id == event.id }
         let scheduleUnchanged =

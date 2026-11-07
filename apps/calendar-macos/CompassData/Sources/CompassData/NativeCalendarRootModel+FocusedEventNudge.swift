@@ -84,8 +84,7 @@ extension NativeCalendarRootModel {
         focusedEventNudgePersistTask = Task { [weak self] in
             await predecessor?.value
             guard let self else { return }
-            guard !Task.isCancelled,
-                revision == self.sessionRevision,
+            guard revision == self.sessionRevision,
                 persistSerial == self.focusedEventNudgePersistSerial
             else { return }
             await self.replaceEvent(with: nudged, scheduleBaseline: baseline)
@@ -96,12 +95,12 @@ extension NativeCalendarRootModel {
         return true
     }
 
-    /// Undoes must not validate against stale repository rows while a nudge write is still queued.
-    func awaitOrCancelPendingFocusedEventNudgeForUndo() async {
-        focusedEventNudgePersistSerial += 1
-        let pending = focusedEventNudgePersistTask
-        focusedEventNudgePersistTask = nil
-        pending?.cancel()
+    /// Undo must run after the in-flight nudge replace (and its server round-trip) so inverse order stays coherent.
+    func awaitFocusedEventNudgePersistenceBeforeUndo() async {
+        await focusedEventNudgePersistTask?.value
+        while eventsStore.inFlightMutations > 0 {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
     }
 
     /// Lets unit tests wait for async replace without reaching into internal task state.
