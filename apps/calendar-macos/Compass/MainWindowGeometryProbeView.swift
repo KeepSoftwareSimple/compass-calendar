@@ -37,9 +37,11 @@ final class MainWindowGeometryProbeView: AccessibilityProbeView {
             + "fitsScreen=\(fitsScreen ? 1 : 0);achievedTarget=\(achievedTarget ? 1 : 0);"
             + "onScreen=\(onScreen ? 1 : 0)"
         setAccessibilityValue(payload)
+        window.setAccessibilityValue(payload)
         frame = NSRect(x: 0, y: 0, width: 1, height: 1)
         syncAccessibilityFrame()
-        NSAccessibility.post(element: self, notification: .valueChanged)
+        // Window mirror: XCTest reads 1440×960 policy without descending the SwiftUI tree.
+        NSAccessibility.post(element: window, notification: .valueChanged)
         WideViewportUITestTrace.record(
             "geometry_probe_published",
             fields: [
@@ -53,14 +55,10 @@ final class MainWindowGeometryProbeView: AccessibilityProbeView {
 
 @MainActor
 enum MainWindowGeometryProbe {
-    private static weak var probe: MainWindowGeometryProbeView?
-
     @MainActor
     static func publish(target: NSSize, on window: NSWindow?) {
-        guard UITestLaunchPolicy.meetingLinkWideViewport, let window, let host = window.contentView else { return }
-        probe = AccessibilityProbeView.attach(existing: probe, to: host) {
-            MainWindowGeometryProbeView(frame: .zero)
-        }
-        probe?.publish(target: target, on: window)
+        guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
+        let view = MainWindowGeometryProbeView(frame: .zero)
+        view.publish(target: target, on: window)
     }
 }

@@ -140,33 +140,29 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             guard let self, !self.model.isEventFormVisible else { return }
             self.view.window?.makeFirstResponder(nil)
         }
-        let attachAccessibilityProbes = { [weak self] in
-            guard let self, let window = self.view.window else { return }
-            GridFocusAccessibilityProbe.attach(to: window)
-            GridFocusAccessibilityProbe.publish(label: self.model.gridFocusAccessibilityLabel)
-            NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(
-                self.model.gridFocusAccessibilityLabel,
-                on: window
-            )
-            EventFormAccessibilityProbe.attach(to: window)
-            EventFormAccessibilityProbe.publish(
-                visible: self.model.isEventFormVisible,
-                title: self.model.draftStore.gridDraft?.title,
-                onTitleChanged: { [weak model] newTitle in
-                    model?.updateDraftFromForm(title: newTitle)
-                }
-            )
-            NativeOverlayProbes.statusToast.attach(to: window)
-            NativeOverlayProbes.shortcutsLegend.attach(to: window)
-            EventJumpChipsAccessibilityProbe.attach(to: window)
-            EventJumpChipsAccessibilityProbe.publish(hints: self.model.timeGridState.eventJumpHints)
-        }
         if UITestLaunchPolicy.meetingLinkWideViewport {
-            WideViewportUITestTrace.record("wide_probe_attach_deferred")
-            DispatchQueue.main.async(execute: attachAccessibilityProbes)
-        } else {
-            attachAccessibilityProbes()
+            WideViewportUITestTrace.record("wide_probe_attach_skipped_viewDidAppear")
+            return
         }
+        guard let window = view.window else { return }
+        GridFocusAccessibilityProbe.attach(to: window)
+        GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
+        NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(
+            model.gridFocusAccessibilityLabel,
+            on: window
+        )
+        EventFormAccessibilityProbe.attach(to: window)
+        EventFormAccessibilityProbe.publish(
+            visible: model.isEventFormVisible,
+            title: model.draftStore.gridDraft?.title,
+            onTitleChanged: { [weak model] newTitle in
+                model?.updateDraftFromForm(title: newTitle)
+            }
+        )
+        NativeOverlayProbes.statusToast.attach(to: window)
+        NativeOverlayProbes.shortcutsLegend.attach(to: window)
+        EventJumpChipsAccessibilityProbe.attach(to: window)
+        EventJumpChipsAccessibilityProbe.publish(hints: model.timeGridState.eventJumpHints)
     }
 
     /// Attaches to whichever window XCUITest is driving, then mirrors the
