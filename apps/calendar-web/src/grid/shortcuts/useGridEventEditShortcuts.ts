@@ -471,6 +471,7 @@ export function useGridEventEditShortcuts({
           event._id!,
           nextEdge,
           describeEdgeDate(nudgedEvent, nextEdge),
+          Boolean(nudgedEvent.isAllDay),
         );
         afterNudge?.(nudgedEvent);
       },
@@ -642,7 +643,11 @@ export function useGridEventEditShortcuts({
     }
 
     claimShortcut(keyboardEvent);
-    edgeFocusActions.cycle(event._id, forward ? "forward" : "backward");
+    edgeFocusActions.cycle(
+      event._id,
+      forward ? "forward" : "backward",
+      Boolean(event.isAllDay),
+    );
   };
 
   const onEscape = () => {

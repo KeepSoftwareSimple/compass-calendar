@@ -428,11 +428,23 @@ extension NativeCalendarRootModel {
 
     private func cycleFocusedEdge(forward: Bool) {
         guard let eventId = focusStore.focusedEventId else { return }
+        let isAllDay =
+            focusLayoutCards.first(where: { $0.eventId == eventId.rawValue })?.isAllDay ?? false
         focusStore.cycleEdge(
             for: eventId,
-            direction: forward ? .forward : .backward
+            direction: forward ? .forward : .backward,
+            isAllDay: isAllDay
         )
         applyFocusPresentation()
+    }
+
+    public var edgeFocusStatusText: String? {
+        guard !focusStore.edgeAnnouncement.isEmpty else { return nil }
+        return EdgeFocusHint.statusText(
+            edge: focusStore.edge,
+            isAllDay: focusStore.edgeFocusIsAllDay,
+            announcement: focusStore.edgeAnnouncement
+        )
     }
 
     func focusEvent(eventId: String) {
