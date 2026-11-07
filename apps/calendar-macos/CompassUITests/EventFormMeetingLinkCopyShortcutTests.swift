@@ -48,6 +48,10 @@ final class EventFormMeetingLinkCopyShortcutTests: XCTestCase {
         XCTAssertTrue(lKeycap.exists, "The taught L keycap must mirror web l-icon")
         XCTAssertGreaterThan(lKeycap.frame.height, 0)
         XCTAssertTrue(viewport.contains(lKeycap.frame))
+        MeetingLinkViewportXCUITestSupport.assertVisibleInWindow(namedConference, window: window, label: "Meeting link")
+        MeetingLinkViewportXCUITestSupport.assertVisibleInWindow(copyByLabel, window: window, label: "Copy control")
+        MeetingLinkViewportXCUITestSupport.assertVisibleInWindow(keycaps, window: window, label: "Shortcut keycaps")
+        MeetingLinkViewportXCUITestSupport.assertVisibleInWindow(lKeycap, window: window, label: "L keycap")
 
         let evidence = XCTAttachment(screenshot: window.screenshot())
         evidence.name = "Meeting link label, copy action and visible shortcut hints"
@@ -76,6 +80,24 @@ final class EventFormMeetingLinkCopyShortcutTests: XCTestCase {
         let window = app.windows["Compass"]
         let form = window.descendants(matching: .any)["compass-event-form"]
         XCTAssertTrue(form.waitForExistence(timeout: 12))
+
+        let geometry = window.descendants(matching: .any)["compass-native-main-window-geometry"]
+        XCTAssertTrue(geometry.waitForExistence(timeout: 8))
+        let rawValue = geometry.value as? String ?? ""
+        guard let reading = MeetingLinkViewportXCUITestSupport.parseGeometryProbe(rawValue) else {
+            XCTFail("Unparseable geometry probe: \(rawValue)")
+            return
+        }
+        XCTAssertEqual(reading.targetWidth, 1440)
+        XCTAssertEqual(reading.targetHeight, 960)
+        XCTAssertTrue(
+            reading.fitsScreen,
+            "Runner screen \(reading.screenWidth)×\(reading.screenHeight) cannot host 1440×960; wide viewport parity is not asserted on this host.")
+        XCTAssertTrue(
+            reading.achievedTarget,
+            "MeetingLinkWideViewportPolicy must achieve 1440×960 content (got \(reading.achievedWidth)×\(reading.achievedHeight)).")
+        XCTAssertTrue(reading.onScreen, "Main window must sit fully inside the visible screen frame.")
+
         window.typeKey("=", modifierFlags: [.command])
         let conference = form.descendants(matching: .any)["compass-event-form-conference"]
         for _ in 0 ..< 4 where !conference.waitForExistence(timeout: 1) {
@@ -83,14 +105,36 @@ final class EventFormMeetingLinkCopyShortcutTests: XCTestCase {
         }
         XCTAssertTrue(conference.waitForExistence(timeout: 4))
         let namedConference = form.links["Google Meet"]
-        let viewport = form.scrollViews.firstMatch.frame
-        XCTAssertTrue(viewport.contains(namedConference.frame))
+        XCTAssertTrue(namedConference.waitForExistence(timeout: 4))
+        XCTAssertGreaterThan(namedConference.frame.width, 0)
+        XCTAssertGreaterThan(namedConference.frame.height, 0)
+        let copyByLabel = form.buttons["copy meeting link"]
+        XCTAssertTrue(copyByLabel.waitForExistence(timeout: 4))
         let keycaps = form.descendants(matching: .any)["compass-event-form-meeting-link-copy-keycaps"]
         XCTAssertTrue(keycaps.waitForExistence(timeout: 4))
-        XCTAssertTrue(viewport.contains(keycaps.frame))
         let lKeycap = form.descendants(matching: .any)["compass-event-form-meeting-link-keycap-l"]
-        XCTAssertTrue(lKeycap.exists)
+        XCTAssertTrue(lKeycap.waitForExistence(timeout: 4))
+
+        let viewport = form.scrollViews.firstMatch.frame
+        XCTAssertTrue(viewport.contains(namedConference.frame))
+        XCTAssertTrue(viewport.contains(keycaps.frame))
         XCTAssertTrue(viewport.contains(lKeycap.frame))
+
+        MeetingLinkViewportXCUITestSupport.attachGeometryEvidence(
+            self,
+            reading: reading,
+            window: window,
+            elements: [
+                ("link", namedConference),
+                ("copy", copyByLabel),
+                ("keycaps", keycaps),
+                ("l-keycap", lKeycap),
+            ])
+        MeetingLinkViewportXCUITestSupport.assertVisibleInWindow(namedConference, window: window, label: "Meeting link")
+        MeetingLinkViewportXCUITestSupport.assertVisibleInWindow(copyByLabel, window: window, label: "Copy control")
+        MeetingLinkViewportXCUITestSupport.assertVisibleInWindow(keycaps, window: window, label: "Shortcut keycaps")
+        MeetingLinkViewportXCUITestSupport.assertVisibleInWindow(lKeycap, window: window, label: "L keycap")
+
         let evidence = XCTAttachment(screenshot: window.screenshot())
         evidence.name = "Meeting link and copy keycaps at 1440×960"
         evidence.lifetime = .keepAlways
