@@ -15,6 +15,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             isAllDay: false
         )
 
+        XCTAssertNotNil(model.focusedEvent(), "fixture must load event before router nudge")
         let router = try makeGridRouter(model: model)
         XCTAssertTrue(router.shiftArrow(.down))
 
@@ -39,6 +40,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing start time",
             isAllDay: true
         )
+        XCTAssertNotNil(model.focusedEvent(), "fixture must load event before router nudge")
         let router = try makeGridRouter(model: model)
         XCTAssertTrue(router.shiftArrow(.right))
         await assertFinishedNudgePersistence(model)
@@ -62,6 +64,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             announcement: "Editing end time",
             isAllDay: false
         )
+        XCTAssertNotNil(model.focusedEvent(), "fixture must load event before router nudge")
         let router = try makeGridRouter(model: model)
         XCTAssertTrue(router.shiftArrow(.up))
         await assertFinishedNudgePersistence(model)
@@ -125,6 +128,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         textView.string = "typing"
         window.contentView?.addSubview(textView)
         window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         window.makeFirstResponder(textView)
         XCTAssertTrue((window.firstResponder as? NSTextView)?.isEditable == true)
 
@@ -241,7 +245,16 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             timeZone: "UTC"
         )
         try environment.calendarRepository.upsert(calendars: [calendar])
-        try environment.localEventRepository.put(.init(id: sample.id, event: sample, isDemo: false))
+        let event = Event(
+            calendarId: sample.calendarId,
+            content: sample.content,
+            createdAt: sample.createdAt,
+            id: sample.id,
+            recurrence: sample.recurrence,
+            schedule: sample.schedule,
+            updatedAt: sample.updatedAt
+        )
+        try environment.localEventRepository.put(.init(id: event.id, event: event, isDemo: false))
         let previousTimeZone = EffectiveTimeZone.identifier
         addTeardownBlock { EffectiveTimeZone.identifier = previousTimeZone }
         let model = NativeCalendarRootModel(environment: environment)
@@ -253,11 +266,14 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         model.authStore.closeModal()
         await model.bootstrapLocalEventsForTests()
         if canWrite {
-            XCTAssertFalse(model.isReadOnly(event: sample))
+            XCTAssertFalse(model.isReadOnly(event: event))
         }
-        model.updateContentTrackWidth(800)
-        model.focusGridEvent(eventId: sample.id.rawValue)
-        return (model, environment, sample)
+        XCTAssertTrue(
+            model.loadedEvents.contains { $0.id == event.id },
+            "bootstrap must load local event into model"
+        )
+        model.focusEvent(eventId: event.id.rawValue)
+        return (model, environment, event)
     }
 }
 

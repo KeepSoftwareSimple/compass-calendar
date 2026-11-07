@@ -441,6 +441,10 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
+            return attemptShiftArrowEdgeNudge(keyEvent)
+        }
+
         if modHold.handleKeyDown(keyEvent) {
             return true
         }
@@ -459,9 +463,6 @@ final class NativeGridKeyboardRouter {
         syncEditSequenceFieldGating()
         if let id = dispatcher.dispatch(keyEvent) {
             model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
-            if id == .editMoveEdge {
-                return attemptShiftArrowEdgeNudge(keyEvent)
-            }
             performShortcut(id)
             if viewSwitchIds.contains(id) {
                 return false
