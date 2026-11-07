@@ -143,23 +143,12 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         try await localFixture(sample: try Self.decodeTimedEvent(id: "router-local-event"), canWrite: canWrite)
     }
 
-    func testRouterIgnoresShiftArrowWhenEditableTextViewIsFirstResponder() async throws {
+    func testRouterIgnoresShiftArrowWhenEventFormIsOpen() async throws {
         _ = NSApplication.shared
         let (model, environment, original) = try await localTimedFixture()
         model.openKeyboardEditForFocusedEvent()
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled], backing: .buffered, defer: false)
-        addTeardownBlock {
-            window.orderOut(nil)
-            NSApp.keyWindow?.makeFirstResponder(nil)
-        }
-        let textView = NSTextView(frame: window.contentView!.bounds)
-        textView.isEditable = true
-        textView.string = "typing"
-        window.contentView?.addSubview(textView)
-        window.makeKeyAndOrderFront(nil)
-        window.makeFirstResponder(textView)
-        XCTAssertTrue((window.firstResponder as? NSTextView)?.isEditable == true)
-
+        model.openEventFormForCurrentDraft()
+        XCTAssertTrue(model.isEventFormVisible)
         model.focusStore.setEdge(
             eventId: original.id,
             edge: .startDate,
@@ -217,6 +206,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         try environment.calendarRepository.upsert(calendars: [calendar])
         try environment.localEventRepository.put(.init(id: sample.id, event: sample, isDemo: false))
+        let previousTimeZone = EffectiveTimeZone.identifier
+        addTeardownBlock { EffectiveTimeZone.identifier = previousTimeZone }
         let model = NativeCalendarRootModel(environment: environment)
         model.viewStore.setPinnedTimeZone("UTC")
         model.viewStore.anchorDate = try XCTUnwrap(
@@ -225,6 +216,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         await model.start()
         model.authStore.closeModal()
         await model.bootstrapLocalEventsForTests()
+        XCTAssertFalse(model.isReadOnly(event: sample))
         model.updateContentTrackWidth(800)
         model.focusGridEvent(eventId: sample.id.rawValue)
         return (model, environment, sample)

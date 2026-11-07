@@ -426,10 +426,6 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if isEditableNonDescriptionTextInputFocused() {
-            return false
-        }
-
         if handleDraftKeys(keyEvent) {
             return true
         }
@@ -456,6 +452,9 @@ final class NativeGridKeyboardRouter {
         syncEditSequenceFieldGating()
         if let id = dispatcher.dispatch(keyEvent) {
             model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
+            if id == .editMoveEdge {
+                return false
+            }
             performShortcut(id)
             if viewSwitchIds.contains(id) {
                 return false
