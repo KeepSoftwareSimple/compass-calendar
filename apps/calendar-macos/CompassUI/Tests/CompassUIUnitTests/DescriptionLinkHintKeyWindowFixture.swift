@@ -33,14 +33,16 @@ enum DescriptionLinkHintKeyWindowFixture {
         window.makeMain()
         window.orderFrontRegardless()
         let deadline = Date().addingTimeInterval(2.0)
-        while Date() < deadline {
-            if window.isKeyWindow || NSApp.keyWindow === window { break }
+        while Date() < deadline, NSApp.keyWindow !== window {
+            window.makeKeyAndOrderFront(nil)
             RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
         }
-        XCTAssertTrue(
-            window.isKeyWindow || NSApp.keyWindow === window,
-            "Test window must be key for linkDigitHintsActiveInKeyWindow()",
-            file: (file), line: line
+        XCTAssertIdentical(
+            NSApp.keyWindow,
+            window,
+            "NSApp.keyWindow must own the description fixture (matches router focus guards)",
+            file: (file),
+            line: line
         )
     }
 
