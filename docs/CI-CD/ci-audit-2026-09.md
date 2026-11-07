@@ -72,7 +72,7 @@ while sitting in `apt-get update`.
 
 | Step | p50 | p95 |
 |---|---|---|
-| Initialize containers (pull `mcr.microsoft.com/playwright:v1.60.0-noble`) | 26s | 37s |
+| Initialize containers (pull `mcr.microsoft.com/playwright:v1.64.1-noble`) | 26s | 37s |
 | Check out repository | 1s | 2s |
 | Install Bun setup prerequisites (`apt-get update && apt-get install unzip`) | 6s | 47s |
 | Set up Node.js (toolcache hit, no download) | 1s | 4s |

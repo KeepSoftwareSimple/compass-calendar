@@ -124,7 +124,7 @@ struct EventFormCompactDateField: View {
 
     private var showsArrowDownHint: Bool { isFocused && !showsCalendar }
 
-    /// Web `EventFormCalendarPopoverHints` in the calendar header.
+    /// Web event form date picker: shortcut hints appear in the sidebar status bar while the grid is open.
     private var calendarKeyHints: some View {
         HStack(spacing: 4) {
             ShortcutHintChip(label: KeycapGlyphs.display(["ArrowUp"]))

@@ -44,26 +44,3 @@ export function EventFormHintKeys({
     </>
   );
 }
-
-/** Compact keycap row for the event-form date popover header. */
-export function EventFormCalendarPopoverHints() {
-  return (
-    <span
-      data-testid="event-form-calendar-hint"
-      className="flex pointer-coarse:hidden max-w-full flex-wrap items-center justify-end gap-x-1 gap-y-0.5"
-    >
-      <EventFormHintKeys
-        keys={["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]}
-        label="Arrow keys move in the calendar"
-      />
-      <span aria-hidden className="text-text-muted">
-        ·
-      </span>
-      <EventFormHintKeys keys="Enter" label="Enter selects the day" />
-      <span aria-hidden className="text-text-muted">
-        ·
-      </span>
-      <EventFormHintKeys keys="Esc" label="Escape closes the calendar" />
-    </span>
-  );
-}

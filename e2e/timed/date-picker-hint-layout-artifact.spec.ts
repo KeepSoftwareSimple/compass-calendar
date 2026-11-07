@@ -1,60 +1,52 @@
 import { expect, test } from "@playwright/test";
 import {
+  ensureSidebarOpen,
   openTimedEventFormWithKeyboard,
   prepareTimedCalendarPage,
 } from "../utils/event-test-utils";
 
-async function captureOpenPicker(page: import("@playwright/test").Page) {
+async function captureSidebarDatePickerHint(
+  page: import("@playwright/test").Page,
+) {
   const startDate = page.locator('input[title="Pick Start Date"]');
   await startDate.focus();
   await page.keyboard.press("ArrowDown");
   await expect(page.locator(".react-datepicker")).toBeVisible();
-  await expect(page.getByTestId("event-form-calendar-hint")).toBeVisible();
+
+  const contextual = page
+    .locator("#sidebar")
+    .getByTestId("date-picker-contextual-hint");
+  await expect(contextual).toBeVisible();
+  await expect(contextual).toContainText("PageDown");
+
+  await expect(page.getByTestId("event-form-calendar-hint")).toHaveCount(0);
 }
 
-test("date picker keycap hint fits at desktop width", async ({ page }) => {
+test("artifact: date picker keyboard hints live in the sidebar, not in the popover", {
+  tag: "@artifact",
+}, async ({ page }) => {
   await prepareTimedCalendarPage(page);
+  await ensureSidebarOpen(page);
   await openTimedEventFormWithKeyboard(page);
-  await captureOpenPicker(page);
-
-  const hint = page.getByTestId("event-form-calendar-hint");
-  const popper = page.locator(".react-datepicker-popper");
-  const hintBox = await hint.boundingBox();
-  const popperBox = await popper.boundingBox();
-  expect(hintBox).not.toBeNull();
-  expect(popperBox).not.toBeNull();
-  if (hintBox && popperBox) {
-    expect(hintBox.x + hintBox.width).toBeLessThanOrEqual(
-      popperBox.x + popperBox.width + 1,
-    );
-  }
+  await captureSidebarDatePickerHint(page);
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/after-date-picker-keycap-hint-desktop.png",
+    path: "/opt/cursor/artifacts/after-date-picker-sidebar-hint-desktop.png",
     fullPage: false,
   });
 });
 
-test("date picker keycap hint fits at 360px width", async ({ page }) => {
+test("artifact: sidebar date picker hints stay visible at narrow width", {
+  tag: "@artifact",
+}, async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await prepareTimedCalendarPage(page);
+  await ensureSidebarOpen(page);
   await openTimedEventFormWithKeyboard(page);
-  await captureOpenPicker(page);
-
-  const hint = page.getByTestId("event-form-calendar-hint");
-  const popper = page.locator(".react-datepicker-popper");
-  const hintBox = await hint.boundingBox();
-  const popperBox = await popper.boundingBox();
-  expect(hintBox).not.toBeNull();
-  expect(popperBox).not.toBeNull();
-  if (hintBox && popperBox) {
-    expect(hintBox.x + hintBox.width).toBeLessThanOrEqual(
-      popperBox.x + popperBox.width + 1,
-    );
-  }
+  await captureSidebarDatePickerHint(page);
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/after-date-picker-keycap-hint-360.png",
+    path: "/opt/cursor/artifacts/after-date-picker-sidebar-hint-360.png",
     fullPage: false,
   });
 });

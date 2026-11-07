@@ -84,6 +84,7 @@ import {
   initialEventJumpState,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { resetDatePickerHintStoreForTests } from "@web/shortcuts/tips/date-picker-hint.store";
 import { resetEventFormFocusStoreForTests } from "@web/shortcuts/tips/event-form-focus.store";
 import { resetHintShortcutCelebrationTimerForTests } from "@web/shortcuts/tips/hint-shortcut-celebration.store";
 import { resetShortcutUsageProfileStoreForTests } from "@web/shortcuts/tips/shortcut-personalization.storage";
@@ -152,6 +153,7 @@ const storeResets: StoreReset[] = [
   () => useCardUpdateStore.setState(initialCardUpdateState, true),
   resetShortcutHintProgressStoreForTests,
   resetHintShortcutCelebrationTimerForTests,
+  resetDatePickerHintStoreForTests,
   resetVisibleShortcutHintStoreForTests,
   resetShortcutTipsMutedStoreForTests,
   resetEventFormFocusStoreForTests,
