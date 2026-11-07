@@ -12,7 +12,7 @@ final class DescriptionLinkDigitKeyboardRouterTests: XCTestCase {
     override func setUp() async throws {
         openedURL = nil
         DescriptionLinkKeyboard.openURLForTests = { [weak self] url in self?.openedURL = url.absoluteString }
-        _ = NSApplication.shared
+        DescriptionLinkHintKeyWindowFixture.configureApplicationForWindowTests()
     }
 
     override func tearDown() async throws {

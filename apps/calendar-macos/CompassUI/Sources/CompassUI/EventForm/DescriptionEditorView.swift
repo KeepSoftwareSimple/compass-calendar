@@ -252,10 +252,7 @@ public final class DescriptionTextView: NSTextView {
 
     /// True when description link digit overlays are active on the key window (web keycap 1…9).
     static func linkDigitHintsActiveInKeyWindow() -> Bool {
-        guard let editor = findInKeyWindow(),
-              let scroll = editor.enclosingScrollView,
-              let container = scroll.superview as? DescriptionEditorContainerView
-        else { return false }
+        guard let container = descriptionEditorContainerInKeyWindow() else { return false }
         return container.descriptionLinkDigitHintsVisible
     }
 
@@ -346,7 +343,34 @@ public final class DescriptionTextView: NSTextView {
     }
 
     static func findInKeyWindow() -> DescriptionTextView? {
-        find(in: NSApp.keyWindow?.contentView)
+        for root in keyWindowContentRoots() {
+            if let editor = find(in: root) { return editor }
+        }
+        return nil
+    }
+
+    static func descriptionEditorContainerInKeyWindow() -> DescriptionEditorContainerView? {
+        for root in keyWindowContentRoots() {
+            guard let editor = find(in: root),
+                  let scroll = editor.enclosingScrollView,
+                  let container = scroll.superview as? DescriptionEditorContainerView
+            else { continue }
+            return container
+        }
+        return nil
+    }
+
+    private static func keyWindowContentRoots() -> [NSView] {
+        var roots: [NSView] = []
+        if let content = NSApp.keyWindow?.contentView {
+            roots.append(content)
+        }
+        for window in NSApp.windows where window.isKeyWindow, let content = window.contentView {
+            if !roots.contains(where: { $0 === content }) {
+                roots.append(content)
+            }
+        }
+        return roots
     }
 
     private static func find(in root: NSView?) -> DescriptionTextView? {
