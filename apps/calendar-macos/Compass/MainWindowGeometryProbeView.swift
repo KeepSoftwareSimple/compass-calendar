@@ -12,19 +12,19 @@ final class MainWindowGeometryProbeView: AccessibilityProbeView {
         }
         let achieved = window.contentView?.frame.size ?? .zero
         let visible = window.screen?.visibleFrame ?? .zero
-        let frame = window.frame
+        let windowFrame = window.frame
         let targetFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
         let fitsScreen = targetFrame.width <= visible.width + 2 && targetFrame.height <= visible.height + 2
         let achievedTarget =
             abs(achieved.width - target.width) <= 2 && abs(achieved.height - target.height) <= 2
         let onScreen =
-            visible.intersects(frame)
-            && frame.width > 0
-            && frame.height > 0
-            && frame.minX >= visible.minX - 2
-            && frame.maxX <= visible.maxX + 2
-            && frame.minY >= visible.minY - 2
-            && frame.maxY <= visible.maxY + 2
+            visible.intersects(windowFrame)
+            && windowFrame.width > 0
+            && windowFrame.height > 0
+            && windowFrame.minX >= visible.minX - 2
+            && windowFrame.maxX <= visible.maxX + 2
+            && windowFrame.minY >= visible.minY - 2
+            && windowFrame.maxY <= visible.maxY + 2
         isHidden = false
         setAccessibilityElement(true)
         setAccessibilityHidden(false)
