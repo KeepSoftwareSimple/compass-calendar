@@ -91,7 +91,7 @@ final class EventFormMeetingLinkCopyShortcutTests: XCTestCase {
         let lKeycap = form.descendants(matching: .any)["compass-event-form-meeting-link-keycap-l"]
         XCTAssertTrue(lKeycap.exists)
         XCTAssertTrue(viewport.contains(lKeycap.frame))
-        XCTAssertGreaterThanOrEqual(window.frame.width, 1440)
+        XCTAssertGreaterThanOrEqual(form.frame.width, 360, "Wide viewport launch must leave a usable event form width")
         let evidence = XCTAttachment(screenshot: window.screenshot())
         evidence.name = "Meeting link and copy keycaps at 1440×960"
         evidence.lifetime = .keepAlways
