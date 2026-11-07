@@ -59,6 +59,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if UITestLaunchPolicy.isParityCapture {
             // Parity XCUITest must match web 1280×820; never restore a narrow autosaved frame.
             ParityCaptureWindowPolicy.scheduleReapply(to: window)
+        } else if UITestLaunchPolicy.meetingLinkWideViewport {
+            MeetingLinkWideViewportPolicy.scheduleReapply(to: window)
         } else {
             // Installing the content controller resizes the window, so restore the saved frame afterwards.
             window.setFrameUsingName(Self.windowFrameName)
@@ -85,8 +87,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func makeMainWindow() -> NSWindow {
+        let contentSize = Self.defaultMainWindowContentSize
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
+            contentRect: NSRect(x: 0, y: 0, width: contentSize.width, height: contentSize.height),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false)
@@ -98,10 +101,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         // Window > Compass reopens it, so AppKit's own window list would repeat it.
         window.isExcludedFromWindowsMenu = true
-        window.setContentSize(NSSize(width: 1280, height: 820))
+        window.setContentSize(contentSize)
         window.center()
         window.makeKeyAndOrderFront(nil)
         return window
+    }
+
+    private static var defaultMainWindowContentSize: NSSize {
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            return NSSize(width: 1440, height: 960)
+        }
+        return NSSize(width: 1280, height: 820)
     }
 
     private func installRootContent(on window: NSWindow) {
@@ -116,6 +126,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             webAuthPresenter: presenter,
             catalogController: catalog
         ) else {
+            if UITestLaunchPolicy.meetingLinkWideViewport {
+                window.setAccessibilityValue("wide-error=native-model-init-failed")
+                NSAccessibility.post(element: window, notification: .valueChanged)
+            }
             return
         }
         model.onDesktopRestartToUpdate = { [weak self] in
@@ -128,6 +142,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         nativeRootController = nativeController
         window.contentViewController = nativeController
         NativeAccessibilityProbes.prepareNativeRootWindowForXCUITest(window)
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            MeetingLinkWideViewportPolicy.scheduleReapply(to: window)
+        }
         mainMenuController?.nativeRootController = nativeController
         if let quickAddCoordinator {
             nativeController.attachQuickAddRouter(quickAddCoordinator)

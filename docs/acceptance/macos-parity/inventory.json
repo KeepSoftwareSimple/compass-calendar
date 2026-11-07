@@ -775,10 +775,10 @@
       "native": [
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
-      "status": "missing",
-      "evidence": "",
-      "reason": "Native test name mentions keycaps but asserts only copy button existence, toast and pasteboard; no hint existence or viewport assertion.",
-      "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
+      "status": "passing",
+      "evidence": "Head dd38a56ca run42364873057 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed with full-bounds scroll+window containment and hittable keycaps.",
+      "reason": "Product chips unchanged; XCTest probes under -COMPASS_UI_TEST only.",
+      "review": "2026-11-07 agent: no clipboard or layout product change in this row."
     },
     {
       "id": "meeting-link-name",
@@ -801,12 +801,13 @@
         "e2e/timed/event-form-meeting-link-keycaps.spec.ts#shows meeting-link copy keycaps and copies with Mod+Shift+L"
       ],
       "native": [
+        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkWideViewportTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
       "status": "unreviewed",
-      "evidence": "Native focus test passed strict40981800450 log11008; geometry checks in both themes.",
-      "reason": "Native test asserts link geometry but does not set the web test equivalent wide window size. Window-size equivalence still needs review.",
-      "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
+      "evidence": "Single Intel green dd38a56ca run42364873057 183.371s (±2 pt, full bounds). Recurrent macos-meeting-link-wide failures on same source: run42367020444 (034802f9e inventory), run42371044750 (69180c3e6), run42374326933 (cadd3468a); root cause bounded to demo-layout/AX snapshot flake on macos-26-intel, not arm64 shard.",
+      "reason": "Wide leg mandatory on macos-26-intel; one green does not prove stability. Latest head targets window-value geometry mirror without child-tree query first.",
+      "review": "2026-11-07 agent: parent review before queue; do not treat inventory pass from dd38a56ca alone as head green."
     },
     {
       "id": "booking-description-open",

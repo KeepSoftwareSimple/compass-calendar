@@ -164,6 +164,48 @@ jobs:
           path: apps/calendar-macos/build/Compass.zip
           retention-days: 14
 
+  # Web meeting-link viewport needs 1440×960; arm64 macos-latest guests are often 1024×677.
+  # Intel images may expose VMware resolutionSet (actions/runner-images#8606).
+  macos-meeting-link-wide:
+    needs: [changes, macos-build, macos-ui-shard]
+    if: >-
+      always() && needs.changes.outputs.macos == 'true'
+      && needs.macos-build.result == 'success'
+    runs-on: macos-26-intel
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/calendar-macos
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Render app icon
+        run: bash ../../.github/scripts/render-macos-icon.sh
+
+      # DerivedData from macos-build (arm64 macos-latest) must not run on Intel; rebuild here.
+      - name: Build for testing on Intel
+        env:
+          SKIP_COMPASS_KIT_TESTS: "1"
+        run: bash ../../.github/scripts/test-macos-build-for-testing.sh
+
+      - name: Configure guest display for wide viewport
+        run: bash ../../.github/scripts/macos-ci-display-setup.sh
+
+      - name: Run wide meeting-link viewport XCTest
+        run: bash ../../.github/scripts/macos-meeting-link-wide-ui-test.sh
+
+      - name: Upload wide geometry result bundle
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: compass-macos-meeting-link-wide-xcresult
+          path: apps/calendar-macos/build/Compass-meeting-link-wide.xcresult
+          retention-days: 7
+
   # Four parallel legs over CompassUITests (hand-balanced in macos-ui-shards.json).
   # Each leg restores the same DerivedData cache as macos-build and runs
   # test-without-building with -only-testing filters. Critical path is the
@@ -200,6 +242,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-xcode-sparkle-v2-
             ${{ runner.os }}-xcode-
+
+      - name: Log display geometry (shard 2 probe)
+        if: matrix.shard == 2
+        env:
+          MACOS_DISPLAY_PROBE_ONLY: 1
+        run: bash ../../.github/scripts/macos-ci-display-setup.sh
 
       - name: Run UI test shard
         env:
@@ -452,7 +500,7 @@ jobs:
   # `unit-leg`. `changes` must succeed too: a failed filter skips `build`,
   # and a skipped build alone would read as a pass.
   macos:
-    needs: [changes, macos-build, macos-ui-shard, swift-packages, strict, strict-web]
+    needs: [changes, macos-build, macos-ui-shard, macos-meeting-link-wide, swift-packages, strict, strict-web]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -462,17 +510,18 @@ jobs:
           CHANGES: ${{ needs.changes.result }}
           BUILD: ${{ needs.macos-build.result }}
           UI_SHARDS: ${{ needs.macos-ui-shard.result }}
+          WIDE_VIEWPORT: ${{ needs.macos-meeting-link-wide.result }}
           SWIFT_PACKAGES: ${{ needs.swift-packages.result }}
           STRICT: ${{ needs.strict.result }}
           STRICT_WEB: ${{ needs.strict-web.result }}
           STRICT_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.strict_verify }}
         run: |
-          echo "changes: ${CHANGES}, macos-build: ${BUILD}, ui-shards: ${UI_SHARDS}, swift-packages: ${SWIFT_PACKAGES}"
+          echo "changes: ${CHANGES}, macos-build: ${BUILD}, ui-shards: ${UI_SHARDS}, wide-viewport: ${WIDE_VIEWPORT}, swift-packages: ${SWIFT_PACKAGES}"
           [ "$CHANGES" = "success" ] || exit 1
           if [ "$STRICT_REQUESTED" = "true" ]; then
             [ "$STRICT" = "success" ] && [ "$STRICT_WEB" = "success" ] || exit 1
           fi
-          for leg in "$BUILD" "$UI_SHARDS" "$SWIFT_PACKAGES" "$STRICT" "$STRICT_WEB"; do
+          for leg in "$BUILD" "$UI_SHARDS" "$WIDE_VIEWPORT" "$SWIFT_PACKAGES" "$STRICT" "$STRICT_WEB"; do
             case "$leg" in
               success|skipped) ;;
               *) exit 1 ;;

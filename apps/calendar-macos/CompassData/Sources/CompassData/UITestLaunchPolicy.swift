@@ -146,4 +146,13 @@ public enum UITestLaunchPolicy {
     public static var appendDemoOccurrenceForUITest: Bool {
         ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_APPEND_DEMO_OCCURRENCE")
     }
+
+    /// Web `event-form-meeting-link-keycaps` viewport resize (1440×960 content).
+    public static var meetingLinkWideViewport: Bool {
+        meetingLinkWideViewport(arguments: ProcessInfo.processInfo.arguments)
+    }
+
+    public static func meetingLinkWideViewport(arguments: [String]) -> Bool {
+        arguments.contains("-COMPASS_UI_TEST_MEETING_LINK_WIDE_VIEWPORT")
+    }
 }

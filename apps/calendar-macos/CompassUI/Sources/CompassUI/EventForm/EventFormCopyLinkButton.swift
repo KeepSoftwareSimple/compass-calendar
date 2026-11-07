@@ -1,3 +1,4 @@
+import CompassData
 import CompassKit
 import SwiftUI
 
@@ -31,13 +32,20 @@ struct EventFormCopyLinkButton: View {
             .accessibilityIdentifier("compass-event-form-meeting-link-copy")
 
             if !shortcutKeycaps.isEmpty {
-                HStack(spacing: 4) {
+                let keycaps = HStack(spacing: 4) {
                     ForEach(shortcutKeycaps, id: \.self) { key in
                         ShortcutHintChip(label: KeycapGlyphs.display([key]))
+                            .modifier(MeetingLinkCopyKeycapProbe(token: key))
                     }
                 }
                 .opacity(isEnabled ? 0.25 : 0.15)
-                .accessibilityHidden(true)
+                if UITestLaunchPolicy.attachesAccessibilityProbes {
+                    keycaps
+                        .accessibilityElement(children: .contain)
+                        .accessibilityIdentifier("compass-event-form-meeting-link-copy-keycaps")
+                } else {
+                    keycaps.accessibilityHidden(true)
+                }
             }
         }
     }
@@ -48,6 +56,22 @@ struct EventFormCopyLinkButton: View {
         copied = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             copied = false
+        }
+    }
+}
+
+/// Web `data-testid="l-icon"`: expose keycap chips to XCUITest without VO noise.
+private struct MeetingLinkCopyKeycapProbe: ViewModifier {
+    let token: String
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if UITestLaunchPolicy.attachesAccessibilityProbes,
+            token.caseInsensitiveCompare("l") == .orderedSame
+        {
+            content.accessibilityIdentifier("compass-event-form-meeting-link-keycap-l")
+        } else {
+            content
         }
     }
 }
