@@ -60,8 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Parity XCUITest must match web 1280×820; never restore a narrow autosaved frame.
             ParityCaptureWindowPolicy.scheduleReapply(to: window)
         } else if UITestLaunchPolicy.meetingLinkWideViewport {
-            // Web meeting-link viewport uses 1440×960; never restore a narrower autosaved frame.
-            window.setContentSize(Self.defaultMainWindowContentSize)
+            MeetingLinkWideViewportPolicy.scheduleReapply(to: window)
         } else {
             // Installing the content controller resizes the window, so restore the saved frame afterwards.
             window.setFrameUsingName(Self.windowFrameName)
