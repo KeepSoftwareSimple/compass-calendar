@@ -115,9 +115,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         window.center()
         window.makeKeyAndOrderFront(nil)
-        if UITestLaunchPolicy.meetingLinkWideViewport {
-            MeetingLinkWideViewportPolicy.applyIfNeeded(to: window)
-        }
         return window
     }
 
