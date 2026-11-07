@@ -100,29 +100,33 @@ export function LifeSidebarContent({
         className="flex flex-col gap-2 text-text-muted"
         {...pageJumpAttrs("life-variation")}
       >
-        <div
-          className="flex items-center gap-1"
-          {...pageJumpChipAttrs("life-variation")}
-        >
-          <TooltipWrapper description="Previous life variation" shortcut="J">
-            <ArrowButton
-              direction="left"
-              label="Previous life variation in sidebar"
-              onClick={() => onCycleVariation(-1)}
-            />
-          </TooltipWrapper>
-          <TooltipWrapper description="Next life variation" shortcut="K">
-            <ArrowButton
-              direction="right"
-              label="Next life variation in sidebar"
-              onClick={() => onCycleVariation(1)}
-            />
-          </TooltipWrapper>
-          <h2 className="font-semibold text-text">
-            {LIFE_VARIATIONS[preferences.variation].label}
-          </h2>
+        <div className="flex w-full items-center gap-1">
+          <div
+            className="flex min-w-0 items-center gap-1"
+            {...pageJumpChipAttrs("life-variation")}
+          >
+            <TooltipWrapper description="Previous life variation" shortcut="J">
+              <ArrowButton
+                direction="left"
+                label="Previous life variation in sidebar"
+                onClick={() => onCycleVariation(-1)}
+              />
+            </TooltipWrapper>
+            <TooltipWrapper description="Next life variation" shortcut="K">
+              <ArrowButton
+                direction="right"
+                label="Next life variation in sidebar"
+                onClick={() => onCycleVariation(1)}
+              />
+            </TooltipWrapper>
+            <h2 className="font-semibold text-text">
+              {LIFE_VARIATIONS[preferences.variation].label}
+            </h2>
+          </div>
           {headerEndContent ? (
-            <div className="ml-auto flex items-center">{headerEndContent}</div>
+            <div className="ml-auto flex shrink-0 items-center">
+              {headerEndContent}
+            </div>
           ) : null}
         </div>
         <p>{getLifeVariationDescription(preferences.lifespan)}</p>

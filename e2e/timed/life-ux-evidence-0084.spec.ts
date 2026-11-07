@@ -42,6 +42,25 @@ async function openLifeSidebar(page: import("@playwright/test").Page) {
   ).toBeVisible();
 }
 
+async function expectYearCaptionMatchesCells(
+  popper: import("@playwright/test").Locator,
+) {
+  const yearTexts = await popper
+    .locator(".react-datepicker__year-text")
+    .allTextContents();
+  const years = yearTexts
+    .map((label) => Number.parseInt(label, 10))
+    .filter((y) => Number.isFinite(y));
+  expect(years.length).toBeGreaterThan(0);
+  const caption = popper.getByText(/^Years \d+ to \d+$/);
+  await expect(caption).toBeVisible();
+  const captionText = (await caption.textContent())?.trim() ?? "";
+  const match = /^Years (\d+) to (\d+)$/.exec(captionText);
+  expect(match).not.toBeNull();
+  expect(Number(match![1])).toBe(years[0]);
+  expect(Number(match![2])).toBe(years[years.length - 1]);
+}
+
 async function holdModForHints(page: import("@playwright/test").Page) {
   await page.locator("#mainSection").focus();
   await page.keyboard.down("ControlOrMeta");
@@ -93,14 +112,17 @@ test.describe("life ux evidence 0084", () => {
     });
 
     await popper.getByRole("button", { name: "Choose month and year" }).click();
-    await expect(popper.getByText("Years 1974 to 1993")).toBeVisible();
+    await expectYearCaptionMatchesCells(popper);
+    await expect(popper.getByText("Years 1981 to 2000")).toBeVisible();
     await page.screenshot({
       path: path.join(ARTIFACT_DIR, "life-datepicker-year-grid-wide.png"),
     });
     await popper.getByRole("button", { name: "Previous years" }).click();
-    await expect(popper.getByText("Years 1954 to 1973")).toBeVisible();
+    await expectYearCaptionMatchesCells(popper);
+    await expect(popper.getByText("Years 1961 to 1980")).toBeVisible();
     await popper.getByRole("button", { name: "Next years" }).click();
-    await expect(popper.getByText("Years 1974 to 1993")).toBeVisible();
+    await expectYearCaptionMatchesCells(popper);
+    await expect(popper.getByText("Years 1981 to 2000")).toBeVisible();
 
     await popper
       .locator(".react-datepicker__year-text", { hasText: "1993" })
@@ -131,6 +153,11 @@ test.describe("life ux evidence 0084", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await dismissLifeViewIntro(page);
     await openLifeSidebar(page);
+    await holdModForHints(page);
+    await page.screenshot({
+      path: path.join(ARTIFACT_DIR, "life-mod-hints-sidebar-narrow.png"),
+    });
+    await page.keyboard.up("ControlOrMeta");
     await birth.scrollIntoViewIfNeeded();
     await birth.click();
     await expect(popper).toBeVisible();
@@ -142,7 +169,7 @@ test.describe("life ux evidence 0084", () => {
       ),
     });
     await popper.getByRole("button", { name: "Choose month and year" }).click();
-    await expect(popper.getByText(/Years \d+ to \d+/)).toBeVisible();
+    await expectYearCaptionMatchesCells(popper);
     await page.screenshot({
       path: path.join(
         ARTIFACT_DIR,

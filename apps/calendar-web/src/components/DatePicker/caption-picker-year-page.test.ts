@@ -1,25 +1,40 @@
 import {
-  reactDatepickerYearRangeCaption,
-  yearPageContaining,
-  yearRangeCaption,
+  macYearRangeCaption,
+  reactDatepickerYearPageBounds,
+  shiftYearPageBounds,
+  yearRangeCaptionFromBounds,
 } from "@web/components/DatePicker/caption-picker-year-page";
 import { describe, expect, it } from "bun:test";
 
 describe("caption-picker-year-page", () => {
-  it("pages years in blocks of twenty aligned with macOS", () => {
-    expect(yearPageContaining(2026)).toEqual([
-      ...Array.from({ length: 20 }, (_, i) => 2020 + i),
-    ]);
-    expect(yearPageContaining(1993)[0]).toBe(1980);
-    expect(yearPageContaining(1993).at(-1)).toBe(1999);
+  it("matches react-datepicker 1-based twenty-year pages", () => {
+    expect(reactDatepickerYearPageBounds(1993)).toEqual({
+      start: 1981,
+      end: 2000,
+    });
+    expect(reactDatepickerYearPageBounds(2000)).toEqual({
+      start: 1981,
+      end: 2000,
+    });
+    expect(reactDatepickerYearPageBounds(2026)).toEqual({
+      start: 2021,
+      end: 2040,
+    });
   });
 
-  it("labels the visible year range in the header", () => {
-    expect(yearRangeCaption(1993)).toBe("Years 1980 to 1999");
-    expect(yearRangeCaption(2026)).toBe("Years 2020 to 2039");
+  it("labels the visible page bounds", () => {
+    expect(
+      yearRangeCaptionFromBounds(reactDatepickerYearPageBounds(1993)),
+    ).toBe("Years 1981 to 2000");
   });
 
-  it("labels react-datepicker year pages ending on the anchor year", () => {
-    expect(reactDatepickerYearRangeCaption(2000)).toBe("Years 1981 to 2000");
+  it("steps pages by one twenty-year block", () => {
+    const page = reactDatepickerYearPageBounds(1993);
+    expect(shiftYearPageBounds(page, -1)).toEqual({ start: 1961, end: 1980 });
+    expect(shiftYearPageBounds(page, 1)).toEqual({ start: 2001, end: 2020 });
+  });
+
+  it("keeps mac decade alignment separate", () => {
+    expect(macYearRangeCaption(1993)).toBe("Years 1980 to 1999");
   });
 });

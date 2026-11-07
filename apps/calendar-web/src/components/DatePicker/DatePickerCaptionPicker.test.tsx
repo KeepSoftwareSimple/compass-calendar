@@ -128,11 +128,19 @@ describe("DatePicker captionPicker", () => {
 
     await user.click(captionButton);
 
+    const visiblePickerYears = () =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          ".react-datepicker__year-text",
+        ),
+      ]
+        .map((el) => Number.parseInt(el.textContent ?? "", 10))
+        .filter((y) => Number.isFinite(y));
+
     expect(screen.getByText("Years 1981 to 2000")).toBeInTheDocument();
-    expect(screen.getByText("2000")).toBeInTheDocument();
-    expect(screen.getAllByText(/^(19|20)\d{2}$/).length).toBeGreaterThanOrEqual(
-      20,
-    );
+    expect(visiblePickerYears()).toEqual([
+      ...Array.from({ length: 20 }, (_, index) => 1981 + index),
+    ]);
 
     await user.click(screen.getByText("1995"));
 
@@ -148,6 +156,42 @@ describe("DatePicker captionPicker", () => {
 
     fireEvent.click(screen.getByText("15"));
     expect(onSelect).toHaveBeenCalled();
+  });
+
+  it("shows the same range caption as painted year cells for a distant birth year", async () => {
+    const user = userEvent.setup();
+    render(
+      <DatePicker
+        captionPicker
+        isOpen
+        maxDate={new Date(2026, 0, 1)}
+        minDate={new Date(1900, 0, 1)}
+        onCalendarClose={() => {}}
+        onChange={() => {}}
+        open
+        selected={new Date(1993, 8, 14)}
+        view="grid"
+        withTodayButton={false}
+      />,
+      { wrapper },
+    );
+
+    const visiblePickerYears = () =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          ".react-datepicker__year-text",
+        ),
+      ]
+        .map((el) => Number.parseInt(el.textContent ?? "", 10))
+        .filter((y) => Number.isFinite(y));
+
+    await user.click(
+      screen.getByRole("button", { name: "Choose month and year" }),
+    );
+    const years = visiblePickerYears();
+    expect(years[0]).toBe(1981);
+    expect(years.at(-1)).toBe(2000);
+    expect(screen.getByText("Years 1981 to 2000")).toBeInTheDocument();
   });
 
   it("updates the year-range caption when paging backward", async () => {
@@ -172,7 +216,18 @@ describe("DatePicker captionPicker", () => {
       screen.getByRole("button", { name: "Choose month and year" }),
     );
     expect(screen.getByText("Years 1981 to 2000")).toBeInTheDocument();
+    const visiblePickerYears = () =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          ".react-datepicker__year-text",
+        ),
+      ]
+        .map((el) => Number.parseInt(el.textContent ?? "", 10))
+        .filter((y) => Number.isFinite(y));
+
     await user.click(screen.getByRole("button", { name: "Previous years" }));
+    expect(visiblePickerYears()[0]).toBe(1961);
+    expect(visiblePickerYears().at(-1)).toBe(1980);
     expect(screen.getByText("Years 1961 to 1980")).toBeInTheDocument();
   });
 });

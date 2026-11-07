@@ -128,6 +128,30 @@ describe("PageJumpHintOverlay", () => {
     expect(chipsWrapper()?.getAttribute("aria-hidden")).not.toBeNull();
   });
 
+  it("anchors life-variation chips on the arrow cluster, not the full title row", () => {
+    const section = addAnchor("life-variation", { focusable: true });
+    stubRect(section, box(0, 0, 400, 200));
+    const cluster = document.createElement("div");
+    cluster.setAttribute(PAGE_JUMP_CHIP_ATTRIBUTE, "life-variation");
+    stubRect(cluster, box(20, 8, 52, 140));
+    const trail = document.createElement("div");
+    stubRect(trail, box(20, 300, 52, 396));
+    section.append(cluster, trail);
+
+    render(
+      <PageJumpHintOverlay
+        targets={[
+          { digit: "3", id: "life-variation", label: "Life variation" },
+        ]}
+        visible={true}
+      />,
+    );
+
+    const chip = chipsWrapper()?.firstElementChild as HTMLElement | undefined;
+    expect(chip?.style.left).toBe("118px");
+    expect(chip?.style.top).toBe("22px");
+  });
+
   it("anchors chips to data-page-jump-chip markers instead of the section edge", () => {
     const section = addAnchor("life-details", { focusable: true });
     stubRect(section, box(0, 0, 400, 300));

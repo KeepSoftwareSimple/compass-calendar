@@ -23,7 +23,10 @@ import { type CSSVariables } from "@web/common/styles/css.types";
 import { theme } from "@web/common/styles/theme";
 import {
   CAPTION_YEARS_PER_PAGE,
-  reactDatepickerYearRangeCaption,
+  reactDatepickerYearPageBounds,
+  shiftYearPageBounds,
+  type YearPageBounds,
+  yearRangeCaptionFromBounds,
 } from "@web/components/DatePicker/caption-picker-year-page";
 import { MonthNavButton } from "@web/components/DatePicker/MonthNavButton";
 import { ChevronLeftIcon } from "@web/components/Icons/ChevronLeftIcon";
@@ -195,13 +198,15 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     setCaptionView(next);
   }, []);
   const [captionFocusDate, setCaptionFocusDate] = useState<Date | undefined>();
-  /** react-datepicker year paging does not always move `monthDate`; track page end. */
-  const [yearPageEndYear, setYearPageEndYear] = useState<number | null>(null);
+  /** Visible year cells; react-datepicker does not move `monthDate` with paging. */
+  const [yearPageBounds, setYearPageBounds] = useState<YearPageBounds | null>(
+    null,
+  );
   useEffect(() => {
     if (isOpen) return;
     commitCaptionView("day");
     setCaptionFocusDate(undefined);
-    setYearPageEndYear(null);
+    setYearPageBounds(null);
   }, [commitCaptionView, isOpen]);
 
   useEffect(() => {
@@ -310,7 +315,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const handleCalendarClose = () => {
     commitCaptionView("day");
     setCaptionFocusDate(undefined);
-    setYearPageEndYear(null);
+    setYearPageBounds(null);
     datePickerProps.onCalendarClose?.();
   };
 
@@ -321,7 +326,12 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         ? selectedDate
         : new Date();
     setCaptionFocusDate(anchor);
-    setYearPageEndYear(dayjs(anchor).year());
+    setYearPageBounds(
+      reactDatepickerYearPageBounds(
+        dayjs(anchor).year(),
+        CAPTION_YEARS_PER_PAGE,
+      ),
+    );
     commitCaptionView("year");
   };
 
@@ -336,13 +346,12 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     } else {
       headerProps.increaseYear();
     }
-    setYearPageEndYear((current) => {
+    setYearPageBounds((current) => {
+      const anchorYear = dayjs(headerProps.monthDate).year();
       const base =
         current ??
-        (captionFocusDate
-          ? dayjs(captionFocusDate).year()
-          : dayjs(headerProps.monthDate).year());
-      return base + direction * CAPTION_YEARS_PER_PAGE;
+        reactDatepickerYearPageBounds(anchorYear, CAPTION_YEARS_PER_PAGE);
+      return shiftYearPageBounds(base, direction, CAPTION_YEARS_PER_PAGE);
     });
   };
 
@@ -446,9 +455,14 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         const selectedMonth = dayjs(monthDate).format("MMM YYYY");
         const selectedYear = dayjs(monthDate).format("YYYY");
         const currentMonth = dayjs().format("MMM YYYY");
-        const yearPageEnd = yearPageEndYear ?? dayjs(monthDate).year();
+        const visibleYearPage =
+          yearPageBounds ??
+          reactDatepickerYearPageBounds(
+            dayjs(monthDate).year(),
+            CAPTION_YEARS_PER_PAGE,
+          );
         const captionLabel = isCaptionYearView
-          ? reactDatepickerYearRangeCaption(yearPageEnd, CAPTION_YEARS_PER_PAGE)
+          ? yearRangeCaptionFromBounds(visibleYearPage)
           : isCaptionMonthView
             ? `Select month, ${selectedYear}`
             : selectedMonth;

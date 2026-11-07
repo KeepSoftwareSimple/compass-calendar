@@ -350,7 +350,7 @@ public struct SidebarMonthPicker: View {
             count: 4)
         return LazyVGrid(columns: columns, spacing: 4) {
             if captionView == .year {
-                ForEach(DatePickerCaption.yearPage(containing: yearPageYear), id: \.self) { year in
+                ForEach(DatePickerCaption.reactYearPage(containing: yearPageYear), id: \.self) { year in
                     captionCell(
                         label: String(year),
                         isSelected: year == calendar.component(.year, from: selectedDate),
