@@ -126,6 +126,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             webAuthPresenter: presenter,
             catalogController: catalog
         ) else {
+            if UITestLaunchPolicy.meetingLinkWideViewport {
+                window.setAccessibilityValue("wide-error=native-model-init-failed")
+                NSAccessibility.post(element: window, notification: .valueChanged)
+            }
             return
         }
         model.onDesktopRestartToUpdate = { [weak self] in
@@ -138,6 +142,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         nativeRootController = nativeController
         window.contentViewController = nativeController
         NativeAccessibilityProbes.prepareNativeRootWindowForXCUITest(window)
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            MeetingLinkWideViewportPolicy.scheduleReapply(to: window)
+        }
         mainMenuController?.nativeRootController = nativeController
         if let quickAddCoordinator {
             nativeController.attachQuickAddRouter(quickAddCoordinator)
