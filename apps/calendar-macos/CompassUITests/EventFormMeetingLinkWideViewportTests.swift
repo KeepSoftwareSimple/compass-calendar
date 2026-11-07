@@ -13,8 +13,8 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK", "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
         ]
         app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 8))
         let window = app.windows["Compass"]
-        XCTAssertTrue(window.waitForExistence(timeout: 8))
         guard let rawValue = MeetingLinkViewportXCUITestSupport.waitForGeometryMirror(on: window, timeout: 8) else {
             XCTFail(
                 "Wide geometry mirror missing after 8s; "
