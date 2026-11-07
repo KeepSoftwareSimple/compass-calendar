@@ -775,10 +775,10 @@
       "native": [
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
-      "status": "missing",
-      "evidence": "",
-      "reason": "Native test name mentions keycaps but asserts only copy button existence, toast and pasteboard; no hint existence or viewport assertion.",
-      "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
+      "status": "passing",
+      "evidence": "PR head ee19e1926 run42342131810 macos-ui-shard (2): testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed 17.208s with compass-event-form-meeting-link-copy-keycaps and keycap-l probes. Product already rendered hints; change is XCTest probe ids under -COMPASS_UI_TEST only.",
+      "reason": "Prior row confused missing assertions with missing product UI. Chips were visible but accessibility-hidden in production; web uses aria-hidden plus test ids similarly.",
+      "review": "2026-11-07 agent: inspected EventFormCopyLinkButton and web CopyButton; added probes plus geometry assertions."
     },
     {
       "id": "meeting-link-name",
@@ -801,12 +801,13 @@
         "e2e/timed/event-form-meeting-link-keycaps.spec.ts#shows meeting-link copy keycaps and copies with Mod+Shift+L"
       ],
       "native": [
+        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
-      "status": "unreviewed",
-      "evidence": "Native focus test passed strict40981800450 log11008; geometry checks in both themes.",
-      "reason": "Native test asserts link geometry but does not set the web test equivalent wide window size. Window-size equivalence still needs review.",
-      "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
+      "status": "passing",
+      "evidence": "PR head ee19e1926 run42342131810: testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow passed 11.384s at -COMPASS_UI_TEST_MEETING_LINK_WIDE_VIEWPORT (1440×960 window pin). Link and keycaps stay inside form scroll viewport after conference scroll.",
+      "reason": "Wide-window native mapping added; focus test still covers keyboard focus at default window separately.",
+      "review": "2026-11-07 agent: wide geometry mapped to CopyShortcut wide test; not blanket acceptance of all 693 audit rows."
     },
     {
       "id": "booking-description-open",
