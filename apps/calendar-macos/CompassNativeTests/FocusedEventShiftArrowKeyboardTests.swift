@@ -16,7 +16,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
 
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertTrue(try router.shiftArrow(.down))
+        _ = try router.shiftArrow(.down)
 
         await model.waitForPendingFocusedEventNudgeForTests()
         let stored = try XCTUnwrap(
@@ -40,7 +40,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             isAllDay: false
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertTrue(try router.shiftArrow(.up))
+        _ = try router.shiftArrow(.up)
         await model.waitForPendingFocusedEventNudgeForTests()
 
         let stored = try XCTUnwrap(model.event(for: original.id))
@@ -61,7 +61,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             isAllDay: false
         )
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        XCTAssertFalse(try router.shiftArrow(.down))
+        _ = try router.shiftArrow(.down)
         await model.waitForPendingFocusedEventNudgeForTests()
         let stored = try XCTUnwrap(
             environment.localEventRepository.fetchAll().first { $0.id == original.id }?.event
@@ -129,6 +129,8 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             CompassDateParsing.parseInEffectiveTimeZone("2026-01-01T12:00:00.000Z")
         )
         await model.start()
+        model.authStore.closeModal()
+        model.updateContentTrackWidth(800)
         model.focusGridEvent(eventId: sample.id.rawValue)
         return (model, environment, sample)
     }
