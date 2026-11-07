@@ -1,6 +1,7 @@
 import AppKit
+import CompassData
 
-/// Mirrors web `role="status"` announcements after Go to date navigation.
+/// Mirrors web `role="status"` for XCUITest and posts spoken status on the host window.
 @MainActor
 final class CommandPaletteStatusAccessibilityProbeView: AccessibilityProbeView {
     private let labelField = NSTextField(labelWithString: "")
@@ -59,30 +60,47 @@ enum CommandPaletteStatusAccessibilityProbe {
         }
     }
 
-    static func publish(announcement: String?) {
-        if probe == nil, let window = NSApp.keyWindow ?? NSApp.mainWindow {
-            attach(to: window)
+    static func publish(announcement: String?, hostWindow: NSWindow? = nil) {
+        let window = hostWindow ?? NSApp.keyWindow ?? NSApp.mainWindow
+        let delivery = CommandPaletteStatusAnnouncementPlanner.deliver(
+            announcement: announcement,
+            attachesAccessibilityProbes: UITestLaunchPolicy.attachesAccessibilityProbes
+        )
+
+        if UITestLaunchPolicy.attachesAccessibilityProbes, let host = window?.contentView {
+            syncProbeMirror(delivery: delivery, hostView: host)
+        }
+
+        if let payload = delivery.announcementRequestedPayload, let window {
+            NSAccessibility.post(
+                element: window,
+                notification: .announcementRequested,
+                userInfo: [.announcement: payload]
+            )
+        }
+    }
+
+    private static func syncProbeMirror(
+        delivery: CommandPaletteStatusAnnouncementDelivery,
+        hostView: NSView
+    ) {
+        if probe == nil {
+            attach(to: hostView)
         }
         guard let probe else { return }
         let wasInactive = probe.isHidden
-        let previous = probe.subviews.compactMap { ($0 as? NSTextField)?.stringValue }.first
-        probe.update(announcement: announcement)
-        guard let announcement, !announcement.isEmpty else {
+        if delivery.clearProbeMirror {
+            probe.update(announcement: nil)
             if !wasInactive {
                 NSAccessibility.post(element: probe, notification: .uiElementDestroyed)
             }
+            probe.postLayoutChanged()
             return
         }
+        guard let mirror = delivery.mirrorText else { return }
+        probe.update(announcement: mirror)
         if wasInactive {
             NSAccessibility.post(element: probe, notification: .created)
-        }
-        NSAccessibility.post(element: probe, notification: .focusedUIElementChanged)
-        if previous != announcement {
-            NSAccessibility.post(
-                element: probe,
-                notification: .announcementRequested,
-                userInfo: [.announcement: announcement]
-            )
         }
         probe.postLayoutChanged()
     }

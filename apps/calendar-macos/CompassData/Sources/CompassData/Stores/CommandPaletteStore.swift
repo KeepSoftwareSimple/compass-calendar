@@ -52,6 +52,8 @@ public final class CommandPaletteStore {
     }
 
     public func consumeAnnouncement() {
+        guard !statusAnnouncement.isEmpty else { return }
         statusAnnouncement = ""
+        onAnnouncementChanged?("")
     }
 }
