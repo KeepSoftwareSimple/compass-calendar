@@ -68,7 +68,7 @@ final class EventFormMeetingLinkCopyShortcutTests: XCTestCase {
     }
 
     @MainActor
-    func testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow() {
+    func testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow() throws {
         let app = XCUIApplication.compassUITest()
         app.launchArguments += [
             "-COMPASS_FIXTURE", "demo",
@@ -90,9 +90,10 @@ final class EventFormMeetingLinkCopyShortcutTests: XCTestCase {
         }
         XCTAssertEqual(reading.targetWidth, 1440)
         XCTAssertEqual(reading.targetHeight, 960)
-        XCTAssertTrue(
-            reading.fitsScreen,
-            "Runner screen \(reading.screenWidth)×\(reading.screenHeight) cannot host 1440×960; wide viewport parity is not asserted on this host.")
+        if !reading.fitsScreen {
+            throw XCTSkip(
+                "Runner visible frame \(reading.screenWidth)×\(reading.screenHeight) cannot host 1440×960 content (achieved \(reading.achievedWidth)×\(reading.achievedHeight)). Wide viewport parity withheld.")
+        }
         XCTAssertTrue(
             reading.achievedTarget,
             "MeetingLinkWideViewportPolicy must achieve 1440×960 content (got \(reading.achievedWidth)×\(reading.achievedHeight)).")

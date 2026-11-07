@@ -776,9 +776,9 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
       "status": "passing",
-      "evidence": "PR head ee19e1926 run42342131810 macos-ui-shard (2): testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed 17.208s with compass-event-form-meeting-link-copy-keycaps and keycap-l probes. Product already rendered hints; change is XCTest probe ids under -COMPASS_UI_TEST only.",
-      "reason": "Prior row confused missing assertions with missing product UI. Chips were visible but accessibility-hidden in production; web uses aria-hidden plus test ids similarly.",
-      "review": "2026-11-07 agent: inspected EventFormCopyLinkButton and web CopyButton; added probes plus geometry assertions."
+      "evidence": "Head 9ebcf95c0 run42345729992 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed 26.973s with keycap probes plus isHittable/window-frame containment. Product chips unchanged in production.",
+      "reason": "Coverage gap only: XCTest probe ids under -COMPASS_UI_TEST. Narrow layout assertions map web visible keycap plus copy behavior.",
+      "review": "2026-11-07 agent: chips rendered before probes; no product deficiency."
     },
     {
       "id": "meeting-link-name",
@@ -804,10 +804,10 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
-      "status": "passing",
-      "evidence": "PR head ee19e1926 run42342131810: testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow passed 11.384s at -COMPASS_UI_TEST_MEETING_LINK_WIDE_VIEWPORT (1440×960 window pin). Link and keycaps stay inside form scroll viewport after conference scroll.",
-      "reason": "Wide-window native mapping added; focus test still covers keyboard focus at default window separately.",
-      "review": "2026-11-07 agent: wide geometry mapped to CopyShortcut wide test; not blanket acceptance of all 693 audit rows."
+      "status": "blocked",
+      "evidence": "Head 9ebcf95c0 run42345729992: compass-native-main-window-geometry reports screen=1024x677 fitsScreen=0 achieved=1024x677 on GitHub macos-latest; testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow XCTSkip's. Policy no longer pins oversized min/max off-screen.",
+      "reason": "Web 1440x960 viewport parity cannot be asserted on current GitHub Mac runner geometry. Scroll clip ~313px sidebar residual stays separate. Wide test enforces achievedTarget when fitsScreen=1.",
+      "review": "2026-11-07 agent: honest runner limitation; not marked passing without 1440x960 achieved content and on-screen hittable link/keycaps."
     },
     {
       "id": "booking-description-open",
