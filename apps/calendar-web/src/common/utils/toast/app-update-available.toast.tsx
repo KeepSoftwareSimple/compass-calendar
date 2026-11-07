@@ -1,6 +1,9 @@
 import { createElement } from "react";
 import { type Id } from "react-toastify";
-import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
+import {
+  APP_UPDATE_AVAILABLE_TOAST_ID,
+  getToastDefaultOptions,
+} from "@web/common/constants/toast.constants";
 import { reloadLocation } from "@web/common/utils/browser/browser-navigation.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { deliverOrQueueBottomNoticeToast } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.toast";
@@ -16,10 +19,11 @@ export const APP_UPDATE_TOAST_MESSAGE =
 
 export const APP_UPDATE_REFRESH_LABEL = "Refresh";
 
-export const appUpdateToastIdForVersion = (version: string): Id =>
-  `app-update-${version}`;
-
-export function AppUpdateAvailableToast({ toastId }: { toastId: Id }) {
+export function AppUpdateAvailableToast({
+  toastId = APP_UPDATE_AVAILABLE_TOAST_ID,
+}: {
+  toastId?: Id;
+}) {
   useReloadAppShortcut(true);
 
   const dismiss = () => {
@@ -49,13 +53,8 @@ export function AppUpdateAvailableToast({ toastId }: { toastId: Id }) {
   );
 }
 
-export function showAppUpdateAvailableToast(version: string): Id {
-  const toast = getToast();
-  const toastId = appUpdateToastIdForVersion(version);
-
-  if (toast.isActive?.(toastId)) {
-    return toastId;
-  }
+export function showAppUpdateAvailableToast(_version: string): Id {
+  const toastId = APP_UPDATE_AVAILABLE_TOAST_ID;
 
   return deliverOrQueueBottomNoticeToast(
     createElement(AppUpdateAvailableToast, { toastId }),

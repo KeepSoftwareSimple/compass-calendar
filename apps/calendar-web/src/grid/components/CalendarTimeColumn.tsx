@@ -37,7 +37,7 @@ export function CalendarTimeColumn({
   const now = useMinuteTick();
   const currentHour = now.tz(effectiveTimeZone).hour();
   const nowGridMinutes = nowLineGridMinutes(now, effectiveTimeZone);
-  const fadedHourIndex = showNowTimeLabel
+  const hiddenHourIndex = showNowTimeLabel
     ? hourLabelIndexOverlappingNow(nowGridMinutes, dayjs(at), effectiveTimeZone)
     : null;
   const nowTopPercent = nowLineTopPercent(now, effectiveTimeZone);
@@ -78,7 +78,7 @@ export function CalendarTimeColumn({
       >
         <HourLabelColumn
           colors={colors}
-          fadedHourIndex={fadedHourIndex}
+          hiddenHourIndex={hiddenHourIndex}
           labels={primaryLabels}
           width={GRID_TIME_COLUMN_WIDTH}
         />

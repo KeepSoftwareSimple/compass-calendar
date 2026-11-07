@@ -161,7 +161,7 @@ const AllDayEventCardBase = (
           </span>
         </div>
       )}
-      {showRepeatIcon && <EventRepeatIcon baseColor={fill.bgColor} />}
+      {showRepeatIcon && <EventRepeatIcon contentColor={titleColor} />}
     </div>
   );
 };

@@ -45,7 +45,7 @@
     "test:booking-web": "cd apps/booking-web && bun test",
     "test:scripts": "bun packages/scripts/src/testing/test-mongo-env.ts scripts --",
     "test:self-host": "bun test ./self-host",
-    "test:macos": "cd apps/calendar-macos && xcodegen generate && xcodebuild test -project Compass.xcodeproj -scheme Compass -destination platform=macOS",
+    "test:macos": "bash .github/scripts/test-macos-xcodebuild.sh",
     "test:macos:packages": "bash .github/scripts/test-macos-swift-packages.sh",
     "test:scripts:fast": "bun packages/scripts/src/testing/test-parallel.ts scripts-fast -- --path-ignore-patterns '**/*.db.test.ts'",
     "test:scripts:db": "bun packages/scripts/src/testing/test-mongo-env.ts scripts -- './packages/scripts/src/**/*.db.test.ts'",

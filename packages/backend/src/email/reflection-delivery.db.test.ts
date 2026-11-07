@@ -118,7 +118,7 @@ describe("private reflection delivery", () => {
     ).toBe("2026-11-02T17:30:00.000Z");
   });
 
-  it("sends a named PNG attachment, clears personal preparation data, and does not resend", async () => {
+  it("sends a named PDF attachment, clears personal preparation data, and does not resend", async () => {
     await enqueueDueReflections(now);
     const row = EmailSendRecordSchema.parse(
       await mongoService.emailSend.findOne({ userId }),
@@ -130,8 +130,12 @@ describe("private reflection delivery", () => {
     const payload = send.mock.calls[0]?.[0];
     expect(payload?.to).toBe("trial@example.com");
     expect(payload?.attachments?.[0]?.filename).toBe(
-      "compass-life-in-weeks-2026-11-01.png",
+      "compass-life-in-weeks-2026-11-01.pdf",
     );
+    expect(payload?.attachments?.[0]?.contentType).toBe("application/pdf");
+    expect(payload?.attachments?.[0]?.contentId).toBeUndefined();
+    expect(payload?.html).not.toContain("<img");
+    expect(payload?.html).not.toContain("cid:");
     expect(payload?.personal).toBe(true);
     expect(payload?.text).toContain("/week/2026-11-01");
     const sent = await mongoService.emailSend.findOne({ _id: row._id });

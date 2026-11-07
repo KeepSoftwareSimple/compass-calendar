@@ -9,6 +9,7 @@
   "dependencies": {
     "@compass/core": "1.0.0",
     "@floating-ui/react": "^0.27.20",
+    "@popperjs/core": "^2.11.8",
     "@phosphor-icons/react": "^2.1.7",
     "@react-oauth/google": "^0.13.5",
     "@stripe/react-stripe-js": "7.0.0",

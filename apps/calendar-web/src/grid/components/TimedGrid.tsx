@@ -23,7 +23,10 @@ import {
 } from "@web/grid/grid.constants";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { CalendarNowLine } from "@web/grid/now-cue/CalendarNowLine";
-import { nowTimeLabelPlacement } from "@web/grid/now-cue/now-line-time.util";
+import {
+  nowTimeLabelPlacement,
+  weekNowTimeLabelUsesGutter,
+} from "@web/grid/now-cue/now-line-time.util";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 
@@ -75,7 +78,7 @@ export const TimedGrid: FC<TimedGridProps> = ({
   const showGutterNowTimeLabel =
     showTodayNowCue &&
     (timeLabelPlacement === "gutter" ||
-      (timeLabelPlacement === "column-edge" && todayColumnIndex === 0));
+      weekNowTimeLabelUsesGutter(todayColumnIndex));
   const showWeekColumnNowTimeLabel =
     showTodayNowCue && timeLabelPlacement === "column-edge";
 

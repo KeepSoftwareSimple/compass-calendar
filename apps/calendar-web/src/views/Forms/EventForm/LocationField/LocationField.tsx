@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { useStableLoadingVisible } from "@web/common/hooks/useStableLoadingVisible";
+import { InlineSpinner } from "@web/components/InlineSpinner/InlineSpinner";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { GoogleMapsAttribution } from "@web/views/Forms/EventForm/LocationField/GoogleMapsAttribution";
 import { LocationSuggestionRow } from "@web/views/Forms/EventForm/LocationField/LocationSuggestionRow";
@@ -167,10 +168,7 @@ export function LocationField({
           <div aria-label="Location suggestions" id={listId} role="listbox">
             {showLoadingRow && !showSuggestions && (
               <LocationSuggestionRow className="gap-2 text-text-muted">
-                <span
-                  aria-hidden
-                  className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-text-subtle/30 border-t-text-muted"
-                />
+                <InlineSpinner ring="subtle" size="sm" />
                 <span>Searching…</span>
               </LocationSuggestionRow>
             )}

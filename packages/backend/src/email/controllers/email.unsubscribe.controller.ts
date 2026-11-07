@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import { Status } from "@core/errors/status.codes";
 import mongoService from "@backend/common/services/mongo.service";
+import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
   type EmailUnsubscribeScope,
   parseUnsubscribeUserId,
@@ -123,13 +124,7 @@ export class EmailUnsubscribeController {
           },
         },
       );
-      await mongoService.emailSend.updateMany(
-        { userId, sequence: "reflection", status: "queued" },
-        {
-          $set: { status: "canceled", updatedAt: new Date() },
-          $unset: { "reflection.prepared": "" },
-        },
-      );
+      await emailSendRepository.cancelQueuedReflection(userId);
     } else if (scope === "booking-host") {
       await markBookingHostEmailDisabled(userId);
     } else {

@@ -8,7 +8,7 @@ export function eventFormTabNavigationApplies(
   const form = getEventFormElement();
   if (!form?.contains(activeElement)) return false;
   if (activeElement.closest('[role="listbox"]')) return false;
-  if (document.querySelector('[data-testid="event-form-calendar-hint"]')) {
+  if (form.querySelector(".react-datepicker-popper")) {
     return false;
   }
   return true;

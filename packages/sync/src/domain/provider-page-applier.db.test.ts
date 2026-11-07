@@ -297,6 +297,30 @@ describe("ProviderPageApplier", () => {
     });
   });
 
+  it("persists a series cancellation when providerVersion is empty", async () => {
+    const calendar = await seedCalendar();
+    const run = applier(calendar);
+
+    await run.applyPage([
+      master("bare"),
+      {
+        ...seriesCancellation("bare_c", "bare", "2026-07-21T09:00:00-06:00"),
+        providerVersion: "",
+      },
+    ]);
+
+    const cancelled = await events.findByProviderIdentity(
+      calendar.tenantId,
+      calendar.principalId,
+      {
+        connectionId: calendar.connectionId,
+        calendarId: calendar._id,
+        providerEventId: "bare_c" as ProviderEventId,
+      },
+    );
+    expect(cancelled?.providerVersion).toBeNull();
+  });
+
   it("returns standalone cancellations unconsumed and writes nothing for them", async () => {
     const calendar = await seedCalendar();
     const run = applier(calendar);
@@ -359,6 +383,134 @@ describe("ProviderPageApplier", () => {
       "orphan_c",
     ]);
     expect(run.importedCount).toBe(0);
+  });
+
+  it("preserves active orphan instances after a complete snapshot and relinks on replay", async () => {
+    const calendar = await seedCalendar();
+    const orphan: ProviderEvent = {
+      ...single("orphan-active"),
+      recurrence: {
+        kind: "instance",
+        seriesProviderId: "missing-parent",
+        recurrenceId: schedule.start,
+      },
+    };
+    const run = applier(calendar);
+    await run.applyPage([orphan]);
+    await run.applyPage([orphan]); // Windowed and unwindowed passes overlap.
+    expect(await run.finish({ fullSnapshot: true })).toEqual({
+      orphans: 0,
+      leftoverCancellations: [],
+    });
+    const identity = {
+      connectionId: calendar.connectionId,
+      calendarId: calendar._id,
+      providerEventId: orphan.providerEventId,
+    };
+    const stored = await events.findByProviderIdentity(
+      calendar.tenantId,
+      calendar.principalId,
+      identity,
+    );
+    expect(stored?.content).toEqual(orphan.content);
+    expect(stored?.schedule).toEqual(orphan.schedule);
+    expect(stored?.recurrence.kind).toBe("single");
+    expect(stored?.providerMetadata).toMatchObject({
+      orphanSeriesProviderId: "missing-parent",
+      orphanRecurrenceId: schedule.start,
+    });
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.eventOccurrences)
+        .countDocuments({ eventId: stored?._id }),
+    ).toBe(1);
+
+    const replay = applier(calendar);
+    await replay.applyPage([orphan, master("missing-parent")]);
+    expect((await replay.finish({ fullSnapshot: true })).orphans).toBe(0);
+    const linked = await events.findByProviderIdentity(
+      calendar.tenantId,
+      calendar.principalId,
+      identity,
+    );
+    expect(linked?._id).toBe(stored?._id);
+    expect(linked?.recurrence.kind).toBe("exception");
+    expect(linked?.providerMetadata).toBeNull();
+  });
+
+  it.each(["standalone", "series"] as const)(
+    "does not resurrect an orphan cancelled by a later %s read",
+    async (kind) => {
+      const calendar = await seedCalendar();
+      const run = applier(calendar);
+      await run.applyPage([
+        {
+          ...single("changed"),
+          recurrence: {
+            kind: "instance",
+            seriesProviderId: "missing",
+            recurrenceId: schedule.start,
+          },
+        },
+      ]);
+      await run.applyPage([
+        kind === "standalone"
+          ? standaloneCancellation("changed")
+          : seriesCancellation("changed", "missing", schedule.start),
+      ]);
+      await run.finish({ fullSnapshot: true });
+      expect(run.importedCount).toBe(0);
+      expect(
+        await storage
+          .db()
+          .collection(SYNC_COLLECTIONS.events)
+          .countDocuments({ calendarId: calendar._id }),
+      ).toBe(0);
+      expect(
+        await storage
+          .db()
+          .collection(SYNC_COLLECTIONS.eventOccurrences)
+          .countDocuments({ calendarId: calendar._id }),
+      ).toBe(0);
+    },
+  );
+
+  it("does not count cancelled children of an explicitly deleted master as missing snapshot content", async () => {
+    const calendar = await seedCalendar();
+    const run = applier(calendar);
+    await run.applyPage([
+      seriesCancellation("deleted-child", "deleted-parent", schedule.start),
+    ]);
+    await run.applyPage([standaloneCancellation("deleted-parent")]);
+    const result = await run.finish({ fullSnapshot: true });
+    expect(result.orphans).toBe(0);
+    expect(result.leftoverCancellations.map((c) => c.providerEventId)).toEqual([
+      "deleted-child",
+    ]);
+    expect(run.importedCount).toBe(0);
+  });
+
+  it("keeps unexplained cancellations and incremental active orphans visible as gaps", async () => {
+    const calendar = await seedCalendar();
+    const snapshot = applier(calendar);
+    await snapshot.applyPage([
+      seriesCancellation("unknown-child", "unknown-parent", schedule.start),
+    ]);
+    expect((await snapshot.finish({ fullSnapshot: true })).orphans).toBe(1);
+    const incremental = applier(calendar);
+    await incremental.applyPage([
+      {
+        ...single("active-child"),
+        recurrence: {
+          kind: "instance",
+          seriesProviderId: "unknown-parent",
+          recurrenceId: schedule.start,
+        },
+      },
+    ]);
+    expect((await incremental.finish()).orphans).toBe(1);
+    expect(incremental.importedCount).toBe(0);
   });
 
   it("writes every event's occurrences for a page larger than one projection batch", async () => {

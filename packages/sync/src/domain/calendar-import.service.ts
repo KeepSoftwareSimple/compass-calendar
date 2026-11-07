@@ -257,7 +257,9 @@ class ImportRun {
   // Flush any series members still waiting for a master, counting the ones that
   // never linked as skipped provider anomalies.
   async resolveRemainingInstances(): Promise<void> {
-    this.#orphans += (await this.#applier.finish()).orphans;
+    this.#orphans += (
+      await this.#applier.finish({ fullSnapshot: true })
+    ).orphans;
   }
 }
 

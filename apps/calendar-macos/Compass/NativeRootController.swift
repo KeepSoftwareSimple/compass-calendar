@@ -113,6 +113,9 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         Task {
             await model.start()
             deepLinkRouter.markConsumerReady()
+            if let launchDeepLink = UserDefaults.standard.string(forKey: "COMPASS_LAUNCH_DEEP_LINK") {
+                _ = deepLinkRouter.receive(urlString: launchDeepLink)
+            }
             #if DEBUG
             let queued = pendingDebugCommands ?? []
             pendingDebugCommands = nil

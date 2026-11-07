@@ -114,11 +114,11 @@ jobs:
       - name: Test native Swift packages
         run: bash .github/scripts/test-macos-swift-packages.sh
 
-  build:
+  macos-build:
     needs: changes
-    if: needs.changes.outputs.macos == 'true' && !inputs.strict_verify
+    if: needs.changes.outputs.macos == 'true'
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: apps/calendar-macos
@@ -141,41 +141,15 @@ jobs:
             apps/calendar-macos/build/SourcePackages
           # Bump when SPM binary artifacts (Sparkle) change; stale DerivedData can
           # skip ProcessXCFramework and break the embed copy step.
-          key: ${{ runner.os }}-xcode-sparkle-v1-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved') }}
+          key: ${{ runner.os }}-xcode-sparkle-v2-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved', 'apps/calendar-macos/CompassUITests/**', 'apps/calendar-macos/Compass/**', 'apps/calendar-macos/CompassUI/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassKit/**') }}
           restore-keys: |
+            ${{ runner.os }}-xcode-sparkle-v2-
             ${{ runner.os }}-xcode-
 
-      - name: Generate Xcode project
-        run: |
-          xcodegen generate
-
-      # The Compass scheme runs CompassKitTests and CompassUITests.
-      - name: Build and test
+      - name: Build for testing and run CompassKitTests
         run: |
           xcodebuild -version
-          xcodebuild test \
-            -project Compass.xcodeproj \
-            -scheme Compass \
-            -destination platform=macOS \
-            -derivedDataPath build/DerivedData \
-            -clonedSourcePackagesDirPath build/SourcePackages \
-            -resultBundlePath build/Compass.xcresult
-
-      # Window snapshots from NativeImageSnapshotTests and the screen
-      # recordings of failing UI tests, named by test, so a PR's UI can be
-      # reviewed from the artifact without Xcode or a local Mac.
-      - name: Export UI test screenshots
-        if: ${{ !cancelled() }}
-        run: bash ../../.github/scripts/export-macos-screenshots.sh build/Compass.xcresult build/screenshots
-
-      - name: Upload UI test screenshots
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: compass-macos-screenshots
-          path: apps/calendar-macos/build/screenshots
-          if-no-files-found: ignore
-          retention-days: 14
+          bash ../../.github/scripts/test-macos-build-for-testing.sh
 
       # Unsigned, ad hoc signed Debug build for manual checks: unzip, then
       # right-click Compass.app → Open. Signed releases are release-macos.yml.
@@ -190,12 +164,69 @@ jobs:
           path: apps/calendar-macos/build/Compass.zip
           retention-days: 14
 
-      - name: Upload test results
+  # Four parallel legs over CompassUITests (hand-balanced in macos-ui-shards.json).
+  # Each leg restores the same DerivedData cache as macos-build and runs
+  # test-without-building with -only-testing filters. Critical path is the
+  # slowest shard, not the sum of serial class time.
+  macos-ui-shard:
+    needs: [changes, macos-build]
+    if: needs.changes.outputs.macos == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: apps/calendar-macos
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Render app icon
+        run: bash ../../.github/scripts/render-macos-icon.sh
+
+      - name: Restore SwiftPM and derived data
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            apps/calendar-macos/build/DerivedData
+            apps/calendar-macos/build/SourcePackages
+          key: ${{ runner.os }}-xcode-sparkle-v2-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved', 'apps/calendar-macos/CompassUITests/**', 'apps/calendar-macos/Compass/**', 'apps/calendar-macos/CompassUI/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassKit/**') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-sparkle-v2-
+            ${{ runner.os }}-xcode-
+
+      - name: Run UI test shard
+        env:
+          MACOS_UI_SHARD: ${{ matrix.shard }}
+          MACOS_XCRESULT_PATH: build/Compass-shard-${{ matrix.shard }}.xcresult
+        run: bash ../../.github/scripts/macos-ui-shard-test.sh
+
+      - name: Export UI test screenshots
+        if: ${{ !cancelled() && matrix.shard == 1 }}
+        run: bash ../../.github/scripts/export-macos-screenshots.sh build/Compass-shard-1.xcresult build/screenshots
+
+      - name: Upload UI test screenshots
+        if: ${{ !cancelled() && matrix.shard == 1 }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: compass-macos-screenshots
+          path: apps/calendar-macos/build/screenshots
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload shard test results
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: compass-macos-xcresult
-          path: apps/calendar-macos/build/Compass.xcresult
+          name: compass-macos-xcresult-shard-${{ matrix.shard }}
+          path: apps/calendar-macos/build/Compass-shard-${{ matrix.shard }}.xcresult
+          if-no-files-found: ignore
           retention-days: 7
 
   strict:
@@ -213,6 +244,17 @@ jobs:
         run: brew install xcodegen
       - name: Render app icon
         run: bash .github/scripts/render-macos-icon.sh
+      - name: Restore SwiftPM and derived data
+        id: xcode-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            apps/calendar-macos/build/DerivedData
+            apps/calendar-macos/build/SourcePackages
+          key: ${{ runner.os }}-xcode-sparkle-v2-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved', 'apps/calendar-macos/CompassUITests/**', 'apps/calendar-macos/Compass/**', 'apps/calendar-macos/CompassUI/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassKit/**') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-sparkle-v2-
+            ${{ runner.os }}-xcode-
       - name: Restore SwiftPM build directories
         id: swift-cache
         uses: actions/cache/restore@v6
@@ -251,10 +293,20 @@ jobs:
           bun cli desktop:export --check
       - name: Run full strict verification
         shell: bash
+        env:
+          CI_MACOS_UI_SHARDED: "1"
         run: |
           set -o pipefail
           mkdir -p build
           bun run verify --strict --serial macos | tee build/macos-strict.log
+      - name: Save SwiftPM and derived data
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            apps/calendar-macos/build/DerivedData
+            apps/calendar-macos/build/SourcePackages
+          key: ${{ steps.xcode-cache.outputs.cache-primary-key }}
       - name: Upload strict verification log
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
@@ -273,10 +325,33 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  strict-web:
+  # Web strict verification split like test-unit (web shards) and test-e2e
+  # (directory shards). macOS strict already runs type-check, lint, and knip.
+  # E2E legs run inside the Playwright Docker image (see test-e2e.yml): a plain
+  # ubuntu-latest leg that runs `playwright install --with-deps` can spend most
+  # of the 15-minute job budget in apt before tests start (observed on strict
+  # BOTH run 42278445367: e2e/timed cancelled after 13 tests while downloading
+  # font packages).
+  strict-web-leg-web:
     if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: web-1
+            shard: "1"
+          - leg: web-2
+            shard: "2"
+          - leg: web-3
+            shard: "3"
+          - leg: web-4
+            shard: "4"
+          - leg: web-5
+            shard: "5"
+          - leg: web-6
+            shard: "6"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -284,28 +359,100 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install
-      - name: Install Playwright Chromium
-        run: bunx playwright install --with-deps chromium
-      - name: Run full web strict verification
-        shell: bash
-        run: |
-          set -o pipefail
-          mkdir -p build
-          bun run verify --strict web | tee build/web-strict.log
-      - name: Upload web strict verification log
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+      - name: Run web test shard
+        env:
+          WEB_TEST_SHARDS: "6"
+          WEB_TEST_SHARD_INDEX: ${{ matrix.shard }}
+        run: bun run test:web
+
+  strict-web-leg-e2e:
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: e2e-1
+            specs: e2e/accessibility e2e/allday
+          - leg: e2e-2
+            specs: e2e/booking e2e/oauth e2e/auth e2e/billing
+          - leg: e2e-3
+            specs: e2e/timed
+          - leg: e2e-4
+            specs: e2e/onboarding e2e/calendars e2e/life e2e/navigation e2e/attendees
+          - leg: e2e-5
+            specs: e2e/dst e2e/event-form e2e/journey e2e/overlap e2e/parity
+    container:
+      # Match @playwright/test 1.64.1 in bun.lock (OCI index v1.64.1-noble on MCR).
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
         with:
-          name: compass-web-strict-log
-          path: build/web-strict.log
-          if-no-files-found: warn
-          retention-days: 14
+          node-version: 24
+
+      - name: Install Bun
+        timeout-minutes: 2
+        run: |
+          npm install --global --no-audit --no-fund bun@1.3.14
+          bun --version
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify Playwright browser install
+        timeout-minutes: 3
+        run: bunx playwright install chromium
+
+      - name: Run e2e shard
+        timeout-minutes: 12
+        env:
+          TZ: Etc/UTC
+          GOOGLE_CLIENT_ID: test-client-id
+          API_BASEURL: http://localhost:3000/api
+          SPECS: ${{ matrix.specs }}
+        run: |
+          # shellcheck disable=SC2086
+          bunx playwright test $SPECS
+
+      - name: Summarize flaky Playwright tests
+        if: always()
+        run: bash .github/scripts/playwright-flaky-summary.sh
+
+  strict-web:
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
+    needs: [strict-web-leg-web, strict-web-leg-e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every strict web leg to pass
+        env:
+          WEB_RESULT: ${{ needs.strict-web-leg-web.result }}
+          E2E_RESULT: ${{ needs.strict-web-leg-e2e.result }}
+        run: |
+          echo "strict-web web shards: ${WEB_RESULT}"
+          echo "strict-web e2e shards: ${E2E_RESULT}"
+          case "$WEB_RESULT" in success) ;; *) exit 1 ;; esac
+          case "$E2E_RESULT" in success) ;; *) exit 1 ;; esac
 
   # One required context whether or not the build ran, like `unit` over
   # `unit-leg`. `changes` must succeed too: a failed filter skips `build`,
   # and a skipped build alone would read as a pass.
   macos:
-    needs: [changes, build, swift-packages, strict, strict-web]
+    needs: [changes, macos-build, macos-ui-shard, swift-packages, strict, strict-web]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -313,18 +460,19 @@ jobs:
       - name: Require the macOS build to pass
         env:
           CHANGES: ${{ needs.changes.result }}
-          BUILD: ${{ needs.build.result }}
+          BUILD: ${{ needs.macos-build.result }}
+          UI_SHARDS: ${{ needs.macos-ui-shard.result }}
           SWIFT_PACKAGES: ${{ needs.swift-packages.result }}
           STRICT: ${{ needs.strict.result }}
           STRICT_WEB: ${{ needs.strict-web.result }}
           STRICT_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.strict_verify }}
         run: |
-          echo "changes: ${CHANGES}, build: ${BUILD}, swift-packages: ${SWIFT_PACKAGES}"
+          echo "changes: ${CHANGES}, macos-build: ${BUILD}, ui-shards: ${UI_SHARDS}, swift-packages: ${SWIFT_PACKAGES}"
           [ "$CHANGES" = "success" ] || exit 1
           if [ "$STRICT_REQUESTED" = "true" ]; then
             [ "$STRICT" = "success" ] && [ "$STRICT_WEB" = "success" ] || exit 1
           fi
-          for leg in "$BUILD" "$SWIFT_PACKAGES" "$STRICT" "$STRICT_WEB"; do
+          for leg in "$BUILD" "$UI_SHARDS" "$SWIFT_PACKAGES" "$STRICT" "$STRICT_WEB"; do
             case "$leg" in
               success|skipped) ;;
               *) exit 1 ;;

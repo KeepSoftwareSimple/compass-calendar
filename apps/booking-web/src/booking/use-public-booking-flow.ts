@@ -14,6 +14,11 @@ import {
 } from "@booking-web/booking/public-booking.query";
 import { PUBLIC_BOOKING_SLOT_CONFLICT } from "@booking-web/booking/public-booking.view";
 import {
+  PUBLIC_BOOKING_GUEST_HORIZON_EMPTY,
+  PUBLIC_BOOKING_OWNER_HORIZON_EMPTY,
+  PUBLIC_BOOKING_OWNER_NO_WEEKLY_HOURS,
+} from "@booking-web/booking/public-booking-empty-state.copy";
+import {
   optionalMeetingTypeId,
   selectPublicMeetingType,
 } from "@booking-web/booking/public-booking-meeting-types";
@@ -21,6 +26,11 @@ import {
   type PublicBookingSearch,
   tokenFromGuestActionUrl,
 } from "@booking-web/booking/public-booking-search";
+import {
+  ownerHasWeeklyBookingHours,
+  usePublicBookingOwnerSettings,
+} from "@booking-web/booking/use-public-booking-owner-settings";
+import { usePublicBookingPageOwner } from "@booking-web/booking/use-public-booking-page-owner";
 import {
   usePublicBookingSelectionKeys,
   usePublicBookingSlotSelection,
@@ -37,7 +47,7 @@ import {
 } from "@booking-web/telemetry/guest-booking-funnel";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CreateBookingReservationInputSchema } from "@core/types/booking.contracts";
 import { track } from "@web/auth/posthog/track";
 
@@ -102,13 +112,36 @@ export function usePublicBookingFlow() {
   const detailsTrackedRef = useRef<string | null>(null);
 
   const showDetailsStep = selectedSlotStart !== null && !changingTime;
+  const isPageOwner = usePublicBookingPageOwner(slug);
+  const ownerSettingsQuery = usePublicBookingOwnerSettings(
+    isPageOwner === true,
+  );
+  const ownerWeeklyHours = ownerHasWeeklyBookingHours(ownerSettingsQuery.data);
+
+  const resolveHorizonEmptyMessage = useCallback(
+    (horizonDays: number): string | null => {
+      if (isPageOwner !== true) {
+        return PUBLIC_BOOKING_GUEST_HORIZON_EMPTY(horizonDays);
+      }
+      if (ownerWeeklyHours === undefined) {
+        return null;
+      }
+      if (ownerWeeklyHours === false) {
+        return PUBLIC_BOOKING_OWNER_NO_WEEKLY_HOURS;
+      }
+      return PUBLIC_BOOKING_OWNER_HORIZON_EMPTY(horizonDays);
+    },
+    [isPageOwner, ownerWeeklyHours],
+  );
 
   const selection = usePublicBookingSlotSelection({
     search,
     keys,
     slotsQuery,
     horizonDays: pageQuery.data?.maxHorizonDays ?? null,
+    horizonScanKey: `${monthKey}:${slotsTypeId ?? ""}`,
     pickerFocusSuspended: showDetailsStep,
+    resolveHorizonEmptyMessage,
     prefetchMonth: (nextMonthKey, maxHorizonDays) => {
       void prefetchPublicBookingMonth(
         queryClient,
@@ -328,5 +361,7 @@ export function usePublicBookingFlow() {
     handlePrefetchMonth: selection.handlePrefetchMonth,
     handleJumpToNextAvailable: selection.handleJumpToNextAvailable,
     handleSubmit,
+    isPageOwner,
+    horizonHasOpenSlots: selection.horizonHasOpenSlots,
   };
 }

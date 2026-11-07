@@ -133,6 +133,19 @@ export async function dispatchReflection(
       return;
     }
     if (!(await emailSendRepository.isQueued(row._id))) return;
+    const lifeImage = prepared.pdfBase64
+      ? {
+          content: prepared.pdfBase64,
+          ext: "pdf",
+          type: "application/pdf",
+        }
+      : prepared.pngBase64
+        ? {
+            content: prepared.pngBase64,
+            ext: "png",
+            type: "image/png",
+          }
+        : null;
     const result = await provider.send({
       idempotencyKey: row._id,
       to: recipient,
@@ -144,13 +157,13 @@ export async function dispatchReflection(
         "List-Unsubscribe": unsubscribe.listUnsubscribeHeader,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
-      ...(prepared.pngBase64
+      ...(lifeImage
         ? {
             attachments: [
               {
-                filename: `compass-life-in-weeks-${edition.date}.png`,
-                content: prepared.pngBase64,
-                contentType: "image/png",
+                filename: `compass-life-in-weeks-${edition.date}.${lifeImage.ext}`,
+                content: lifeImage.content,
+                contentType: lifeImage.type,
               },
             ],
           }
