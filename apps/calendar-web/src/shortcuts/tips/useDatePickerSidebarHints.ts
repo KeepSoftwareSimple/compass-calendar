@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { type CaptionPickerView } from "@web/components/DatePicker/DatePicker";
 import {
-  buildDatePickerGridCaptionParts,
   buildRecurrenceUntilParts,
   buildSidebarMonthPickerParts,
   surfaceForPickerContext,
@@ -13,8 +12,12 @@ import {
 } from "@web/shortcuts/tips/date-picker-hint.store";
 import { shouldDeferSidebarMonthHint } from "@web/shortcuts/tips/datePickerHintPriority";
 
-function captionHintId(base: DatePickerHintId): DatePickerHintId {
-  return `${base}-caption` as DatePickerHintId;
+type GridDatePickerHintId = "date-picker-life" | "date-picker-event-form";
+
+function captionHintId(base: GridDatePickerHintId): DatePickerHintId {
+  return base === "date-picker-life"
+    ? "date-picker-life-caption"
+    : "date-picker-event-form-caption";
 }
 
 /**
@@ -22,13 +25,12 @@ function captionHintId(base: DatePickerHintId): DatePickerHintId {
  * keyboard contract for typing vs grid vs caption subviews.
  */
 export function useCaptionableGridDatePickerHint(args: {
-  baseId: DatePickerHintId;
+  baseId: GridDatePickerHintId;
   isOpen: boolean;
-  gridFocused: boolean;
   captionView: CaptionPickerView;
   inputPhrase: string;
 }) {
-  const { baseId, isOpen, gridFocused, captionView, inputPhrase } = args;
+  const { baseId, isOpen, captionView, inputPhrase } = args;
   const [inputFocused, setInputFocused] = useState(false);
 
   useEffect(() => {
@@ -42,40 +44,22 @@ export function useCaptionableGridDatePickerHint(args: {
     if (!isOpen) {
       datePickerHintActions.pop(baseId);
       datePickerHintActions.pop(captionHintId(baseId));
-    }
-  }, [baseId, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (captionView === "year" || captionView === "month") {
-      datePickerHintActions.pop(baseId);
-      datePickerHintActions.push({
-        id: captionHintId(baseId),
-        parts:
-          captionView === "year"
-            ? buildDatePickerGridCaptionParts("year")
-            : buildDatePickerGridCaptionParts("month"),
-      });
-      return () => datePickerHintActions.pop(captionHintId(baseId));
+      return;
     }
 
-    datePickerHintActions.pop(captionHintId(baseId));
+    const isCaption = captionView === "year" || captionView === "month";
+    const activeId = isCaption ? captionHintId(baseId) : baseId;
+    datePickerHintActions.pop(isCaption ? baseId : captionHintId(baseId));
     const surface = surfaceForPickerContext({
-      id: baseId,
-      isOpen,
-      gridFocused,
-      captionView: "day",
+      id: activeId,
+      isOpen: true,
+      captionView,
       isInputFocused: inputFocused,
       inputPhrase,
     });
-    if (surface) {
-      datePickerHintActions.push(surface);
-    } else {
-      datePickerHintActions.pop(baseId);
-    }
-    return () => datePickerHintActions.pop(baseId);
-  }, [baseId, captionView, gridFocused, inputFocused, inputPhrase, isOpen]);
+    if (surface) datePickerHintActions.push(surface);
+    return () => datePickerHintActions.pop(activeId);
+  }, [baseId, captionView, inputFocused, inputPhrase, isOpen]);
 
   return {
     onPickerInputFocus: useCallback(() => setInputFocused(true), []),

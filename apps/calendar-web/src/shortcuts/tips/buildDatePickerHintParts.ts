@@ -4,7 +4,7 @@ import { type ShortcutTipPart } from "@web/shortcuts/tips/shortcut-tips.data";
 const sep: ShortcutTipPart = " · ";
 
 /** At most three key tokens per shortcut row; plain strings for glue. */
-export function buildDatePickerGridDayParts(): readonly ShortcutTipPart[] {
+function buildDatePickerGridDayParts(): readonly ShortcutTipPart[] {
   return [
     { keys: ["ArrowLeft", "ArrowRight"] },
     " day",
@@ -29,7 +29,7 @@ export function buildDatePickerGridDayParts(): readonly ShortcutTipPart[] {
   ];
 }
 
-export function buildDatePickerGridCaptionParts(
+function buildDatePickerGridCaptionParts(
   kind: "month" | "year",
 ): readonly ShortcutTipPart[] {
   if (kind === "month") {
@@ -56,7 +56,7 @@ export function buildDatePickerGridCaptionParts(
   ];
 }
 
-export function buildDatePickerOpenInputParts(
+function buildDatePickerOpenInputParts(
   label: string,
 ): readonly ShortcutTipPart[] {
   return [
@@ -100,34 +100,20 @@ export function buildRecurrenceUntilParts(): readonly ShortcutTipPart[] {
 export function surfaceForPickerContext(params: {
   id: DatePickerHintId;
   isOpen: boolean;
-  gridFocused?: boolean;
   captionView?: "day" | "month" | "year";
   isInputFocused: boolean;
   inputPhrase: string;
 }): { id: DatePickerHintId; parts: readonly ShortcutTipPart[] } | null {
-  const { id, isOpen, gridFocused, captionView, isInputFocused, inputPhrase } =
-    params;
+  const { id, isOpen, captionView, isInputFocused, inputPhrase } = params;
 
-  if (!isOpen) {
-    if (id === "date-picker-sidebar-month") {
-      return { id, parts: buildSidebarMonthPickerParts() };
-    }
-    return null;
-  }
+  if (!isOpen) return null;
 
-  if (captionView === "year") {
-    return { id, parts: buildDatePickerGridCaptionParts("year") };
-  }
-  if (captionView === "month") {
-    return { id, parts: buildDatePickerGridCaptionParts("month") };
+  if (captionView === "year" || captionView === "month") {
+    return { id, parts: buildDatePickerGridCaptionParts(captionView) };
   }
 
   if (isInputFocused) {
     return { id, parts: buildDatePickerOpenInputParts(inputPhrase) };
-  }
-
-  if (gridFocused) {
-    return { id, parts: buildDatePickerGridDayParts() };
   }
 
   // Calendar is open on a grid popover: never advertise the closed-field

@@ -9,6 +9,7 @@ import {
   DatePicker,
 } from "@web/components/DatePicker/DatePicker";
 import {
+  clickDatePickerMonthNav,
   consumeDatePickerKey,
   focusKeyboardSelectedDay,
 } from "@web/components/DatePicker/date-picker-keyboard-dom.util";
@@ -92,7 +93,6 @@ export const EventFormDateField = ({
     useCaptionableGridDatePickerHint({
       baseId: "date-picker-event-form",
       isOpen,
-      gridFocused,
       captionView,
       inputPhrase,
     });
@@ -137,11 +137,7 @@ export const EventFormDateField = ({
 
   const stepCalendarMonth = (deltaMonths: number) => {
     if (!calendarClassName) return;
-    const label = deltaMonths < 0 ? "Previous month" : "Next month";
-    document
-      .querySelector(`.calendar.${calendarClassName}`)
-      ?.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
-      ?.click();
+    clickDatePickerMonthNav(calendarClassName, deltaMonths);
     setPickerMonth((m) => m.add(deltaMonths, "month"));
   };
 
