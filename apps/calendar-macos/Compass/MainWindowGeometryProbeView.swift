@@ -41,6 +41,7 @@ final class MainWindowGeometryProbeView: AccessibilityProbeView {
     }
 }
 
+@MainActor
 enum MainWindowGeometryProbe {
     private static weak var probe: MainWindowGeometryProbeView?
 
