@@ -206,6 +206,15 @@ jobs:
           path: apps/calendar-macos/build/Compass-meeting-link-wide.xcresult
           retention-days: 7
 
+      - name: Upload wide uitest independent diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: compass-macos-wide-uitest-diagnostics
+          path: apps/calendar-macos/build/wide-uitest-watchdog
+          if-no-files-found: warn
+          retention-days: 7
+
   # Four parallel legs over CompassUITests (hand-balanced in macos-ui-shards.json).
   # Each leg restores the same DerivedData cache as macos-build and runs
   # test-without-building with -only-testing filters. Critical path is the

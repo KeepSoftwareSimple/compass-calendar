@@ -4,28 +4,12 @@ import CompassData
 /// Reports achieved main-window content size for meeting-link wide viewport XCUITest.
 @MainActor
 final class MainWindowGeometryProbeView: AccessibilityProbeView {
-    func publish(payload: String, target: NSSize, on window: NSWindow) {
+    func publish(target: NSSize, on window: NSWindow) {
         guard UITestLaunchPolicy.meetingLinkWideViewport else {
             isHidden = true
             setAccessibilityElement(false)
             return
         }
-        isHidden = false
-        setAccessibilityElement(true)
-        setAccessibilityHidden(false)
-        setAccessibilityRole(.staticText)
-        setAccessibilityIdentifier("compass-native-main-window-geometry")
-        setAccessibilityValue(payload)
-        frame = NSRect(x: 0, y: 0, width: 1, height: 1)
-        syncAccessibilityFrame()
-    }
-}
-
-@MainActor
-enum MainWindowGeometryProbe {
-    private static weak var probe: MainWindowGeometryProbeView?
-
-    static func payload(target: NSSize, on window: NSWindow) -> String {
         let achieved = window.contentView?.frame.size ?? .zero
         let visible = window.screen?.visibleFrame ?? .zero
         let windowFrame = window.frame
@@ -41,30 +25,42 @@ enum MainWindowGeometryProbe {
             && windowFrame.maxX <= visible.maxX + 2
             && windowFrame.minY >= visible.minY - 2
             && windowFrame.maxY <= visible.maxY + 2
-        return "target=\(Int(target.width))x\(Int(target.height));"
+        isHidden = false
+        setAccessibilityElement(true)
+        setAccessibilityHidden(false)
+        setAccessibilityRole(.staticText)
+        setAccessibilityIdentifier("compass-native-main-window-geometry")
+        let payload =
+            "target=\(Int(target.width))x\(Int(target.height));"
             + "achieved=\(Int(achieved.width))x\(Int(achieved.height));"
             + "screen=\(Int(visible.width))x\(Int(visible.height));"
             + "fitsScreen=\(fitsScreen ? 1 : 0);achievedTarget=\(achievedTarget ? 1 : 0);"
             + "onScreen=\(onScreen ? 1 : 0)"
+        setAccessibilityValue(payload)
+        frame = NSRect(x: 0, y: 0, width: 1, height: 1)
+        syncAccessibilityFrame()
+        NSAccessibility.post(element: self, notification: .valueChanged)
+        WideViewportUITestTrace.record(
+            "geometry_probe_published",
+            fields: [
+                "achievedW": "\(Int(achieved.width))",
+                "achievedH": "\(Int(achieved.height))",
+                "screenW": "\(Int(visible.width))",
+                "screenH": "\(Int(visible.height))",
+            ])
     }
+}
 
-    @MainActor
-    static func publishWindowMirror(target: NSSize, on window: NSWindow) {
-        guard UITestLaunchPolicy.meetingLinkWideViewport else { return }
-        let payload = payload(target: target, on: window)
-        window.setAccessibilityValue(payload)
-        NSAccessibility.post(element: window, notification: .valueChanged)
-    }
+@MainActor
+enum MainWindowGeometryProbe {
+    private static weak var probe: MainWindowGeometryProbeView?
 
     @MainActor
     static func publish(target: NSSize, on window: NSWindow?) {
-        guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
-        publishWindowMirror(target: target, on: window)
-        guard let host = window.contentView else { return }
-        let payload = payload(target: target, on: window)
+        guard UITestLaunchPolicy.meetingLinkWideViewport, let window, let host = window.contentView else { return }
         probe = AccessibilityProbeView.attach(existing: probe, to: host) {
             MainWindowGeometryProbeView(frame: .zero)
         }
-        probe?.publish(payload: payload, target: target, on: window)
+        probe?.publish(target: target, on: window)
     }
 }

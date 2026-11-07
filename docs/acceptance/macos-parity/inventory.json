@@ -805,9 +805,9 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
       "status": "unreviewed",
-      "evidence": "Single Intel green dd38a56ca run42364873057 183.371s (±2 pt, full bounds). Recurrent macos-meeting-link-wide failures on same source: run42367020444 (034802f9e inventory), run42371044750 (69180c3e6), run42374326933 (cadd3468a); root cause bounded to demo-layout/AX snapshot flake on macos-26-intel, not arm64 shard.",
-      "reason": "Wide leg mandatory on macos-26-intel; one green does not prove stability. Latest head targets window-value geometry mirror without child-tree query first.",
-      "review": "2026-11-07 agent: parent review before queue; do not treat inventory pass from dd38a56ca alone as head green."
+      "evidence": "Observation only: dd38a56ca run42364873057 PASS 183.371s; run42381746632 (1e4c1f7bb) FAIL 239.257s on AX snapshot before geometry assertions. Intel wide mandatory; arm64 shards do not run wide leg.",
+      "reason": "Independent /tmp launch trace and CI watchdog artifacts required before causal claims; wide gate stays required.",
+      "review": "2026-11-07 agent: no root-cause label until trace/watchdog evidence reviewed."
     },
     {
       "id": "booking-description-open",

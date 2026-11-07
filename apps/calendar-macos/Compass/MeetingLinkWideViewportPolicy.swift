@@ -8,12 +8,18 @@ enum MeetingLinkWideViewportPolicy {
     @MainActor
     static func applyIfNeeded(to window: NSWindow?) {
         guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
+        WideViewportUITestTrace.record(
+            "policy_apply_begin",
+            fields: [
+                "hasContentView": window.contentView == nil ? "0" : "1",
+                "hasController": window.contentViewController == nil ? "0" : "1",
+            ])
         let target = contentSize
-        MainWindowGeometryProbe.publishWindowMirror(target: target, on: window)
         let contentRect = NSRect(origin: .zero, size: target)
         var frame = window.frameRect(forContentRect: contentRect)
         let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
-        let fitsScreen = frame.width <= visible.width + 2 && frame.height <= visible.height + 2
+        let targetFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target))
+        let fitsScreen = targetFrame.width <= visible.width + 2 && targetFrame.height <= visible.height + 2
         var appliedContent = target
         if !fitsScreen {
             // Do not pin an oversized min/max when the runner display is smaller than web's 1440×960.
@@ -41,11 +47,21 @@ enum MeetingLinkWideViewportPolicy {
         window.setContentSize(appliedContent)
         window.contentView?.setFrameSize(appliedContent)
         MainWindowGeometryProbe.publish(target: target, on: window)
+        WideViewportUITestTrace.record(
+            "policy_apply_end",
+            fields: [
+                "appliedW": "\(Int(appliedContent.width))",
+                "appliedH": "\(Int(appliedContent.height))",
+                "visibleW": "\(Int(visible.width))",
+                "visibleH": "\(Int(visible.height))",
+                "fitsScreen": fitsScreen ? "1" : "0",
+            ])
     }
 
     @MainActor
     static func scheduleReapply(to window: NSWindow?) {
         guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
+        WideViewportUITestTrace.record("policy_schedule_reapply")
         applyIfNeeded(to: window)
     }
 }

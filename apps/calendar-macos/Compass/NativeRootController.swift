@@ -57,9 +57,6 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             }
             GridFocusAccessibilityProbe.publish(label: label)
             NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(label, on: window)
-            if UITestLaunchPolicy.meetingLinkWideViewport, let window {
-                MeetingLinkWideViewportPolicy.applyIfNeeded(to: window)
-            }
         }
         model.onEventFormTitleAccessibilityProbeChanged = { [weak self] visible in
             guard let self else { return }
@@ -129,6 +126,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
     override func viewDidAppear() {
         super.viewDidAppear()
+        WideViewportUITestTrace.record("native_root_viewDidAppear")
         ParityCaptureWindowPolicy.scheduleReapply(to: view.window)
         MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window)
         // AppKit hands launch focus to the first key view, the header Previous

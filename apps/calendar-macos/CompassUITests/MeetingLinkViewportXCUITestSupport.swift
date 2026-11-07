@@ -13,21 +13,6 @@ struct MainWindowGeometryProbeReading: Equatable {
 }
 
 enum MeetingLinkViewportXCUITestSupport {
-    /// Same pattern as `NativeLaunchTests.waitForFocusedGridEvent`: XCTWaiter does not reliably
-    /// observe `NSWindow` accessibility value updates on macOS CI.
-    @MainActor
-    static func waitForGeometryMirror(on window: XCUIElement, timeout: TimeInterval) -> String? {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if let value = window.value as? String {
-                if value.hasPrefix("wide-error=") { return value }
-                if value.contains("target=1440") { return value }
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        }
-        return nil
-    }
-
     static func parseGeometryProbe(_ raw: String) -> MainWindowGeometryProbeReading? {
         var fields: [String: String] = [:]
         for part in raw.split(separator: ";") {

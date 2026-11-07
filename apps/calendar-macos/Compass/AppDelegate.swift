@@ -21,6 +21,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        WideViewportUITestTrace.resetIfNeeded()
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            WideViewportUITestTrace.record(
+                "applicationDidFinishLaunching",
+                fields: ["wideFlag": "1"])
+        }
         showDebugMenu = DebugMenuPolicy.shouldShow(optionHeldAtLaunch: optionHeldAtLaunch)
 
         let appURL = AppOrigin.resolve(
@@ -122,16 +128,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let presenter = WebAuthSessionPresenter()
         let catalog = shortcutsCatalogController ?? ShortcutsCatalogWindowController()
         shortcutsCatalogController = catalog
+        WideViewportUITestTrace.record("installRootContent_begin")
         guard let model = try? NativeRootFactory.makeModel(
             webAuthPresenter: presenter,
             catalogController: catalog
         ) else {
-            if UITestLaunchPolicy.meetingLinkWideViewport {
-                window.setAccessibilityValue("wide-error=native-model-init-failed")
-                NSAccessibility.post(element: window, notification: .valueChanged)
-            }
+            WideViewportUITestTrace.record("model_init_failed")
             return
         }
+        WideViewportUITestTrace.record("model_init_ok")
         model.onDesktopRestartToUpdate = { [weak self] in
             self?.updater.restartToUpdate()
         }
@@ -142,9 +147,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         nativeRootController = nativeController
         window.contentViewController = nativeController
         NativeAccessibilityProbes.prepareNativeRootWindowForXCUITest(window)
-        if UITestLaunchPolicy.meetingLinkWideViewport {
-            MeetingLinkWideViewportPolicy.scheduleReapply(to: window)
-        }
+        WideViewportUITestTrace.record(
+            "installRootContent_end",
+            fields: ["hasNativeRootController": nativeRootController == nil ? "0" : "1"])
         mainMenuController?.nativeRootController = nativeController
         if let quickAddCoordinator {
             nativeController.attachQuickAddRouter(quickAddCoordinator)

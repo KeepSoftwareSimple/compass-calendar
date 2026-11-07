@@ -13,23 +13,14 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK", "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
         ]
         app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 8))
         let window = app.windows["Compass"]
-        guard let rawValue = MeetingLinkViewportXCUITestSupport.waitForGeometryMirror(on: window, timeout: 8) else {
-            XCTFail(
-                "Wide geometry mirror missing after 8s; "
-                    + "window value=\(String(describing: window.value)), "
-                    + "label=\(window.label), frame=\(window.frame)")
-            return
-        }
-        if rawValue.hasPrefix("wide-error=") {
-            XCTFail("Native root install failed: \(rawValue)")
-            return
-        }
+        let geometry = window.descendants(matching: .any)["compass-native-main-window-geometry"]
+        XCTAssertTrue(geometry.waitForExistence(timeout: 8))
         let titleProbe = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleProbe.waitForExistence(timeout: 12))
         let form = window.descendants(matching: .any)["compass-event-form"]
         XCTAssertTrue(form.exists)
+        let rawValue = geometry.value as? String ?? ""
         guard let reading = MeetingLinkViewportXCUITestSupport.parseGeometryProbe(rawValue) else {
             XCTFail("Unparseable geometry probe: \(rawValue)")
             return

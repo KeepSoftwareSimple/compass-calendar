@@ -1,5 +1,4 @@
 import AppKit
-import CompassData
 
 /// Window accessibility values for XCUITest (grid focus, deep links).
 enum NativeAccessibilityProbes {
@@ -33,8 +32,6 @@ enum NativeAccessibilityProbes {
     static func publishNativeGridFocusedEventTitle(_ title: String?, on window: NSWindow?) {
         guard let window else { return }
         window.setAccessibilityIdentifier("Compass")
-        // Wide viewport XCTest reads geometry from the window value mirror, not grid title.
-        guard !UITestLaunchPolicy.meetingLinkWideViewport else { return }
         if let title, !title.isEmpty {
             window.setAccessibilityValue(title)
         } else {
