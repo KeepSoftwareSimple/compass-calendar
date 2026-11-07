@@ -263,7 +263,11 @@ final class NativeGridKeyboardRouter {
             }
             return false
         }
-        if editingText, !model.overlayKeyboardCaptureActive, !modalOwnsKeyboard {
+        // Event form fields are NSTextViews too. Route their Cmd shortcuts through
+        // handleEventFormKeys instead of swallowing keys here.
+        if editingText, !model.overlayKeyboardCaptureActive, !modalOwnsKeyboard,
+            !model.isEventFormVisible
+        {
             if let key = KeyEvent(nsEvent: event),
                 key.matches(KeyChord(modifiers: [.command], token: .character("k"))) {
                 model.toggleCommandPalette()
