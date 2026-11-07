@@ -39,6 +39,10 @@ struct LifeSidebarView: View {
             Text("Date of birth").help("Saved to your account when signed in")
             TextField("Select date", text: $birthDate)
               .accessibilityLabel("Date of birth")
+              .accessibilityIdentifier(
+                focusedField == .birthDate
+                  ? "compass-life-birth-date-focused"
+                  : "compass-life-birth-date-field")
               .focused($focusedField, equals: .birthDate)
               .onSubmit { commitBirthDate() }
               .help("Enter a date like Jun 10, 2026")

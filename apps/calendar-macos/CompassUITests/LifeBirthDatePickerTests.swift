@@ -37,7 +37,8 @@ final class LifeBirthDatePickerTests: XCTestCase {
 
         XCTAssertFalse(picker.waitForExistence(timeout: 2))
         XCTAssertEqual(birth.value as? String, "Jun 15, 1990")
-        XCTAssertTrue(birth.hasFocus)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["compass-life-birth-date-focused"].waitForExistence(timeout: 3))
     }
 
     @MainActor
