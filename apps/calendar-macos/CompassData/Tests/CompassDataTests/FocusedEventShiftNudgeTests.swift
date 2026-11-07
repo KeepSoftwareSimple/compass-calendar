@@ -214,6 +214,7 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         )
         addTeardownBlock { EffectiveTimeZone.identifier = previous }
         await model.start()
+        await model.bootstrapLocalEventsForTests()
         model.focusEvent(eventId: event.id.rawValue)
         return (model, environment, event)
     }

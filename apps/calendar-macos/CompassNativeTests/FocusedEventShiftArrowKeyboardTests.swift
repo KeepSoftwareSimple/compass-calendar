@@ -130,6 +130,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         await model.start()
         model.authStore.closeModal()
+        await model.bootstrapLocalEventsForTests()
         model.updateContentTrackWidth(800)
         model.focusGridEvent(eventId: sample.id.rawValue)
         return (model, environment, sample)

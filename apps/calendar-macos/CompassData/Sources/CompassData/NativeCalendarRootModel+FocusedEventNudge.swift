@@ -94,6 +94,12 @@ extension NativeCalendarRootModel {
         }
     }
 
+    /// Anonymous local fixtures must read the in-memory local repository through `EventsStore`.
+    public func bootstrapLocalEventsForTests() async {
+        eventsStore.setSource(.local)
+        await refreshVisibleRange()
+    }
+
     func isFocusedSavedEventScheduleLocked(_ event: Event) -> Bool {
         let isBusy: Bool = {
             if case .busy = event.content { return true }
