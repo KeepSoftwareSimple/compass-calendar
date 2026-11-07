@@ -99,7 +99,7 @@ extension NativeCalendarRootModel {
                 return moved
             }
             placeTimedDraft()
-            return true
+            return draftStore.gridDraft != nil
         }
 
         if draftStore.gridDraft != nil {

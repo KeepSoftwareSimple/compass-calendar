@@ -286,10 +286,10 @@ final class NativeGridKeyboardRouter {
             return true
         }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
-        return handleNormalizedKeyDown(keyEvent)
+        return handleNormalizedKeyDown(keyEvent, eventWindowNumber: event.windowNumber)
     }
 
-    func handleNormalizedKeyDown(_ keyEvent: KeyEvent) -> Bool {
+    func handleNormalizedKeyDown(_ keyEvent: KeyEvent, eventWindowNumber: Int = 0) -> Bool {
         if model.isWelcomeModalActive, handleWelcomeKeyDown(keyEvent) {
             return true
         }
@@ -429,7 +429,7 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if isEditableNonDescriptionTextInputFocused() {
+        if isEditableNonDescriptionTextInputFocused(eventWindowNumber: eventWindowNumber) {
             return false
         }
 
@@ -442,7 +442,7 @@ final class NativeGridKeyboardRouter {
         }
 
         if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
-            return attemptShiftArrowEdgeNudge(keyEvent)
+            return attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber)
         }
 
         if modHold.handleKeyDown(keyEvent) {
@@ -713,8 +713,18 @@ final class NativeGridKeyboardRouter {
         return textView.accessibilityIdentifier() == "compass-event-form-description"
     }
 
-    private func isEditableNonDescriptionTextInputFocused() -> Bool {
-        guard let textView = NSApp.keyWindow?.firstResponder as? NSTextView, textView.isEditable else {
+    private func keyboardEventWindow(for windowNumber: Int) -> NSWindow? {
+        if windowNumber != 0 {
+            return NSApp.windows.first { $0.windowNumber == windowNumber }
+        }
+        return NSApp.keyWindow
+    }
+
+    private func isEditableNonDescriptionTextInputFocused(eventWindowNumber: Int = 0) -> Bool {
+        guard let window = keyboardEventWindow(for: eventWindowNumber),
+            let textView = window.firstResponder as? NSTextView,
+            textView.isEditable
+        else {
             return false
         }
         return textView.accessibilityIdentifier() != "compass-event-form-description"
@@ -730,8 +740,10 @@ final class NativeGridKeyboardRouter {
         }
     }
 
-    private func attemptShiftArrowEdgeNudge(_ keyEvent: KeyEvent) -> Bool {
-        guard keyEvent.modifiers.contains(.shift), !isEditableNonDescriptionTextInputFocused() else {
+    private func attemptShiftArrowEdgeNudge(_ keyEvent: KeyEvent, eventWindowNumber: Int = 0) -> Bool {
+        guard keyEvent.modifiers.contains(.shift),
+            !isEditableNonDescriptionTextInputFocused(eventWindowNumber: eventWindowNumber)
+        else {
             return false
         }
         guard let arrow = shiftArrowKeyboardName(for: keyEvent) else { return false }
@@ -762,6 +774,7 @@ final class NativeGridKeyboardRouter {
     }
 
     private func handleDraftKeys(_ keyEvent: KeyEvent) -> Bool {
+        if model.isEventFormVisible { return false }
         if keyEvent.modifiers == [.control, .shift],
             case .character(let char) = keyEvent.key,
             char == "0"

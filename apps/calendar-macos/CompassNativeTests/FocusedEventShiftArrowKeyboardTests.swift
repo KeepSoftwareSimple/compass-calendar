@@ -80,6 +80,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
     func testRouterRejectsShiftArrowWhenReadOnly() async throws {
         _ = NSApplication.shared
         let (model, environment, original) = try await localTimedFixture(canWrite: false)
+        XCTAssertNotNil(model.focusedEvent(), "fixture must load event before router nudge")
         model.focusStore.setEdge(
             eventId: original.id,
             edge: .startDate,
@@ -98,8 +99,10 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
     func testRouterIgnoresShiftArrowWhenEventFormIsOpen() async throws {
         _ = NSApplication.shared
         let (model, environment, original) = try await localTimedFixture()
+        XCTAssertNotNil(model.focusedEvent(), "fixture must load focused event before opening form")
         model.openKeyboardEditForFocusedEvent()
         model.openEventFormForCurrentDraft()
+        XCTAssertNotNil(model.draftStore.gridDraft, "keyboard edit must seed draft before form opens")
         XCTAssertTrue(model.isEventFormVisible)
         let router = try makeGridRouter(model: model)
         XCTAssertFalse(router.shiftArrow(.down))
@@ -256,6 +259,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         try environment.localEventRepository.put(.init(id: event.id, event: event, isDemo: false))
         let previousTimeZone = EffectiveTimeZone.identifier
+        EffectiveTimeZone.identifier = "UTC"
         addTeardownBlock { EffectiveTimeZone.identifier = previousTimeZone }
         let model = NativeCalendarRootModel(environment: environment)
         model.viewStore.setPinnedTimeZone("UTC")
