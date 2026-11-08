@@ -250,8 +250,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
 
   const isCaptionYearView = captionPicker && captionView === "year";
   const isCaptionMonthView = captionPicker && captionView === "month";
-  const isCaptionDayGrid = !isCaptionYearView && !isCaptionMonthView;
-  const shouldCommitSelection = !captionPicker || captionView === "day";
+  const isDayGrid = !isCaptionYearView && !isCaptionMonthView;
 
   const monthStepHandlersRef = useRef({
     onPrev: () => {},
@@ -263,7 +262,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const sidebarMonthNavShortcuts = Boolean(monthNav);
   const monthNavShortcutsEnabled =
     isOpen &&
-    isCaptionDayGrid &&
+    isDayGrid &&
     (gridMonthNavShortcuts ||
       (sidebarMonthNavShortcuts && !isFloatingLayerOpen()));
 
@@ -273,16 +272,10 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
 
   useMonthPickerShortcuts({
     enabled: monthNavShortcutsEnabled,
-    onPrevMonth: () => {
-      monthStepHandlersRef.current.onPrev();
-    },
-    onNextMonth: () => {
-      monthStepHandlersRef.current.onNext();
-    },
+    onPrevMonth: () => monthStepHandlersRef.current.onPrev(),
+    onNextMonth: () => monthStepHandlersRef.current.onNext(),
     onGoToThisMonth: canGoToThisMonthInPicker
-      ? () => {
-          monthStepHandlersRef.current.onGoToThisMonth?.();
-        }
+      ? () => monthStepHandlersRef.current.onGoToThisMonth?.()
       : undefined,
   });
 
@@ -393,9 +386,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
       onCalendarClose={handleCalendarClose}
       onChange={handleChange}
       onSelect={handleSelect}
-      shouldCloseOnSelect={
-        shouldCommitSelection ? props.shouldCloseOnSelect : false
-      }
+      shouldCloseOnSelect={isDayGrid ? props.shouldCloseOnSelect : false}
       showFourColumnMonthYearPicker={isCaptionMonthView}
       showMonthYearPicker={isCaptionMonthView}
       showYearPicker={isCaptionYearView}
@@ -447,8 +438,6 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         monthStepHandlersRef.current = {
           onPrev: headerNav.onPrev,
           onNext: headerNav.onNext,
-          // Same rule that decides whether the shortcut is offered at all;
-          // spelling it twice let the two drift.
           onGoToThisMonth: canGoToThisMonthInPicker
             ? jumpToThisMonth
             : undefined,
@@ -461,7 +450,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
 
         const captionBlock = (
           <div className="min-w-16 shrink-0 items-start">
-            {captionPicker && captionView === "day" ? (
+            {captionPicker && isDayGrid ? (
               <button
                 type="button"
                 aria-label="Choose month and year"
