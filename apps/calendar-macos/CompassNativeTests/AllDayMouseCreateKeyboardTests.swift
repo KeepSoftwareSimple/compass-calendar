@@ -1,7 +1,7 @@
 import AppKit
-import CompassData
 import CompassKit
 import XCTest
+@testable import CompassData
 
 /// Mouse-teach path: empty all-day click parks a day, then Shift+C must create a draft.
 @MainActor
@@ -40,7 +40,10 @@ final class AllDayMouseCreateKeyboardTests: XCTestCase {
         await model.saveDraft()
 
         let stored = try environment.localEventRepository.fetchAll()
-        let saved = try XCTUnwrap(stored.first { $0.event.content.title == "Parked all-day" })
+        let saved = try XCTUnwrap(stored.first(where: { record in
+            guard case .details(let details) = record.event.content else { return false }
+            return details.title == "Parked all-day"
+        }))
         guard case .allDay(let schedule) = saved.event.schedule else {
             return XCTFail("Expected persisted all-day schedule")
         }
