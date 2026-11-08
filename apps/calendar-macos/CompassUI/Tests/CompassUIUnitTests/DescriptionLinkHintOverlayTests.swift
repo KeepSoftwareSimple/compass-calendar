@@ -40,12 +40,10 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
         let editor = container.textView
         let storage = editor.textStorage!
         storage.insert(NSAttributedString(string: "empty ", attributes: [.link: ""]), at: 0)
-        container.updateLinkHintOverlay(visible: false)
-        container.updateLinkHintOverlay(visible: true)
+        container.syncLinkHintSlots(reserved: true)
         container.layoutSubtreeIfNeeded()
 
-        let chipIdentifiers = linkHintDigitChipFrames(in: container)
-        XCTAssertEqual(chipIdentifiers.count, 1)
+        XCTAssertEqual(linkHintDigitChipFrames(in: container).count, 1)
 
         DescriptionLinkKeyboard.openURLForTests = { url in
             XCTAssertEqual(url.absoluteString, "https://second.example")
@@ -54,7 +52,7 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
         _ = DescriptionLinkKeyboard.openNumberedLinkIfHintsActive(digit: 1)
     }
 
-    func testLinkHintChipsRepositionWhenContainerWidthChanges() throws {
+    func testLinkHintChipsRepositionWhenContainerWidthChangesWithoutTogglingHints() throws {
         let html =
             "<p><a href=\"https://one.example/a\">https://one.example/a</a> and "
             + "<a href=\"https://two.example/b\">https://two.example/b</a></p>"
@@ -74,8 +72,6 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
 
         container.frame = NSRect(x: 0, y: 0, width: 520, height: 140)
         window.setContentSize(NSSize(width: 520, height: 140))
-        container.updateLinkHintOverlay(visible: false)
-        container.updateLinkHintOverlay(visible: true)
         container.layoutSubtreeIfNeeded()
         window.layoutIfNeeded()
         RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
@@ -83,6 +79,31 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
         let wideFrames = linkHintDigitChipFrames(in: container).map(\.origin.x)
         XCTAssertEqual(wideFrames.count, 2)
         XCTAssertNotEqual(narrowFrames, wideFrames)
+    }
+
+    func testLinkHintChipsRepositionAfterPrefixEditWithoutTogglingHints() throws {
+        let html = "<p><a href=\"https://only.example/a\">https://only.example/a</a></p>"
+        let (container, window, _) = try DescriptionLinkHintKeyWindowFixture.makeBlurredDescriptionLinkHints(
+            html: html,
+            resetKey: "event",
+            frame: NSRect(x: 0, y: 0, width: 400, height: 120)
+        )
+        defer {
+            DescriptionLinkHintKeyWindowFixture.resetDigitHintLookupWindow()
+            window.close()
+        }
+
+        container.layoutSubtreeIfNeeded()
+        let before = linkHintDigitChipFrames(in: container).map(\.origin.x)
+        XCTAssertEqual(before.count, 1)
+
+        container.textView.textStorage?.insert(NSAttributedString(string: "Prefix "), at: 0)
+        container.syncLinkHintSlots(reserved: true)
+        container.layoutSubtreeIfNeeded()
+
+        let after = linkHintDigitChipFrames(in: container).map(\.origin.x)
+        XCTAssertEqual(after.count, 1)
+        XCTAssertNotEqual(before, after)
     }
 
     private func linkHintDigitChipFrames(in root: NSView) -> [CGRect] {

@@ -12,10 +12,16 @@ final class DescriptionLinkHintOverlayView: NSView {
     private var isLayingOutLinkHints = false
     private var laidOutFingerprint: LayoutFingerprint?
 
+    /// Placement + geometry inputs for digit keycaps (not hint visibility).
     private struct LayoutFingerprint: Equatable {
-        let hrefsKey: String
+        let linksPlacementKey: String
         let overlayBoundsSize: NSSize
         let textContainerWidth: CGFloat
+        let numberOfGlyphs: Int
+    }
+
+    func invalidateLayoutCache() {
+        laidOutFingerprint = nil
     }
 
     override var isFlipped: Bool { true }
@@ -48,9 +54,12 @@ final class DescriptionLinkHintOverlayView: NSView {
         }
 
         let fingerprint = LayoutFingerprint(
-            hrefsKey: linkEntries.map(\.href).joined(separator: "\u{1e}"),
+            linksPlacementKey: linkEntries.map { entry in
+                "\(entry.range.location):\(entry.range.length):\(entry.href)"
+            }.joined(separator: "\u{1e}"),
             overlayBoundsSize: bounds.size,
-            textContainerWidth: textContainer.containerSize.width
+            textContainerWidth: textContainer.containerSize.width,
+            numberOfGlyphs: layoutManager.numberOfGlyphs
         )
         if fingerprint == laidOutFingerprint, subviews.count == linkEntries.count {
             return

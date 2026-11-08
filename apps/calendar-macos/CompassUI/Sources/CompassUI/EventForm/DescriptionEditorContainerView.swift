@@ -91,6 +91,7 @@ final class DescriptionEditorContainerView: NSView {
     func syncLinkHintSlots(reserved: Bool) {
         guard textView.window != nil else { return }
         textView.syncLinkHintSlots(reserved: reserved)
+        linkHintOverlay.invalidateLayoutCache()
         if linkHintOverlay.hintsVisible {
             linkHintOverlay.needsLayout = true
         }
