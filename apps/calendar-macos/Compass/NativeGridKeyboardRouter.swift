@@ -478,7 +478,9 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if keyEvent.modifiers == .shift, case .character(let letter) = keyEvent.key {
+        if keyEvent.modifiers == .shift, case .character(let letter) = keyEvent.key,
+            claimsShiftDayJump(letter)
+        {
             model.handleShiftDayJump(letter: letter)
             return true
         }
@@ -757,6 +759,13 @@ final class NativeGridKeyboardRouter {
             return false
         }
         return textView.accessibilityIdentifier() != "compass-event-form-description"
+    }
+
+    /// Shift+letter day jump (M T W R F S). Other shifted letters (e.g. C for create-allday)
+    /// must reach the shortcut dispatcher.
+    private func claimsShiftDayJump(_ letter: Character) -> Bool {
+        if String(letter).lowercased() == "s" { return true }
+        return DayJumpPrefixes.dayPrefix(forShiftedLetter: letter) != nil
     }
 
     private func shiftArrowKeyboardName(for keyEvent: KeyEvent) -> String? {
