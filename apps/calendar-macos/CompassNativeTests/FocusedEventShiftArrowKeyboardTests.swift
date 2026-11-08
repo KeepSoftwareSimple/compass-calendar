@@ -291,13 +291,20 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         await model.start()
         model.authStore.closeModal()
-        let welcomeKey = OnboardingStorageKeys.hasSeenWelcome
-        let priorHasSeenWelcome = UserDefaults.standard.string(forKey: welcomeKey)
+        let hasSeenKey = OnboardingStorageKeys.hasSeenWelcome
+        let exitKey = OnboardingStorageKeys.welcomeExit
+        let priorHasSeen = UserDefaults.standard.string(forKey: hasSeenKey)
+        let priorExit = UserDefaults.standard.string(forKey: exitKey)
         addTeardownBlock {
-            if let priorHasSeenWelcome {
-                UserDefaults.standard.set(priorHasSeenWelcome, forKey: welcomeKey)
+            if let priorHasSeen {
+                UserDefaults.standard.set(priorHasSeen, forKey: hasSeenKey)
             } else {
-                UserDefaults.standard.removeObject(forKey: welcomeKey)
+                UserDefaults.standard.removeObject(forKey: hasSeenKey)
+            }
+            if let priorExit {
+                UserDefaults.standard.set(priorExit, forKey: exitKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: exitKey)
             }
         }
         model.onboardingStore.markWelcomeSeen(exit: "test")

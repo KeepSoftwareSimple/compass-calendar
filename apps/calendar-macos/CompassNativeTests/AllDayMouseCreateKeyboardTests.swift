@@ -8,7 +8,7 @@ import XCTest
 final class AllDayMouseCreateKeyboardTests: XCTestCase {
     func testShiftCAfterAllDaySlotClickCreatesDraftOnParkedDay() async throws {
         _ = NSApplication.shared
-        let model = try await weekGridModel()
+        let (model, _) = try await weekGridModel()
         model.handleGridPointerClick(
             target: .allDaySlot(dateKey: "2026-01-08"),
             registry: model.shortcutRegistry
@@ -16,7 +16,7 @@ final class AllDayMouseCreateKeyboardTests: XCTestCase {
         XCTAssertEqual(model.pointerDraftDateKey, "2026-01-08")
 
         let router = try makeGridRouter(model: model)
-        XCTAssertTrue(shiftC(router))
+        XCTAssertTrue(router.shiftC())
 
         let draft = try XCTUnwrap(model.draftStore.gridDraft)
         XCTAssertEqual(draft.schedule.kind, .allDay)
@@ -27,13 +27,36 @@ final class AllDayMouseCreateKeyboardTests: XCTestCase {
         XCTAssertEqual(day, EffectiveTimeZone.calendar.startOfDay(for: parked))
     }
 
+    func testShiftCAfterAllDayClickPersistsSavedAllDayEvent() async throws {
+        _ = NSApplication.shared
+        let (model, environment) = try await weekGridModel()
+        model.handleGridPointerClick(
+            target: .allDaySlot(dateKey: "2026-01-08"),
+            registry: model.shortcutRegistry
+        )
+        let router = try makeGridRouter(model: model)
+        XCTAssertTrue(router.shiftC())
+        model.setDraftTitle("Parked all-day")
+        await model.saveDraft()
+
+        let stored = try environment.localEventRepository.fetchAll()
+        let saved = try XCTUnwrap(stored.first { $0.event.content.title == "Parked all-day" })
+        guard case .allDay(let schedule) = saved.event.schedule else {
+            return XCTFail("Expected persisted all-day schedule")
+        }
+        XCTAssertEqual(schedule.start, "2026-01-08")
+        XCTAssertEqual(schedule.end, "2026-01-09")
+    }
+
     private func makeGridRouter(model: NativeCalendarRootModel) throws -> NativeGridKeyboardRouter {
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         router.dispatcher.pushScope(.grid)
         return router
     }
 
-    private func weekGridModel() async throws -> NativeCalendarRootModel {
+    private func weekGridModel() async throws
+        -> (NativeCalendarRootModel, NativeCalendarEnvironment)
+    {
         let environment = try NativeCalendarEnvironment(
             appURL: URL(string: "https://compass.invalid")!,
             inMemoryDatabase: true,
@@ -74,18 +97,30 @@ final class AllDayMouseCreateKeyboardTests: XCTestCase {
         model.settingsStore.setDefaultCalendarId("cal-1")
         await model.start()
         model.authStore.closeModal()
+        restoreWelcomeDefaultsAfterTeardown()
         model.onboardingStore.markWelcomeSeen(exit: "test")
         model.onboardingStore.setWelcomeFirstVisitOpen(false)
-        let welcomeKey = OnboardingStorageKeys.hasSeenWelcome
-        let priorHasSeenWelcome = UserDefaults.standard.string(forKey: welcomeKey)
+        NSApp.keyWindow?.makeFirstResponder(nil)
+        return (model, environment)
+    }
+
+    private func restoreWelcomeDefaultsAfterTeardown() {
+        let hasSeenKey = OnboardingStorageKeys.hasSeenWelcome
+        let exitKey = OnboardingStorageKeys.welcomeExit
+        let priorHasSeen = UserDefaults.standard.string(forKey: hasSeenKey)
+        let priorExit = UserDefaults.standard.string(forKey: exitKey)
         addTeardownBlock {
-            if let priorHasSeenWelcome {
-                UserDefaults.standard.set(priorHasSeenWelcome, forKey: welcomeKey)
+            if let priorHasSeen {
+                UserDefaults.standard.set(priorHasSeen, forKey: hasSeenKey)
             } else {
-                UserDefaults.standard.removeObject(forKey: welcomeKey)
+                UserDefaults.standard.removeObject(forKey: hasSeenKey)
+            }
+            if let priorExit {
+                UserDefaults.standard.set(priorExit, forKey: exitKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: exitKey)
             }
         }
-        return model
     }
 }
 
