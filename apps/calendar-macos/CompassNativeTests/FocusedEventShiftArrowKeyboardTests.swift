@@ -291,6 +291,9 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         await model.start()
         model.authStore.closeModal()
+        model.onboardingStore.markWelcomeSeen(exit: "test")
+        model.onboardingStore.setWelcomeFirstVisitOpen(false)
+        NSApp.keyWindow?.makeFirstResponder(nil)
         await model.bootstrapLocalEventsForTests()
         if canWrite {
             XCTAssertFalse(model.isReadOnly(event: event))

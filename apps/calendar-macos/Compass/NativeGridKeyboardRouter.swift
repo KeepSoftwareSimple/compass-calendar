@@ -908,25 +908,38 @@ final class NativeGridKeyboardRouter {
         switch keyEvent.key {
         case .named(.enter):
             // A held Enter would blast through every screen and into signup.
-            if !keyEvent.isRepeat {
-                model.welcomePrimaryAction()
-            }
+            guard !keyEvent.isRepeat else { return false }
+            model.welcomePrimaryAction()
+            return true
         case .named(.escape):
             model.welcomeBack()
+            return true
         case .character(let char):
             if char == "i" {
                 model.welcomeLogIn()
-            } else if step == 2, let digit = char.wholeNumberValue, (1 ... 5).contains(digit) {
-                model.onboardingStore.toggleWelcomeFaq(digit - 1)
-            } else if step == 3 {
-                handleWelcomeLastStepKey(char)
-            } else if step == 4 {
-                break
+                return true
             }
+            if step == 2, let digit = char.wholeNumberValue, (1 ... 5).contains(digit) {
+                model.onboardingStore.toggleWelcomeFaq(digit - 1)
+                return true
+            }
+            if step == 3, welcomeLastStepKeyRecognized(char) {
+                handleWelcomeLastStepKey(char)
+                return true
+            }
+            return false
         default:
-            break
+            return false
         }
-        return true
+    }
+
+    private func welcomeLastStepKeyRecognized(_ char: Character) -> Bool {
+        if model.authStore.availableSignInProviders().contains(where: { $0.shortcutLetter == char }) {
+            return true
+        }
+        if char == "u" || char == "s" { return true }
+        if WelcomeLinks.items.contains(where: { $0.key == char }) { return true }
+        return false
     }
 
     private func handleWelcomeLastStepKey(_ char: Character) {

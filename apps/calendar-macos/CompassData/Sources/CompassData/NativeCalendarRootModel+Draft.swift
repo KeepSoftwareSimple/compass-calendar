@@ -34,11 +34,7 @@ extension NativeCalendarRootModel {
     }
 
     public func createTimedDraft(activity: DraftNudgeActivity) {
-        guard viewStore.view != .life,
-            let calendarId = defaultTargetCalendarId(),
-            let calendar = calendars.first(where: { $0.id == calendarId.rawValue }),
-            calendar.capabilities.canWrite
-        else { return }
+        guard viewStore.view != .life, defaultTargetCalendarId() != nil else { return }
         if draftStore.gridDraft != nil, activity == .keyboardPlace { return }
 
         let targetDay = draftTargetDay()
@@ -59,11 +55,7 @@ extension NativeCalendarRootModel {
     }
 
     public func createAllDayDraft() {
-        guard viewStore.view != .life,
-            let calendarId = defaultTargetCalendarId(),
-            let calendar = calendars.first(where: { $0.id == calendarId.rawValue }),
-            calendar.capabilities.canWrite
-        else { return }
+        guard viewStore.view != .life, let calendarId = defaultTargetCalendarId() else { return }
         let dateCalendar = EffectiveTimeZone.calendar
         let day = dateCalendar.startOfDay(for: draftTargetDay())
         guard let end = dateCalendar.date(byAdding: .day, value: 1, to: day) else { return }
