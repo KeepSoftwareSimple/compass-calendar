@@ -293,10 +293,19 @@ final class NativeGridKeyboardRouter {
             return true
         }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
-        return handleNormalizedKeyDown(keyEvent, eventWindowNumber: event.windowNumber)
+        let hardwareShiftArrow = event.modifierFlags.contains(.shift)
+            && [123, 124, 125, 126].contains(event.keyCode)
+        return handleNormalizedKeyDown(
+            keyEvent,
+            eventWindowNumber: event.windowNumber,
+            hardwareShiftArrow: hardwareShiftArrow)
     }
 
-    func handleNormalizedKeyDown(_ keyEvent: KeyEvent, eventWindowNumber: Int = 0) -> Bool {
+    func handleNormalizedKeyDown(
+        _ keyEvent: KeyEvent,
+        eventWindowNumber: Int = 0,
+        hardwareShiftArrow: Bool = false
+    ) -> Bool {
         if model.isWelcomeModalActive, handleWelcomeKeyDown(keyEvent) {
             return true
         }
@@ -443,10 +452,13 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
-        let isShiftArrow = keyEvent.modifiers.contains(.shift)
-            && shiftArrowKeyboardName(for: keyEvent) != nil
+        let isShiftArrow = hardwareShiftArrow
+            || (keyEvent.modifiers.contains(.shift) && shiftArrowKeyboardName(for: keyEvent) != nil)
 
         if isShiftArrow {
+            if model.isEventFormVisible {
+                return false
+            }
             if model.draftStore.gridDraft != nil {
                 if handleDraftKeys(keyEvent) { return true }
                 return false

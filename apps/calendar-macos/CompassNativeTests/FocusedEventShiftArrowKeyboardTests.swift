@@ -18,7 +18,13 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         XCTAssertEqual(model.focusStore.focusedEventId, original.id)
         XCTAssertNotNil(model.focusedEvent(), "fixture must load event before router nudge")
         let router = try makeGridRouter(model: model)
-        XCTAssertTrue(router.shiftArrow(.down))
+        XCTAssertTrue(router.shiftArrow(.down), "router must handle shift+nudge for focused start edge")
+        let updated = try XCTUnwrap(model.event(for: original.id))
+        if case .timed(let timed) = updated.schedule {
+            XCTAssertTrue(timed.start.rawValue.hasPrefix("2026-01-01T10:15:00"))
+        } else {
+            XCTFail("Expected timed schedule on model after nudge")
+        }
 
         await assertFinishedNudgePersistence(model)
         let stored = try XCTUnwrap(
@@ -203,13 +209,13 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
     private func localAllDayFixture() async throws
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
     {
-        try await localFixture(sample: try Self.decodeAllDayEvent(id: "router-local-allday"))
+        try await localFixture(sample: try Self.decodeAllDayEvent(id: "shift-nudge-allday"))
     }
 
     private func localTimedFixture(canWrite: Bool = true) async throws
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
     {
-        try await localFixture(sample: try Self.decodeTimedEvent(id: "router-local-event"), canWrite: canWrite)
+        try await localFixture(sample: try Self.decodeTimedEvent(id: "shift-nudge-event"), canWrite: canWrite)
     }
 
     private func assertFinishedNudgePersistence(
@@ -248,7 +254,7 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             isActive: true,
             isPrimary: true,
             isVisible: true,
-            name: "Shared",
+            name: "Shared calendar",
             provider: "local",
             timeZone: "UTC"
         )
