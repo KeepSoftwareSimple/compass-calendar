@@ -87,8 +87,8 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
 
     private func linkHintDigitChipFrames(in root: NSView) -> [CGRect] {
         var frames: [CGRect] = []
-        if let identifier = root.accessibilityIdentifier(),
-           identifier.hasPrefix("compass-description-link-digit-"),
+        let identifier = root.accessibilityIdentifier()
+        if identifier.hasPrefix("compass-description-link-digit-"),
            identifier != "compass-description-link-digit-hints"
         {
             frames.append(root.frame)
