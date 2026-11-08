@@ -104,8 +104,8 @@ final class NativeCalendarRootModelEventJumpTests: XCTestCase {
         await model.start()
         model.viewStore.view = .week
         model.activateEventJumpMode()
-        XCTAssertTrue(model.handleEventJumpKeystroke("W"))
-        XCTAssertEqual(model.eventJumpSelection.dayJumpBuffer, "w")
+        XCTAssertTrue(model.handleEventJumpKeystroke("F"))
+        XCTAssertEqual(model.eventJumpSelection.dayJumpBuffer, "f")
     }
 
     /// Web: Shift+T then 1230 creates at 12:30 on Tuesday, not today.
