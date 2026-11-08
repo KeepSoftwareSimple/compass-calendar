@@ -464,7 +464,10 @@ final class NativeGridKeyboardRouter {
                 return false
             }
             if model.focusStore.focusedEventId != nil {
-                return attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber)
+                return attemptShiftArrowEdgeNudge(
+                    keyEvent,
+                    eventWindowNumber: eventWindowNumber,
+                    hardwareShift: hardwareShiftArrow)
             }
             if handleDraftKeys(keyEvent) { return true }
             return false
