@@ -11,18 +11,19 @@ import {
   consumeDatePickerKey,
   focusKeyboardSelectedDay,
 } from "@web/components/DatePicker/date-picker-keyboard-dom.util";
+import {
+  calendarAction,
+  datePickerPageStep,
+  isDatePickerCalendarKey,
+  isDatePickerClosedFieldKey,
+  movePickerCursor,
+} from "@web/components/DatePicker/date-picker-keys.util";
 import { useCaptionableGridDatePickerHint } from "@web/shortcuts/tips/useDatePickerSidebarHints";
 import {
   consumeUiFocusTextInsertSuppress,
   shouldSuppressUiFocusTextInsert,
   stripTrailingLetter,
 } from "@web/shortcuts/ui-focus/ui-focus-text-insert.util";
-import {
-  calendarAction,
-  isEventFormDateCalendarKey,
-  isEventFormDateFieldClosedKey,
-  movePickerCursor,
-} from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
 import {
   formatLifeBirthDatePreview,
   lifeBirthDateDraftPreview,
@@ -355,20 +356,15 @@ export function LifeBirthDateField({
       return;
     }
 
-    if (event.key === "PageDown") {
+    const pageStep = datePickerPageStep(event.key, event.shiftKey);
+    if (pageStep) {
       consumeDatePickerKey(event);
-      if (event.shiftKey) stepCalendarYear(1);
-      else stepCalendarMonth(1);
-      return;
-    }
-    if (event.key === "PageUp") {
-      consumeDatePickerKey(event);
-      if (event.shiftKey) stepCalendarYear(-1);
-      else stepCalendarMonth(-1);
+      if (pageStep.unit === "year") stepCalendarYear(pageStep.delta);
+      else stepCalendarMonth(pageStep.delta);
       return;
     }
 
-    if (!isEventFormDateCalendarKey(event.key)) return;
+    if (!isDatePickerCalendarKey(event.key)) return;
 
     if (
       isInputTarget &&
@@ -464,7 +460,7 @@ export function LifeBirthDateField({
       return;
     }
 
-    if (!isEventFormDateFieldClosedKey(event.key)) {
+    if (!isDatePickerClosedFieldKey(event.key)) {
       if (event.key === "Escape") {
         revertInput(target);
         event.stopPropagation();

@@ -13,19 +13,20 @@ import {
   consumeDatePickerKey,
   focusKeyboardSelectedDay,
 } from "@web/components/DatePicker/date-picker-keyboard-dom.util";
+import {
+  calendarAction,
+  datePickerPageStep,
+  isDatePickerCalendarKey,
+  isDatePickerClosedFieldKey,
+  movePickerCursor,
+} from "@web/components/DatePicker/date-picker-keys.util";
 import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { useCaptionableGridDatePickerHint } from "@web/shortcuts/tips/useDatePickerSidebarHints";
 import {
   EVENT_FORM_DATE_INPUT_FORMAT,
   formatEventFormDateLabel,
 } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateField.util";
-import {
-  calendarAction,
-  closedFieldAction,
-  isEventFormDateCalendarKey,
-  isEventFormDateFieldClosedKey,
-  movePickerCursor,
-} from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
+import { closedFieldAction } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
 
 const DATE_FIELD_CLASSNAME =
   "c-event-form-date-field flex min-w-0 flex-1 items-center [&_.react-datepicker-wrapper]:w-full [&_.react-datepicker\\_\\_input-container]:w-full [&_input]:w-full [&_input]:min-w-0";
@@ -215,20 +216,15 @@ export const EventFormDateField = ({
       return;
     }
 
-    if (event.key === "PageDown") {
+    const pageStep = datePickerPageStep(event.key, event.shiftKey);
+    if (pageStep) {
       consumeDatePickerKey(event);
-      if (event.shiftKey) stepCalendarYear(1);
-      else stepCalendarMonth(1);
-      return;
-    }
-    if (event.key === "PageUp") {
-      consumeDatePickerKey(event);
-      if (event.shiftKey) stepCalendarYear(-1);
-      else stepCalendarMonth(-1);
+      if (pageStep.unit === "year") stepCalendarYear(pageStep.delta);
+      else stepCalendarMonth(pageStep.delta);
       return;
     }
 
-    if (!isEventFormDateCalendarKey(event.key)) return;
+    if (!isDatePickerCalendarKey(event.key)) return;
 
     if (
       isInputTarget &&
@@ -300,7 +296,7 @@ export const EventFormDateField = ({
       return;
     }
 
-    if (!isEventFormDateFieldClosedKey(event.key)) {
+    if (!isDatePickerClosedFieldKey(event.key)) {
       if (event.key === "Escape") {
         revertInput(target);
         event.stopPropagation();
