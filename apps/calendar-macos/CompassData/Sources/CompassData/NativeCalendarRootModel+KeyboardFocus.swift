@@ -180,18 +180,21 @@ extension NativeCalendarRootModel {
             lifeStore.cycleVariation(direction: 1)
         case .navLifeCurrent:
             lifeStore.focusCurrentWeek()
-        case .navLifeView:
-            viewStore.view = .life
-            rebuildPresentation()
         case .navDayView:
+            clearEventJumpSelection()
             viewStore.view = .day
             viewStore.setVisibleDayCount(1)
             rebuildPresentation()
             scheduleRefreshVisibleRange()
         case .navWeekView:
+            clearEventJumpSelection()
             viewStore.view = .week
             rebuildPresentation()
             scheduleRefreshVisibleRange()
+        case .navLifeView:
+            clearEventJumpSelection()
+            viewStore.view = .life
+            rebuildPresentation()
         case .navShiftLeft:
             shiftViewByDay(-1)
         case .navShiftRight:

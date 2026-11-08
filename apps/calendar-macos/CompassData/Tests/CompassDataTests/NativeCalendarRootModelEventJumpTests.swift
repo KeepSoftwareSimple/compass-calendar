@@ -56,8 +56,9 @@ final class NativeCalendarRootModelEventJumpTests: XCTestCase {
         model.viewStore.view = .week
         model.toggleEventJumpMode()
 
-        XCTAssertTrue(model.handleEventJumpKeystroke("w"))
-        XCTAssertEqual(model.eventJumpSelection.announcement, "Wednesday selected")
+        XCTAssertFalse(model.handleEventJumpKeystroke("w"))
+        XCTAssertTrue(model.handleEventJumpKeystroke("f"))
+        XCTAssertEqual(model.eventJumpSelection.announcement, "Friday selected")
 
         XCTAssertTrue(model.handleEventJumpKeystroke("s"))
         XCTAssertEqual(model.eventJumpSelection.dayJumpBuffer, "s")
@@ -79,6 +80,21 @@ final class NativeCalendarRootModelEventJumpTests: XCTestCase {
         XCTAssertEqual(model.eventJumpSelection.dayJumpBuffer, "f")
         XCTAssertFalse(model.handleEventJumpKeystroke("e"))
         XCTAssertFalse(model.handleEventJumpKeystroke("c"))
+        XCTAssertFalse(model.handleEventJumpKeystroke("w"))
+        XCTAssertFalse(model.handleEventJumpKeystroke("d"))
+        XCTAssertFalse(model.handleEventJumpKeystroke("l"))
+    }
+
+    func testJumpModeLeavesViewSwitchLettersForGridRouter() async throws {
+        let fixture = try DemoSeedFixture.load()
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
+        let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
+        await model.start()
+        model.viewStore.view = .day
+        model.toggleEventJumpMode()
+        model.handleShortcut(.navWeekView)
+        XCTAssertEqual(model.viewStore.view, .week)
+        XCTAssertFalse(model.eventJumpSelection.modeActive)
     }
 
     func testUppercaseDayLettersMatchLowercaseHints() async throws {

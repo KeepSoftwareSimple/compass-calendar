@@ -2,6 +2,10 @@ import CompassKit
 import Foundation
 
 extension NativeCalendarRootModel {
+    /// Web `VIEW_SHORTCUT_KEYS`: view switches use keyup globally; grid jump uses
+    /// keydown. These letters fall through jump mode so `nav-*-view` can run.
+    private static let viewNavigationFallthroughLetters: Set<Character> = ["d", "w", "l"]
+
     public var eventJumpSelection: EventJumpSelectionStore { overlayStores.eventJumpSelection }
 
     public var eventJumpStatusText: String? {
@@ -89,6 +93,9 @@ extension NativeCalendarRootModel {
     public func handleEventJumpKeystroke(_ key: Character) -> Bool {
         guard eventJumpSelection.modeActive else { return false }
         let normalized = Character(String(key).lowercased())
+        if Self.viewNavigationFallthroughLetters.contains(normalized) {
+            return false
+        }
         if normalized.isNumber {
             return handleEventJumpDigit(normalized)
         }
