@@ -150,6 +150,8 @@ public final class NativeCalendarRootModel {
     public internal(set) var quickAddError: String?
     var blockPartyModHoldTask: Task<Void, Never>?
     var eventJumpCommitTask: Task<Void, Never>?
+    var focusedEventNudgePersistTask: Task<Void, Never>?
+    var focusedEventNudgePersistSerial = 0
     /// Digits typed after a day pick, for web's typed-time create on that column.
     @ObservationIgnored var eventJumpTimeBurstDigits = ""
     /// When the last digit handler finished; gaps measure idle time between key events.
@@ -1143,5 +1145,12 @@ public final class NativeCalendarRootModel {
                 }
             )
         }
+    }
+
+    /// Unsigned fixtures upsert calendars/events before `start()`; switching to `.local` must reload metadata.
+    public func bootstrapLocalEventsForTests() async {
+        eventsStore.setSource(.local)
+        await reloadCalendars()
+        await refreshVisibleRange()
     }
 }

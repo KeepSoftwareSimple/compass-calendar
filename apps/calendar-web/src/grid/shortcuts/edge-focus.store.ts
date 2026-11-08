@@ -8,12 +8,15 @@ export type EdgeFocusState = {
   edge: EventEdge | null;
   /** Polite live-region message for the current edge / a nudge result. */
   announcement: string;
+  /** Drives whether edge nudges teach vertical time or horizontal day shifts. */
+  isAllDay: boolean;
 };
 
 export const initialEdgeFocusState: EdgeFocusState = {
   eventId: null,
   edge: null,
   announcement: "",
+  isAllDay: false,
 };
 
 export const useEdgeFocusStore = create<EdgeFocusState>()(
@@ -34,7 +37,11 @@ const edgeAnnouncement = (edge: EventEdge | null) =>
 
 export const edgeFocusActions = {
   /** Cycles the given event's edge focus: whole event → start → end → wrap. */
-  cycle: (eventId: string, direction: "forward" | "backward") => {
+  cycle: (
+    eventId: string,
+    direction: "forward" | "backward",
+    isAllDay = false,
+  ) => {
     const current = useEdgeFocusStore.getState();
     const currentEdge = current.eventId === eventId ? current.edge : null;
     const index = EDGE_CYCLE.indexOf(currentEdge);
@@ -43,16 +50,30 @@ export const edgeFocusActions = {
       EDGE_CYCLE[(index + step + EDGE_CYCLE.length) % EDGE_CYCLE.length]!;
 
     useEdgeFocusStore.setState(
-      { eventId, edge: nextEdge, announcement: edgeAnnouncement(nextEdge) },
+      {
+        eventId,
+        edge: nextEdge,
+        announcement: edgeAnnouncement(nextEdge),
+        isAllDay,
+      },
       false,
       { type: "cycle" },
     );
   },
   /** Sets the focused edge directly (e.g. after a keyboard nudge flip). */
-  setEdge: (eventId: string, edge: EventEdge, announcement: string) =>
-    useEdgeFocusStore.setState({ eventId, edge, announcement }, false, {
-      type: "setEdge",
-    }),
+  setEdge: (
+    eventId: string,
+    edge: EventEdge,
+    announcement: string,
+    isAllDay = false,
+  ) =>
+    useEdgeFocusStore.setState(
+      { eventId, edge, announcement, isAllDay },
+      false,
+      {
+        type: "setEdge",
+      },
+    ),
   reset: () =>
     useEdgeFocusStore.setState(initialEdgeFocusState, false, {
       type: "reset",

@@ -214,7 +214,8 @@ final class NativeGridKeyboardRouter {
             return false
         }
         // Native controls own editing shortcuts, including undo and redo.
-        let editingText = (NSApp.keyWindow?.firstResponder as? NSTextView)?.isEditable == true
+        let eventWindow = keyboardEventWindow(for: event.windowNumber)
+        let editingText = (eventWindow?.firstResponder as? NSTextView)?.isEditable == true
         let modalOwnsKeyboard = model.settingsStore.isPresented || model.authStore.isModalPresented
         if modalOwnsKeyboard && !model.overlayKeyboardCaptureActive {
             guard let key = KeyEvent(nsEvent: event) else { return false }
@@ -262,15 +263,21 @@ final class NativeGridKeyboardRouter {
             }
             return false
         }
-        if editingText, model.viewStore.view == .life, !model.isLifeViewIntroActive,
-            !model.overlayKeyboardCaptureActive
+        // Event form fields are NSTextViews too. Route their Cmd shortcuts through
+        // handleEventFormKeys instead of swallowing keys here.
+        if editingText, !model.overlayKeyboardCaptureActive, !modalOwnsKeyboard,
+            !model.isEventFormVisible
         {
             if let key = KeyEvent(nsEvent: event),
                 key.matches(KeyChord(modifiers: [.command], token: .character("k"))) {
                 model.toggleCommandPalette()
                 return true
             }
-            return false
+            if model.viewStore.view == .life {
+                if !model.isLifeViewIntroActive { return false }
+            } else {
+                return false
+            }
         }
         if editingText, event.modifierFlags.contains(.command),
             event.charactersIgnoringModifiers?.lowercased() == "z" {
@@ -286,7 +293,13 @@ final class NativeGridKeyboardRouter {
             return true
         }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
+        return handleNormalizedKeyDown(keyEvent, eventWindowNumber: event.windowNumber)
+    }
 
+    func handleNormalizedKeyDown(
+        _ keyEvent: KeyEvent,
+        eventWindowNumber: Int = 0
+    ) -> Bool {
         if model.isWelcomeModalActive, handleWelcomeKeyDown(keyEvent) {
             return true
         }
@@ -392,6 +405,9 @@ final class NativeGridKeyboardRouter {
         }
 
         if model.isEventFormVisible {
+            if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
+                return false
+            }
             if handleUITestEventFormTyping(keyEvent) {
                 return true
             }
@@ -426,19 +442,45 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if handleDraftKeys(keyEvent) {
-            return true
+        if isEditableNonDescriptionTextInputFocused(eventWindowNumber: eventWindowNumber) {
+            return false
         }
 
-        if model.isEventFormVisible {
+        let isShiftArrow = keyEvent.modifiers.contains(.shift)
+            && shiftArrowKeyboardName(for: keyEvent) != nil
+
+        if isShiftArrow {
+            if model.isEventFormVisible {
+                return false
+            }
+            if model.draftStore.gridDraft != nil {
+                if handleDraftKeys(keyEvent) { return true }
+                return false
+            }
+            if model.focusStore.focusedEventId != nil {
+                if attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber) {
+                    return true
+                }
+                if let focused = model.focusedEvent(), model.isReadOnly(event: focused) {
+                    return false
+                }
+                return false
+            }
+            if handleDraftKeys(keyEvent) { return true }
             return false
+        }
+
+        if handleDraftKeys(keyEvent) {
+            return true
         }
 
         if modHold.handleKeyDown(keyEvent) {
             return true
         }
 
-        if keyEvent.modifiers == .shift, case .character(let letter) = keyEvent.key {
+        if keyEvent.modifiers == .shift, case .character(let letter) = keyEvent.key,
+            claimsShiftDayJump(letter)
+        {
             model.handleShiftDayJump(letter: letter)
             return true
         }
@@ -516,6 +558,12 @@ final class NativeGridKeyboardRouter {
     }
 
     private func handleEventFormKeys(_ keyEvent: KeyEvent) -> Bool {
+        if keyEvent.modifiers.contains(.shift),
+            case .named(let named) = keyEvent.key,
+            [.arrowUp, .arrowDown, .arrowLeft, .arrowRight].contains(named)
+        {
+            return false
+        }
         if model.eventFormTimeKeyOwner != nil, keyEvent.modifiers.isEmpty,
             (isSpaceKey(keyEvent.key)
                 || [KeyToken.named(.enter), .named(.arrowUp), .named(.arrowDown)].contains(keyEvent.key)) {
@@ -696,11 +744,56 @@ final class NativeGridKeyboardRouter {
         return textView.accessibilityIdentifier() == "compass-event-form-description"
     }
 
-    private func isEditableNonDescriptionTextInputFocused() -> Bool {
-        guard let textView = NSApp.keyWindow?.firstResponder as? NSTextView, textView.isEditable else {
+    private func keyboardEventWindow(for windowNumber: Int) -> NSWindow? {
+        if windowNumber != 0 {
+            return NSApp.windows.first { $0.windowNumber == windowNumber }
+        }
+        return NSApp.keyWindow
+    }
+
+    private func isEditableNonDescriptionTextInputFocused(eventWindowNumber: Int = 0) -> Bool {
+        guard let window = keyboardEventWindow(for: eventWindowNumber),
+            let textView = window.firstResponder as? NSTextView,
+            textView.isEditable
+        else {
             return false
         }
         return textView.accessibilityIdentifier() != "compass-event-form-description"
+    }
+
+    /// Shift+letter day jump (M T W R F S). Other shifted letters (e.g. C for create-allday)
+    /// must reach the shortcut dispatcher.
+    private func claimsShiftDayJump(_ letter: Character) -> Bool {
+        if String(letter).lowercased() == "s" { return true }
+        return DayJumpPrefixes.dayPrefix(forShiftedLetter: letter) != nil
+    }
+
+    private func shiftArrowKeyboardName(for keyEvent: KeyEvent) -> String? {
+        switch keyEvent.key {
+        case .named(.arrowUp): return "ArrowUp"
+        case .named(.arrowDown): return "ArrowDown"
+        case .named(.arrowLeft): return "ArrowLeft"
+        case .named(.arrowRight): return "ArrowRight"
+        default: return nil
+        }
+    }
+
+    private func attemptShiftArrowEdgeNudge(
+        _ keyEvent: KeyEvent,
+        eventWindowNumber: Int = 0
+    ) -> Bool {
+        guard keyEvent.modifiers.contains(.shift),
+            !isEditableNonDescriptionTextInputFocused(eventWindowNumber: eventWindowNumber)
+        else {
+            return false
+        }
+        guard let arrow = shiftArrowKeyboardName(for: keyEvent) else { return false }
+        let moved = model.nudgeDraftOrPlace(
+            key: arrow,
+            shiftKey: true,
+            altKey: keyEvent.modifiers.contains(.option)
+        )
+        return moved
     }
 
     private func matchesBinding(_ keyEvent: KeyEvent, id: ShortcutId) -> Bool {
@@ -722,6 +815,7 @@ final class NativeGridKeyboardRouter {
     }
 
     private func handleDraftKeys(_ keyEvent: KeyEvent) -> Bool {
+        if model.isEventFormVisible { return false }
         if keyEvent.modifiers == [.control, .shift],
             case .character(let char) = keyEvent.key,
             char == "0"
@@ -823,25 +917,38 @@ final class NativeGridKeyboardRouter {
         switch keyEvent.key {
         case .named(.enter):
             // A held Enter would blast through every screen and into signup.
-            if !keyEvent.isRepeat {
-                model.welcomePrimaryAction()
-            }
+            guard !keyEvent.isRepeat else { return false }
+            model.welcomePrimaryAction()
+            return true
         case .named(.escape):
             model.welcomeBack()
+            return true
         case .character(let char):
             if char == "i" {
                 model.welcomeLogIn()
-            } else if step == 2, let digit = char.wholeNumberValue, (1 ... 5).contains(digit) {
-                model.onboardingStore.toggleWelcomeFaq(digit - 1)
-            } else if step == 3 {
-                handleWelcomeLastStepKey(char)
-            } else if step == 4 {
-                break
+                return true
             }
+            if step == 2, let digit = char.wholeNumberValue, (1 ... 5).contains(digit) {
+                model.onboardingStore.toggleWelcomeFaq(digit - 1)
+                return true
+            }
+            if step == 3, welcomeLastStepKeyRecognized(char) {
+                handleWelcomeLastStepKey(char)
+                return true
+            }
+            return false
         default:
-            break
+            return false
         }
-        return true
+    }
+
+    private func welcomeLastStepKeyRecognized(_ char: Character) -> Bool {
+        if model.authStore.availableSignInProviders().contains(where: { $0.shortcutLetter == char }) {
+            return true
+        }
+        if char == "u" || char == "s" { return true }
+        if WelcomeLinks.items.contains(where: { $0.key == char }) { return true }
+        return false
     }
 
     private func handleWelcomeLastStepKey(_ char: Character) {

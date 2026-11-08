@@ -31,6 +31,7 @@ public final class FocusStore {
     public private(set) var focusedEventType: ViewInteractionEventType?
     public private(set) var edge: EventEdge?
     public private(set) var edgeAnnouncement: String = ""
+    public private(set) var edgeFocusIsAllDay: Bool = false
     public private(set) var pageJumpTargets: [PageJumpTarget] = []
     public var pageJumpHintsVisible = false
 
@@ -79,7 +80,11 @@ public final class FocusStore {
         }
     }
 
-    public func cycleEdge(for eventId: EventId, direction: CycleDirection) {
+    public func cycleEdge(
+        for eventId: EventId,
+        direction: CycleDirection,
+        isAllDay: Bool = false
+    ) {
         let cycle: [EventEdge?] = [nil, .startDate, .endDate]
         let currentEdge: EventEdge? =
             focusedEventId == eventId ? edge : nil
@@ -89,12 +94,19 @@ public final class FocusStore {
         let next = cycle[nextIndex]
         focusedEventId = eventId
         edge = next
+        edgeFocusIsAllDay = isAllDay
         edgeAnnouncement = Self.edgeAnnouncement(next)
     }
 
-    public func setEdge(eventId: EventId, edge: EventEdge, announcement: String) {
+    public func setEdge(
+        eventId: EventId,
+        edge: EventEdge,
+        announcement: String,
+        isAllDay: Bool = false
+    ) {
         focusedEventId = eventId
         self.edge = edge
+        edgeFocusIsAllDay = isAllDay
         edgeAnnouncement = announcement
     }
 
@@ -103,6 +115,7 @@ public final class FocusStore {
         focusedEventType = nil
         edge = nil
         edgeAnnouncement = ""
+        edgeFocusIsAllDay = false
     }
 
     public func setPageJumpTargets(_ targets: [PageJumpTarget]) {

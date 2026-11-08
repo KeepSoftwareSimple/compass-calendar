@@ -4,7 +4,7 @@ import {
 } from "@web/shortcuts/hint-chips/DigitHintChipOverlay";
 import {
   CALENDAR_PAGE_JUMP_TARGETS,
-  getPageJumpAnchor,
+  getPageJumpChipAnchor,
   getPageJumpFocusElement,
   type PageJumpTargets,
 } from "@web/shortcuts/page-jump/page-jump.targets";
@@ -25,8 +25,9 @@ export function PageJumpHintOverlay({
   // card has nothing focusable, so their digits would do nothing there.
   const resolveChips = (): DigitHintChip[] =>
     targets.flatMap((target) => {
-      const anchor = getPageJumpAnchor(target.id);
-      if (!anchor || !getPageJumpFocusElement(target.id)) return [];
+      if (!getPageJumpFocusElement(target.id)) return [];
+      const anchor = getPageJumpChipAnchor(target.id);
+      if (!anchor) return [];
       return [
         { key: target.id, digit: target.digit, label: target.label, anchor },
       ];

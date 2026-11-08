@@ -119,18 +119,34 @@ public final class DraftStore {
     public func nudgeByKeyboard(
         key: String,
         altKey: Bool = false,
+        edge: DraftNudge.ScheduleEdge? = nil,
         isStartAllowed: ((Date) -> Bool)? = nil
     ) -> DraftSchedule? {
         let step = DraftNudge.nudgeStepFromKeyboard(altKey: altKey)
-        guard let next = DraftNudge.repositionDraftByKeyboard(
-            activity: status.activity,
-            schedule: gridDraft?.schedule,
-            key: key,
-            isStartAllowed: isStartAllowed,
-            step: step
-        ) else {
-            return nil
+        guard let current = gridDraft?.schedule else { return nil }
+
+        let next: DraftSchedule?
+        if let edge {
+            guard let result = DraftNudge.nudgeScheduleEdgeByKeyboard(
+                schedule: current,
+                edge: edge,
+                key: key,
+                step: step
+            ) else {
+                return nil
+            }
+            next = result.schedule
+        } else {
+            next = DraftNudge.repositionDraftByKeyboard(
+                activity: status.activity,
+                schedule: current,
+                key: key,
+                isStartAllowed: isStartAllowed,
+                step: step
+            )
         }
+
+        guard let next else { return nil }
         setGridSchedule(next)
         return next
     }

@@ -1,3 +1,4 @@
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import {
   type Modifier,
   type ModifierArguments,
@@ -20,6 +21,13 @@ import { darken, isDark } from "@web/common/styles/color.utils";
 import { colors, lightColors } from "@web/common/styles/colors";
 import { type CSSVariables } from "@web/common/styles/css.types";
 import { theme } from "@web/common/styles/theme";
+import {
+  CAPTION_YEARS_PER_PAGE,
+  reactDatepickerYearPageBounds,
+  shiftYearPageBounds,
+  type YearPageBounds,
+  yearRangeCaptionFromBounds,
+} from "@web/components/DatePicker/caption-picker-year-page";
 import { MonthNavButton } from "@web/components/DatePicker/MonthNavButton";
 import { ChevronLeftIcon } from "@web/components/Icons/ChevronLeftIcon";
 import { ChevronRightIcon } from "@web/components/Icons/ChevronRightIcon";
@@ -190,10 +198,15 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     setCaptionView(next);
   }, []);
   const [captionFocusDate, setCaptionFocusDate] = useState<Date | undefined>();
+  /** Visible year cells; react-datepicker does not move `monthDate` with paging. */
+  const [yearPageBounds, setYearPageBounds] = useState<YearPageBounds | null>(
+    null,
+  );
   useEffect(() => {
     if (isOpen) return;
     commitCaptionView("day");
     setCaptionFocusDate(undefined);
+    setYearPageBounds(null);
   }, [commitCaptionView, isOpen]);
 
   useEffect(() => {
@@ -302,17 +315,44 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const handleCalendarClose = () => {
     commitCaptionView("day");
     setCaptionFocusDate(undefined);
+    setYearPageBounds(null);
     datePickerProps.onCalendarClose?.();
   };
 
   const openCaptionPicker = () => {
     const selectedDate = datePickerProps.selected;
-    setCaptionFocusDate(
+    const anchor =
       selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime())
         ? selectedDate
-        : new Date(),
+        : new Date();
+    setCaptionFocusDate(anchor);
+    setYearPageBounds(
+      reactDatepickerYearPageBounds(
+        dayjs(anchor).year(),
+        CAPTION_YEARS_PER_PAGE,
+      ),
     );
     commitCaptionView("year");
+  };
+
+  const stepYearPage = (
+    headerProps: Parameters<
+      NonNullable<ReactDatePickerProps["renderCustomHeader"]>
+    >[0],
+    direction: -1 | 1,
+  ) => {
+    if (direction < 0) {
+      headerProps.decreaseYear();
+    } else {
+      headerProps.increaseYear();
+    }
+    setYearPageBounds((current) => {
+      const anchorYear = dayjs(headerProps.monthDate).year();
+      const base =
+        current ??
+        reactDatepickerYearPageBounds(anchorYear, CAPTION_YEARS_PER_PAGE);
+      return shiftYearPageBounds(base, direction, CAPTION_YEARS_PER_PAGE);
+    });
   };
 
   const handleChange: ReactDatePickerProps["onChange"] = (date, event) => {
@@ -349,6 +389,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         <div
           ref={calendarRef}
           className={classNames("c-date-picker", className)}
+          data-caption-view={captionPicker ? captionView : undefined}
           data-dark={usesThemeText ? "true" : "false"}
           data-view={view}
           style={datePickerStyle}
@@ -399,7 +440,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
       showFourColumnMonthYearPicker={isCaptionMonthView}
       showMonthYearPicker={isCaptionMonthView}
       showYearPicker={isCaptionYearView}
-      yearItemNumber={12}
+      yearItemNumber={CAPTION_YEARS_PER_PAGE}
       // Close the picker when the user clicks away (react-datepicker has no
       // onCalendarClose for outside-clicks). onCalendarOpen/onCalendarClose/
       // onSelect flow straight through {...props}. Kept as a fallback for
@@ -414,16 +455,22 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         const selectedMonth = dayjs(monthDate).format("MMM YYYY");
         const selectedYear = dayjs(monthDate).format("YYYY");
         const currentMonth = dayjs().format("MMM YYYY");
+        const visibleYearPage =
+          yearPageBounds ??
+          reactDatepickerYearPageBounds(
+            dayjs(monthDate).year(),
+            CAPTION_YEARS_PER_PAGE,
+          );
         const captionLabel = isCaptionYearView
-          ? "Select year"
+          ? yearRangeCaptionFromBounds(visibleYearPage)
           : isCaptionMonthView
             ? `Select month, ${selectedYear}`
             : selectedMonth;
         const useYearNavigation = isCaptionYearView || isCaptionMonthView;
         const headerNav = useYearNavigation
           ? {
-              onPrev: () => headerProps.decreaseYear(),
-              onNext: () => headerProps.increaseYear(),
+              onPrev: () => stepYearPage(headerProps, -1),
+              onNext: () => stepYearPage(headerProps, 1),
               prevDisabled: headerProps.prevYearButtonDisabled,
               nextDisabled: headerProps.nextYearButtonDisabled,
               prevLabel: "Previous years",
@@ -460,23 +507,27 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
             : headerEndContent;
 
         const captionBlock = (
-          <div className="min-w-16 shrink-0 items-start">
+          <div className="min-w-0 shrink-0 items-start">
             {captionPicker && captionView === "day" ? (
               <button
                 type="button"
                 aria-label="Choose month and year"
                 className={classNames(
-                  "relative cursor-pointer rounded-xs px-0.5 text-left transition-colors hover:bg-text/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "relative inline-flex cursor-pointer items-center gap-0.5 rounded-sm border border-text/15 bg-text/5 px-1.5 py-0.5 text-left font-medium transition-colors hover:border-text/25 hover:bg-text/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                   monthTextClassName,
                 )}
                 style={{ color: headerColor }}
                 onClick={openCaptionPicker}
               >
                 {selectedMonth}
+                <CaretDownIcon aria-hidden size={12} weight="bold" />
               </button>
             ) : (
               <span
-                className={classNames("relative", monthTextClassName)}
+                className={classNames(
+                  "relative font-medium",
+                  monthTextClassName,
+                )}
                 style={{ color: headerColor }}
               >
                 {captionLabel}
@@ -487,7 +538,10 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
 
         const navBlock = !customHeaderCount && (
           <div
-            className={classNames("flex items-center", headerActionsClassName)}
+            className={classNames(
+              "flex shrink-0 items-center",
+              headerActionsClassName,
+            )}
           >
             <div className="flex items-center gap-1">
               <MonthNavButton
@@ -557,17 +611,17 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         return (
           <div
             className={classNames(
-              "flex min-w-0 items-center gap-2 px-2 py-2",
+              "flex w-full min-w-0 items-center justify-between gap-2 px-2 py-2",
               headerClassName,
             )}
           >
             {captionBlock}
-            {navBlock}
-            {!customHeaderCount && resolvedHeaderEndContent ? (
-              <div className="ml-auto flex min-w-0 items-center">
-                {resolvedHeaderEndContent}
-              </div>
-            ) : null}
+            <div className="ml-auto flex min-w-0 items-center gap-2">
+              {navBlock}
+              {!customHeaderCount && resolvedHeaderEndContent
+                ? resolvedHeaderEndContent
+                : null}
+            </div>
           </div>
         );
       }}

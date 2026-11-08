@@ -39,6 +39,10 @@ struct LifeSidebarView: View {
             Text("Date of birth").help("Saved to your account when signed in")
             TextField("Select date", text: $birthDate)
               .accessibilityLabel("Date of birth")
+              .accessibilityIdentifier(
+                focusedField == .birthDate
+                  ? "compass-life-birth-date-focused"
+                  : "compass-life-birth-date-field")
               .focused($focusedField, equals: .birthDate)
               .onSubmit { commitBirthDate() }
               .help("Enter a date like Jun 10, 2026")
@@ -109,6 +113,11 @@ struct LifeSidebarView: View {
       .padding(20)
     }
     .onKeyPress(.escape) {
+      if showsBirthDatePicker {
+        showsBirthDatePicker = false
+        focusedField = .birthDate
+        return .handled
+      }
       focusedField = nil
       return .handled
     }
@@ -140,6 +149,7 @@ struct LifeSidebarView: View {
 
   private func openBirthDatePicker() {
     pickerMonth = storedBirthDate ?? model.referenceNow
+    focusedField = .birthDate
     showsBirthDatePicker = true
   }
 
@@ -152,6 +162,7 @@ struct LifeSidebarView: View {
         invalidBirthDate = !model.lifeStore.updateBirthDate(LifeDateFormat.stored(from: picked))
         refreshInputs()
         showsBirthDatePicker = false
+        focusedField = .birthDate
       },
       today: model.referenceNow,
       daysAreClickable: true,
@@ -163,6 +174,10 @@ struct LifeSidebarView: View {
     .padding(12)
     .background(theme.surfacePanelColor)
     .accessibilityIdentifier("compass-life-birth-date-picker")
+    .onExitCommand {
+      showsBirthDatePicker = false
+      focusedField = .birthDate
+    }
   }
 
   private func variationButton(_ label: String, symbol: String, direction: Int) -> some View {

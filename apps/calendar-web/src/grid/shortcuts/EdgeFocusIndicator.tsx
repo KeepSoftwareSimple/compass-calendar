@@ -3,15 +3,20 @@ import {
   selectEdgeFocusAnnouncement,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
+import { edgeFocusHintParts } from "@web/grid/shortcuts/edge-focus-hint.parts";
+import { ShortcutTipParts } from "@web/shortcuts/tips/ShortcutTipParts";
 
 /**
- * Live region announcing the currently focused start/end edge and the result
- * of edge nudges (e.g. "Editing start time", "Start 9:15 AM").
+ * Sidebar contextual help while an event edge or whole-body move is focused.
  */
 export const EdgeFocusIndicator: FC = () => {
   const announcement = useEdgeFocusStore(selectEdgeFocusAnnouncement);
+  const edge = useEdgeFocusStore((state) => state.edge);
+  const isAllDay = useEdgeFocusStore((state) => state.isAllDay);
 
   if (!announcement) return null;
+
+  const parts = edgeFocusHintParts(edge, isAllDay, announcement);
 
   return (
     <span
@@ -20,7 +25,7 @@ export const EdgeFocusIndicator: FC = () => {
       data-edge-focus-indicator=""
       role="status"
     >
-      {announcement}
+      <ShortcutTipParts parts={parts} />
     </span>
   );
 };

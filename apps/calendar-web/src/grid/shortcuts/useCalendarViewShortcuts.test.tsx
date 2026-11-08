@@ -249,6 +249,7 @@ describe("useCalendarViewShortcuts", () => {
       "aaaaaaaaaaaaaaaaaaaaaaaa",
       "startDate",
       "Editing start time",
+      false,
     );
     renderHook(() => useCalendarViewShortcuts({}), { wrapper });
 

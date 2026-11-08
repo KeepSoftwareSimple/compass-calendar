@@ -1,6 +1,10 @@
 import { createPortal } from "react-dom";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
+import {
+  PAGE_JUMP_CHIP_PLACEMENT_ATTRIBUTE,
+  type PageJumpChipPlacement,
+} from "@web/shortcuts/page-jump/page-jump.targets";
 import { getVisibleHintRect } from "@web/shortcuts/shift-hint/shift-hint-visible-rect";
 import { useHintLayoutRefresh } from "@web/shortcuts/useHintLayoutRefresh";
 
@@ -15,6 +19,18 @@ export type DigitHintChip = {
 
 /** Widest a single-character keycap gets, used to keep chips on screen. */
 const CHIP_WIDTH_PX = 22;
+/** Gap between an `outside-trailing` chip and the marker's right edge. */
+const CHIP_OUTSIDE_GUTTER_PX = 4;
+
+const chipLeftPx = (
+  visibleRect: { readonly left: number; readonly right: number },
+  placement: PageJumpChipPlacement | null,
+): number => {
+  if (placement === "outside-trailing") {
+    return visibleRect.right + CHIP_OUTSIDE_GUTTER_PX;
+  }
+  return Math.max(4, visibleRect.right - CHIP_WIDTH_PX);
+};
 
 /**
  * Numbered keycap chips anchored to each target while Mod is held, shared by
@@ -72,13 +88,17 @@ export function DigitHintChipOverlay({
             return null;
           }
 
+          const placement = chip.anchor.getAttribute(
+            PAGE_JUMP_CHIP_PLACEMENT_ATTRIBUTE,
+          ) as PageJumpChipPlacement | null;
+
           return (
             <span
               key={chip.key}
               className="absolute"
               style={{
                 top: visibleRect.top + 2,
-                left: Math.max(4, visibleRect.right - CHIP_WIDTH_PX),
+                left: chipLeftPx(visibleRect, placement),
               }}
             >
               <ShortcutHint>{chip.digit}</ShortcutHint>

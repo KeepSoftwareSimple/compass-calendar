@@ -275,13 +275,18 @@ public struct RootView: View {
             EventJumpStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 2)
+            EdgeFocusStatusLine(model: model)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 2)
             SidebarSyncStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 4)
             ShortcutSidebarFooter(
                 levelsStore: model.levelsStore,
                 isEventFormVisible: model.isEventFormVisible,
-                suppressTips: model.eventJumpStatusText != nil || model.focusStore.pageJumpHintsVisible,
+                suppressTips: model.eventJumpStatusText != nil
+                    || model.edgeFocusStatusText != nil
+                    || model.focusStore.pageJumpHintsVisible,
                 suppressForQuickTime: !model.draftStore.quickTimeDigits.isEmpty)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
