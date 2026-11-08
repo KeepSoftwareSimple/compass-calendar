@@ -26,6 +26,13 @@ Agent branch: `cursor/mac-f-preview-audit-afc2`. Runtime proof for native behavi
 - Register `focus-shift-hold` on grid shortcut dispatcher.
 - `NativeGridKeyboardRouterEventJumpTests`: f activates mode + quick-time hints, form text-input gating, Esc dismiss.
 
+## Tranche 1b (city timezone search — separate PR)
+
+- **User report (2026-11-08):** Second timezone picker, typing `tampa`, no results.
+- **Architecture:** `city-timezones` (MIT, ~7k cities) in `@core/timezone/city-timezone-search`; merged into web `filterTimeZones`; `city-timezone-index.json` via `desktop:export` for `CityTimezoneSearch.swift`.
+- **Florida:** US state query prefers US rows; surfaces both `America/New_York` and `America/Chicago` with span note.
+- **Limits:** City data is population-weighted geonames-derived; typos/obsolete names may miss; no live external API.
+
 ## Tranche 2 (prioritized next, not in this PR)
 
 1. bc-9c7c2aa7 bug fixes after merge/conflict review (NativeGridKeyboardRouter overlap: day jump vs event jump only).

@@ -665,6 +665,21 @@
   ],
   "behaviors": [
     {
+      "id": "timezone-city-search",
+      "behavior": "Second timezone and default timezone pickers find IANA zones by city or region name (e.g. Tampa, Florida)",
+      "web": [
+        "apps/calendar-web/src/timezone/timezone-catalog.test.ts",
+        "packages/core/src/timezone/city-timezone-search.test.ts"
+      ],
+      "native": [
+        "apps/calendar-macos/CompassKit/Tests/CompassKitTests/CityTimezoneSearchTests.swift"
+      ],
+      "status": "unverified",
+      "evidence": "Linux agent: core + web tests PASS; desktop:export wrote city-timezone-index.json; macOS CI required for CompassKitTests.",
+      "reason": "Prior picker filtered IANA ids only; travelers expect city names.",
+      "review": "2026-11-08 cursor/city-timezone-search-afc2"
+    },
+    {
       "id": "focus-shift-hold-f",
       "behavior": "Bare f latches event-jump mode: jump chips, quick-time slot preview, Esc dismisses; f does not fire in an open event form",
       "web": [
