@@ -293,18 +293,12 @@ final class NativeGridKeyboardRouter {
             return true
         }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
-        let hardwareShiftArrow = event.modifierFlags.contains(.shift)
-            && [123, 124, 125, 126].contains(event.keyCode)
-        return handleNormalizedKeyDown(
-            keyEvent,
-            eventWindowNumber: event.windowNumber,
-            hardwareShiftArrow: hardwareShiftArrow)
+        return handleNormalizedKeyDown(keyEvent, eventWindowNumber: event.windowNumber)
     }
 
     func handleNormalizedKeyDown(
         _ keyEvent: KeyEvent,
-        eventWindowNumber: Int = 0,
-        hardwareShiftArrow: Bool = false
+        eventWindowNumber: Int = 0
     ) -> Bool {
         if model.isWelcomeModalActive, handleWelcomeKeyDown(keyEvent) {
             return true
@@ -452,8 +446,8 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
-        let isShiftArrow = hardwareShiftArrow
-            || (keyEvent.modifiers.contains(.shift) && shiftArrowKeyboardName(for: keyEvent) != nil)
+        let isShiftArrow = keyEvent.modifiers.contains(.shift)
+            && shiftArrowKeyboardName(for: keyEvent) != nil
 
         if isShiftArrow {
             if model.isEventFormVisible {
@@ -466,10 +460,8 @@ final class NativeGridKeyboardRouter {
             if model.focusStore.focusedEventId != nil {
                 return attemptShiftArrowEdgeNudge(
                     keyEvent,
-                    eventWindowNumber: eventWindowNumber,
-                    hardwareShift: hardwareShiftArrow)
+                    eventWindowNumber: eventWindowNumber)
             }
-            if handleDraftKeys(keyEvent) { return true }
             return false
         }
 
@@ -496,6 +488,9 @@ final class NativeGridKeyboardRouter {
         if isShiftArrow {
             return false
         }
+        if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
+            return false
+        }
         if let id = dispatcher.dispatch(keyEvent) {
             model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
             performShortcut(id)
@@ -505,10 +500,6 @@ final class NativeGridKeyboardRouter {
             return true
         }
         model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
-
-        if isShiftArrow {
-            return false
-        }
 
         if let field = dispatcher.lastResolvedLeaderField {
             handleEditSequenceField(field)
@@ -779,7 +770,10 @@ final class NativeGridKeyboardRouter {
         }
     }
 
-    private func attemptShiftArrowEdgeNudge(_ keyEvent: KeyEvent, eventWindowNumber: Int = 0) -> Bool {
+    private func attemptShiftArrowEdgeNudge(
+        _ keyEvent: KeyEvent,
+        eventWindowNumber: Int = 0
+    ) -> Bool {
         guard keyEvent.modifiers.contains(.shift),
             !isEditableNonDescriptionTextInputFocused(eventWindowNumber: eventWindowNumber)
         else {

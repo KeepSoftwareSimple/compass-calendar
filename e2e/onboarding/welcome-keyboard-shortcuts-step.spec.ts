@@ -4,7 +4,11 @@ import { openCommandPaletteWithKeyboard } from "../utils/event-test-utils";
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1280, height: 900 } });
 
+/** Week header uses the month of today; pin October so "t" after two prev weeks matches the assertion. */
+const WELCOME_SHORTCUTS_CLOCK = new Date("2026-10-01T12:00:00.000Z");
+
 const openEssentialShortcutsStep = async (page: Page) => {
+  await page.clock.install({ time: WELCOME_SHORTCUTS_CLOCK });
   await page.goto("/week", { waitUntil: "domcontentloaded" });
 
   const welcomeDialog = page.getByRole("dialog", {

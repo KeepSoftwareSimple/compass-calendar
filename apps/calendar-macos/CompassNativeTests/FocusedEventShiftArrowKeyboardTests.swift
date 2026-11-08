@@ -209,13 +209,13 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
     private func localAllDayFixture() async throws
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
     {
-        try await localFixture(sample: try Self.decodeAllDayEvent(id: "shift-nudge-allday"))
+        try await localFixture(sample: try Self.decodeAllDayEvent(id: "router-local-allday"))
     }
 
     private func localTimedFixture(canWrite: Bool = true) async throws
         -> (NativeCalendarRootModel, NativeCalendarEnvironment, Event)
     {
-        try await localFixture(sample: try Self.decodeTimedEvent(id: "shift-nudge-event"), canWrite: canWrite)
+        try await localFixture(sample: try Self.decodeTimedEvent(id: "router-local-event"), canWrite: canWrite)
     }
 
     private func assertFinishedNudgePersistence(
@@ -252,9 +252,9 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             foregroundColor: "#000000",
             id: sample.calendarId.rawValue,
             isActive: true,
-            isPrimary: true,
+            isPrimary: false,
             isVisible: true,
-            name: "Shared calendar",
+            name: "Shared",
             provider: "local",
             timeZone: "UTC"
         )
@@ -287,7 +287,6 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
             model.event(for: event.id),
             "bootstrap must load local event into model"
         )
-        model.updateContentTrackWidth(800)
         model.focusGridEvent(eventId: event.id.rawValue)
         XCTAssertEqual(model.focusStore.focusedEventId, event.id)
         return (model, environment, event)
