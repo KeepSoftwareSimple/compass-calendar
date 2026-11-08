@@ -291,6 +291,15 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         )
         await model.start()
         model.authStore.closeModal()
+        let welcomeKey = OnboardingStorageKeys.hasSeenWelcome
+        let priorHasSeenWelcome = UserDefaults.standard.string(forKey: welcomeKey)
+        addTeardownBlock {
+            if let priorHasSeenWelcome {
+                UserDefaults.standard.set(priorHasSeenWelcome, forKey: welcomeKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: welcomeKey)
+            }
+        }
         model.onboardingStore.markWelcomeSeen(exit: "test")
         model.onboardingStore.setWelcomeFirstVisitOpen(false)
         NSApp.keyWindow?.makeFirstResponder(nil)
