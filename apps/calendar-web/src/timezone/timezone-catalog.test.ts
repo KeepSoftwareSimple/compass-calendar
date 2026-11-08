@@ -10,6 +10,28 @@ const at = new Date("2026-07-15T18:00:00.000Z");
 describe("timezone-catalog", () => {
   const zones = buildTimeZoneList(at);
 
+  it("finds us cities by common name (Tampa)", () => {
+    const tampa = filterTimeZones(zones, "tampa");
+    expect(tampa.length).toBeGreaterThan(0);
+    expect(tampa[0]?.id).toBe("America/New_York");
+    expect(tampa[0]?.placeLabel).toMatch(/Tampa/i);
+  });
+
+  it("keeps Tampa on America/New_York in winter and summer", () => {
+    const winter = buildTimeZoneList(new Date("2026-01-15T18:00:00.000Z"));
+    const summer = buildTimeZoneList(new Date("2026-07-15T18:00:00.000Z"));
+    expect(filterTimeZones(winter, "tampa")[0]?.abbreviation).toMatch(/EST|ET/);
+    expect(filterTimeZones(summer, "tampa")[0]?.abbreviation).toMatch(/EDT|ET/);
+  });
+
+  it("does not collapse Florida to one zone", () => {
+    const florida = filterTimeZones(zones, "florida");
+    const zoneIds = new Set(florida.map((zone) => zone.id));
+    expect(zoneIds.has("America/New_York")).toBe(true);
+    expect(zoneIds.has("America/Chicago")).toBe(true);
+    expect(florida[0]?.multiZoneRegionNote).toMatch(/multiple time zones/i);
+  });
+
   it("filters by city, abbreviation, and region", () => {
     const chicago = filterTimeZones(zones, "Chi").map((zone) => zone.id);
     expect(chicago).toContain("America/Chicago");

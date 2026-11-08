@@ -1,3 +1,4 @@
+import { searchPlaceTimeZones } from "@core/timezone/city-timezone-search";
 import { scoreCommandItem } from "@web/components/CommandPalette/command-palette.search";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
 
@@ -12,6 +13,10 @@ export interface TimeZoneListItem {
   offsetMinutes: number;
   secondary: string;
   keywords: string[];
+  /** When matched via city search, show this instead of the IANA city segment. */
+  placeLabel?: string;
+  listKey?: string;
+  multiZoneRegionNote?: string;
 }
 
 export function timeZoneCityName(id: string): string {
@@ -142,6 +147,23 @@ export function sortTimeZonesByOffsetDistance(
   });
 }
 
+function zoneById(
+  zones: TimeZoneListItem[],
+  id: string,
+): TimeZoneListItem | undefined {
+  return zones.find((zone) => zone.id === id);
+}
+
+function regionSpanNote(
+  placeHits: ReturnType<typeof searchPlaceTimeZones>,
+): string | undefined {
+  const labeled = placeHits.find((hit) => hit.multiZoneRegion);
+  if (!labeled) return undefined;
+  const zones = new Set(placeHits.map((hit) => hit.iana));
+  if (zones.size < 2) return undefined;
+  return `${labeled.multiZoneRegion!.charAt(0).toUpperCase()}${labeled.multiZoneRegion!.slice(1)} spans multiple time zones`;
+}
+
 export function filterTimeZones(
   zones: TimeZoneListItem[],
   query: string,
@@ -151,11 +173,9 @@ export function filterTimeZones(
     return zones;
   }
 
-  return zones
+  const ianaScored = zones
     .map((zone) => ({
       zone,
-      // The zone name counts as a label so "pacific" ranks Los Angeles
-      // ("Pacific Time") above ids that merely start with "Pacific/".
       score: Math.max(
         scoreCommandItem(
           { label: zone.city, keywords: zone.keywords },
@@ -172,7 +192,44 @@ export function filterTimeZones(
       PRIMARY_ZONES.has(entry.zone.id)
         ? { ...entry, score: entry.score + 0.5 }
         : entry,
-    )
+    );
+
+  const placeHits = searchPlaceTimeZones(trimmed);
+  const regionNote = regionSpanNote(placeHits);
+
+  const merged: { zone: TimeZoneListItem; score: number }[] = [];
+
+  for (const hit of placeHits) {
+    const base = zoneById(zones, hit.iana);
+    if (!base) continue;
+    const secondaryParts = [base.secondary, base.id];
+    if (regionNote) secondaryParts.unshift(regionNote);
+    merged.push({
+      score: hit.score + 1.25,
+      zone: {
+        ...base,
+        placeLabel: hit.placeLabel,
+        listKey: hit.listKey,
+        multiZoneRegionNote: regionNote,
+        secondary: secondaryParts.filter(Boolean).join(" · "),
+        keywords: [...base.keywords, hit.placeLabel],
+      },
+    });
+  }
+
+  const seenKeys = new Set(
+    merged.map((entry) => entry.zone.listKey ?? entry.zone.id),
+  );
+
+  for (const entry of ianaScored) {
+    if (seenKeys.has(entry.zone.id)) continue;
+    seenKeys.add(entry.zone.id);
+    merged.push({ zone: entry.zone, score: entry.score });
+  }
+
+  if (merged.length === 0) return [];
+
+  return merged
     .sort((left, right) => right.score - left.score)
     .map((entry) => entry.zone);
 }
