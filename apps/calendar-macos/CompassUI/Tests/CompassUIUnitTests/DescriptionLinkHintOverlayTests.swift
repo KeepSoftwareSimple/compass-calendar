@@ -59,7 +59,7 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
         let (container, window, _) = try DescriptionLinkHintKeyWindowFixture.makeBlurredDescriptionLinkHints(
             html: html,
             resetKey: "event",
-            frame: NSRect(x: 0, y: 0, width: 280, height: 140)
+            frame: NSRect(x: 0, y: 0, width: 200, height: 160)
         )
         defer {
             DescriptionLinkHintKeyWindowFixture.resetDigitHintLookupWindow()
@@ -67,18 +67,23 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
         }
 
         container.layoutSubtreeIfNeeded()
-        let narrowFrames = linkHintDigitChipFrames(in: container).map(\.origin.x)
-        XCTAssertEqual(narrowFrames.count, 2, "Expected two link hint chips before reflow")
+        let narrow = layoutSnapshot(container: container)
+        XCTAssertEqual(narrow.chipOriginX.count, 2, "Expected two link hint chips before reflow")
 
-        container.frame = NSRect(x: 0, y: 0, width: 520, height: 140)
-        window.setContentSize(NSSize(width: 520, height: 140))
+        window.setFrame(NSRect(x: 0, y: 0, width: 560, height: 160), display: true)
         container.layoutSubtreeIfNeeded()
         window.layoutIfNeeded()
         RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
 
-        let wideFrames = linkHintDigitChipFrames(in: container).map(\.origin.x)
-        XCTAssertEqual(wideFrames.count, 2)
-        XCTAssertNotEqual(narrowFrames, wideFrames)
+        let wide = layoutSnapshot(container: container)
+        XCTAssertEqual(wide.chipOriginX.count, 2)
+        XCTAssertGreaterThan(wide.containerWidth, narrow.containerWidth + 100, narrow.diagnosticMessage)
+        XCTAssertGreaterThan(wide.textContainerWidth, narrow.textContainerWidth + 100, wide.diagnosticMessage)
+        XCTAssertNotEqual(
+            narrow.chipOriginX,
+            wide.chipOriginX,
+            "Chip X should change after reflow: narrow=\(narrow.diagnosticMessage) wide=\(wide.diagnosticMessage)"
+        )
     }
 
     func testLinkHintChipsRepositionAfterPrefixEditWithoutTogglingHints() throws {
@@ -104,6 +109,36 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
         let after = linkHintDigitChipFrames(in: container).map(\.origin.x)
         XCTAssertEqual(after.count, 1)
         XCTAssertNotEqual(before, after)
+    }
+
+    private struct LinkHintLayoutSnapshot {
+        let containerWidth: CGFloat
+        let textContainerWidth: CGFloat
+        let chipOriginX: [CGFloat]
+        let linkMaxX: [CGFloat]
+
+        var diagnosticMessage: String {
+            "containerW=\(containerWidth) textContainerW=\(textContainerWidth) chipX=\(chipOriginX) linkMaxX=\(linkMaxX)"
+        }
+    }
+
+    private func layoutSnapshot(container: DescriptionEditorContainerView) -> LinkHintLayoutSnapshot {
+        let editor = container.textView
+        let textContainer = editor.textContainer!
+        let layoutManager = editor.layoutManager!
+        var linkMaxX: [CGFloat] = []
+        for entry in editor.orderedLinkAttributeEntries() {
+            let glyphRange = layoutManager.glyphRange(forCharacterRange: entry.range, actualCharacterRange: nil)
+            layoutManager.ensureLayout(forGlyphRange: glyphRange)
+            let rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+            linkMaxX.append(rect.maxX)
+        }
+        return LinkHintLayoutSnapshot(
+            containerWidth: container.bounds.width,
+            textContainerWidth: textContainer.containerSize.width,
+            chipOriginX: linkHintDigitChipFrames(in: container).map(\.origin.x),
+            linkMaxX: linkMaxX
+        )
     }
 
     private func linkHintDigitChipFrames(in root: NSView) -> [CGRect] {
