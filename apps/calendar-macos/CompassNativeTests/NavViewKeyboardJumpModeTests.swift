@@ -15,21 +15,41 @@ final class NavViewKeyboardJumpModeTests: XCTestCase {
         await model.start()
         model.onboardingStore.markWelcomeSeen(exit: "test")
         model.onboardingStore.setWelcomeFirstVisitOpen(false)
+        restoreWelcomeDefaultsAfterTeardown()
         NSApp.keyWindow?.makeFirstResponder(nil)
 
         let router = try makeGridRouter(model: model)
-        XCTAssertTrue(pressW(router: router))
+        pressW(router: router)
         XCTAssertEqual(model.viewStore.view, .week)
 
-        XCTAssertTrue(pressD(router: router))
+        pressD(router: router)
         XCTAssertEqual(model.viewStore.view, .day)
 
         model.toggleEventJumpMode()
         XCTAssertTrue(model.eventJumpSelection.modeActive)
 
-        XCTAssertTrue(pressW(router: router))
+        pressW(router: router)
         XCTAssertEqual(model.viewStore.view, .week)
         XCTAssertFalse(model.eventJumpSelection.modeActive)
+    }
+
+    private func restoreWelcomeDefaultsAfterTeardown() {
+        let hasSeenKey = OnboardingStorageKeys.hasSeenWelcome
+        let exitKey = OnboardingStorageKeys.welcomeExit
+        let priorHasSeen = UserDefaults.standard.string(forKey: hasSeenKey)
+        let priorExit = UserDefaults.standard.string(forKey: exitKey)
+        addTeardownBlock {
+            if let priorHasSeen {
+                UserDefaults.standard.set(priorHasSeen, forKey: hasSeenKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: hasSeenKey)
+            }
+            if let priorExit {
+                UserDefaults.standard.set(priorExit, forKey: exitKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: exitKey)
+            }
+        }
     }
 
     private func makeGridRouter(model: NativeCalendarRootModel) throws -> NativeGridKeyboardRouter {
