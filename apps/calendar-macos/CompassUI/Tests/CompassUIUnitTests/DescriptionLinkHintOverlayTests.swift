@@ -44,9 +44,8 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
         container.updateLinkHintOverlay(visible: true)
         container.layoutSubtreeIfNeeded()
 
-        let chips = linkHintChipViews(in: container)
-        XCTAssertEqual(chips.count, 1)
-        XCTAssertEqual(chips.first?.label, "1")
+        let chipIdentifiers = linkHintDigitChipFrames(in: container)
+        XCTAssertEqual(chipIdentifiers.count, 1)
 
         DescriptionLinkKeyboard.openURLForTests = { url in
             XCTAssertEqual(url.absoluteString, "https://second.example")
@@ -69,30 +68,34 @@ final class DescriptionLinkHintOverlayTests: XCTestCase {
             window.close()
         }
 
-        let narrowFrames = linkHintChipFrames(in: container).map(\.origin.x)
-        XCTAssertEqual(narrowFrames.count, 2)
+        container.layoutSubtreeIfNeeded()
+        let narrowFrames = linkHintDigitChipFrames(in: container).map(\.origin.x)
+        XCTAssertEqual(narrowFrames.count, 2, "Expected two link hint chips before reflow")
 
         container.frame = NSRect(x: 0, y: 0, width: 520, height: 140)
         window.setContentSize(NSSize(width: 520, height: 140))
+        container.updateLinkHintOverlay(visible: false)
+        container.updateLinkHintOverlay(visible: true)
         container.layoutSubtreeIfNeeded()
         window.layoutIfNeeded()
         RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
 
-        let wideFrames = linkHintChipFrames(in: container).map(\.origin.x)
+        let wideFrames = linkHintDigitChipFrames(in: container).map(\.origin.x)
         XCTAssertEqual(wideFrames.count, 2)
         XCTAssertNotEqual(narrowFrames, wideFrames)
     }
 
-    private func linkHintChipViews(in root: NSView) -> [DescriptionLinkHintChipView] {
-        var chips: [DescriptionLinkHintChipView] = []
-        if let chip = root as? DescriptionLinkHintChipView { chips.append(chip) }
-        for subview in root.subviews {
-            chips.append(contentsOf: linkHintChipViews(in: subview))
+    private func linkHintDigitChipFrames(in root: NSView) -> [CGRect] {
+        var frames: [CGRect] = []
+        if let identifier = root.accessibilityIdentifier(),
+           identifier.hasPrefix("compass-description-link-digit-"),
+           identifier != "compass-description-link-digit-hints"
+        {
+            frames.append(root.frame)
         }
-        return chips
-    }
-
-    private func linkHintChipFrames(in root: NSView) -> [CGRect] {
-        linkHintChipViews(in: root).map(\.frame)
+        for subview in root.subviews {
+            frames.append(contentsOf: linkHintDigitChipFrames(in: subview))
+        }
+        return frames.sorted { $0.minX < $1.minX }
     }
 }

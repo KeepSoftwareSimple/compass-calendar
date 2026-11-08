@@ -68,6 +68,8 @@ final class DescriptionLinkHintOverlayView: NSView {
                 forCharacterRange: entry.range,
                 actualCharacterRange: nil
             )
+            guard glyphRange.length > 0 else { continue }
+            layoutManager.ensureLayout(forGlyphRange: glyphRange)
             let linkRect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
             let slotOrigin = textView.convert(
                 NSPoint(
