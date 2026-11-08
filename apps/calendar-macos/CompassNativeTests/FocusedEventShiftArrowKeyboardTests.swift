@@ -124,6 +124,18 @@ final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
         XCTAssertEqual(stored.schedule, original.schedule)
     }
 
+    func testRouterShiftArrowPlacesTimedDraftWhenNothingFocused() async throws {
+        _ = NSApplication.shared
+        let (model, _, _) = try await localTimedFixture()
+        model.focusStore.resetEdgeFocus()
+        XCTAssertNil(model.focusStore.focusedEventId)
+        XCTAssertNil(model.draftStore.gridDraft)
+        let router = try makeGridRouter(model: model)
+        XCTAssertTrue(router.shiftArrow(.down))
+        XCTAssertNotNil(model.draftStore.gridDraft)
+        XCTAssertEqual(model.draftStore.status.activity, .keyboardPlace)
+    }
+
     func testRouterIgnoresShiftArrowWhenEditableTextViewIsFirstResponder() async throws {
         _ = NSApplication.shared
         let (model, environment, original) = try await localTimedFixture()

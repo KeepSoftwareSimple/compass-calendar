@@ -458,10 +458,15 @@ final class NativeGridKeyboardRouter {
                 return false
             }
             if model.focusStore.focusedEventId != nil {
-                return attemptShiftArrowEdgeNudge(
-                    keyEvent,
-                    eventWindowNumber: eventWindowNumber)
+                if attemptShiftArrowEdgeNudge(keyEvent, eventWindowNumber: eventWindowNumber) {
+                    return true
+                }
+                if let focused = model.focusedEvent(), model.isReadOnly(event: focused) {
+                    return false
+                }
+                return false
             }
+            if handleDraftKeys(keyEvent) { return true }
             return false
         }
 
@@ -485,12 +490,6 @@ final class NativeGridKeyboardRouter {
 
         dispatcher.shortcutContext = model.shortcutContext
         syncEditSequenceFieldGating()
-        if isShiftArrow {
-            return false
-        }
-        if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
-            return false
-        }
         if let id = dispatcher.dispatch(keyEvent) {
             model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
             performShortcut(id)
