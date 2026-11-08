@@ -2,6 +2,33 @@ import XCTest
 @testable import CompassKit
 
 final class OnboardingSurfaceTests: XCTestCase {
+    private var savedHasSeenWelcome: String?
+    private var savedWelcomeExit: String?
+
+    override func setUp() {
+        super.setUp()
+        let defaults = UserDefaults.standard
+        savedHasSeenWelcome = defaults.string(forKey: OnboardingStorageKeys.hasSeenWelcome)
+        savedWelcomeExit = defaults.string(forKey: OnboardingStorageKeys.welcomeExit)
+        defaults.removeObject(forKey: OnboardingStorageKeys.hasSeenWelcome)
+        defaults.removeObject(forKey: OnboardingStorageKeys.welcomeExit)
+    }
+
+    override func tearDown() {
+        let defaults = UserDefaults.standard
+        if let savedHasSeenWelcome {
+            defaults.set(savedHasSeenWelcome, forKey: OnboardingStorageKeys.hasSeenWelcome)
+        } else {
+            defaults.removeObject(forKey: OnboardingStorageKeys.hasSeenWelcome)
+        }
+        if let savedWelcomeExit {
+            defaults.set(savedWelcomeExit, forKey: OnboardingStorageKeys.welcomeExit)
+        } else {
+            defaults.removeObject(forKey: OnboardingStorageKeys.welcomeExit)
+        }
+        super.tearDown()
+    }
+
     private func none() -> OnboardingSurfaceFlags {
         Dictionary(uniqueKeysWithValues: OnboardingSurfaceKind.allCases.map { ($0, false) })
     }
