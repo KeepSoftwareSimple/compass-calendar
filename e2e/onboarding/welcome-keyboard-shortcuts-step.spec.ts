@@ -1,10 +1,17 @@
 import { expect, type Page, test } from "@playwright/test";
-import { openCommandPaletteWithKeyboard } from "../utils/event-test-utils";
+import {
+  installDeterministicBrowserClock,
+  openCommandPaletteWithKeyboard,
+} from "../utils/event-test-utils";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1280, height: 900 } });
 
 const openEssentialShortcutsStep = async (page: Page) => {
+  // `t` below asserts the month heading, which the grid anchors on today
+  // whenever today is in view (resolveWeekHeadingLabel). Without a pinned
+  // clock that label is whatever month CI runs in.
+  await installDeterministicBrowserClock(page);
   await page.goto("/week", { waitUntil: "domcontentloaded" });
 
   const welcomeDialog = page.getByRole("dialog", {
@@ -69,7 +76,5 @@ test("essential shortcuts step keycaps work on web", async ({ page }) => {
   await page.getByRole("button", { name: "Previous week" }).click();
   await page.locator("#mainGrid").focus();
   await page.keyboard.press("t");
-  await expect(
-    page.getByRole("heading", { name: "October 2026" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 });
