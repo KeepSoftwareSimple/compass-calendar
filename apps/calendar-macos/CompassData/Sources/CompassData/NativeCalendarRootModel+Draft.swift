@@ -50,6 +50,7 @@ extension NativeCalendarRootModel {
             calendarId: defaultTargetCalendarId()
         )
         draftStore.startGridDraft(activity: activity, draft: draft)
+        pointerHintStore.hide()
         rebuildPresentation()
         focusDraftCard()
     }
@@ -65,6 +66,7 @@ extension NativeCalendarRootModel {
             calendarId: calendarId
         )
         draftStore.startGridDraft(activity: .createShortcut, draft: draft)
+        pointerHintStore.hide()
         rebuildPresentation()
         focusDraftCard()
     }
@@ -206,6 +208,7 @@ extension NativeCalendarRootModel {
             calendarId: defaultTargetCalendarId()
         )
         draftStore.startGridDraft(activity: .keyboardPlace, draft: draft)
+        pointerHintStore.hide()
         clearEventJumpSelection()
         rebuildPresentation()
         focusDraftCard()

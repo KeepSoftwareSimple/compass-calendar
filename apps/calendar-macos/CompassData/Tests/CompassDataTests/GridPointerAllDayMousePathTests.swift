@@ -33,6 +33,26 @@ final class GridPointerAllDayMousePathTests: XCTestCase {
             CompassDateParsing.calendarDateInEffectiveTimeZone("2026-01-08")
         )
         XCTAssertEqual(day, EffectiveTimeZone.calendar.startOfDay(for: parked))
+        XCTAssertFalse(model.pointerHintStore.isVisible)
+    }
+
+    func testTimedSlotQuickTimeHidesPointerHintWhenDraftStarts() async throws {
+        let model = try await weekGridModel()
+        model.handleGridPointerClick(
+            target: .timedSlot(
+                dateKey: "2026-01-08",
+                timeKey: "0000",
+                timeLabel: "12:00 AM",
+                startISO: "2026-01-08T00:00:00.000Z"
+            ),
+            registry: model.shortcutRegistry
+        )
+        XCTAssertTrue(model.pointerHintStore.isVisible)
+        for digit in "0000" {
+            model.handleQuickTimeDigit(digit)
+        }
+        XCTAssertNotNil(model.draftStore.gridDraft)
+        XCTAssertFalse(model.pointerHintStore.isVisible)
     }
 
     private func weekGridModel() async throws -> NativeCalendarRootModel {
