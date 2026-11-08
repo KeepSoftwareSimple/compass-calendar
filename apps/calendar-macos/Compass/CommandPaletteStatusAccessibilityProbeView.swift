@@ -84,7 +84,7 @@ enum CommandPaletteStatusAccessibilityProbe {
             syncProbeMirror(delivery: delivery, hostView: host)
         }
 
-        if let payload = delivery.announcementRequestedPayload, let window {
+        if case .speak(let payload, _) = delivery, let window {
             postAnnouncementRequested(on: window, payload: payload)
         }
     }
@@ -112,18 +112,18 @@ enum CommandPaletteStatusAccessibilityProbe {
         }
         guard let probe else { return }
         let wasInactive = probe.isHidden
-        if delivery.clearProbeMirror {
+        switch delivery {
+        case .clear:
             probe.update(announcement: nil)
             if !wasInactive {
                 NSAccessibility.post(element: probe, notification: .uiElementDestroyed)
             }
-            probe.postLayoutChanged()
-            return
-        }
-        guard let mirror = delivery.mirrorText else { return }
-        probe.update(announcement: mirror)
-        if wasInactive {
-            NSAccessibility.post(element: probe, notification: .created)
+        case .speak(_, let mirror):
+            guard let mirror else { return }
+            probe.update(announcement: mirror)
+            if wasInactive {
+                NSAccessibility.post(element: probe, notification: .created)
+            }
         }
         probe.postLayoutChanged()
     }

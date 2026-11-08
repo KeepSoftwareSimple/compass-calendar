@@ -14,6 +14,11 @@ import {
 } from "@web/shortcuts/tips/date-picker-hint.store";
 import { shouldDeferSidebarMonthHint } from "@web/shortcuts/tips/datePickerHintPriority";
 
+function popGridHintPair(baseId: GridDatePickerHintId) {
+  datePickerHintActions.pop(baseId);
+  datePickerHintActions.pop(captionHintId(baseId));
+}
+
 /**
  * Grid popover date fields (Life birth, event form): sidebar shows the active
  * keyboard contract for typing vs grid vs caption subviews.
@@ -28,16 +33,8 @@ export function useCaptionableGridDatePickerHint(args: {
   const [inputFocused, setInputFocused] = useState(false);
 
   useEffect(() => {
-    return () => {
-      datePickerHintActions.pop(baseId);
-      datePickerHintActions.pop(captionHintId(baseId));
-    };
-  }, [baseId]);
-
-  useEffect(() => {
     if (!isOpen) {
-      datePickerHintActions.pop(baseId);
-      datePickerHintActions.pop(captionHintId(baseId));
+      popGridHintPair(baseId);
       return;
     }
 
@@ -47,13 +44,9 @@ export function useCaptionableGridDatePickerHint(args: {
       isInputFocused: inputFocused,
       inputPhrase,
     });
-    // Only one of the pair publishes at a time; drop whichever the new view
-    // is not using so a day-grid line never sits under a caption line.
-    datePickerHintActions.pop(
-      surface.id === baseId ? captionHintId(baseId) : baseId,
-    );
+    popGridHintPair(baseId);
     datePickerHintActions.push(surface);
-    return () => datePickerHintActions.pop(surface.id);
+    return () => popGridHintPair(baseId);
   }, [baseId, captionView, inputFocused, inputPhrase, isOpen]);
 
   return {
