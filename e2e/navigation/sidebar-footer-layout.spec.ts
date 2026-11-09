@@ -115,7 +115,7 @@ test.describe("sidebar footer actions layout", () => {
       );
     });
     await page.setViewportSize({ width: 360, height: 800 });
-    await page.goto("/week", { waitUntil: "networkidle" });
+    await page.goto("/week", { waitUntil: "domcontentloaded" });
     await ensureSidebarOpen(page);
     await expect(
       page.getByRole("complementary", { name: "Create your first event" }),

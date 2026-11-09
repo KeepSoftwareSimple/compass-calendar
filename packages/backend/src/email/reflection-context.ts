@@ -22,7 +22,6 @@ import { renderReflectionLifePdf } from "@backend/email/reflection-life-image";
 import {
   historicalMemoryWindow,
   reflectionExpiresAt,
-  reflectionSendAt,
   reflectionWindows,
 } from "@backend/email/reflection-schedule";
 import hiddenEventService from "@backend/user/services/hidden-event.service";
@@ -68,7 +67,7 @@ export async function prepareReflection(
   row: EmailSendRecord,
   user: WithId<Schema_User>,
   unsubscribeUrl: string,
-  options: { preview?: boolean } = {},
+  options: { preview?: boolean; allowIncompleteHistory?: boolean } = {},
 ) {
   const edition = row.reflection;
   if (!edition) throw new Error("Missing reflection edition");
@@ -79,7 +78,11 @@ export async function prepareReflection(
     windows: [],
   });
   if (!metadata.ok) throw new Error("Calendar history unavailable");
-  if (!edition.trial && !metadata.value.historyComplete)
+  if (
+    !edition.trial &&
+    !options.allowIncompleteHistory &&
+    !metadata.value.historyComplete
+  )
     throw new Error("Calendar history incomplete");
   const current = reflectionWindows(
     edition.date,
@@ -135,13 +138,16 @@ export async function prepareReflection(
       );
     } while (cursor);
   }
-  if (!edition.trial && !historyComplete)
+  if (!edition.trial && !options.allowIncompleteHistory && !historyComplete)
     throw new Error("Calendar history incomplete");
   const previous = await mongoService.emailSend
     .find(
       {
         userId: user._id,
-        sequence: "reflection",
+        $or: [
+          { sequence: "reflection" },
+          { sequence: "welcome", stepKey: "weekly-review" },
+        ],
         status: "sent",
         sentAt: { $gte: new Date(row.sendAt.getTime() - 7 * 86_400_000) },
       },
@@ -151,7 +157,8 @@ export async function prepareReflection(
   const selected = selectReflectionEvents({
     events,
     timeZone: edition.timeZone,
-    cutoff: reflectionSendAt(edition.date, edition.timeZone),
+    cutoff: new Date(current[0]!.end),
+    upcomingCutoff: row.sendAt,
     recentStartDate: current[0]!.startDate,
     hiddenIds: new Set(await hiddenEventService.listHiddenEventIds(user._id)),
     previousMemoryIds: new Set(

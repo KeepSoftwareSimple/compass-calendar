@@ -12,6 +12,7 @@ const SETTINGS_PAGES: readonly SettingsPage[] = [
   "accounts",
   "billing",
   "booking",
+  "notifications",
 ];
 
 /** Keep a search value only when it names a Settings page. */

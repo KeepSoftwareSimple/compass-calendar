@@ -150,6 +150,18 @@ export async function readReflectionPage(
       .filter((record) => record.recurrence.kind === "seriesMaster")
       .map((record) => record._id),
   );
+  const masters = await new EventRepository(db).findByIds(
+    scope.tenantId,
+    scope.principalId,
+    records.flatMap((record) =>
+      record.recurrence.kind === "exception"
+        ? [record.recurrence.seriesId]
+        : [],
+    ),
+  );
+  const recurrenceById = new Map(
+    masters.map((master) => [master._id, master.recurrence]),
+  );
   const selfEmails = new Set(
     input.selfEmails.map((email) => email.toLowerCase()),
   );
@@ -204,6 +216,11 @@ export async function readReflectionPage(
           title: event.customizations?.title ?? event.content.title,
           schedule: occurrence.schedule,
           recurring: event.recurrence.kind !== "single",
+          routine: isRoutineRecurrence(
+            event.recurrence.kind === "exception"
+              ? recurrenceById.get(event.recurrence.seriesId)
+              : event.recurrence,
+          ),
           uid:
             event.providerMetadata?.["icalUid"] ??
             event.providerMetadata?.["uid"] ??
@@ -221,4 +238,19 @@ export async function readReflectionPage(
     historyComplete,
     truncated,
   };
+}
+
+function isRoutineRecurrence(
+  recurrence: EventRecord["recurrence"] | undefined,
+) {
+  // Missing series metadata is treated conservatively for an exception.
+  if (!recurrence) return true;
+  return (
+    recurrence.kind === "seriesMaster" &&
+    recurrence.rules.some((rule) =>
+      /(?:^|[;:])FREQ=(?:SECONDLY|MINUTELY|HOURLY|DAILY|WEEKLY)(?:;|$)/i.test(
+        rule,
+      ),
+    )
+  );
 }

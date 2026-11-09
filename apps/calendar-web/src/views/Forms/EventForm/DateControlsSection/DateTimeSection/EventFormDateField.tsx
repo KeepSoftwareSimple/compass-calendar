@@ -208,7 +208,10 @@ export const EventFormDateField = ({
       const anchor = dayjs(selectedRef.current).startOf("day");
       setPickerCursorSync(anchor);
       isGridFocusedRef.current = true;
-      focusKeyboardSelectedDay(calendarClassName);
+      focusKeyboardSelectedDay(
+        calendarClassName,
+        () => isGridFocusedRef.current,
+      );
       return;
     }
 
@@ -226,7 +229,10 @@ export const EventFormDateField = ({
           setPickerMonth(next.startOf("month"));
         }
         isGridFocusedRef.current = true;
-        focusKeyboardSelectedDay(calendarClassName);
+        focusKeyboardSelectedDay(
+          calendarClassName,
+          () => isGridFocusedRef.current,
+        );
         break;
       }
       case "pickCursor":

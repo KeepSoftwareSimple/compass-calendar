@@ -24,14 +24,20 @@ then invite them to make time for something in Compass.
   never as events that have already happened.
 - Private trial: daily at 10:30 a.m. in `America/Denver`, observing DST.
   Recap the preceding seven days and preview the next seven days, with explicit
-  dates and the send-time cutoff. Trial recipient and confirmed birthday have
+  dates and midnight boundaries, so no date appears in both sections. Trial recipient and confirmed birthday have
   been supplied separately; seed them through private operator configuration,
   not source-controlled fixtures or production-wide defaults.
 - Trial uses the real account's calendar data and is restricted to its immutable
   user ID and designated address. No synthetic account or welcome-email preview
   loop. Approval of this plan does not enroll the general user base.
-- Broader delivery is opt-in and staged after the trial is approved. Full
-  available history must be imported and queryable before enrolling a user.
+- Broader delivery remains behind the staged rollout gate. New onboarding
+  recipients are enrolled automatically, receive their first review as email
+  5/5, and can pause or re-enable reviews in Settings > Notifications. Existing
+  accounts are not automatically enrolled. Browser initialization saves the app
+  timezone; a signup that never opens the web app falls back to UTC.
+- Regular Sunday delivery starts after the introductory review. It requires
+  complete available history. The onboarding review can use partial history
+  and says when history is still being prepared.
 - Use calendars enabled in Compass; exclude hidden, declined, canceled, and
   deleted events. Deduplicate copies where shared event identity is available.
   Do not merge unrelated events merely because titles and times match.
@@ -243,8 +249,10 @@ exhaustive sequence switch instead of the current welcome fallback.
   expiry counts as that edition's send, even if later delivery is delayed.
 - Add reflection-specific unsubscribe UI and one-click handling, while honoring
   global suppression. Preserve existing welcome and booking opt-out semantics.
-  Turning reflection off cancels queued reflection rows; turning it on requires
-  explicit opt-in. Birthday is optional for enrollment; omit the life image if
+  Turning reflection off cancels queued reflection rows and suppresses the
+  onboarding review. Re-enabling after a pause requires an explicit action.
+  Offer optional email feedback after unsubscribing. Birthday is optional for
+  enrollment; omit the life image if
   unconfirmed rather than making up a birthday.
 - Logs/analytics record sequence, edition, coverage, durations, delivery outcome,
   and skip reason without birthday, event titles, or PNG/base64 data.
@@ -254,7 +262,7 @@ not duplicate delivery within provider idempotency guarantees. Test Sunday,
 DST transitions, timezone changes, late retries, opt-out during preparation,
 bounce/complaint suppression, deleted accounts, and an unauthorized recipient.
 
-### 6. Private trial, then staged opt-in rollout
+### 6. Private trial, then staged onboarding rollout
 
 1. Ship preference migration and provider history fixes with reflection delivery
    disabled. Verify existing calendar/auth/email flows still work.
@@ -264,8 +272,8 @@ bounce/complaint suppression, deleted accounts, and an unauthorized recipient.
    attachment legibility, and whether the reflection helps plan the next week.
 4. Improve selection/template using trial feedback. Verify a Sunday edition
    separately because the daily trial uses different date windows.
-5. After the user's trial approval, enable opt-in UI for a small cohort with
-   verified history. Expand only after reviewing import load, queue health,
+5. After the user's trial approval, enable automatic enrollment for the new
+   onboarding cohort. Expand only after reviewing import load, queue health,
    delivery failures/complaints, and qualitative usefulness. Do not auto-enroll
    existing accounts.
 

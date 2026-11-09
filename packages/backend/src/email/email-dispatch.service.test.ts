@@ -316,6 +316,7 @@ describe("EmailDispatchService", () => {
     expect(markSent).toHaveBeenCalledWith(row._id, "provider-123");
     const sendInput = send.mock.calls[0]?.[0];
     expect(sendInput?.template?.id).toBe("04-cmdk");
+    expect(sendInput?.subject).toBe("Welcome to Compass Calendar (0/5)");
     expect(sendInput?.template?.variables.CTA_URL).toContain(
       "utm_source=email",
     );

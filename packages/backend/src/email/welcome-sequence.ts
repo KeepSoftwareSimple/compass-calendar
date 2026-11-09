@@ -24,15 +24,16 @@ export type EmailStep = {
  * The drip, and the single source of its step keys. `as const` is what lets
  * `WelcomeStepKey` fall out of this list, so the content map and the Resend
  * alias map are checked against it at compile time instead of being three
- * hand-maintained copies of the same five strings.
+ * hand-maintained copies of the same step keys.
  */
 export const WELCOME_SEQUENCE = [
-  // Five daily keyboard tips, the first right at signup (day 0-4).
+  // Five daily keyboard tips followed by a weekly review introduction.
   { key: "cmd-k", delayDays: 0 },
   { key: "shortcut-list", delayDays: 1 },
   { key: "jump-around", delayDays: 2 },
   { key: "adjusting-times", delayDays: 3 },
   { key: "roundup", delayDays: 4 },
+  { key: "weekly-review", delayDays: 5 },
   // Trial is BILLING_PLAN.TRIAL_LENGTH_DAYS (7): heads-up two days before it converts.
   {
     key: "trial-ending",

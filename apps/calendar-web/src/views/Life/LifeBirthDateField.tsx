@@ -237,7 +237,11 @@ export function LifeBirthDateField({
       setGridFocusedSync(true);
     }
     openCalendar();
-    if (anchor) focusKeyboardSelectedDay("lifeBirthDatePicker");
+    if (anchor)
+      focusKeyboardSelectedDay(
+        "lifeBirthDatePicker",
+        () => isGridFocusedRef.current,
+      );
   };
 
   const commitOrRevert = (
@@ -367,7 +371,10 @@ export function LifeBirthDateField({
         dayjs(committedRef.current ?? today).startOf("day");
       setPickerCursorSync(anchor);
       setGridFocusedSync(true);
-      focusKeyboardSelectedDay("lifeBirthDatePicker");
+      focusKeyboardSelectedDay(
+        "lifeBirthDatePicker",
+        () => isGridFocusedRef.current,
+      );
       return;
     }
 
@@ -384,7 +391,10 @@ export function LifeBirthDateField({
           syncPickerMonth(next);
         }
         setGridFocusedSync(true);
-        focusKeyboardSelectedDay("lifeBirthDatePicker");
+        focusKeyboardSelectedDay(
+          "lifeBirthDatePicker",
+          () => isGridFocusedRef.current,
+        );
         break;
       }
       case "pickCursor":
@@ -457,7 +467,11 @@ export function LifeBirthDateField({
       className="c-life-birth-date-field flex w-full max-w-44 flex-col items-center gap-1"
       onBlur={(event) => {
         const next = event.relatedTarget;
-        if (next instanceof Element && next.closest(".react-datepicker"))
+        if (
+          next instanceof Element &&
+          (containerRef.current?.contains(next) ||
+            next.closest(".react-datepicker"))
+        )
           return;
         if (isOpen) {
           setGridFocusedSync(false);
@@ -518,7 +532,9 @@ export function LifeBirthDateField({
           onFocus={(event) => {
             if (event.target instanceof HTMLInputElement) {
               setGridFocusedSync(false);
-              event.target.select();
+              // react-datepicker can refocus the input after opening. Preserve
+              // the caret while the user is already editing an open picker.
+              if (!isOpen) event.target.select();
             }
           }}
           onInputClick={onCalendarOpen}
@@ -538,6 +554,7 @@ export function LifeBirthDateField({
           }}
           onChangeRaw={(event) => {
             if (event.type === "click") return;
+            setGridFocusedSync(false);
             setDraftText(event.currentTarget.value);
           }}
           openToDate={pickerMonth.toDate()}

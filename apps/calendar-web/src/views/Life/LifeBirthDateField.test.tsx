@@ -2,7 +2,6 @@ import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type PropsWithChildren, useState } from "react";
-import { flushSync } from "react-dom";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { LifeBirthDateField } from "@web/views/Life/LifeBirthDateField";
 import { describe, expect, it, mock } from "bun:test";
@@ -33,9 +32,7 @@ function ControlledBirthDateField({
       maxDate={today}
       minDate={minDate}
       onCalendarClose={() => setOpen(false)}
-      onCalendarOpen={() => {
-        flushSync(() => setOpen(true));
-      }}
+      onCalendarOpen={() => setOpen(true)}
       onCommit={onCommit}
       storedBirthDate={storedBirthDate}
       today={today}
@@ -121,6 +118,32 @@ describe("LifeBirthDateField", () => {
     await waitFor(() => {
       expect(screen.getByText("Apr 1993")).toBeInTheDocument();
     });
+  });
+
+  it("preserves a typed date when the open picker refocuses the input", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    render(
+      <ControlledBirthDateField
+        onCommit={() => {}}
+        storedBirthDate="2000-01-01"
+      />,
+      { wrapper },
+    );
+    const input = screen.getByRole("textbox", { name: "Date of birth" });
+    await user.click(input);
+    await user.keyboard("{ArrowDown}");
+    await user.clear(input);
+    await user.type(input, "4/12/", { skipClick: true });
+    expect(input).toHaveValue("4/12/");
+    act(() => {
+      screen.getByRole("button", { name: "Previous month" }).focus();
+      input.focus();
+    });
+    await user.type(input, "1993", { skipClick: true });
+    expect(input).toHaveValue("4/12/1993");
+    await waitFor(() =>
+      expect(screen.getByText("Apr 1993")).toBeInTheDocument(),
+    );
   });
 
   it("commits a year typed with arrow-down day pick on Enter", async () => {

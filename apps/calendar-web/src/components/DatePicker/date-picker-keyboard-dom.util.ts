@@ -23,8 +23,12 @@ export function findKeyboardSelectedDay(calendarClassName?: string) {
   );
 }
 
-export function focusKeyboardSelectedDay(calendarClassName?: string) {
+export function focusKeyboardSelectedDay(
+  calendarClassName?: string,
+  shouldFocus: () => boolean = () => true,
+) {
   requestAnimationFrame(() => {
+    if (!shouldFocus()) return;
     const day = findKeyboardSelectedDay(calendarClassName);
     if (!day) return;
     const scope = day.closest(".react-datepicker") ?? day.closest(".calendar");

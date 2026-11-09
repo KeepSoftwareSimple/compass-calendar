@@ -18,6 +18,7 @@ test("title keeps every character when typed quickly in day view", async ({
 }) => {
   await page.keyboard.press("d");
   await page.waitForURL((url) => url.pathname.startsWith("/day"), {
+    waitUntil: "domcontentloaded",
     timeout: 10_000,
   });
 

@@ -38,6 +38,7 @@ import {
 } from "@web/components/OverlayPanel/OverlayPanel";
 import { AccountsSection } from "@web/components/Settings/AccountsSection";
 import { DefaultCalendarPicker } from "@web/components/Settings/DefaultCalendarPicker";
+import { NotificationsSection } from "@web/components/Settings/NotificationsSection";
 import { SettingsNavButton } from "@web/components/Settings/SettingsNavButton";
 import {
   selectGuestMeetingSetupActive,
@@ -254,6 +255,14 @@ export const SettingsModal: FC = () => {
                 showShortcut={areHintsVisible}
               />
             ) : null}
+            <SettingsNavButton
+              currentPage={page}
+              initialFocusRef={initialFocusRef}
+              label="Notifications"
+              page="notifications"
+              shortcutDigit="4"
+              showShortcut={areHintsVisible}
+            />
             {!areHintsVisible ? (
               <p className="mt-2 px-2 text-text-muted text-xs">
                 <ShortcutTipParts parts={SETTINGS_HOLD_MOD_HINT_PARTS} />
@@ -271,7 +280,9 @@ export const SettingsModal: FC = () => {
               Set up your meeting page, then sign up to save and go live.
             </p>
           ) : null}
-          {page === "billing" ? (
+          {page === "notifications" ? (
+            <NotificationsSection />
+          ) : page === "billing" ? (
             <PlanSection showShortcuts={areHintsVisible} />
           ) : page === "booking" && showBookingNav ? (
             <Suspense fallback={<div aria-hidden className="w-full" />}>

@@ -1338,7 +1338,12 @@ describe("SettingsModal", () => {
       }),
     ).toBeNull();
     expect(within(settings).queryByText("U", { exact: true })).toBeNull();
-    expect(within(settings).queryByText("4", { exact: true })).toBeNull();
+    expect(
+      within(screen.getByRole("button", { name: "Notifications" })).getByText(
+        "4",
+        { exact: true },
+      ),
+    ).toBeInTheDocument();
 
     await user.keyboard(`{/${modKey}}`);
   });
@@ -1369,6 +1374,23 @@ describe("SettingsModal", () => {
     ).toBeInTheDocument();
 
     await user.keyboard(`{/${modKey}}`);
+  });
+
+  it("opens notification controls with Mod+4", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderSettings({ authenticated: false });
+    const modKey = resolveModifier("Mod") === "Meta" ? "Meta" : "Control";
+    await user.keyboard(`{${modKey}>}4{/${modKey}}`);
+    expect(selectSettingsPage(useSettingsStore.getState())).toBe(
+      "notifications",
+    );
+    expect(screen.getByRole("button", { name: "Notifications" })).toHaveFocus();
+    expect(
+      screen.getByRole("checkbox", { name: "Event reminders on this device" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Sign in to manage calendar reflection emails."),
+    ).toBeInTheDocument();
   });
 
   it("does not jump or toggle anything with Mod+5", async () => {
@@ -1467,7 +1489,6 @@ describe("SettingsModal", () => {
     const modKey = resolveModifier("Mod") === "Meta" ? "Meta" : "Control";
     await user.keyboard(`{${modKey}>}`);
 
-    const settings = screen.getByRole("dialog", { name: "Settings" });
     expect(
       within(screen.getByRole("button", { name: "Accounts" })).getByText("1", {
         exact: true,
@@ -1486,7 +1507,12 @@ describe("SettingsModal", () => {
     expect(
       screen.queryByRole("button", { name: BOOKING_SAVE_CHANGES_LABEL }),
     ).toBeNull();
-    expect(within(settings).queryByText("4", { exact: true })).toBeNull();
+    expect(
+      within(screen.getByRole("button", { name: "Notifications" })).getByText(
+        "4",
+        { exact: true },
+      ),
+    ).toBeInTheDocument();
 
     await user.keyboard(`{/${modKey}}`);
   });

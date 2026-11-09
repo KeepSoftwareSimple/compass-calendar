@@ -192,8 +192,17 @@ const focusAcrossFrames = (
   { startOnNextFrame = false }: { startOnNextFrame?: boolean } = {},
 ) => {
   let attemptsLeft = FOCUS_RETRY_FRAMES;
+  const originalFocus = document.activeElement;
 
   const tryFocus = () => {
+    const currentFocus = document.activeElement;
+    // A later focus choice takes precedence over an earlier pending restore.
+    if (
+      currentFocus &&
+      currentFocus !== document.body &&
+      currentFocus !== originalFocus
+    )
+      return;
     const element = findTarget();
     if (element) {
       element.focus();

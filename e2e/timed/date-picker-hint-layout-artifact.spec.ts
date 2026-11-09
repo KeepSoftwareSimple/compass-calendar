@@ -12,25 +12,34 @@ async function captureOpenPicker(page: import("@playwright/test").Page) {
   await expect(page.getByTestId("event-form-calendar-hint")).toBeVisible();
 }
 
+async function expectHintFits(page: import("@playwright/test").Page) {
+  const hint = page.getByTestId("event-form-calendar-hint");
+  const popper = page.locator(".react-datepicker-popper");
+  // Popover positioning can briefly remount its header after it becomes visible.
+  await expect
+    .poll(async () => {
+      const [hintBox, popperBox] = await Promise.all([
+        hint.boundingBox(),
+        popper.boundingBox(),
+      ]);
+      return (
+        hintBox !== null &&
+        popperBox !== null &&
+        hintBox.x >= popperBox.x - 1 &&
+        hintBox.x + hintBox.width <= popperBox.x + popperBox.width + 1
+      );
+    })
+    .toBe(true);
+}
+
 test("date picker keycap hint fits at desktop width", async ({ page }) => {
   await prepareTimedCalendarPage(page);
   await openTimedEventFormWithKeyboard(page);
   await captureOpenPicker(page);
 
-  const hint = page.getByTestId("event-form-calendar-hint");
-  const popper = page.locator(".react-datepicker-popper");
-  const hintBox = await hint.boundingBox();
-  const popperBox = await popper.boundingBox();
-  expect(hintBox).not.toBeNull();
-  expect(popperBox).not.toBeNull();
-  if (hintBox && popperBox) {
-    expect(hintBox.x + hintBox.width).toBeLessThanOrEqual(
-      popperBox.x + popperBox.width + 1,
-    );
-  }
-
+  await expectHintFits(page);
   await page.screenshot({
-    path: "/opt/cursor/artifacts/after-date-picker-keycap-hint-desktop.png",
+    path: test.info().outputPath("date-picker-keycap-hint-desktop.png"),
     fullPage: false,
   });
 });
@@ -41,20 +50,9 @@ test("date picker keycap hint fits at 360px width", async ({ page }) => {
   await openTimedEventFormWithKeyboard(page);
   await captureOpenPicker(page);
 
-  const hint = page.getByTestId("event-form-calendar-hint");
-  const popper = page.locator(".react-datepicker-popper");
-  const hintBox = await hint.boundingBox();
-  const popperBox = await popper.boundingBox();
-  expect(hintBox).not.toBeNull();
-  expect(popperBox).not.toBeNull();
-  if (hintBox && popperBox) {
-    expect(hintBox.x + hintBox.width).toBeLessThanOrEqual(
-      popperBox.x + popperBox.width + 1,
-    );
-  }
-
+  await expectHintFits(page);
   await page.screenshot({
-    path: "/opt/cursor/artifacts/after-date-picker-keycap-hint-360.png",
+    path: test.info().outputPath("date-picker-keycap-hint-360.png"),
     fullPage: false,
   });
 });
