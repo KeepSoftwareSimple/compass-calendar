@@ -6,22 +6,6 @@ import XCTest
 /// `colorHex` on the wire (`googleColorIdToSlot` / `EventColorSlotHex.hex(.coral)`).
 @MainActor
 final class NativeCalendarRootModelPendingRecurringColorTests: XCTestCase {
-    private var priorArgs: [String] = []
-
-    override func setUp() {
-        super.setUp()
-        priorArgs = ProcessInfo.processInfo.arguments
-        ProcessInfo.processInfo.setValue(
-            priorArgs + ["-COMPASS_UI_TEST_AUTO_CONFIRM_RECURRENCE_SCOPE_SAVE"],
-            forKey: "arguments"
-        )
-    }
-
-    override func tearDown() {
-        ProcessInfo.processInfo.setValue(priorArgs, forKey: "arguments")
-        super.tearDown()
-    }
-
     func testKeyboardNudgeKeepsCoralFillOnDraftOverlayBeforeSave() throws {
         EffectiveTimeZone.identifier = "UTC"
         let devotion = try googleSyncedCoralOccurrence()
@@ -72,7 +56,12 @@ final class NativeCalendarRootModelPendingRecurringColorTests: XCTestCase {
         model.openKeyboardEditForFocusedEvent()
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: false, altKey: false))
 
-        let saveTask = Task { await model.saveDraft() }
+        let saveTask = Task {
+            await model.requestSaveDraft()
+            if model.pendingRecurrenceScopePrompt == .save {
+                await model.confirmRecurrenceScope(.this)
+            }
+        }
         for _ in 0 ..< 80 {
             if model.eventsStore.inFlightMutations > 0 { break }
             await Task.yield()
