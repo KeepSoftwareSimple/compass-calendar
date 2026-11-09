@@ -429,7 +429,11 @@ test("settings dialog never scrolls horizontally with more options open", async 
     timezoneDialog.getByRole("combobox", { name: "Search meeting timezones" }),
     "Buenos Aires",
   );
-  await timezoneDialog.getByRole("option", { name: /Buenos Aires/ }).click();
+  const buenosAiresOption = timezoneDialog
+    .getByRole("option", { name: /Buenos Aires/ })
+    .first();
+  await expect(buenosAiresOption).toBeVisible();
+  await buenosAiresOption.click();
   await expect(
     settingsDialog.getByRole("button", { name: /Buenos Aires/ }),
   ).toBeVisible();

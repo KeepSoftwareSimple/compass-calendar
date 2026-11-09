@@ -24,7 +24,7 @@ private struct CityTimezoneIndexRow: Decodable {
 
 /// Web `@core/timezone/city-timezone-search`: city-timezones index in `city-timezone-index.json`.
 public enum CityTimezoneSearch {
-    private static var cachedRows: [CityTimezoneIndexRow]?
+    private nonisolated(unsafe) static var cachedRows: [CityTimezoneIndexRow]?
 
     private static func rows() -> [CityTimezoneIndexRow] {
         if let cachedRows { return cachedRows }
@@ -134,7 +134,7 @@ public enum CityTimezoneSearch {
             }
         }
 
-        let placeHits = search(query: query, at: at, limit: limit)
+        let placeHits = search(query: query, at: date, limit: limit)
         var seen = Set(placeHits.map(\.listKey))
         var merged = placeHits
 

@@ -10,6 +10,20 @@ const at = new Date("2026-07-15T18:00:00.000Z");
 describe("timezone-catalog", () => {
   const zones = buildTimeZoneList(at);
 
+  it("finds Buenos Aires by city name for booking settings", () => {
+    const hits = filterTimeZones(zones, "Buenos Aires");
+    expect(
+      hits.some((zone) => zone.id === "America/Argentina/Buenos_Aires"),
+    ).toBe(true);
+    expect(
+      hits.some(
+        (zone) =>
+          zone.placeLabel?.includes("Buenos Aires") ||
+          zone.city === "Buenos Aires",
+      ),
+    ).toBe(true);
+  });
+
   it("finds us cities by common name (Tampa)", () => {
     const tampa = filterTimeZones(zones, "tampa");
     expect(tampa.length).toBeGreaterThan(0);

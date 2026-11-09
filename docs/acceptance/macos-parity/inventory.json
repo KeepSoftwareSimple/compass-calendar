@@ -674,9 +674,9 @@
       "native": [
         "apps/calendar-macos/CompassKit/Tests/CompassKitTests/CityTimezoneSearchTests.swift"
       ],
-      "status": "unverified",
+      "status": "missing",
       "evidence": "Linux agent: core + web tests PASS; desktop:export wrote city-timezone-index.json; macOS CI required for CompassKitTests.",
-      "reason": "Prior picker filtered IANA ids only; travelers expect city names.",
+      "reason": "Prior picker filtered IANA ids only; travelers expect city names. Implementation on PR branch; macOS CI not yet green.",
       "review": "2026-11-08 cursor/city-timezone-search-afc2"
     },
     {
