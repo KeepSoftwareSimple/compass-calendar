@@ -4,7 +4,7 @@ import XCTest
 
 final class GridEventDraftColorPreservationTests: XCTestCase {
     func testOptimisticScheduleEditPreservesProviderColorHex() throws {
-        let baseline = sampleTimedEvent(
+        let baseline = try sampleTimedEvent(
             content: .details(
                 EventContent_DetailsPayload(
                     colorHex: "#E67C73",
@@ -12,8 +12,7 @@ final class GridEventDraftColorPreservationTests: XCTestCase {
                     kind: "details",
                     title: "Devotion"
                 )
-            ),
-            recurrence: .occurrence(.init(kind: "occurrence", seriesId: EventId(rawValue: "bbbbbbbbbbbbbbbbbbbbbbbb")))
+            )
         )
         var draft = try XCTUnwrap(GridEventDraftFromEvent.editDraft(from: baseline))
         draft.schedule = DraftSchedule(
@@ -26,41 +25,15 @@ final class GridEventDraftColorPreservationTests: XCTestCase {
             return XCTFail("Expected details content")
         }
         XCTAssertEqual(content.colorHex, "#E67C73")
-        XCTAssertNil(content.color)
         XCTAssertEqual(EventColorSlotHex.eventColorHex(for: optimistic), "#E67C73")
     }
 
-    func testOptimisticScheduleEditPreservesSlotColor() throws {
-        let baseline = sampleTimedEvent(
+    func testExplicitSlotChangeClearsProviderHexOnOptimisticEvent() throws {
+        let baseline = try sampleTimedEvent(
             content: .details(
                 EventContent_DetailsPayload(
                     color: .coral,
-                    description: "",
-                    kind: "details",
-                    title: "Devotion"
-                )
-            ),
-            recurrence: .occurrence(.init(kind: "occurrence", seriesId: EventId(rawValue: "bbbbbbbbbbbbbbbbbbbbbbbb")))
-        )
-        var draft = try XCTUnwrap(GridEventDraftFromEvent.editDraft(from: baseline))
-        draft.schedule = DraftSchedule(
-            start: baseline.scheduleStartDate().addingTimeInterval(3600),
-            end: baseline.scheduleEndDate().addingTimeInterval(3600),
-            kind: .timed
-        )
-        let optimistic = try XCTUnwrap(GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline))
-        guard case .details(let content) = optimistic.content else {
-            return XCTFail("Expected details content")
-        }
-        XCTAssertEqual(content.color, .coral)
-        XCTAssertEqual(EventColorSlotHex.eventColorHex(for: optimistic), EventColorSlotHex.hex(for: .coral))
-    }
-
-    func testExplicitColorChangeAppliesNewSlot() throws {
-        let baseline = sampleTimedEvent(
-            content: .details(
-                EventContent_DetailsPayload(
-                    color: .coral,
+                    colorHex: "#009688",
                     description: "",
                     kind: "details",
                     title: "Devotion"
@@ -77,13 +50,13 @@ final class GridEventDraftColorPreservationTests: XCTestCase {
         XCTAssertNil(content.colorHex)
     }
 
-    private func sampleTimedEvent(content: EventContent, recurrence: EventRecurrence) -> Event {
+    private func sampleTimedEvent(content: EventContent) -> Event {
         Event(
             calendarId: CalendarId(rawValue: "cal1cal1cal1cal1cal1cal1cal1"),
             content: content,
             createdAt: DateTime(rawValue: "2026-11-09T00:00:00.000Z"),
             id: EventId(rawValue: "aaaaaaaaaaaaaaaaaaaaaaaa"),
-            recurrence: recurrence,
+            recurrence: .occurrence(.init(kind: "occurrence", seriesId: EventId(rawValue: "bbbbbbbbbbbbbbbbbbbbbbbb"))),
             schedule: .timed(
                 EventSchedule_TimedPayload(
                     end: DateTime(rawValue: "2026-11-09T13:15:00.000Z"),

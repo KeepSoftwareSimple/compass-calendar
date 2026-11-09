@@ -73,13 +73,47 @@ describe("event-mutation-optimistic.util", () => {
     expect(merged.content).toMatchObject({ title: "Renamed" });
   });
 
-  test("mergeReplaceInput keeps colorHex when replace sends color null on a hex-only event", () => {
+  test.each(["this", "thisAndFollowing", "all"] as const)(
+    "mergeReplaceInput keeps colorHex when replace sends color null (scope %s)",
+    (scope) => {
+      const seriesId = EventIdSchema.parse("bbbbbbbbbbbbbbbbbbbbbbbb");
+      const existing = createMockEvent({
+        id: EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa"),
+        content: {
+          kind: "details",
+          title: "Devotion",
+          description: "",
+          colorHex: "#E67C73",
+        },
+        recurrence: { kind: "occurrence", seriesId },
+      });
+      const merged = mergeReplaceInput(existing, {
+        content: {
+          kind: "details",
+          title: "Devotion",
+          description: "",
+          location: "",
+          color: null,
+        },
+        schedule: existing.schedule,
+        recurrence: { kind: "preserve" },
+        scope,
+      });
+      expect(merged.content).toMatchObject({
+        kind: "details",
+        colorHex: "#E67C73",
+      });
+      expect(merged.content).not.toHaveProperty("color");
+    },
+  );
+
+  test("mergeReplaceInput clears slot color when user sends color null", () => {
     const existing = createMockEvent({
       content: {
         kind: "details",
         title: "Devotion",
         description: "",
-        colorHex: "#E67C73",
+        color: "blue",
       },
     });
     const merged = mergeReplaceInput(existing, {
@@ -94,11 +128,9 @@ describe("event-mutation-optimistic.util", () => {
       recurrence: { kind: "preserve" },
       scope: "this",
     });
-    expect(merged.content).toMatchObject({
-      kind: "details",
-      colorHex: "#E67C73",
-    });
+    expect(merged.content).toMatchObject({ kind: "details" });
     expect(merged.content).not.toHaveProperty("color");
+    expect(merged.content).not.toHaveProperty("colorHex");
   });
 
   test("seriesWriteKey collapses scope-all edits onto the root series id", () => {
