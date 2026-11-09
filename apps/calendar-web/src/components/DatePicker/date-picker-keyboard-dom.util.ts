@@ -172,8 +172,10 @@ export function findKeyboardSelectedDay(
 export function focusKeyboardSelectedDay(
   calendarClassName?: string,
   cursorDate?: Date | null,
+  shouldFocus: () => boolean = () => true,
 ) {
   const run = () => {
+    if (!shouldFocus()) return;
     const day = findKeyboardSelectedDay(calendarClassName, cursorDate);
     if (!day) return;
     const scope = day.closest(".react-datepicker") ?? day.closest(".calendar");

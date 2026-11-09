@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { parseLifeDate } from "@core/life/life-math";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import {
@@ -91,7 +91,12 @@ export function LifeBirthDateField({
 
   const [pickerCursor, setPickerCursor] = useState<Dayjs | null>(null);
   const pickerCursorRef = useRef<Dayjs | null>(null);
-  const [gridFocused, setGridFocused] = useState(false);
+  const [gridFocused, setGridFocusedState] = useState(false);
+  const isGridFocusedRef = useRef(false);
+  const setGridFocused = useCallback((next: boolean) => {
+    isGridFocusedRef.current = next;
+    setGridFocusedState(next);
+  }, []);
   const setPickerCursorSync = (next: Dayjs | null) => {
     pickerCursorRef.current = next;
     setPickerCursor(next);
@@ -151,6 +156,7 @@ export function LifeBirthDateField({
       focusKeyboardSelectedDay(
         LIFE_BIRTH_PICKER_CLASSNAME,
         pickerCursor.toDate(),
+        () => isGridFocusedRef.current,
       );
     });
     return () => window.cancelAnimationFrame(id);
@@ -267,6 +273,7 @@ export function LifeBirthDateField({
       focusKeyboardSelectedDay(
         LIFE_BIRTH_PICKER_CLASSNAME,
         anchor.cursor.toDate(),
+        () => isGridFocusedRef.current,
       );
   };
 
@@ -409,6 +416,7 @@ export function LifeBirthDateField({
       focusKeyboardSelectedDay(
         LIFE_BIRTH_PICKER_CLASSNAME,
         cursorForFocus.toDate(),
+        () => isGridFocusedRef.current,
       );
       return;
     }
@@ -426,7 +434,11 @@ export function LifeBirthDateField({
           syncPickerMonth(next);
         }
         setGridFocused(true);
-        focusKeyboardSelectedDay(LIFE_BIRTH_PICKER_CLASSNAME, next.toDate());
+        focusKeyboardSelectedDay(
+          LIFE_BIRTH_PICKER_CLASSNAME,
+          next.toDate(),
+          () => isGridFocusedRef.current,
+        );
         break;
       }
       case "pickCursor":
@@ -497,7 +509,11 @@ export function LifeBirthDateField({
       className="c-life-birth-date-field flex w-full max-w-44 flex-col items-center gap-1"
       onBlur={(event) => {
         const next = event.relatedTarget;
-        if (next instanceof Element && next.closest(".react-datepicker"))
+        if (
+          next instanceof Element &&
+          (containerRef.current?.contains(next) ||
+            next.closest(".react-datepicker"))
+        )
           return;
         if (isOpen) {
           setGridFocused(false);
@@ -546,7 +562,7 @@ export function LifeBirthDateField({
           onFocus={(event) => {
             if (event.target instanceof HTMLInputElement) {
               setGridFocused(false);
-              event.target.select();
+              if (!isOpen) event.target.select();
             }
           }}
           onInputClick={onCalendarOpen}
@@ -566,6 +582,7 @@ export function LifeBirthDateField({
           }}
           onChangeRaw={(event) => {
             if (event.type === "click") return;
+            setGridFocused(false);
             setDraftText(event.currentTarget.value);
           }}
           openToDate={pickerMonth.toDate()}

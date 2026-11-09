@@ -50,6 +50,10 @@ export const globalHandlers = [
   http.options(`${ENV_WEB.API_BASEURL}/event`, () => {
     return HttpResponse.json([]);
   }),
+  http.post(
+    `${ENV_WEB.API_BASEURL}/user/reflection-preferences`,
+    () => new HttpResponse(null, { status: 204 }),
+  ),
   http.get(`${ENV_WEB.API_BASEURL}/user/profile`, () => {
     return HttpResponse.json(
       {

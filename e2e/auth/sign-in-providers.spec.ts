@@ -107,11 +107,18 @@ test.describe("sign-in provider buttons", () => {
       apple: signInOnly(false),
     });
 
+    await page.route("https://login.microsoftonline.com/**", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<title>Microsoft authorization destination</title>",
+      }),
+    );
+
     await page.goto("/week?auth=login", { waitUntil: "domcontentloaded" });
     await expect(
       page.getByRole("button", { name: "Continue with Microsoft" }),
     ).toBeVisible();
-    await page.getByRole("heading", { name: "Hey, welcome back" }).click();
+    await page.getByRole("button", { name: "Continue with Microsoft" }).focus();
 
     await Promise.all([
       page.waitForURL(

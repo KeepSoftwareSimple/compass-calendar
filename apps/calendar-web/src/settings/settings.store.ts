@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { IS_DEV } from "@web/common/constants/env.constants";
 
-export type SettingsPage = "accounts" | "billing" | "booking";
+export type SettingsPage = "accounts" | "billing" | "booking" | "notifications";
 
 export type OpenFromPaletteOptions = {
   fromPalette?: boolean;

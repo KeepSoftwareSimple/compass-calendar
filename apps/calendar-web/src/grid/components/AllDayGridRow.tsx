@@ -108,7 +108,6 @@ export const AllDayGridRow: FC<AllDayRowProps> = ({
     }
   };
   const onBlurCapture = (event: FocusEvent<HTMLElement>) => {
-    if (!focusPeek) return;
     const next = event.relatedTarget;
     if (next instanceof Node && event.currentTarget.contains(next)) return;
     setFocusPeek(false);

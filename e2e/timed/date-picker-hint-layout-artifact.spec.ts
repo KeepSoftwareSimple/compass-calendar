@@ -31,7 +31,7 @@ test("artifact: date picker keyboard hints live in the sidebar, not in the popov
   await captureSidebarDatePickerHint(page);
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/after-date-picker-sidebar-hint-desktop.png",
+    path: test.info().outputPath("date-picker-sidebar-hint-desktop.png"),
     fullPage: false,
   });
 });
@@ -46,7 +46,7 @@ test("artifact: sidebar date picker hints stay visible at narrow width", {
   await captureSidebarDatePickerHint(page);
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/after-date-picker-sidebar-hint-360.png",
+    path: test.info().outputPath("date-picker-sidebar-hint-360.png"),
     fullPage: false,
   });
 });

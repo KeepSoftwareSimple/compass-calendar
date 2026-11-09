@@ -1,11 +1,13 @@
 import { type Request, type Response } from "express";
 import { Status } from "@core/errors/status.codes";
+import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
   type EmailUnsubscribeScope,
   parseUnsubscribeUserId,
 } from "@backend/email/email-unsubscribe";
+import { EMAIL_REPLY_TO } from "@backend/email/providers/email.client";
 import {
   markBookingHostEmailDisabled,
   markUserUnsubscribed,
@@ -38,11 +40,6 @@ const invalidPage = (): string =>
   );
 
 const confirmPage = (token: string, scope: EmailUnsubscribeScope): string => {
-  if (scope === "reflection")
-    return pageShell(
-      "Weekly reflections",
-      `<h1>Stop weekly reflections</h1><p>You will stop receiving calendar reflection emails from Compass.</p><form method="post" action="/api/email/unsubscribe"><input type="hidden" name="token" value="${token.replace(/"/g, "&quot;")}" /><input type="hidden" name="scope" value="reflection" /><button type="submit">Stop reflections</button></form>`,
-    );
   const isBookingHost = scope === "booking-host";
   const description = isBookingHost
     ? "You will stop receiving email when guests book, cancel, or reschedule meetings on your Compass meeting page."
@@ -63,11 +60,13 @@ const confirmPage = (token: string, scope: EmailUnsubscribeScope): string => {
   );
 };
 
+const feedbackLink = `<p><a href="mailto:${EMAIL_REPLY_TO}?subject=Compass%20email%20feedback">Share feedback by email (optional)</a></p>`;
+
 const donePage = (scope: EmailUnsubscribeScope): string => {
   if (scope === "reflection")
     return pageShell(
       "Reflections are off",
-      "<h1>Reflections are off</h1><p>You will not receive further calendar reflection emails.</p>",
+      `<h1>Reflections are off</h1><p>You will not receive further calendar reflection emails.</p>${feedbackLink}`,
     );
   const description =
     scope === "booking-host"
@@ -76,7 +75,7 @@ const donePage = (scope: EmailUnsubscribeScope): string => {
   return pageShell(
     "Unsubscribed",
     `<h1 style="margin:0 0 12px;font-size:22px;line-height:30px;color:#111827;">${scope === "booking-host" ? "Booking alerts are off" : "You are unsubscribed"}</h1>
-     <p style="margin:0;font-size:16px;line-height:24px;color:#4b5563;">${description}</p>`,
+     <p style="margin:0;font-size:16px;line-height:24px;color:#4b5563;">${description}</p>${feedbackLink}`,
   );
 };
 
@@ -89,6 +88,12 @@ export class EmailUnsubscribeController {
       return;
     }
     const scope = parseScope(req.query["scope"]);
+    if (scope === "reflection") {
+      res.redirect(
+        new URL("/?settings=notifications", CONFIG.FRONTEND_URL).toString(),
+      );
+      return;
+    }
     res.status(Status.OK).type("html").send(confirmPage(token, scope));
   };
 
@@ -120,11 +125,13 @@ export class EmailUnsubscribeController {
         {
           $set: {
             "emailPreferences.reflectionDisabledAt": new Date(),
-            "reflectionPreferences.enabled": false,
+            ...(user.reflectionPreferences
+              ? { "reflectionPreferences.enabled": false }
+              : {}),
           },
         },
       );
-      await emailSendRepository.cancelQueuedReflection(userId);
+      await emailSendRepository.cancelQueuedReflection(userId, true);
     } else if (scope === "booking-host") {
       await markBookingHostEmailDisabled(userId);
     } else {

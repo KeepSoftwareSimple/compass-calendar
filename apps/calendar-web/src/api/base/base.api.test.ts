@@ -1,5 +1,24 @@
+import { createApiError } from "@web/api/util/api.util";
+import {
+  readAuthenticated,
+  resetAuthSessionStoreForTests,
+  setAuthSessionAuthenticated,
+} from "@web/auth/compass/session/auth-session.store";
+import { session } from "@web/auth/compass/session/Session";
+import {
+  clearAuthenticationState,
+  markUserAsAuthenticated,
+} from "@web/auth/compass/state/auth.state.util";
 import { BaseApi } from "./base.api";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 
 describe("BaseApi", () => {
   beforeEach(() => {
@@ -8,6 +27,8 @@ describe("BaseApi", () => {
   });
 
   afterEach(() => {
+    resetAuthSessionStoreForTests();
+    clearAuthenticationState();
     BaseApi.defaults.adapter = undefined;
     BaseApi.defaults.onGoogleRevoked = undefined;
   });
@@ -33,6 +54,32 @@ describe("BaseApi", () => {
     });
 
     expect(onGoogleRevoked).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a new session when an earlier guest request returns 401", async () => {
+    setAuthSessionAuthenticated(false);
+    const signOut = spyOn(session, "signOut").mockResolvedValue(undefined);
+    BaseApi.defaults.adapter = async (config) => {
+      setAuthSessionAuthenticated(true);
+      markUserAsAuthenticated("host@example.com");
+      throw createApiError(config, {
+        config,
+        data: {},
+        headers: new Headers(),
+        status: 401,
+        statusText: "Unauthorized",
+      });
+    };
+
+    try {
+      await expect(BaseApi.get("/user/metadata")).rejects.toMatchObject({
+        response: { status: 401 },
+      });
+      expect(readAuthenticated()).toBe(true);
+      expect(signOut).not.toHaveBeenCalled();
+    } finally {
+      signOut.mockRestore();
+    }
   });
 
   it("rethrows AbortError instead of wrapping it as ApiError", async () => {

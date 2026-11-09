@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { parseUserDate } from "@web/common/utils/datetime/web.date.util";
 import { resolveFormControlJumpIds } from "@web/common/utils/form/form.util";
@@ -74,7 +74,12 @@ export const EventFormDateField = ({
   };
   const [pickerCursor, setPickerCursor] = useState<Dayjs | null>(null);
   const pickerCursorRef = useRef<Dayjs | null>(null);
-  const [gridFocused, setGridFocused] = useState(false);
+  const [gridFocused, setGridFocusedState] = useState(false);
+  const isGridFocusedRef = useRef(false);
+  const setGridFocused = useCallback((next: boolean) => {
+    isGridFocusedRef.current = next;
+    setGridFocusedState(next);
+  }, []);
   const setPickerCursorSync = (next: Dayjs | null) => {
     pickerCursorRef.current = next;
     setPickerCursor(next);
@@ -105,12 +110,16 @@ export const EventFormDateField = ({
     }
     calendarCloseRequestedRef.current = false;
     setPickerMonth(dayjs(selected).startOf("month"));
-  }, [isOpen, selected]);
+  }, [isOpen, selected, setGridFocused]);
 
   useEffect(() => {
     if (!isOpen || pickerCursor === null || !calendarClassName) return;
     const id = window.requestAnimationFrame(() => {
-      focusKeyboardSelectedDay(calendarClassName, pickerCursor.toDate());
+      focusKeyboardSelectedDay(
+        calendarClassName,
+        pickerCursor.toDate(),
+        () => isGridFocusedRef.current,
+      );
     });
     return () => window.cancelAnimationFrame(id);
   }, [isOpen, pickerCursor, calendarClassName]);
@@ -246,7 +255,11 @@ export const EventFormDateField = ({
       const anchor = dayjs(selectedRef.current).startOf("day");
       setPickerCursorSync(anchor);
       setGridFocused(true);
-      focusKeyboardSelectedDay(calendarClassName, selectedRef.current);
+      focusKeyboardSelectedDay(
+        calendarClassName,
+        selectedRef.current,
+        () => isGridFocusedRef.current,
+      );
       return;
     }
 
@@ -264,7 +277,11 @@ export const EventFormDateField = ({
           setPickerMonth(next.startOf("month"));
         }
         setGridFocused(true);
-        focusKeyboardSelectedDay(calendarClassName, next.toDate());
+        focusKeyboardSelectedDay(
+          calendarClassName,
+          next.toDate(),
+          () => isGridFocusedRef.current,
+        );
         break;
       }
       case "pickCursor":

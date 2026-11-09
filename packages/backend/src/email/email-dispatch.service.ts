@@ -1,7 +1,9 @@
 import { Logger } from "@core/logger/winston.logger";
+import dayjs from "@core/util/date/dayjs";
 import { emailListIncludes } from "@core/util/email.util";
 import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
+import mongoService from "@backend/common/services/mongo.service";
 import { renderBookingHostEmail } from "@backend/email/booking-host-email.content";
 import { loadBookingHostEmailDispatchContext } from "@backend/email/booking-host-email.context";
 import { type BookingHostEmailKind } from "@backend/email/booking-host-email.id";
@@ -33,8 +35,13 @@ import {
   type EmailSendInput,
 } from "@backend/email/providers/email.port";
 import { dispatchReflection } from "@backend/email/reflection-dispatch";
-import { enqueueDueReflections } from "@backend/email/reflection-enrollment";
+import {
+  enqueueDueReflections,
+  isReflectionTrialUser,
+} from "@backend/email/reflection-enrollment";
+import { initializeReflectionPreferences } from "@backend/email/reflection-initialization";
 import { findWelcomeStep } from "@backend/email/welcome-sequence";
+import { getWelcomeEmailContent } from "@backend/email/welcome-sequence.content";
 import { loadWelcomeSequenceUser } from "@backend/email/welcome-sequence.context";
 import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
 import {
@@ -442,6 +449,52 @@ export class EmailDispatchService {
       return;
     }
 
+    if (row.stepKey === "weekly-review") {
+      // Browser initialization normally supplies the user's timezone. UTC is
+      // the fallback for a signup that never opens the web app.
+      await initializeReflectionPreferences(row.userId, {
+        timeZone: "UTC",
+        excludedCalendarIds: [],
+      });
+      const fullUser = await mongoService.user.findOne({ _id: row.userId });
+      const preferences = fullUser?.reflectionPreferences;
+      if (!fullUser || !preferences) {
+        await skip("Calendar reviews unavailable");
+        return;
+      }
+      if (!row.reflection) {
+        await mongoService.emailSend.updateOne(
+          { _id: row._id, status: "queued", reflection: { $exists: false } },
+          {
+            $set: {
+              recipientEmail: fullUser.email,
+              reflection: {
+                date: dayjs().tz(preferences.timeZone).format("YYYY-MM-DD"),
+                timeZone: preferences.timeZone,
+                cadence: "daily",
+                trial: isReflectionTrialUser(userIdHex),
+              },
+            },
+          },
+        );
+      }
+      const current = await mongoService.emailSend.findOne({
+        _id: row._id,
+        status: "queued",
+      });
+      if (!current) return;
+      await dispatchReflection(current, this.getProvider(), {
+        onboarding: true,
+      });
+      if (
+        previewLoop &&
+        (await mongoService.emailSend.findOne({ _id: row._id, status: "sent" }))
+      ) {
+        await handlePreviewLoopAfterSend(row, now);
+      }
+      return;
+    }
+
     const templateAlias = getWelcomeStepTemplateAlias(row.stepKey);
     const ctaBaseHref = getWelcomeStepCtaBaseHref(row.stepKey);
     if (!templateAlias || !ctaBaseHref) {
@@ -466,6 +519,7 @@ export class EmailDispatchService {
       send: {
         idempotencyKey: row._id,
         to: user.email,
+        subject: getWelcomeEmailContent(row.stepKey)?.subject,
         template: {
           id: templateAlias,
           variables: templateVariables,
