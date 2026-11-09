@@ -646,6 +646,9 @@ final class NativeGridKeyboardRouter {
             return true
         }
         if let shortcut {
+            if shortcut == .focusShiftHold, keyEvent.modifiers.isEmpty {
+                return false
+            }
             performShortcut(shortcut)
             return true
         }
