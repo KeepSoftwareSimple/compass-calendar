@@ -5,19 +5,24 @@ import {
 import { getWelcomeEmailContent } from "@backend/email/welcome-sequence.content";
 
 /** Resend published template alias per welcome drip step. */
-export const WELCOME_STEP_TEMPLATE_ALIAS: Record<WelcomeStepKey, string> = {
+export const WELCOME_STEP_TEMPLATE_ALIAS: Record<
+  WelcomeStepKey,
+  string | null
+> = {
   "cmd-k": "04-cmdk",
   "shortcut-list": "14-",
   "jump-around": "24-jump-around",
   "adjusting-times": "34-adjusting-times",
   roundup: "44-roundup",
+  // Personalized reviews are rendered from calendar data, not a hosted template.
+  "weekly-review": null,
   "trial-ending": "compass-trial-ending",
 };
 
 export function getWelcomeStepTemplateAlias(
   stepKey: string,
 ): string | undefined {
-  return welcomeStepValue(WELCOME_STEP_TEMPLATE_ALIAS, stepKey);
+  return welcomeStepValue(WELCOME_STEP_TEMPLATE_ALIAS, stepKey) ?? undefined;
 }
 
 export function buildWelcomeResendTemplateVariables(input: {

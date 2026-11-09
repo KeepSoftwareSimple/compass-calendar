@@ -11,7 +11,6 @@ public final class CommandPaletteStore {
     }
     public private(set) var selectedCommandId: String?
     public private(set) var recentCommandIds: [String] = []
-    public private(set) var statusAnnouncement = ""
     public var onAnnouncementChanged: ((String) -> Void)?
 
     private let defaults: UserDefaults
@@ -47,13 +46,6 @@ public final class CommandPaletteStore {
     }
 
     public func announce(_ text: String) {
-        statusAnnouncement = text
         onAnnouncementChanged?(text)
-    }
-
-    public func consumeAnnouncement() {
-        guard !statusAnnouncement.isEmpty else { return }
-        statusAnnouncement = ""
-        onAnnouncementChanged?("")
     }
 }

@@ -1,38 +1,7 @@
-import dayjs, { type Dayjs } from "@core/util/date/dayjs";
+import dayjs from "@core/util/date/dayjs";
 import { parseUserDate } from "@web/common/utils/datetime/web.date.util";
+import { type DatePickerClosedFieldKey } from "@web/components/DatePicker/date-picker-keys.util";
 import { formatEventFormDateLabel } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateField.util";
-
-const CLOSED_FIELD_KEYS = ["ArrowDown", "ArrowUp", "Enter", " "] as const;
-
-const CALENDAR_KEYS = [
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
-  "Enter",
-  " ",
-  "Escape",
-] as const;
-
-export type EventFormDateFieldClosedKey = (typeof CLOSED_FIELD_KEYS)[number];
-
-export type EventFormDateCalendarKey = (typeof CALENDAR_KEYS)[number];
-
-const closedFieldKeys: ReadonlySet<string> = new Set(CLOSED_FIELD_KEYS);
-const calendarKeys: ReadonlySet<string> = new Set(CALENDAR_KEYS);
-
-export const isEventFormDateFieldClosedKey = (
-  key: string,
-): key is EventFormDateFieldClosedKey => closedFieldKeys.has(key);
-
-export const isEventFormDateCalendarKey = (
-  key: string,
-): key is EventFormDateCalendarKey => calendarKeys.has(key);
-
-type EventFormDateCalendarAction =
-  | { kind: "moveCursor"; days: number }
-  | { kind: "pickCursor" }
-  | { kind: "close" };
 
 const showsCommittedDay = (text: string, committedDate: Date) => {
   const parsed = parseUserDate(text.trim(), dayjs());
@@ -44,7 +13,7 @@ const showsCommittedDay = (text: string, committedDate: Date) => {
 
 /** Closed-field keys (web `EventFormDateField.handleKeyDown`, Mac parity). */
 export const closedFieldAction = (
-  key: EventFormDateFieldClosedKey,
+  key: DatePickerClosedFieldKey,
   options: {
     shiftKey: boolean;
     modKey: boolean;
@@ -74,30 +43,3 @@ export const closedFieldAction = (
         : { kind: "ignore" };
   }
 };
-
-/** Open-calendar keys (web `react-datepicker` parity with Mac). */
-export const calendarAction = (
-  key: EventFormDateCalendarKey,
-): EventFormDateCalendarAction => {
-  switch (key) {
-    case "ArrowLeft":
-      return { kind: "moveCursor", days: -1 };
-    case "ArrowRight":
-      return { kind: "moveCursor", days: 1 };
-    case "ArrowUp":
-      return { kind: "moveCursor", days: -7 };
-    case "ArrowDown":
-      return { kind: "moveCursor", days: 7 };
-    case "Enter":
-    case " ":
-      return { kind: "pickCursor" };
-    case "Escape":
-      return { kind: "close" };
-  }
-};
-
-export const movePickerCursor = (
-  cursor: Dayjs | null,
-  anchor: Date,
-  days: number,
-): Dayjs => (cursor ?? dayjs(anchor)).add(days, "day");

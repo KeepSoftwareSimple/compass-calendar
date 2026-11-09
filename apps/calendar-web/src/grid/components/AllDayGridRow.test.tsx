@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import dayjs from "@core/util/date/dayjs";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
@@ -187,6 +187,35 @@ describe("AllDayGridRow", () => {
       expect(
         screen.getByRole("region", { name: "All-day events" }),
       ).toHaveStyle({ height: `${compactAllDayRowHeightPx(6)}px` });
+      expect(readAllDayRowExpanded()).toBe(false);
+    });
+
+    it("collapses again when focus enters and leaves a folded event in one batch", () => {
+      render(
+        <>
+          <AllDayGridRow
+            allDayColumnsRef={() => {}}
+            allDayRowRef={() => {}}
+            eventsLayer={<button type="button">Folded event</button>}
+            rowsCount={6}
+            visibleDates={[
+              { date: today, key: "a", surfaceLabel: "A all-day column" },
+            ]}
+          />
+          <button type="button">Timed grid</button>
+        </>,
+      );
+      const chip = screen.getByRole("button", { name: "Folded event" });
+      Object.defineProperty(chip, "getBoundingClientRect", {
+        value: () => ({ top: 100 }),
+      });
+      act(() => {
+        chip.focus();
+        screen.getByRole("button", { name: "Timed grid" }).focus();
+      });
+      expect(
+        screen.getByRole("region", { name: "All-day events" }),
+      ).toHaveAttribute("data-allday-collapsed", "true");
       expect(readAllDayRowExpanded()).toBe(false);
     });
 

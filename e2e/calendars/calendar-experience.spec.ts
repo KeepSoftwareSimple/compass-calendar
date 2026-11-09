@@ -603,6 +603,7 @@ test("day view separates visible calendars into distinct columns", async ({
 
   await page.keyboard.press("d");
   await page.waitForURL((url) => url.pathname.startsWith("/day"), {
+    waitUntil: "domcontentloaded",
     timeout: 10000,
   });
 
@@ -1014,6 +1015,7 @@ test("day view keeps calendar column labels clipped with many visible columns", 
 
   await page.keyboard.press("d");
   await page.waitForURL((url) => url.pathname.startsWith("/day"), {
+    waitUntil: "domcontentloaded",
     timeout: 10000,
   });
 

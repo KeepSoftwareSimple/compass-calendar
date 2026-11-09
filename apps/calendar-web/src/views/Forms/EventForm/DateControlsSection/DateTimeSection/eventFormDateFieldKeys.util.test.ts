@@ -1,12 +1,5 @@
-import dayjs from "@core/util/date/dayjs";
 import { formatEventFormDateLabel } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateField.util";
-import {
-  calendarAction,
-  closedFieldAction,
-  isEventFormDateCalendarKey,
-  isEventFormDateFieldClosedKey,
-  movePickerCursor,
-} from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
+import { closedFieldAction } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
 import { describe, expect, it } from "bun:test";
 
 const committed = new Date("2026-10-17T12:00:00.000Z");
@@ -64,39 +57,5 @@ describe("closedFieldAction", () => {
         committedDate: committed,
       }),
     ).toEqual({ kind: "ignore" });
-  });
-});
-
-describe("date field key guards", () => {
-  it("classifies closed-field and open-calendar keys", () => {
-    expect(isEventFormDateFieldClosedKey("Enter")).toBe(true);
-    expect(isEventFormDateFieldClosedKey("Escape")).toBe(false);
-    expect(isEventFormDateCalendarKey("Escape")).toBe(true);
-    expect(isEventFormDateCalendarKey("Tab")).toBe(false);
-  });
-});
-
-describe("calendarAction", () => {
-  it("moves the cursor by day and week", () => {
-    expect(calendarAction("ArrowLeft")).toEqual({
-      kind: "moveCursor",
-      days: -1,
-    });
-    expect(calendarAction("ArrowDown")).toEqual({
-      kind: "moveCursor",
-      days: 7,
-    });
-    expect(calendarAction("Enter")).toEqual({ kind: "pickCursor" });
-    expect(calendarAction("Escape")).toEqual({ kind: "close" });
-  });
-});
-
-describe("movePickerCursor", () => {
-  it("anchors on the committed date until the cursor moves", () => {
-    const moved = movePickerCursor(null, committed, 7);
-    expect(moved.format("YYYY-MM-DD")).toBe("2026-10-24");
-    expect(
-      movePickerCursor(dayjs("2026-10-24"), committed, -7).format("YYYY-MM-DD"),
-    ).toBe("2026-10-17");
   });
 });

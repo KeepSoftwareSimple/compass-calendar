@@ -61,6 +61,8 @@ const shortcutIdForEvent = (
   if (digit === 2)
     return hasBooking || page === "booking" ? "nav-booking" : null;
 
+  if (digit === 3) return "nav-notifications";
+
   const key = normalizedKeyboardKey(event);
   if (page === "booking") {
     if (isModEnter(event)) return "save-booking";

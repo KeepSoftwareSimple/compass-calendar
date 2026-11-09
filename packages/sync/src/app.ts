@@ -646,6 +646,7 @@ function buildSchedulers(
           registry.callbackUrlFor(config.CALLBACK_BASE_URL, kind),
         providerCapabilities: (kind) => registry.get(kind).capabilities,
         invalidations: repos.invalidations,
+        hostGuestRsvpObservations: repos.hostGuestRsvpObservations,
         log: logger,
       },
       owner,

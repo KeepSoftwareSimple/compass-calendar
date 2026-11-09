@@ -95,6 +95,19 @@ Every package runs on Bun's native test runner (Bun 1.3.14+); Jest has been remo
 - Backend and web SuperTokens, toast, and Google-auth behavior in tests use injectable seams (`TestGcalFixture`, `session.middleware`, `supertokens.registry`, `session.port`, `emailpassword.port`, `toast.port`, `useStartGoogleAuthorization.registry`, `useCompleteAuthentication.registry`, `LoggerFactory`) instead of preload `mock.module` clusters.
 - Test files import lifecycle/assertion APIs from `bun:test` only (`mock`, `spyOn`, `mock.module` where unavoidable).
 
+### Native authentication test dependency
+
+The full backend suite also runs `header-session.test.ts` against a real
+SuperTokens core. MongoDB is started by the test runner; SuperTokens is not.
+Start the same Postgres 16 and SuperTokens 12.2.0 services used by
+[the backend CI job](../../.github/workflows/test-unit.yml) before running the
+full backend suite or `bun run verify --strict`. The defaults are
+`SUPERTOKENS_URI=http://127.0.0.1:3567` and
+`SUPERTOKENS_KEY=local-dev-supertokens-key`; environment overrides are supported.
+`curl http://127.0.0.1:3567/hello` should return `Hello`. An unavailable core
+causes the native-session setup hook to time out; increasing the test timeout
+does not supply the missing service.
+
 ### Known infrastructure constraints
 
 **Web test seams.** Session, toast, Google authorization, email/password, and complete-authentication use injectable ports/registries registered in `@web/__tests__/helpers/web-test-seams.ts`. The preload lifecycle calls `installDefaultWebTestSeams()` in `beforeEach` and `resetWebTestSeams()` in `afterEach`, so web no longer needs preload `mock.module` clusters or a per-file process launcher.

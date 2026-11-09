@@ -9,6 +9,7 @@ import {
 } from "@backend/booking/booking.error";
 import { bookingLifecycleAnalytics } from "@backend/booking/booking-lifecycle.analytics";
 import bookingPageService from "@backend/booking/services/booking-page.service";
+import hostGuestRsvpNoticeService from "@backend/booking/services/host-guest-rsvp-notice.service";
 import publicBookingService from "@backend/booking/services/public-booking.service";
 import { routeParam } from "@backend/common/helpers/query-param";
 
@@ -62,6 +63,17 @@ class BookingController {
     try {
       const userId = zObjectId.parse(req.session?.getUserId());
       const response = await bookingPageService.claimNewMeetings(userId);
+      res.status(Status.OK).json(response);
+    } catch (error) {
+      respondBookingError(res, error);
+    }
+  };
+
+  claimGuestRsvpReplies = async (req: SessionRequest, res: Response) => {
+    try {
+      const userId = zObjectId.parse(req.session?.getUserId());
+      const response =
+        await hostGuestRsvpNoticeService.claimGuestRsvpReplies(userId);
       res.status(Status.OK).json(response);
     } catch (error) {
       respondBookingError(res, error);

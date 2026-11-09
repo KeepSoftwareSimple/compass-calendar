@@ -10,6 +10,7 @@ import {
 import { registerContactsRoutes } from "@sync/server/contacts.routes";
 import { registerDiagnosticRoutes } from "@sync/server/diagnostic.routes";
 import { registerHealthRoutes } from "@sync/server/health.routes";
+import { mountHostGuestRsvpRoutes } from "@sync/server/host-guest-rsvp.routes";
 import { registerNotificationRoutes } from "@sync/server/notification.routes";
 import { registerPrincipalRoutes } from "@sync/server/principal.routes";
 import { registerReflectionRoutes } from "@sync/server/reflection.routes";
@@ -63,6 +64,10 @@ export function buildSyncApp(deps: {
     registerChangeFeedRoutes(app, {
       authMiddleware: deps.connectionApi.authMiddleware,
       serviceAuthMiddleware: deps.connectionApi.serviceAuthMiddleware,
+      mongo: deps.connectionApi.mongo,
+    });
+    mountHostGuestRsvpRoutes(app, {
+      authMiddleware: deps.connectionApi.serviceAuthMiddleware,
       mongo: deps.connectionApi.mongo,
     });
     // Account-deletion hard purge for the signed principal (S43). Served in

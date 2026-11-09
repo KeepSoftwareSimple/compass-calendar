@@ -56,6 +56,64 @@ const review = (
   });
 
 describe("reflection content", () => {
+  it("omits daily and weekly routines without excluding less frequent repeats", () => {
+    const selected = selectReflectionEvents({
+      ...input,
+      events: [
+        event("Daily lunch", "2026-11-09", {
+          windowKey: "upcoming",
+          recurring: true,
+          routine: true,
+        }),
+        event("Weekly standup", "2026-11-10", {
+          windowKey: "upcoming",
+          recurring: true,
+          routine: true,
+        }),
+        event("Birthday", "2026-11-12", {
+          windowKey: "upcoming",
+          recurring: true,
+        }),
+        event("Trip", "2026-11-11", { windowKey: "upcoming" }),
+      ],
+    });
+    expect(selected.upcoming.map((event) => event.title)).toEqual([
+      "Trip",
+      "Birthday",
+    ]);
+  });
+  it("does not call already-started appointments upcoming when the recap ends at midnight", () => {
+    const timed = (id: string, start: string, end: string) =>
+      event(id, "2026-11-08", {
+        windowKey: "upcoming",
+        schedule: { kind: "timed", start, end, timeZone: "America/Denver" },
+      });
+    const selected = selectReflectionEvents({
+      ...input,
+      cutoff: new Date("2026-11-08T07:00:00Z"),
+      upcomingCutoff: input.cutoff,
+      events: [
+        timed("Breakfast", "2026-11-08T15:00:00Z", "2026-11-08T16:00:00Z"),
+        timed("Interview", "2026-11-08T18:00:00Z", "2026-11-08T19:00:00Z"),
+        event("Birthday", "2026-11-08", { windowKey: "upcoming" }),
+      ],
+    });
+    expect(selected.upcoming.map((event) => event.id)).toEqual([
+      "Birthday",
+      "Interview",
+    ]);
+  });
+
+  it("shows non-overlapping whole-day ranges for the daily trial", () => {
+    const rendered = review({
+      date: "2026-11-07",
+      cadence: "daily",
+      recentStartDate: "2026-10-31",
+      upcomingStartDate: "2026-11-07",
+    });
+    expect(rendered.text).toContain("Your past week, Oct 31 - Nov 6");
+    expect(rendered.text).toContain("Next week, Nov 7-13");
+  });
   it("searches the historical week first and supplements from the month", () => {
     const selected = selectReflectionEvents({
       ...input,
@@ -165,11 +223,11 @@ describe("reflection content", () => {
     });
     expect(selected.recent.map((e) => e.id)).toEqual(["holiday-one", "Lunch"]);
     const rendered = review({ ...selected });
-    expect(rendered.text).toContain("Your calendar included 2 events.");
+    expect(rendered.text).not.toContain("Your calendar included");
     expect(rendered.text.match(/: Holiday/g)).toHaveLength(1);
     expect(rendered.text).toContain(": Lunch");
   });
-  it("preserves distinct dates, durations, same-calendar events and overlapping reflection windows", () => {
+  it("preserves distinct dates, durations, same-calendar events while excluding past events from upcoming", () => {
     const first = event("first", "2026-11-03", {
       title: "Walk",
       windowKey: "recent",
@@ -197,7 +255,7 @@ describe("reflection content", () => {
       ],
     });
     expect(selected.recent).toHaveLength(4);
-    expect(selected.upcoming).toHaveLength(1);
+    expect(selected.upcoming).toHaveLength(0);
   });
   it("omits empty memories and safely escapes event titles without claiming attendance", () => {
     const rendered = renderReflectionEmail({
@@ -220,7 +278,7 @@ describe("reflection content", () => {
     expect(rendered.html).toContain("&lt;script&gt;");
     expect(rendered.html).not.toContain("<script>");
     expect(rendered.text).not.toContain("This time in your life");
-    expect(rendered.text).toContain("Your calendar included");
+    expect(rendered.text).not.toContain("Your calendar included");
     expect(rendered.text).not.toContain("you attended");
     expect(rendered.text).toContain("https://example.com/week/2026-11-09");
   });

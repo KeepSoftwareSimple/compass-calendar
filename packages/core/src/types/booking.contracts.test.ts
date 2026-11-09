@@ -7,6 +7,7 @@ import {
   BOOKING_MAX_HORIZON_DAYS,
   BOOKING_MAX_MIN_NOTICE_HOURS,
   BOOKING_PLACEHOLDER_CALENDAR_ID,
+  BookingGuestRsvpClaimResponseSchema,
   BookingNewMeetingsClaimResponseSchema,
   BookingPageSchema,
   BookingPageStatusResponseSchema,
@@ -693,6 +694,18 @@ describe("HTTP booking contracts", () => {
 
   it("rejects reserved slug reschedule", () => {
     expect(BookingSlugSchema.safeParse("reschedule").success).toBe(false);
+  });
+});
+
+describe("BookingGuestRsvpClaimResponseSchema", () => {
+  it("accepts an empty claim", () => {
+    expect(
+      BookingGuestRsvpClaimResponseSchema.safeParse({
+        count: 0,
+        latest: null,
+        whileYouWereAway: false,
+      }).success,
+    ).toBe(true);
   });
 });
 

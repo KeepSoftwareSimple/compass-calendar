@@ -1,5 +1,6 @@
 import { type Attendee } from "@core/types/event-attendance.contracts";
 import { type SyncEventContent } from "@core/types/sync/event.contracts";
+import { mergeEditableContentColor } from "@core/util/event/merge-editable-content-color";
 
 // Browser edits only title + description + location (+ optional color). An
 // update command still carries a full SyncEventContent (strict schema), and
@@ -34,8 +35,8 @@ export function mergeUpdateContent(
   incoming: SyncEventContent,
 ): SyncEventContent {
   const {
-    color: existingColor,
-    colorHex: existingColorHex,
+    color: _existingColor,
+    colorHex: _existingColorHex,
     ...existingRest
   } = existing;
   const merged: SyncEventContent = {
@@ -45,22 +46,7 @@ export function mergeUpdateContent(
     location: incoming.location,
   };
 
-  if (incoming.color === null) {
-    if (existingColor !== undefined) return merged;
-    return existingColorHex !== undefined
-      ? { ...merged, colorHex: existingColorHex }
-      : merged;
-  }
-  if (incoming.color !== undefined) {
-    return { ...merged, color: incoming.color };
-  }
-
-  let kept = merged;
-  if (existingColor !== undefined) kept = { ...kept, color: existingColor };
-  if (existingColorHex !== undefined) {
-    kept = { ...kept, colorHex: existingColorHex };
-  }
-  return kept;
+  return mergeEditableContentColor(existing, incoming, merged);
 }
 
 // Merge an intended guest membership (an attendeesEdit "replace" command's

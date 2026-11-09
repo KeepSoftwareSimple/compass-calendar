@@ -43,6 +43,7 @@ export function selectReflectionEvents(input: {
   events: ReflectionEvent[];
   timeZone: string;
   cutoff: Date;
+  upcomingCutoff?: Date;
   recentStartDate: string;
   hiddenIds: Set<string>;
   previousMemoryIds: Set<string>;
@@ -72,7 +73,15 @@ export function selectReflectionEvents(input: {
         rank(b) - rank(a) || a.schedule.start.localeCompare(b.schedule.start),
     );
   const upcoming = eligible
-    .filter((event) => event.windowKey === "upcoming")
+    .filter(
+      (event) =>
+        event.windowKey === "upcoming" &&
+        !event.routine &&
+        (event.schedule.kind === "allDay"
+          ? event.schedule.start >= date
+          : Date.parse(event.schedule.start) >=
+            (input.upcomingCutoff ?? input.cutoff).getTime()),
+    )
     .sort((a, b) => a.schedule.start.localeCompare(b.schedule.start));
   const history = eligible.filter((event) =>
     event.windowKey.startsWith("history:"),
@@ -141,24 +150,19 @@ export function renderReflectionEmail(input: {
   };
   const sections: { heading: string; lines: string[] }[] = [
     {
-      heading: `Your past week, ${dateRange(input.recentStartDate, input.date)}`,
+      heading: `Your past week, ${dateRange(input.recentStartDate, input.cadence === "daily" ? dayjs(input.upcomingStartDate).subtract(1, "day").format("YYYY-MM-DD") : input.date)}`,
       lines: input.recent.length
-        ? [
-            `Your calendar included ${input.recent.length} events.`,
-            ...input.recent.slice(0, 3).map(label),
-          ]
+        ? input.recent.slice(0, 3).map(label)
         : ["No completed events in your calendar this week."],
     },
     {
       heading: `Next week, ${dateRange(
         input.upcomingStartDate,
-        dayjs(input.upcomingStartDate)
-          .add(input.cadence === "weekly" ? 6 : 7, "day")
-          .format("YYYY-MM-DD"),
+        dayjs(input.upcomingStartDate).add(6, "day").format("YYYY-MM-DD"),
       )}`,
       lines: input.upcoming.length
         ? input.upcoming.slice(0, 3).map(label)
-        : ["No upcoming events in your calendar."],
+        : ["No upcoming highlights in your calendar."],
     },
   ];
   if (input.memories.length)

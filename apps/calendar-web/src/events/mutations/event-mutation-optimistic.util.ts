@@ -14,6 +14,7 @@ import {
   type RecurrenceScope,
   type ReplaceEventInput,
 } from "@core/types/event-command.contracts";
+import { mergeEditableContentColor } from "@core/util/event/merge-editable-content-color";
 import { rootSeriesMasterId } from "@core/util/occurrence-id";
 
 const nowDateTime = () => DateTimeSchema.parse(new Date().toISOString());
@@ -125,11 +126,28 @@ function mergeReplaceContent(
       ? details
       : { ...details, attendees: optimisticAttendees };
   if (existing.kind !== "details") return replayInput;
-  if (replayInput.kind === "details" && replayInput.color !== undefined) {
-    const { colorHex: _cleared, ...withoutHex } = existing;
-    return { ...withoutHex, ...replayInput };
+  if (replayInput.kind !== "details") return replayInput;
+
+  const { color: incomingColor, ...detailsWithoutColor } = replayInput;
+  const {
+    color: _existingColor,
+    colorHex: _existingColorHex,
+    ...existingDetails
+  } = existing;
+  const merged: typeof existing = {
+    ...existingDetails,
+    ...detailsWithoutColor,
+  };
+  const withColor = mergeEditableContentColor(
+    existing,
+    { color: incomingColor },
+    merged,
+  ) as typeof existing;
+  if (incomingColor !== undefined && incomingColor !== null) {
+    const { colorHex: _dropped, ...withoutHex } = withColor;
+    return withoutHex;
   }
-  return { ...existing, ...replayInput };
+  return withColor;
 }
 
 export function mergeReplaceInput(

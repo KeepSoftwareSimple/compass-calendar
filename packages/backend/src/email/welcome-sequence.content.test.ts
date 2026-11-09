@@ -19,6 +19,24 @@ describe("welcome sequence content links", () => {
     }
   });
 
+  it("numbers the six onboarding emails and introduces review controls in the final email", () => {
+    const keys = [
+      "cmd-k",
+      "shortcut-list",
+      "jump-around",
+      "adjusting-times",
+      "roundup",
+      "weekly-review",
+    ] as const;
+    keys.forEach((key, index) =>
+      expect(WELCOME_SEQUENCE_CONTENT[key].subject).toContain(`(${index}/5)`),
+    );
+    const review = WELCOME_SEQUENCE_CONTENT["weekly-review"];
+    expect(review.cta.href).toBe(`${appUrl}/?settings=notifications`);
+    expect(review.paragraphs.join(" ")).toContain("Sunday at 10:30 a.m.");
+    expect(review.paragraphs.join(" ")).toContain("Settings > Notifications");
+  });
+
   it("opens Settings > Billing from the trial-ending email", () => {
     expect(WELCOME_SEQUENCE_CONTENT["trial-ending"]?.cta.href).toBe(
       `${appUrl}/?settings=billing`,

@@ -8,11 +8,11 @@ final class CommandPaletteStatusAnnouncementDeliveryTests: XCTestCase {
             announcement: "Showing week of Tuesday, December 15, 2026",
             attachesAccessibilityProbes: false
         )
-        XCTAssertEqual(
-            delivery.announcementRequestedPayload,
-            "Showing week of Tuesday, December 15, 2026")
-        XCTAssertNil(delivery.mirrorText)
-        XCTAssertFalse(delivery.clearProbeMirror)
+        guard case .speak(let payload, let mirror) = delivery else {
+            return XCTFail("expected speak")
+        }
+        XCTAssertEqual(payload, "Showing week of Tuesday, December 15, 2026")
+        XCTAssertNil(mirror)
     }
 
     func testUITestLaunchMirrorsAndEmitsAnnouncement() {
@@ -20,13 +20,11 @@ final class CommandPaletteStatusAnnouncementDeliveryTests: XCTestCase {
             announcement: "Showing week of Tuesday, December 15, 2026",
             attachesAccessibilityProbes: true
         )
-        XCTAssertEqual(
-            delivery.announcementRequestedPayload,
-            "Showing week of Tuesday, December 15, 2026")
-        XCTAssertEqual(
-            delivery.mirrorText,
-            "Showing week of Tuesday, December 15, 2026")
-        XCTAssertFalse(delivery.clearProbeMirror)
+        guard case .speak(let payload, let mirror) = delivery else {
+            return XCTFail("expected speak")
+        }
+        XCTAssertEqual(payload, "Showing week of Tuesday, December 15, 2026")
+        XCTAssertEqual(mirror, "Showing week of Tuesday, December 15, 2026")
     }
 
     func testRepeatSameAnnouncementStillEmitsProductionPayload() {
@@ -37,34 +35,36 @@ final class CommandPaletteStatusAnnouncementDeliveryTests: XCTestCase {
         let second = CommandPaletteStatusAnnouncementPlanner.deliver(
             announcement: text,
             attachesAccessibilityProbes: false)
-        XCTAssertEqual(first.announcementRequestedPayload, text)
-        XCTAssertEqual(second.announcementRequestedPayload, text)
+        guard case .speak(let firstPayload, _) = first,
+              case .speak(let secondPayload, _) = second
+        else {
+            return XCTFail("expected speak")
+        }
+        XCTAssertEqual(firstPayload, text)
+        XCTAssertEqual(secondPayload, text)
     }
 
-    func testClearAnnouncementClearsMirrorAndSkipsSpokenPayload() {
+    func testClearAnnouncementSkipsSpokenPayload() {
         let delivery = CommandPaletteStatusAnnouncementPlanner.deliver(
             announcement: "",
             attachesAccessibilityProbes: true
         )
-        XCTAssertNil(delivery.announcementRequestedPayload)
-        XCTAssertNil(delivery.mirrorText)
-        XCTAssertTrue(delivery.clearProbeMirror)
+        guard case .clear = delivery else {
+            return XCTFail("expected clear")
+        }
     }
 
-    func testConsumeAnnouncementPathUsesClearDelivery() {
+    func testAnnounceForwardsEveryCallIncludingRepeats() {
         let store = CommandPaletteStore()
         var received: [String] = []
         store.onAnnouncementChanged = { received.append($0) }
         store.announce("Showing week of Tuesday, December 15, 2026")
-        store.consumeAnnouncement()
+        store.announce("Showing week of Tuesday, December 15, 2026")
         XCTAssertEqual(
             received,
-            ["Showing week of Tuesday, December 15, 2026", ""])
-        let clear = CommandPaletteStatusAnnouncementPlanner.deliver(
-            announcement: received.last,
-            attachesAccessibilityProbes: false
-        )
-        XCTAssertTrue(clear.clearProbeMirror)
-        XCTAssertNil(clear.announcementRequestedPayload)
+            [
+                "Showing week of Tuesday, December 15, 2026",
+                "Showing week of Tuesday, December 15, 2026",
+            ])
     }
 }

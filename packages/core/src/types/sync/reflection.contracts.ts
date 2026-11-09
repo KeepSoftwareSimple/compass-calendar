@@ -36,6 +36,7 @@ export const ReflectionEventSchema = z.object({
   title: z.string(),
   schedule: EventScheduleSchema,
   recurring: z.boolean(),
+  routine: z.boolean().default(false),
   uid: z.string().nullable(),
   windowKey: z.string(),
 });

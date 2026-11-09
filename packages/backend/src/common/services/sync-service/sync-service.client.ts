@@ -51,6 +51,12 @@ import {
   type EventInstanceListResponse,
   EventInstanceListResponseSchema,
 } from "@core/types/sync/event.contracts";
+import {
+  type HostGuestRsvpSummarizeRequest,
+  HostGuestRsvpSummarizeRequestSchema,
+  type HostGuestRsvpSummarizeResponse,
+  HostGuestRsvpSummarizeResponseSchema,
+} from "@core/types/sync/host-guest-rsvp.contracts";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import {
   type PrincipalPurgeResponse,
@@ -83,6 +89,7 @@ const EVENTS_FULL_PATH = "/internal/events/full";
 const COMMANDS_PATH = "/internal/commands";
 const PRINCIPAL_PATH = "/internal/principal";
 const CONTACTS_SUGGESTIONS_PATH = "/internal/contacts/suggestions";
+const HOST_GUEST_RSVP_SUMMARIZE_PATH = "/internal/host-guest-rsvp/summarize";
 
 const DEFAULT_TIMEOUT_MS = 5_000;
 
@@ -650,6 +657,19 @@ export class SyncServiceClient {
   // process instead of once per connected user. Signed as the service itself,
   // not any principal (see signServiceRequest): there is no single tenant or
   // principal this request acts on behalf of. Pass `null` to resume from now.
+  summarizeHostGuestRsvpReplies(
+    body: HostGuestRsvpSummarizeRequest,
+    correlationId?: string,
+  ): Promise<SyncClientResult<HostGuestRsvpSummarizeResponse>> {
+    return this.#requestUnscoped({
+      method: "POST",
+      path: HOST_GUEST_RSVP_SUMMARIZE_PATH,
+      body: HostGuestRsvpSummarizeRequestSchema.parse(body),
+      schema: HostGuestRsvpSummarizeResponseSchema,
+      correlationId,
+    });
+  }
+
   getGlobalChanges(
     cursor: ChangeFeedCursor | null,
     correlationId?: string,

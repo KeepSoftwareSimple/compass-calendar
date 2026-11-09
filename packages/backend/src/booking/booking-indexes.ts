@@ -131,4 +131,9 @@ export async function ensureBookingIndexes(): Promise<void> {
       },
     },
   );
+
+  await mongoService.hostGuestRsvpNoticeState.createIndex(
+    { userId: 1 },
+    { name: "host_guest_rsvp_notice_user_id_unique", unique: true },
+  );
 }

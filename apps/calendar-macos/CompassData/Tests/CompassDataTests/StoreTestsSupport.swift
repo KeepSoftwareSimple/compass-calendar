@@ -62,6 +62,19 @@ final class MockUserAPI: HiddenEventsRemoteClient, @unchecked Sendable {
     }
 }
 
+actor AsyncTestGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func wait() async {
+        await withCheckedContinuation { continuation = $0 }
+    }
+
+    func resume() {
+        continuation?.resume()
+        continuation = nil
+    }
+}
+
 enum StoreSampleEvents {
     static func timedEvent(id: String, title: String = "Meet") throws -> Event {
         let json = """
