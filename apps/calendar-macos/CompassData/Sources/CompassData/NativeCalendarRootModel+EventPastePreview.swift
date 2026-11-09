@@ -30,7 +30,7 @@ extension NativeCalendarRootModel {
         NSPasteboard.general.setString(text, forType: .string)
     }
 
-    func endEventPastePreview() {
+    public func endEventPastePreview() {
         guard pastePreviewStore.isActive else { return }
         pastePreviewStore.deactivate()
         if draftStore.status.activity == .pastePlace {
