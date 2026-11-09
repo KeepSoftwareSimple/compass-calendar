@@ -1,5 +1,5 @@
-import CompassData
 import CompassKit
+@testable import CompassData
 import XCTest
 
 final class GridEventDraftMappingPresentationColorTests: XCTestCase {

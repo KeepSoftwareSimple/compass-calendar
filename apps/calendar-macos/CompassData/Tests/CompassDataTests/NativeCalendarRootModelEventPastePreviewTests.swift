@@ -1,5 +1,5 @@
-import CompassData
 import CompassKit
+@testable import CompassData
 import XCTest
 
 @MainActor
@@ -53,7 +53,7 @@ final class NativeCalendarRootModelEventPastePreviewTests: XCTestCase {
             return false
         })
         if case .details(var payload) = event.content {
-            payload.color = .coral
+            payload.color = ColorEnum.coral
             event = Event(
                 calendarId: event.calendarId,
                 content: .details(payload),
