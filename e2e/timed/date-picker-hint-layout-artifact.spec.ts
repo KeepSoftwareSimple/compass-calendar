@@ -17,6 +17,9 @@ async function captureSidebarDatePickerHint(
     .locator("#sidebar")
     .getByTestId("date-picker-contextual-hint");
   await expect(contextual).toBeVisible();
+  await expect(contextual).toContainText("move date");
+  await expect(contextual).not.toContainText("PageDown");
+  await contextual.getByRole("button", { name: "More" }).click();
   await expect(contextual).toContainText("PageDown");
 
   await expect(page.getByTestId("event-form-calendar-hint")).toHaveCount(0);

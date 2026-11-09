@@ -204,7 +204,11 @@ describe("LifeBirthDateField", () => {
       const top = useDatePickerHintStore.getState().stack.at(-1);
       expect(top?.id).toBe("date-picker-life");
       const plain = getPartsPlainText(top!.parts);
-      expect(plain).toContain("PageDown");
+      expect(plain).toMatch(/move date/i);
+      expect(plain).not.toContain("PageDown");
+      expect(getPartsPlainText(top!.secondaryParts ?? [])).toContain(
+        "PageDown",
+      );
       expect(plain).not.toMatch(/open/i);
     });
   });
@@ -233,7 +237,7 @@ describe("LifeBirthDateField", () => {
     await waitFor(() => {
       const top = useDatePickerHintStore.getState().stack.at(-1);
       expect(top?.id).toBe("date-picker-life");
-      expect(getPartsPlainText(top!.parts)).toMatch(/day/i);
+      expect(getPartsPlainText(top!.parts)).toMatch(/move date/i);
     });
   });
 
