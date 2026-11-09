@@ -436,6 +436,7 @@ extension NativeCalendarRootModel {
     }
 
     func focusEvent(eventId: String) {
+        clearMonthPickerFocus()
         let type: ViewInteractionEventType =
             focusLayoutCards.first(where: { $0.eventId == eventId })?.isAllDay == true
                 ? .allDay

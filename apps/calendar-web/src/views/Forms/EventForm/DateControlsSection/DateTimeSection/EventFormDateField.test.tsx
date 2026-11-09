@@ -337,7 +337,11 @@ describe("EventFormDateField", () => {
       const top = useDatePickerHintStore.getState().stack.at(-1);
       expect(top?.id).toBe("date-picker-event-form");
       const plain = getPartsPlainText(top!.parts);
-      expect(plain).toContain("PageDown");
+      expect(plain).toMatch(/move date/i);
+      expect(plain).not.toContain("PageDown");
+      expect(getPartsPlainText(top!.secondaryParts ?? [])).toContain(
+        "PageDown",
+      );
       expect(plain).not.toMatch(/open start date/i);
     });
   });

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
@@ -471,6 +471,53 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(EDIT_SEQUENCE_HINT);
+  });
+
+  it("shows edit-sequence instead of stale month picker hints when a grid event is focused", async () => {
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+    const { SidebarMonthPickerHintEffect } = await import(
+      "@web/shortcuts/tips/useDatePickerSidebarHints"
+    );
+    const { resetDatePickerHintStoreForTests } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+    resetDatePickerHintStoreForTests();
+
+    const fieldset = document.createElement("fieldset");
+    fieldset.className = "c-month-picker";
+    const pickerDay = document.createElement("button");
+    fieldset.append(pickerDay);
+    document.body.append(fieldset);
+    pickerDay.focus();
+
+    const { wrapper } = createStoreWrapper();
+    const { rerender } = render(
+      <>
+        <SidebarMonthPickerHintEffect />
+        <SidebarStatusBar />
+      </>,
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(/back to grid/i);
+    });
+
+    const card = focusCalendarEvent();
+    rerender(
+      <>
+        <SidebarMonthPickerHintEffect />
+        <SidebarStatusBar />
+      </>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(EDIT_SEQUENCE_HINT);
+    });
+    expect(screen.queryByText(/back to grid/i)).not.toBeInTheDocument();
+    fieldset.remove();
+    card.remove();
+    resetDatePickerHintStoreForTests();
   });
 
   it("yields the next-shortcut hint to event jump", () => {

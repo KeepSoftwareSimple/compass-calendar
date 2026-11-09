@@ -1,6 +1,6 @@
 import { type FC, useEffect } from "react";
 import { useDatePickerHintStore } from "@web/shortcuts/tips/date-picker-hint.store";
-import { ShortcutTipParts } from "@web/shortcuts/tips/ShortcutTipParts";
+import { ProgressiveShortcutTipParts } from "@web/shortcuts/tips/ProgressiveShortcutTipParts";
 import { visibleShortcutHintActions } from "@web/shortcuts/tips/visible-shortcut-hint.store";
 
 /**
@@ -16,9 +16,10 @@ export const DatePickerContextualHint: FC = () => {
       visibleShortcutHintActions.clearSidebarHint();
       return;
     }
+    const allParts = [...surface.parts, ...(surface.secondaryParts ?? [])];
     visibleShortcutHintActions.setSidebarHint({
       id: syntheticId,
-      parts: surface.parts,
+      parts: allParts,
     });
     return () => visibleShortcutHintActions.clearSidebarHint();
   }, [surface, syntheticId]);
@@ -33,7 +34,11 @@ export const DatePickerContextualHint: FC = () => {
         role="status"
         data-testid="date-picker-contextual-hint"
       >
-        <ShortcutTipParts hintId={syntheticId} parts={surface.parts} />
+        <ProgressiveShortcutTipParts
+          hintId={syntheticId}
+          primary={surface.parts}
+          secondary={surface.secondaryParts}
+        />
       </span>
     </div>
   );

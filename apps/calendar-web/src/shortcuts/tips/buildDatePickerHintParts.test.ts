@@ -11,9 +11,13 @@ describe("datePickerHintSurface", () => {
       inputPhrase: "start date",
     });
     const plain = getPartsPlainText(openNoInputFocus.parts);
-    expect(plain).toContain("PageDown");
+    expect(plain).toMatch(/move date/i);
     expect(plain).not.toMatch(/open start date/i);
+    expect(plain).not.toContain("PageDown");
     expect(openNoInputFocus.id).toBe("date-picker-event-form");
+    expect(openNoInputFocus.secondaryParts?.length).toBeGreaterThan(0);
+    const secondary = getPartsPlainText(openNoInputFocus.secondaryParts!);
+    expect(secondary).toContain("PageDown");
   });
 
   it("prioritizes typing hints when the input stays focused with the calendar open", () => {
@@ -27,6 +31,8 @@ describe("datePickerHintSurface", () => {
     expect(plain).toMatch(/save start date/i);
     expect(plain).not.toContain("PageDown");
     expect(typing.id).toBe("date-picker-event-form");
+    const secondary = getPartsPlainText(typing.secondaryParts!);
+    expect(secondary).toMatch(/calendar/i);
   });
 
   it("publishes caption parts on the field's caption id while year or month view is open", () => {

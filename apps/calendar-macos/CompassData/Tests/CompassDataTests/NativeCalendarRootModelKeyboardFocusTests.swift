@@ -51,6 +51,17 @@ final class NativeCalendarRootModelKeyboardFocusTests: XCTestCase {
         XCTAssertNotNil(model.timeGridState.focusedEventId)
     }
 
+    func testFocusingAGridEventClearsMonthPickerFocus() async throws {
+        let model = try await makeModel()
+        model.focusSidebar()
+        XCTAssertNotNil(model.monthPickerFocusDate)
+
+        model.focusGridEvent(eventId: "demo-morning-standup")
+
+        XCTAssertNil(model.monthPickerFocusDate)
+        XCTAssertEqual(model.timeGridState.focusedEventId, "demo-morning-standup")
+    }
+
     func testFocusSidebarOpensSidebarAndFocusesAnchorDay() async throws {
         let model = try await makeModel()
         model.isSidebarOpen = false

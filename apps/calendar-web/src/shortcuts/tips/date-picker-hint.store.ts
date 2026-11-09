@@ -26,6 +26,7 @@ export function captionHintId(base: GridDatePickerHintId): DatePickerHintId {
 export type DatePickerHintSurface = {
   id: DatePickerHintId;
   parts: readonly ShortcutTipPart[];
+  secondaryParts?: readonly ShortcutTipPart[];
 };
 
 type DatePickerHintState = {
