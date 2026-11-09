@@ -41,7 +41,7 @@ final class GridEventDraftColorPreservationTests: XCTestCase {
             )
         )
         var draft = try XCTUnwrap(GridEventDraftFromEvent.editDraft(from: baseline))
-        draft.color = .blue
+        draft.color = EventColorSlot.blue
         let optimistic = try XCTUnwrap(GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline))
         guard case .details(let content) = optimistic.content else {
             return XCTFail("Expected details content")
