@@ -674,10 +674,10 @@
       "native": [
         "apps/calendar-macos/CompassKit/Tests/CompassKitTests/CityTimezoneSearchTests.swift"
       ],
-      "status": "missing",
-      "evidence": "Linux agent: core + web tests PASS; desktop:export wrote city-timezone-index.json; macOS CI required for CompassKitTests.",
-      "reason": "Prior picker filtered IANA ids only; travelers expect city names. Implementation on PR branch; macOS CI not yet green.",
-      "review": "2026-11-08 cursor/city-timezone-search-afc2"
+      "status": "passing",
+      "evidence": "PR head d3f971d75: macOS workflow 42671066386 (swift-packages job 129347767249, macos-build 129347543318, aggregate macos 129359491825, macos-ui-shard 1–4 jobs 129350704925/195/565/789); core+web city search tests; e2e booking host-settings Buenos Aires listKey row.",
+      "reason": "City/region search in second-timezone and booking pickers matches web filterTimeZones + native CityTimezoneSearch index decode.",
+      "review": "2026-11-09 agent: compared place labels, Florida dual-zone note, DST abbreviations, and macOS XCTest decode fixture to web catalog tests."
     },
     {
       "id": "legend-escape",
