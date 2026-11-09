@@ -29,6 +29,8 @@ public struct NativeCalendarEnvironment: Sendable {
         appURL: URL = AppHostPreference.productionURL,
         inMemoryDatabase: Bool = false,
         sessionStore: (any SessionStore)? = nil,
+        eventsAPI: EventsAPIProtocol? = nil,
+        repositorySource: EventRepositorySource? = nil,
         urlSession: URLSession = .shared,
         analytics: ProductAnalyticsClient = NoOpProductAnalyticsClient(),
         analyticsIdentity: AnalyticsIdentityCoordinator = NoOpAnalyticsIdentityCoordinator(),
@@ -46,10 +48,11 @@ public struct NativeCalendarEnvironment: Sendable {
             urlSession: urlSession
         )
         let remembered = try AuthRememberedState.hasUserEverAuthenticated(repository: userMetadataRepository)
-        let source = EventRepositorySelection.source(
+        let source = repositorySource ?? EventRepositorySelection.source(
             sessionExists: false,
             hasUserEverAuthenticated: remembered
         )
+        let resolvedEventsAPI = eventsAPI ?? EventsAPI(client: apiClient)
 
         self.apiClient = apiClient
         self.database = database
@@ -60,7 +63,7 @@ public struct NativeCalendarEnvironment: Sendable {
             repository: eventRepository,
             localEvents: localEventRepository,
             rangeCache: rangeCache,
-            eventsAPI: EventsAPI(client: apiClient),
+            eventsAPI: resolvedEventsAPI,
             source: source
         )
         let hiddenSource: HiddenEventRepositorySource = source == .local ? .local : .remote

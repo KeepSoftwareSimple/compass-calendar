@@ -93,7 +93,8 @@ final class EventsStorePendingPresentationColorTests: XCTestCase {
         _ = try await replaceTask.value
     }
 
-    func testStaleLoadedEventsMissMovedScheduleUntilRepositoryRefresh() async throws {
+    /// Stale `loadedEvents` keep the prior fill (`#E67C73`) but the old start time, not default gray.
+    func testRepositoryRefreshUpdatesScheduleWhileColorHexSurvives() async throws {
         let database = try AppDatabase.inMemory()
         let repository = EventRepository(database: database)
         let mockAPI = MockEventsAPI()
