@@ -21,7 +21,7 @@ public enum EventClipboardText {
             let day = formatter.string(from: start)
             formatter.dateFormat = "h:mm a"
             let range = "\(formatter.string(from: start)) – \(formatter.string(from: end))"
-            return "\(title)\n\(day), \(range) (\(timed.timeZone.id))"
+            return "\(title)\n\(day), \(range) (\(timed.timeZone.rawValue))"
         case .allDay(let allDay):
             return "\(title)\nAll day, \(allDay.start) – \(allDay.end)"
         }
