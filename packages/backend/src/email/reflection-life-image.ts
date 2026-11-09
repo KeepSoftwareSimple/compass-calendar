@@ -1,6 +1,10 @@
 import { Resvg } from "@resvg/resvg-js";
 import { PDFDocument, PDFString } from "pdf-lib";
-import { DEFAULT_LIFESPAN, getCompletedLifeWeeks } from "@core/life/life-math";
+import {
+  DEFAULT_LIFESPAN,
+  getCompletedLifeWeeks,
+  WEEKS_PER_ROW,
+} from "@core/life/life-math";
 import { LIFE_PDF_QUOTE } from "@core/life/life-quotes";
 import { escapeHtml } from "@core/util/escape-html.util";
 import { fileURLToPath } from "node:url";
@@ -64,8 +68,8 @@ export function renderReflectionLifeSvg(
         : "";
     return (
       label +
-      Array.from({ length: 52 }, (_, week) => {
-        const index = year * 52 + week;
+      Array.from({ length: WEEKS_PER_ROW }, (_, week) => {
+        const index = year * WEEKS_PER_ROW + week;
         return `<rect x="${38 + week * WEEK_COL_PITCH}" y="${GRID_TOP + year * ROW_PITCH}" width="${DOT_SIZE}" height="${DOT_SIZE}" rx="1" fill="${index < completed ? GRID_INK : GRID_EMPTY}"${index === completed ? ` stroke="${GRID_INK}" stroke-width="1.5"` : ""}/>`;
       }).join("")
     );
