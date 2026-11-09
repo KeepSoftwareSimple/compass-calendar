@@ -1,5 +1,5 @@
 import AppKit
-import CompassData
+@testable import CompassData
 import CompassKit
 import XCTest
 
@@ -12,7 +12,7 @@ final class EventPastePreviewKeyboardTests: XCTestCase {
             demoPresentation: try DemoSeedFixture.load())
         await model.start()
         model.viewStore.view = .week
-        model.focusStore.focusedEventId = nil
+        model.focusStore.resetEdgeFocus()
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         router.dispatcher.pushScope(.grid)
 
@@ -142,7 +142,7 @@ final class EventPastePreviewKeyboardTests: XCTestCase {
         let targetDay = Calendar.current.date(byAdding: .day, value: 2, to: EventOnTargetDay.startDay(for: event))!
         model.eventJumpSelection.selectDay(
             key: CompassDateParsing.formatCalendarDay(targetDay),
-            announcement: nil,
+            announcement: "",
             buffer: ""
         )
 
