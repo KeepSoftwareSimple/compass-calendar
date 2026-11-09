@@ -44,7 +44,10 @@ import {
   gridEventDraftToGridEvent,
   replaceGridDraftSchedule,
 } from "@web/events/grid-event-draft.adapter";
-import { commitDuplicateEvent } from "@web/events/mutations/duplicate-event";
+import {
+  commitDuplicateEvent,
+  commitDuplicateFromPasteDraft,
+} from "@web/events/mutations/duplicate-event";
 import {
   eventOnTargetDay,
   eventStartDay,
@@ -54,6 +57,10 @@ import {
   useEventMutations,
 } from "@web/events/mutations/useEventMutations";
 import { useUpdateEvent } from "@web/events/mutations/useUpdateEvent";
+import {
+  beginEventPastePreview,
+  endEventPastePreview,
+} from "@web/events/paste-preview/event-paste-preview.lifecycle";
 import { findEventInCache } from "@web/events/queries/event.query.cache";
 import {
   draftActions,
@@ -64,6 +71,7 @@ import {
   eventClipboardActions,
   useEventClipboardStore,
 } from "@web/events/stores/event-clipboard.store";
+import { isEventPastePreviewActive } from "@web/events/stores/event-paste-preview.store";
 import {
   edgeFocusActions,
   useEdgeFocusStore,
@@ -77,10 +85,7 @@ import {
   getSpatiallyAdjacentTarget,
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
-import {
-  eventJumpActions,
-  isEventJumpActive,
-} from "@web/shortcuts/shift-hint/event-jump.store";
+import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
@@ -342,14 +347,15 @@ export function useGridEventEditShortcuts({
       defaultCalendarId: defaultCalendar?.id,
       create: createEvent,
     });
-    if (committed) return;
+    if (committed) return true;
 
     // No writable calendar could be resolved for the copy - fall back to
     // the create-draft form so the user can pick one.
     const duplicate = duplicateGridEventDraft(source, calendars ?? []);
-    if (!duplicate) return;
+    if (!duplicate) return false;
 
     draftActions.startGridDraft({ activity: "gridClick", draft: duplicate });
+    return false;
   };
 
   const duplicateFocusedCalendarEvent = (keyboardEvent: KeyboardEvent) => {
@@ -379,6 +385,7 @@ export function useGridEventEditShortcuts({
 
     claimShortcut(keyboardEvent);
     eventClipboardActions.copy(sourceEvent);
+    beginEventPastePreview(sourceEvent, calendars ?? []);
   };
 
   const pasteCopiedCalendarEvent = (keyboardEvent: KeyboardEvent) => {
@@ -391,13 +398,32 @@ export function useGridEventEditShortcuts({
     if (!sourceEvent) return;
 
     claimShortcut(keyboardEvent);
-    // Read the create-target day before spending the column selection
-    // (the #3388 gotcha: setActive(false) clears activeDayKeys).
+
+    const placementDraft = useDraftStore.getState().gridDraft;
+    const placementActive =
+      isEventPastePreviewActive() &&
+      placementDraft &&
+      useDraftStore.getState().status?.activity === "pastePlace";
+
+    if (placementActive) {
+      const committed = commitDuplicateFromPasteDraft({
+        placementDraft,
+        defaultCalendarId: defaultCalendar?.id,
+        create: createEvent,
+      });
+      endEventPastePreview();
+      if (committed) {
+        eventJumpActions.setActive(false);
+        return;
+      }
+    }
+
     const sourceDay = eventStartDay(sourceEvent);
     const targetDay = getPasteTargetDay?.(sourceDay) ?? sourceDay;
-    eventJumpActions.setPointerDraftIntent(null);
-    if (isEventJumpActive()) eventJumpActions.setActive(false);
-    duplicateSourceEvent(sourceEvent, targetDay);
+    endEventPastePreview();
+    if (duplicateSourceEvent(sourceEvent, targetDay)) {
+      eventJumpActions.setActive(false);
+    }
   };
 
   const describeEdgeDate = (event: GridEvent, edge: EventEdge) => {
@@ -654,11 +680,16 @@ export function useGridEventEditShortcuts({
 
     const { gridDraft, status } = useDraftStore.getState();
     if (
-      status?.activity === "keyboardPlace" &&
+      (status?.activity === "keyboardPlace" ||
+        status?.activity === "pastePlace") &&
       !status.isFormOpen &&
       gridDraft
     ) {
-      draftActions.discard();
+      if (status.activity === "pastePlace") {
+        endEventPastePreview();
+      } else {
+        draftActions.discard();
+      }
     }
   };
 

@@ -3,7 +3,11 @@ import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.t
 import { focusEventFormTitle } from "@web/common/utils/form/form.util";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import { gridEventDraftToGridEvent } from "@web/events/grid-event-draft.adapter";
-import { draftActions, isEventFormOpen } from "@web/events/stores/draft.store";
+import {
+  draftActions,
+  isEventFormOpen,
+  useDraftStore,
+} from "@web/events/stores/draft.store";
 import { GridAllDayEventMemo } from "@web/grid/components/GridAllDayEvent";
 import { GridTimedEvent } from "@web/grid/components/GridTimedEvent";
 import { getWeekInteractionTargetAttributes } from "@web/grid/interaction/view-event-registry";
@@ -26,6 +30,9 @@ interface Props {
 }
 
 const openDraftFormOrFocusTitle = () => {
+  if (useDraftStore.getState().status?.activity === "pastePlace") {
+    return;
+  }
   if (!isEventFormOpen()) {
     draftActions.setFormOpen(true);
     return;

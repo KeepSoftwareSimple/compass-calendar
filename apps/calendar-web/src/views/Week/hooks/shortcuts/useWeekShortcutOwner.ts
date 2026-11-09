@@ -12,6 +12,7 @@ import {
 import { repositionDraftByKeyboard } from "@web/common/utils/draft/reposition-draft-by-keyboard.util";
 import { focusCalendarEventElement } from "@web/common/utils/event/event.util";
 import { useFocusSidebarShortcut } from "@web/components/Sidebar/useFocusSidebarShortcut";
+import { useEventPastePreviewEscape } from "@web/events/paste-preview/useEventPastePreviewEscape";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import {
   draftActions,
@@ -339,6 +340,8 @@ export const useWeekShortcutOwner = ({
     timedEvents,
     visibleDays: weekDays,
   });
+
+  useEventPastePreviewEscape();
 
   return { getEditSequenceAnchor, shiftHints };
 };

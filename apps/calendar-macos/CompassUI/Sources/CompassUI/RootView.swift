@@ -272,9 +272,14 @@ public struct RootView: View {
             QuickTimeStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 2)
-            EventJumpStatusLine(model: model)
+            EventPastePreviewStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 2)
+            if !model.pastePreviewStore.isActive {
+                EventJumpStatusLine(model: model)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 2)
+            }
             SidebarSyncStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 4)

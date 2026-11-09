@@ -7,6 +7,7 @@ public struct NativeCalendarEnvironment: Sendable {
     public let eventsStore: EventsStore
     public let hiddenEventsStore: HiddenEventsStore
     public let clipboardStore: ClipboardStore
+    public let pastePreviewStore: PastePreviewStore
     public let undoStore: UndoStore
     public let calendarRepository: CalendarRepository
     public let localEventRepository: LocalEventRepository
@@ -73,6 +74,7 @@ public struct NativeCalendarEnvironment: Sendable {
             source: hiddenSource
         )
         clipboardStore = ClipboardStore()
+        pastePreviewStore = PastePreviewStore()
         undoStore = UndoStore()
         configStore = ConfigStore(apiClient: apiClient)
         oauthService = OAuthAuthorizationService(

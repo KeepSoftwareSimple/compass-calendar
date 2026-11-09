@@ -3,6 +3,7 @@ import { type CalendarId, EventIdSchema } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import { focusCalendarEventElement } from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
+import { type GridEventDraft } from "@web/events/event-draft.types";
 import {
   duplicateGridEventDraft,
   parseGridEventDraft,
@@ -44,6 +45,39 @@ export function commitDuplicateEvent({
   if (!parsed.ok || parsed.mode !== "create") return false;
 
   const id = EventIdSchema.parse(createObjectIdString());
+
+  create(
+    { ...parsed.input, id },
+    { onOptimisticApplied: () => focusCalendarEventElement(id) },
+  );
+
+  return true;
+}
+
+/** Commit a paste-placement duplicate at the placement draft's schedule. */
+export function commitDuplicateFromPasteDraft({
+  placementDraft,
+  defaultCalendarId,
+  create,
+}: {
+  placementDraft: GridEventDraft;
+  defaultCalendarId: CalendarId | undefined;
+  create: EventMutations["create"];
+}): boolean {
+  if (placementDraft.kind !== "create") return false;
+
+  const calendarId =
+    placementDraft.values.calendarId ?? defaultCalendarId ?? null;
+  if (!calendarId) return false;
+
+  const parsed = parseGridEventDraft({
+    ...placementDraft,
+    values: { ...placementDraft.values, calendarId },
+  });
+  if (!parsed.ok || parsed.mode !== "create") return false;
+
+  const id =
+    placementDraft.clientId ?? EventIdSchema.parse(createObjectIdString());
 
   create(
     { ...parsed.input, id },

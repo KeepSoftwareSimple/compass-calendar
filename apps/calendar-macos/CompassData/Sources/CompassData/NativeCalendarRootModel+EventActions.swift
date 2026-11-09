@@ -79,19 +79,54 @@ extension NativeCalendarRootModel {
         }
     }
 
-    public func copyFocusedEvent() {
-        guard let event = focusedEvent() else { return }
+    @discardableResult
+    public func copyFocusedEvent() -> Bool {
+        guard let event = focusedEvent() else { return false }
         clipboardStore.copy(event)
+        beginEventPastePreview(from: event)
         recordShortcut(.editCopy)
+        return true
     }
 
-    public func pasteCopiedEvent() {
-        guard viewStore.view != .life, let source = clipboardStore.event else { return }
-        let sourceDay = EventOnTargetDay.startDay(for: source)
-        let targetDay = draftTargetDay()
-        let adjusted = EventOnTargetDay.moved(source, to: targetDay)
+    @discardableResult
+    public func pasteCopiedEvent() -> Bool {
+        guard viewStore.view != .life, clipboardStore.event != nil else { return false }
+
+        if pastePreviewStore.isActive, let draft = draftStore.gridDraft,
+           draftStore.status.activity == .pastePlace,
+           let input = GridEventDraftMapping.createInput(from: draft),
+           let optimistic = GridEventDraftMapping.optimisticEvent(
+               from: draft,
+               baseline: baselineEvent(for: draft))
+        {
+            let savedId = optimistic.id.rawValue
+            endEventPastePreview()
+            recordShortcut(.editPaste)
+            recordCreateUndo(for: optimistic)
+            do {
+                try eventsStore.stageOptimisticCreate(optimistic)
+                loadedEvents = try eventsStore.fetchAllEvents()
+            } catch {
+                reportSaveFailure(error, action: "create")
+                return true
+            }
+            rebuildPresentation()
+            focusEvent(eventId: savedId)
+            keyboardCreateSettleGeneration += 1
+            let settleGeneration = keyboardCreateSettleGeneration
+            Task {
+                guard settleGeneration == keyboardCreateSettleGeneration else { return }
+                await eventsStore.settleStagedCreate(input: input, optimisticEvent: optimistic)
+            }
+            return true
+        }
+
+        guard let source = clipboardStore.event else { return false }
+        let adjusted = EventOnTargetDay.moved(source, to: draftTargetDay())
+        endEventPastePreview()
         Task { await commitDuplicate(from: adjusted, recordUndo: true) }
         recordShortcut(.editPaste)
+        return true
     }
 
     public func deleteFocusedEvent() {

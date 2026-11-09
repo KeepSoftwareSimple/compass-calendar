@@ -8,6 +8,7 @@ import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import { isRecurrenceScopeAskReady } from "@web/events/recurrence/recurrence-scope-opportunity.store";
 import { recurrenceScopeForToastDigit } from "@web/events/recurrence/recurrence-scope-toast-digit";
 import { isEventFormOpen } from "@web/events/stores/draft.store";
+import { isEventPastePreviewActive } from "@web/events/stores/event-paste-preview.store";
 import { isAppLocked } from "@web/shortcuts/app-lock";
 import {
   digitPickIndex,
@@ -294,6 +295,8 @@ export function useShiftHoldEventHints({
       // A bare Shift keydown precedes every digit on layouts where the top row
       // is shifted, so it must never abandon a half-typed time.
       if (MODIFIER_KEYS.has(event.key)) return false;
+
+      if (isEventPastePreviewActive()) return false;
 
       if (
         isAppLocked() ||
