@@ -12,9 +12,7 @@ export type BookingHostNoticeClaimLimiter = {
   rollback: (trigger: BookingHostNoticeClaimTrigger) => void;
 };
 
-export function createBookingHostNoticeClaimLimiter(
-  scope: string,
-): BookingHostNoticeClaimLimiter {
+export function createBookingHostNoticeClaimLimiter(): BookingHostNoticeClaimLimiter {
   const lastClaimAtMs: Record<BookingHostNoticeClaimTrigger, number | null> = {
     focus: null,
     sse: null,
@@ -35,7 +33,6 @@ export function createBookingHostNoticeClaimLimiter(
         return false;
       }
       lastClaimAtMs[trigger] = now;
-      void scope;
       return true;
     },
     rollback: (trigger) => {

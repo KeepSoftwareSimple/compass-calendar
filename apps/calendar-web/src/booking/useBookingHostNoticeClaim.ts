@@ -8,8 +8,8 @@ import {
 import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
 import { onServerMessage } from "@web/sse/client/sse.client";
 
-const guestRsvpLimiter = createBookingHostNoticeClaimLimiter("guest-rsvp");
-const newMeetingsLimiter = createBookingHostNoticeClaimLimiter("new-meetings");
+const guestRsvpLimiter = createBookingHostNoticeClaimLimiter();
+const newMeetingsLimiter = createBookingHostNoticeClaimLimiter();
 
 export function resetGuestRsvpNoticeForTests(): void {
   guestRsvpLimiter.resetForTests();
