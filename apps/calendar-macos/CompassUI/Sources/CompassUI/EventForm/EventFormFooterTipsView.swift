@@ -18,19 +18,24 @@ struct EventFormFooterTipsView: View {
     var body: some View {
         if !model.levelsStore.tipsMuted, !tiered.primary.isEmpty || tiered.hasSecondary {
             VStack(spacing: 2) {
-                hintRow(primarySegments)
+                HStack(spacing: 4) {
+                    hintRowContent(primarySegments)
+                    if tiered.hasSecondary {
+                        disclosureControl
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("compass-event-form-footer-tips")
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
                 if showMoreHints {
                     hintRow(secondarySegments)
-                }
-                if tiered.hasSecondary {
-                    disclosureControl
                 }
             }
             .font(.rubik(11))
             .foregroundStyle(theme.textMutedColor)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, minHeight: 40)
-            .accessibilityIdentifier("compass-event-form-footer-tips")
             .onChange(of: model.eventFormDateKeyOwner?.calendarOpen) { _, _ in
                 showMoreHints = false
             }
@@ -70,6 +75,12 @@ struct EventFormFooterTipsView: View {
     }
 
     private func hintRow(_ segments: [HintSegment]) -> some View {
+        hintRowContent(segments)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
+    }
+
+    private func hintRowContent(_ segments: [HintSegment]) -> some View {
         HStack(spacing: 4) {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                 switch segment {
@@ -80,8 +91,6 @@ struct EventFormFooterTipsView: View {
                 }
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: .infinity)
     }
 
     private enum HintSegment {
