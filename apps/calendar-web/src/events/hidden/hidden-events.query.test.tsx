@@ -9,6 +9,7 @@ import { ENV_WEB } from "@web/common/constants/env.constants";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
+import { resetHiddenEventMutationCoordinatorForTests } from "@web/events/hidden/hidden-event-mutation-coordinator";
 import {
   HIDDEN_EVENT_FAILURE_MESSAGE,
   useHiddenEventIds,
@@ -40,6 +41,7 @@ const createWrapper = (client?: QueryClient) => {
 
 describe("hidden-events.query", () => {
   afterEach(() => {
+    resetHiddenEventMutationCoordinatorForTests();
     persistentBrowserStore.remove(STORAGE_KEYS.HIDDEN_EVENT_IDS);
   });
 
@@ -72,6 +74,84 @@ describe("hidden-events.query", () => {
     expect(readHiddenEventIds()).toEqual(["evt-stored", "evt-2"]);
     expect(useUndoHistoryStore.getState().past).toEqual([
       { kind: "hidden", eventId: "evt-2", hidden: true },
+    ]);
+  });
+
+  it("keeps the latest hide when an earlier unhide response arrives late", async () => {
+    act(() => refreshEventRepositorySource(true));
+
+    let resolveUnhide: (() => void) | undefined;
+    const unhideHold = new Promise<void>((resolve) => {
+      resolveUnhide = () => resolve(undefined);
+    });
+    const putBodies: Array<{ eventId: string; hidden: boolean }> = [];
+
+    server.use(
+      http.get(hiddenEventsUrl, () =>
+        HttpResponse.json({ hiddenEventIds: [] }),
+      ),
+      http.put(hiddenEventsUrl, async ({ request }) => {
+        const body = (await request.json()) as {
+          eventId: string;
+          hidden: boolean;
+        };
+        putBodies.push(body);
+        if (body.hidden) {
+          return HttpResponse.json({ hiddenEventIds: [body.eventId] });
+        }
+        await unhideHold;
+        return HttpResponse.json({ hiddenEventIds: [] });
+      }),
+    );
+
+    const { wrapper, queryClient } = createWrapper();
+    seedHiddenEventIds(queryClient, [], "remote");
+    const { result } = renderHook(
+      () => ({
+        ids: useHiddenEventIds(),
+        hidden: useToggleEventHidden(),
+      }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.ids.size).toBe(0);
+    });
+
+    act(() => {
+      result.current.hidden.setEventHidden("evt-race", true);
+    });
+    await waitFor(() => {
+      expect(result.current.ids.has("evt-race")).toBe(true);
+    });
+
+    act(() => {
+      result.current.hidden.setEventHidden("evt-race", false);
+    });
+    await waitFor(() => {
+      expect(putBodies).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.hidden.setEventHidden("evt-race", true);
+    });
+    await waitFor(() => {
+      expect(result.current.ids.has("evt-race")).toBe(true);
+    });
+    expect(putBodies).toHaveLength(2);
+
+    act(() => {
+      resolveUnhide?.();
+    });
+
+    await waitFor(() => {
+      expect(putBodies).toHaveLength(3);
+      expect(result.current.ids.has("evt-race")).toBe(true);
+    });
+    expect(putBodies).toEqual([
+      { eventId: "evt-race", hidden: true },
+      { eventId: "evt-race", hidden: false },
+      { eventId: "evt-race", hidden: true },
     ]);
   });
 

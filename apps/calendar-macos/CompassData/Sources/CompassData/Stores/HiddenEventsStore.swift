@@ -24,6 +24,14 @@ public final class HiddenEventsStore {
 
     private let repository: HiddenEventRepository
     private let remoteClient: HiddenEventsRemoteClient
+    private struct HiddenWriteChain {
+        var generation: UInt64
+        var task: Task<Void, Error>
+    }
+
+    private var hiddenWriteChains: [EventId: HiddenWriteChain] = [:]
+    private var hiddenWriteGeneration: UInt64 = 0
+    private var intendedHiddenByEventId: [EventId: Bool] = [:]
 
     public init(
         repository: HiddenEventRepository,
@@ -47,7 +55,37 @@ public final class HiddenEventsStore {
     }
 
     public func setEventHidden(eventId: EventId, hidden: Bool) async throws {
+        let generation = hiddenWriteGeneration + 1
+        hiddenWriteGeneration = generation
+        let waitFor = hiddenWriteChains[eventId]?.task
+        let operation = Task<Void, Error> { @MainActor in
+            if let waitFor {
+                _ = try? await waitFor.value
+            }
+            try await self.commitSetEventHidden(
+                eventId: eventId,
+                hidden: hidden,
+                generation: generation)
+        }
+        hiddenWriteChains[eventId] = HiddenWriteChain(generation: generation, task: operation)
+        defer {
+            if hiddenWriteChains[eventId]?.generation == generation {
+                hiddenWriteChains.removeValue(forKey: eventId)
+            }
+        }
+        try await operation.value
+    }
+
+    private func commitSetEventHidden(
+        eventId: EventId,
+        hidden: Bool,
+        generation: UInt64
+    ) async throws {
+        guard hiddenWriteChains[eventId]?.generation == generation else {
+            return
+        }
         let snapshot = hiddenEventIds
+        intendedHiddenByEventId[eventId] = hidden
         applyOptimistic(eventId: eventId, hidden: hidden)
         do {
             switch source {
@@ -55,14 +93,19 @@ public final class HiddenEventsStore {
                 let list = try await remoteClient.setHiddenEvents(
                     SetEventHiddenInput(eventId: eventId, hidden: hidden)
                 )
-                hiddenEventIds = Set(list.map { EventId(rawValue: $0) })
-                try repository.replaceAll(eventIds: Array(hiddenEventIds))
+                if intendedHiddenByEventId[eventId] == hidden {
+                    hiddenEventIds = Set(list.map { EventId(rawValue: $0) })
+                    try repository.replaceAll(eventIds: Array(hiddenEventIds))
+                }
             case .local:
                 try repository.replaceAll(eventIds: Array(hiddenEventIds))
             }
         } catch {
-            hiddenEventIds = snapshot
-            try? repository.replaceAll(eventIds: Array(snapshot))
+            if intendedHiddenByEventId[eventId] == hidden {
+                hiddenEventIds = snapshot
+                try? repository.replaceAll(eventIds: Array(snapshot))
+                intendedHiddenByEventId.removeValue(forKey: eventId)
+            }
             throw error
         }
     }

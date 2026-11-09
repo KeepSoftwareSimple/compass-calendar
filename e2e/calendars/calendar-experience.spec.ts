@@ -829,7 +829,9 @@ test("a read-only event can be hidden from the menu, shown with x, and stays hid
     .last();
 
   await card.focus();
+  const firstHidePut = waitForHiddenEventPut(page, EVENT_B_ID, true);
   await hideFocusedEventViaMenu(page);
+  await firstHidePut;
   await expect(
     page.locator("#mainGrid").getByRole("button", {
       name: new RegExp(`Timed event: ${EVENT_B_TITLE}`),
