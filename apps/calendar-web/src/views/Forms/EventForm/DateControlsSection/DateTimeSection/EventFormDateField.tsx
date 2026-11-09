@@ -136,7 +136,7 @@ export const EventFormDateField = ({
     if (isDraft) return;
     shownDateRef.current = selected.getTime();
     input.value = formatEventFormDateLabel(selected);
-  }, [isOpen, selected, setGridFocused]);
+  }, [isOpen, selected]);
 
   const revertInput = (target: HTMLInputElement) => {
     target.value = formatEventFormDateLabel(selectedRef.current);
