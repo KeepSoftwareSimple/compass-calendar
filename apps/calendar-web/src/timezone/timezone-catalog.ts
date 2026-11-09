@@ -151,7 +151,15 @@ function zoneById(
   zones: TimeZoneListItem[],
   id: string,
 ): TimeZoneListItem | undefined {
-  return zones.find((zone) => zone.id === id);
+  if (!id) return undefined;
+  const direct = zones.find((zone) => zone.id === id);
+  if (direct) return direct;
+  // city-timezones uses full IANA paths; Intl.supportedValuesOf may expose a
+  // shorter link name (America/Argentina/Buenos_Aires vs America/Buenos_Aires).
+  const leaf = id.split("/").pop();
+  if (!leaf) return undefined;
+  const leafMatches = zones.filter((zone) => zone.id.endsWith(`/${leaf}`));
+  return leafMatches.length === 1 ? leafMatches[0] : undefined;
 }
 
 function regionSpanNote(
@@ -200,6 +208,7 @@ export function filterTimeZones(
   const merged: { zone: TimeZoneListItem; score: number }[] = [];
 
   for (const hit of placeHits) {
+    if (!hit.iana) continue;
     const base = zoneById(zones, hit.iana);
     if (!base) continue;
     const secondaryParts = [base.secondary, base.id];
@@ -217,9 +226,12 @@ export function filterTimeZones(
     });
   }
 
-  const seenKeys = new Set(
-    merged.map((entry) => entry.zone.listKey ?? entry.zone.id),
-  );
+  const seenKeys = new Set<string>();
+  for (const entry of merged) {
+    seenKeys.add(entry.zone.id);
+    const key = entry.zone.listKey ?? entry.zone.id;
+    seenKeys.add(key);
+  }
 
   for (const entry of ianaScored) {
     if (seenKeys.has(entry.zone.id)) continue;

@@ -425,10 +425,10 @@ test("settings dialog never scrolls horizontally with more options open", async 
     .click();
 
   const timezoneDialog = page.getByRole("dialog", { name: "Meeting timezone" });
-  await dispatchFill(
-    timezoneDialog.getByRole("combobox", { name: "Search meeting timezones" }),
-    "Buenos Aires",
-  );
+  const timezoneSearch = timezoneDialog.getByRole("combobox", {
+    name: "Search meeting timezones",
+  });
+  await timezoneSearch.fill("Buenos Aires");
   const buenosAiresListKey = "America/Argentina/Buenos_Aires:Buenos Aires:AR";
   const buenosAiresOption = timezoneDialog.locator(
     `[role="option"][id*="${buenosAiresListKey}"]`,

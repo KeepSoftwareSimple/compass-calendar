@@ -13,7 +13,11 @@ describe("timezone-catalog", () => {
   it("finds Buenos Aires by city name for booking settings", () => {
     const hits = filterTimeZones(zones, "Buenos Aires");
     expect(
-      hits.some((zone) => zone.id === "America/Argentina/Buenos_Aires"),
+      hits.some(
+        (zone) =>
+          zone.id === "America/Argentina/Buenos_Aires" ||
+          zone.id === "America/Buenos_Aires",
+      ),
     ).toBe(true);
     expect(
       hits.some(
@@ -22,6 +26,30 @@ describe("timezone-catalog", () => {
           zone.city === "Buenos Aires",
       ),
     ).toBe(true);
+  });
+
+  it("maps city index IANA ids onto supportedValuesOf link names", () => {
+    const browserStyle: typeof zones = [
+      {
+        id: "America/Buenos_Aires",
+        city: "Buenos Aires",
+        name: "",
+        region: "America",
+        abbreviation: "GMT-3",
+        offset: "",
+        offsetMinutes: -180,
+        secondary: "Buenos Aires",
+        keywords: ["buenos aires"],
+      },
+    ];
+    const hits = filterTimeZones(browserStyle, "Buenos Aires");
+    const buenosAiresCity = hits.find(
+      (zone) =>
+        zone.listKey === "America/Argentina/Buenos_Aires:Buenos Aires:AR",
+    );
+    expect(buenosAiresCity?.placeLabel).toMatch(
+      /Buenos Aires, Ciudad de Buenos Aires/,
+    );
   });
 
   it("finds us cities by common name (Tampa)", () => {
