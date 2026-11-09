@@ -430,12 +430,10 @@ test("settings dialog never scrolls horizontally with more options open", async 
     "Buenos Aires",
   );
   const buenosAiresPlace = "Buenos Aires, Ciudad de Buenos Aires, Argentina";
-  await expect(
-    timezoneDialog.getByRole("option", { name: buenosAiresPlace }),
-  ).toHaveCount(1);
-  const buenosAiresOption = timezoneDialog.getByRole("option", {
-    name: buenosAiresPlace,
+  const buenosAiresOption = timezoneDialog.getByRole("option").filter({
+    has: page.getByText(buenosAiresPlace, { exact: true }),
   });
+  await expect(buenosAiresOption).toHaveCount(1);
   await expect(buenosAiresOption).toBeVisible();
   await buenosAiresOption.click();
   await expect(
