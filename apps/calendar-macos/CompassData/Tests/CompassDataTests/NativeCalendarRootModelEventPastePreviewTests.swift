@@ -43,36 +43,28 @@ final class NativeCalendarRootModelEventPastePreviewTests: XCTestCase {
         XCTAssertNil(model.timeGridState.scenario.draftOverlay)
     }
 
-    func testPastePlacementOverlayShowsCoralSlotColor() async throws {
+    func testPastePlacementOverlayShowsSourcePresentationColor() async throws {
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: try DemoSeedFixture.load())
         await model.start()
         model.viewStore.view = .week
-        var event = try XCTUnwrap(model.loadedEvents.first {
+        let event = try XCTUnwrap(model.loadedEvents.first {
             if case .details(let details) = $0.content { return !details.title.isEmpty }
             return false
         })
-        if case .details(var payload) = event.content {
-            payload.color = ColorEnum.coral
-            event = Event(
-                calendarId: event.calendarId,
-                content: .details(payload),
-                createdAt: event.createdAt,
-                icalUid: event.icalUid,
-                id: event.id,
-                popupReminderMinutes: event.popupReminderMinutes,
-                providerManaged: event.providerManaged,
-                recurrence: event.recurrence,
-                schedule: event.schedule,
-                updatedAt: event.updatedAt
-            )
-        }
         model.focusEvent(eventId: event.id.rawValue)
         model.copyFocusedEvent()
+        guard let draft = model.draftStore.gridDraft else {
+            return XCTFail("Expected paste placement draft")
+        }
 
         let overlay = try XCTUnwrap(model.timeGridState.scenario.draftOverlay)
         XCTAssertFalse(overlay.showsInlineTitleEditor)
-        XCTAssertEqual(overlay.colorHex, EventColorSlotHex.hex(for: .coral))
+        let expected = GridEventDraftMapping.presentationColorHex(
+            draft: draft,
+            sourceColorHex: EventColorSlotHex.eventColorHex(for: event)
+        )
+        XCTAssertEqual(overlay.colorHex, expected)
     }
 
     func testPasteMovesDuplicateAfterArrowNudge() async throws {

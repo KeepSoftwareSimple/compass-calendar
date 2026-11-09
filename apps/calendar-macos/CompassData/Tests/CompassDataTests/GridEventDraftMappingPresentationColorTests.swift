@@ -12,6 +12,6 @@ final class GridEventDraftMappingPresentationColorTests: XCTestCase {
             color: EventColorSlot(rawValue: ColorEnum.coral.rawValue)
         )
         let hex = GridEventDraftMapping.presentationColorHex(draft: draft, sourceColorHex: nil)
-        XCTAssertEqual(hex, EventColorSlotHex.hex(for: .coral))
+        XCTAssertEqual(hex, EventColorSlotHex.hex(for: ColorEnum.coral))
     }
 }
