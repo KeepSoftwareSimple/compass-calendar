@@ -13,6 +13,7 @@ Shared stop rules: [`anti-patterns.md`](anti-patterns.md).
 | --- | --- | --- | --- | --- |
 | ship | 5 | compass-maintainers | 2026-11-02 | verify, PR, `gh pr merge --auto` |
 | simplify | 2 | compass-maintainers | 2026-09-04 | behavior-preserving quality pass on a diff |
+| tech-debt-sweep | 1 | compass-maintainers | 2026-11-09 | judge merged code for real debt, and refuse the rest |
 | a11y-audit | 1 | compass-maintainers | 2026-08-25 | review changed UI for accessibility regressions |
 | chaos | 2 | compass-maintainers | 2026-09-04 | exploratory signed-in QA, then ship |
 | google-sync-debug | 2 | compass-maintainers | 2026-09-04 | trace OAuth, provider, job, webhook, SSE failures |
@@ -20,6 +21,12 @@ Shared stop rules: [`anti-patterns.md`](anti-patterns.md).
 
 ## Change log
 
+- 2026-11-09: added `tech-debt-sweep` v1. The scheduled sweep had been
+  merging a refactor most days, five of them reworking the same date-picker
+  hint cluster in one week. The skill makes no PR the expected result, caps a
+  sweep at one, puts files a prior sweep touched in the last 30 days off
+  limits, and records what was judged fine in `tech-debt-sweep/judged-fine.md`
+  so later sweeps stop re-reading settled code.
 - 2026-11-02: `ship` v5 drops the `agent-automerge` label and the merge-guard
   rails. Ready PR plus `gh pr merge --auto`; the merge queue's required checks
   are the gate. One re-queue after a drop the diff cannot explain, then stop.
