@@ -2207,6 +2207,102 @@ describe("useEventMutations", () => {
     context.pending.resolve();
   });
 
+  test.each(["this", "thisAndFollowing", "all"] as const)(
+    "keeps provider colorHex on pending recurring time replace (scope %s)",
+    async (scope) => {
+      const context = setup();
+      const seriesId = EventIdSchema.parse("bbbbbbbbbbbbbbbbbbbbbbbb");
+      const original = event({
+        id: EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa"),
+        content: {
+          kind: "details",
+          title: "Devotion",
+          description: "",
+          colorHex: "#E67C73",
+        },
+        recurrence: { kind: "occurrence", seriesId },
+        schedule: timedSchedule(
+          "2026-07-02T12:15:00.000Z",
+          "2026-07-02T13:15:00.000Z",
+        ),
+      });
+      context.queryClient.setQueryData(calendarKey, normalized(original));
+
+      act(() =>
+        context.hook.result.current.mutations.replace(
+          replacePayload(original.id, {
+            content: {
+              kind: "details",
+              title: "Devotion",
+              description: "",
+              location: "",
+              color: null,
+            },
+            schedule: timedSchedule(
+              "2026-07-02T13:15:00.000Z",
+              "2026-07-02T14:15:00.000Z",
+            ),
+            recurrence: { kind: "preserve" },
+            scope,
+          }),
+        ),
+      );
+
+      const content = () =>
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+          ?.entities[original.id].content;
+
+      await waitFor(() => {
+        expect(content()).toMatchObject({
+          kind: "details",
+          colorHex: "#E67C73",
+        });
+      });
+      expect(context.hook.result.current.hasPending).toBe(true);
+
+      context.pending.resolve();
+    },
+  );
+
+  test("clears slot color on pending replace when user explicitly sends color null", async () => {
+    const context = setup();
+    const original = event({
+      content: {
+        kind: "details",
+        title: "Devotion",
+        description: "",
+        color: "blue",
+      },
+    });
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.mutations.replace(
+        replacePayload(original.id, {
+          content: {
+            kind: "details",
+            title: "Devotion",
+            description: "",
+            location: "",
+            color: null,
+          },
+        }),
+      ),
+    );
+
+    await waitFor(() => {
+      const content =
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+          ?.entities[original.id].content;
+      expect(content).toMatchObject({ kind: "details" });
+      expect(content).not.toHaveProperty("color");
+      expect(content).not.toHaveProperty("colorHex");
+    });
+    expect(context.hook.result.current.hasPending).toBe(true);
+
+    context.pending.resolve();
+  });
+
   test("clears colorHex on optimistic replace when a slot color is written", async () => {
     const context = setup();
     const original = event({

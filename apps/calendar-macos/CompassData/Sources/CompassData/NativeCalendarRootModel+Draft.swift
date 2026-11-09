@@ -208,7 +208,6 @@ extension NativeCalendarRootModel {
         let revision = sessionRevision
         draftStore.commit()
         formFieldDigitHintsVisible = false
-        rebuildPresentation()
         do {
             try await apply()
             guard revision == sessionRevision else { return }
@@ -313,5 +312,11 @@ extension NativeCalendarRootModel {
     static func detailsColorHex(from event: Event) -> String? {
         guard case .details(let payload) = event.content else { return nil }
         return payload.colorHex
+    }
+
+    /// Web/TanStack `onMutate`: repaint as soon as the repository cache updates, before the API settles.
+    func presentOptimisticCache(_ events: [Event]) {
+        loadedEvents = events
+        rebuildPresentation()
     }
 }
