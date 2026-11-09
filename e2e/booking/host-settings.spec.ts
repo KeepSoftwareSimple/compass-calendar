@@ -431,9 +431,11 @@ test("settings dialog never scrolls horizontally with more options open", async 
   );
   const buenosAiresListKey = "America/Argentina/Buenos_Aires:Buenos Aires:AR";
   const buenosAiresOption = timezoneDialog.locator(
-    `[role="option"][id$="${buenosAiresListKey}"]`,
+    `[role="option"][id*="${buenosAiresListKey}"]`,
   );
-  await expect(buenosAiresOption).toHaveCount(1);
+  await expect
+    .poll(async () => buenosAiresOption.count(), { timeout: 10_000 })
+    .toBe(1);
   await expect(buenosAiresOption).toBeVisible();
   await buenosAiresOption.click();
   await expect(

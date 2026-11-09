@@ -4,10 +4,8 @@ import XCTest
 final class CityTimezoneSearchTests: XCTestCase {
     func testDecodeIndexRowsSkipsPoisonedEntries() throws {
         let url = try XCTUnwrap(
-            Bundle(for: CityTimezoneSearchTests.self).url(
-                forResource: "city-timezone-index-poisoned",
-                withExtension: "json",
-                subdirectory: "Fixtures"))
+            Self.poisonFixtureURL(),
+            "city-timezone-index-poisoned.json must ship in CompassKitTests Fixtures")
         let data = try Data(contentsOf: url)
         let rows = CityTimezoneSearch.decodeIndexRows(from: data)
         XCTAssertEqual(rows.count, 1)
@@ -48,5 +46,25 @@ final class CityTimezoneSearchTests: XCTestCase {
             query: "",
             zones: ["America/Chicago", "America/New_York"])
         XCTAssertEqual(results.count, 2)
+    }
+
+    private static func poisonFixtureURL() -> URL? {
+        #if SWIFT_PACKAGE
+        let bundles = [Bundle.module, Bundle(for: CityTimezoneSearchTests.self)]
+        #else
+        let bundles = [Bundle(for: CityTimezoneSearchTests.self)]
+        #endif
+        for bundle in bundles {
+            for subdirectory in ["Fixtures", "Resources/Fixtures", "Resources", ""] {
+                if let url = bundle.url(
+                    forResource: "city-timezone-index-poisoned",
+                    withExtension: "json",
+                    subdirectory: subdirectory.isEmpty ? nil : subdirectory
+                ) {
+                    return url
+                }
+            }
+        }
+        return nil
     }
 }
