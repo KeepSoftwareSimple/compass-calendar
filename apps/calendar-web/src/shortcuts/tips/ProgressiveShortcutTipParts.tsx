@@ -38,6 +38,7 @@ const ProgressiveShortcutTipPartsBody: FC<Props> = ({
           <button
             aria-expanded={false}
             className="c-focus-ring ml-1 inline rounded-xs px-1 text-text underline decoration-text-muted/50 underline-offset-2"
+            onMouseDown={(event) => event.preventDefault()}
             onClick={() => setExpanded(true)}
             type="button"
           >
@@ -51,6 +52,7 @@ const ProgressiveShortcutTipPartsBody: FC<Props> = ({
           <button
             aria-expanded
             className="c-focus-ring ml-1 inline rounded-xs px-1 text-text underline decoration-text-muted/50 underline-offset-2"
+            onMouseDown={(event) => event.preventDefault()}
             onClick={() => setExpanded(false)}
             type="button"
           >
