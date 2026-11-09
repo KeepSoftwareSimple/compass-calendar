@@ -14,7 +14,7 @@ public struct TimezonePickerResult: Equatable, Sendable {
     }
 }
 
-private struct CityTimezoneIndexRow: Decodable {
+struct CityTimezoneIndexRow: Decodable {
     let city: String
     let province: String
     let iso2: String
@@ -39,15 +39,34 @@ public enum CityTimezoneSearch {
         return nil
     }
 
+    /// Skips rows that fail to decode so one bad export row cannot empty the index.
+    static func decodeIndexRows(from data: Data) -> [CityTimezoneIndexRow] {
+        guard let elements = try? JSONSerialization.jsonObject(with: data) as? [Any] else {
+            return []
+        }
+        let decoder = JSONDecoder()
+        var rows: [CityTimezoneIndexRow] = []
+        rows.reserveCapacity(elements.count)
+        for element in elements {
+            guard JSONSerialization.isValidJSONObject(element),
+                let blob = try? JSONSerialization.data(withJSONObject: element),
+                let row = try? decoder.decode(CityTimezoneIndexRow.self, from: blob),
+                !row.iana.isEmpty
+            else { continue }
+            rows.append(row)
+        }
+        return rows
+    }
+
     private static func rows() -> [CityTimezoneIndexRow] {
         if let cachedRows { return cachedRows }
         guard let url = indexJSONURL(),
-            let data = try? Data(contentsOf: url),
-            let decoded = try? JSONDecoder().decode([CityTimezoneIndexRow].self, from: data)
+            let data = try? Data(contentsOf: url)
         else {
             cachedRows = []
             return []
         }
+        let decoded = decodeIndexRows(from: data)
         cachedRows = decoded
         return decoded
     }
