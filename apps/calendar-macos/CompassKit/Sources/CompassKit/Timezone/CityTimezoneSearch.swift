@@ -26,9 +26,22 @@ private struct CityTimezoneIndexRow: Decodable {
 public enum CityTimezoneSearch {
     private nonisolated(unsafe) static var cachedRows: [CityTimezoneIndexRow]?
 
+    private static func indexJSONURL(bundle: Bundle = CompassKitResourceBundle.resources) -> URL? {
+        for subdirectory in ["Resources", ""] {
+            if let url = bundle.url(
+                forResource: "city-timezone-index",
+                withExtension: "json",
+                subdirectory: subdirectory.isEmpty ? nil : subdirectory
+            ) {
+                return url
+            }
+        }
+        return nil
+    }
+
     private static func rows() -> [CityTimezoneIndexRow] {
         if let cachedRows { return cachedRows }
-        guard let url = Bundle.module.url(forResource: "city-timezone-index", withExtension: "json"),
+        guard let url = indexJSONURL(),
             let data = try? Data(contentsOf: url),
             let decoded = try? JSONDecoder().decode([CityTimezoneIndexRow].self, from: data)
         else {
