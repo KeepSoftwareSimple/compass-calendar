@@ -42,6 +42,7 @@ import { CommandRepository } from "@sync/storage/repositories/command.repository
 import { CredentialRepository } from "@sync/storage/repositories/credential.repository";
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
+import { type HostGuestRsvpObservationRepository } from "@sync/storage/repositories/host-guest-rsvp-observation.repository";
 import { InvalidationRepository } from "@sync/storage/repositories/invalidation.repository";
 import { JobRepository } from "@sync/storage/repositories/job.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
@@ -152,6 +153,7 @@ describe("dispatchSyncJob", () => {
   let commands: CommandRepository;
   let jobs: JobRepository;
   let invalidations: InvalidationRepository;
+  let hostGuestRsvpObservations: HostGuestRsvpObservationRepository;
   let credentials: CredentialRepository;
   // Dispatch resolves the connection for a calendarListSync job; a test sets what
   // findById returns without seeding a full connection record.
@@ -166,6 +168,9 @@ describe("dispatchSyncJob", () => {
     commands = new CommandRepository(storage.db());
     jobs = new JobRepository(storage.db());
     invalidations = new InvalidationRepository(storage.db());
+    hostGuestRsvpObservations = new HostGuestRsvpObservationRepository(
+      storage.db(),
+    );
     credentials = new CredentialRepository(storage.db());
     stubbedConnection = undefined;
   });
@@ -245,6 +250,7 @@ describe("dispatchSyncJob", () => {
     callbackUrlFor: () => "https://sync.example/sync/notifications/google",
     providerCapabilities: () => googleProviderCapabilities,
     invalidations,
+    hostGuestRsvpObservations,
   });
 
   const seedCalendar = (): Promise<ProviderCalendarRecord> =>

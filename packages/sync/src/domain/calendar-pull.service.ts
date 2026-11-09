@@ -14,6 +14,8 @@ import { type SyncResourceRecord } from "@sync/storage/contracts/sync-resource.c
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
+import { type HostGuestRsvpObservationRepository } from "@sync/storage/repositories/host-guest-rsvp-observation.repository";
+import { type ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
 import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
 export interface CalendarPullDeps {
@@ -21,8 +23,32 @@ export interface CalendarPullDeps {
   occurrences: EventOccurrenceRepository;
   resources: SyncResourceRepository;
   commands: CommandRepository;
+  connections: ProviderConnectionRepository;
+  hostGuestRsvpObservations?: HostGuestRsvpObservationRepository;
   reader: ProviderEventReader;
   custody: AccessTokenSource;
+}
+
+async function hostGuestRsvpObservationContext(
+  deps: CalendarPullDeps,
+  calendar: ProviderCalendarRecord,
+) {
+  if (!deps.hostGuestRsvpObservations) {
+    return undefined;
+  }
+  const connection = await deps.connections.findById(
+    calendar.tenantId,
+    calendar.principalId,
+    calendar.connectionId,
+  );
+  const accountEmail = connection?.account.email?.trim();
+  if (!accountEmail) {
+    return undefined;
+  }
+  return {
+    accountEmail,
+    observations: deps.hostGuestRsvpObservations,
+  };
 }
 
 export type CalendarPullResult =
@@ -147,6 +173,7 @@ export async function pullCalendarChanges(
     calendar,
     resource.activeGeneration,
     now,
+    await hostGuestRsvpObservationContext(deps, calendar),
   );
   // A pull resumes a mid-batch page from the stored page checkpoint; otherwise
   // it starts the batch at the stored incremental cursor.

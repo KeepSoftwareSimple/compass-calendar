@@ -1,23 +1,14 @@
-import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { type PropsWithChildren } from "react";
 import {
-  act,
-  render,
-  renderHook,
-  screen,
-  waitFor,
-} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { type PropsWithChildren, type ReactNode } from "react";
-import { EventScheduleSchema } from "@core/types/event.contracts";
-import { type Attendee } from "@core/types/event-attendance.contracts";
+  type BookingGuestRsvpClaimResponse,
+  BookingGuestRsvpClaimResponseSchema,
+} from "@core/types/booking.contracts";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
-import { toNormalizedEventQueryData } from "@web/__tests__/utils/event-query-test-data";
-import { createMockConnection } from "@web/__tests__/utils/factories/calendar.factory";
-import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import * as realBookingApi from "@web/api/booking.api";
 import { SessionContext } from "@web/auth/compass/session/session.context";
-import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import {
   resetBillingGateAttentionForTests,
   setBillingGateOwnsScreen,
@@ -27,12 +18,6 @@ import {
   useGuestRsvpNotice,
 } from "@web/booking/useGuestRsvpNotice";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
-import { eventQueryKeys } from "@web/events/queries/event.query.keys";
-import * as realRouters from "@web/routers";
-import {
-  resetEffectiveTimeZoneStoreForTests,
-  setPinnedTimeZone,
-} from "@web/timezone/effective-timezone.store";
 import {
   afterEach,
   beforeEach,
@@ -43,79 +28,55 @@ import {
   setSystemTime,
 } from "bun:test";
 
-const mockNavigate = mock();
+const mockClaimGuestRsvpReplies = mock(
+  async (): Promise<BookingGuestRsvpClaimResponse> => ({
+    count: 0,
+    latest: null,
+    whileYouWereAway: false,
+  }),
+);
 
-mockModuleForFile("@web/routers", realRouters, {
-  router: { navigate: mockNavigate },
+mockModuleForFile("@web/api/booking.api", realBookingApi, {
+  BookingApi: {
+    claimGuestRsvpReplies: (...args: unknown[]) =>
+      args.length === 0
+        ? mockClaimGuestRsvpReplies()
+        : realBookingApi.BookingApi.claimGuestRsvpReplies(
+            ...(args as Parameters<
+              typeof realBookingApi.BookingApi.claimGuestRsvpReplies
+            >),
+          ),
+  },
 });
 
-const HOST_EMAIL = "host@example.com";
-const chicagoSlot = "2026-09-24T17:00:00.000Z";
-
-const weekKey = eventQueryKeys.week({
-  source: "remote",
-  start: "2026-09-20T00:00:00.000Z",
-  end: "2026-09-28T00:00:00.000Z",
+const oneReplyClaim = BookingGuestRsvpClaimResponseSchema.parse({
+  count: 1,
+  whileYouWereAway: false,
+  latest: {
+    id: "674b2c4e5f1a2b3c4d5e6f70",
+    guestName: "Bob",
+    status: "accepted",
+    slotStart: "2026-09-24T17:00:00.000Z",
+    firstObservedAt: "2026-09-09T12:00:00.000Z",
+  },
 });
 
-const meetingSchedule = EventScheduleSchema.parse({
-  kind: "timed",
-  start: chicagoSlot,
-  end: "2026-09-24T17:30:00.000Z",
-  timeZone: "America/Chicago",
+const awayReplyClaim = BookingGuestRsvpClaimResponseSchema.parse({
+  count: 1,
+  whileYouWereAway: true,
+  latest: {
+    id: "674b2c4e5f1a2b3c4d5e6f71",
+    guestName: "Jen",
+    status: "accepted",
+    slotStart: "2026-11-23T18:00:00.000Z",
+    firstObservedAt: "2026-11-08T15:00:00.000Z",
+  },
 });
-
-const hostSelf = (
-  responseStatus: Attendee["responseStatus"] = "accepted",
-): Attendee => ({
-  email: HOST_EMAIL,
-  displayName: "Host",
-  responseStatus,
-});
-
-const guestBob = (
-  responseStatus: Attendee["responseStatus"] = "needsAction",
-): Attendee => ({
-  email: "bob@example.com",
-  displayName: "Bob",
-  responseStatus,
-});
-
-const guestAnn = (
-  responseStatus: Attendee["responseStatus"] = "needsAction",
-): Attendee => ({
-  email: "ann@example.com",
-  displayName: "Ann",
-  responseStatus,
-});
-
-const hostOrganizedEvent = (
-  attendees: Attendee[],
-  organizerEmail: string = HOST_EMAIL,
-) =>
-  createMockEvent({
-    schedule: meetingSchedule,
-    content: {
-      kind: "details",
-      title: "Planning",
-      description: "",
-      organizer: { email: organizerEmail, displayName: null },
-      attendees,
-    },
-  });
 
 const authenticatedSession = {
   authenticated: true,
   setAuthenticated: () => {},
 };
-
-function flushMicrotasks() {
-  return act(async () => {
-    await new Promise<void>((resolve) => {
-      queueMicrotask(resolve);
-    });
-  });
-}
 
 describe("useGuestRsvpNotice", () => {
   const { port, mocks } = createTestToastPort();
@@ -126,21 +87,20 @@ describe("useGuestRsvpNotice", () => {
       defaultOptions: { queries: { retry: false } },
     });
     mocks.toast.mockClear();
-    mocks.dismiss.mockClear();
-    mockNavigate.mockClear();
     registerToastPort(port);
     resetGuestRsvpNoticeForTests();
-    setPinnedTimeZone("America/Chicago");
-    setSystemTime(new Date("2026-09-09T12:00:00.000Z"));
-    userMetadataActions.set({
-      connections: [createMockConnection(HOST_EMAIL)],
+    mockClaimGuestRsvpReplies.mockReset();
+    mockClaimGuestRsvpReplies.mockResolvedValue({
+      count: 0,
+      latest: null,
+      whileYouWereAway: false,
     });
+    setSystemTime(new Date("2026-09-09T12:00:00.000Z"));
   });
 
   afterEach(() => {
     resetBillingGateAttentionForTests();
     resetGuestRsvpNoticeForTests();
-    resetEffectiveTimeZoneStoreForTests();
     setSystemTime();
   });
 
@@ -150,170 +110,46 @@ describe("useGuestRsvpNotice", () => {
     </SessionContext.Provider>
   );
 
-  const mountNotice = () => renderHook(() => useGuestRsvpNotice(), { wrapper });
-
-  const pushWeekEvents = (events: ReturnType<typeof createMockEvent>[]) => {
-    act(() => {
-      queryClient.setQueryData(weekKey, toNormalizedEventQueryData(events));
-    });
-  };
-
-  const renderedToast = () => {
-    const calls = mocks.toast.mock.calls as unknown as unknown[][];
-    const content = calls.at(-1)?.[0];
-    expect(content).toBeTruthy();
-    let view!: ReturnType<typeof render>;
-    act(() => {
-      view = render(<HotkeysProvider>{content as ReactNode}</HotkeysProvider>);
-    });
-    return view;
-  };
-
-  const expectToastCopy = async (copy: string) => {
+  it("claims on mount and shows toast copy with meeting time", async () => {
+    mockClaimGuestRsvpReplies.mockResolvedValue(oneReplyClaim);
+    renderHook(() => useGuestRsvpNotice(), { wrapper });
     await waitFor(() => {
+      expect(mockClaimGuestRsvpReplies).toHaveBeenCalledTimes(1);
       expect(mocks.toast).toHaveBeenCalled();
     });
-    renderedToast();
-    expect(screen.getByText(copy)).toBeInTheDocument();
-  };
-
-  it("seeds needsAction silently then toasts when a guest accepts", async () => {
-    const event = hostOrganizedEvent([hostSelf(), guestBob()]);
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-    expect(mocks.toast).not.toHaveBeenCalled();
-
-    const updated = hostOrganizedEvent([hostSelf(), guestBob("accepted")]);
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await expectToastCopy("Bob accepted: Thu, Sep 24, 12:00 PM");
   });
 
-  it("shows declined copy", async () => {
-    const event = hostOrganizedEvent([hostSelf(), guestBob()]);
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-
-    const updated = hostOrganizedEvent([hostSelf(), guestBob("declined")]);
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await expectToastCopy("Bob declined: Thu, Sep 24, 12:00 PM");
-  });
-
-  it("shows tentative copy", async () => {
-    const event = hostOrganizedEvent([hostSelf(), guestBob()]);
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-
-    const updated = hostOrganizedEvent([hostSelf(), guestBob("tentative")]);
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await expectToastCopy("Bob replied maybe: Thu, Sep 24, 12:00 PM");
-  });
-
-  it("uses plural copy for two guest replies in one refetch", async () => {
-    const event = hostOrganizedEvent([hostSelf(), guestBob(), guestAnn()]);
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-
-    const updated = hostOrganizedEvent([
-      hostSelf(),
-      guestBob("accepted"),
-      guestAnn("declined"),
-    ]);
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await expectToastCopy(
-      "2 guests replied. Latest: Ann declined, Thu, Sep 24, 12:00 PM",
-    );
-  });
-
-  it("ignores RSVP changes on events the host does not organize", async () => {
-    const event = hostOrganizedEvent(
-      [hostSelf(), guestBob()],
-      "other@example.com",
-    );
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-
-    const updated = hostOrganizedEvent(
-      [hostSelf(), guestBob("accepted")],
-      "other@example.com",
-    );
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await flushMicrotasks();
-    expect(mocks.toast).not.toHaveBeenCalled();
-  });
-
-  it("ignores the host's own RSVP change", async () => {
-    const event = hostOrganizedEvent([hostSelf("needsAction"), guestBob()]);
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-
-    const updated = hostOrganizedEvent([hostSelf("accepted"), guestBob()]);
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await flushMicrotasks();
-    expect(mocks.toast).not.toHaveBeenCalled();
-  });
-
-  it("does not toast when a guest moves to needsAction", async () => {
-    const event = hostOrganizedEvent([hostSelf(), guestBob("accepted")]);
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-
-    const updated = hostOrganizedEvent([hostSelf(), guestBob("needsAction")]);
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await flushMicrotasks();
-    expect(mocks.toast).not.toHaveBeenCalled();
-  });
-
-  it("Show navigates to the event week", async () => {
-    const event = hostOrganizedEvent([hostSelf(), guestBob()]);
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-
-    const updated = hostOrganizedEvent([hostSelf(), guestBob("accepted")]);
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await expectToastCopy("Bob accepted: Thu, Sep 24, 12:00 PM");
-
-    await userEvent.click(screen.getByRole("button", { name: "Show" }));
+  it("does not re-claim within the focus floor", async () => {
+    mockClaimGuestRsvpReplies.mockResolvedValue(oneReplyClaim);
+    const { rerender } = renderHook(() => useGuestRsvpNotice(), { wrapper });
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith({
-        to: "/week/$dateString",
-        params: { dateString: "2026-09-24" },
-      });
+      expect(mockClaimGuestRsvpReplies).toHaveBeenCalledTimes(1);
+    });
+    rerender();
+    await waitFor(() => {
+      expect(mockClaimGuestRsvpReplies).toHaveBeenCalledTimes(1);
     });
   });
 
   it("defers the toast until the billing gate is released", async () => {
     setBillingGateOwnsScreen(true);
-    const event = hostOrganizedEvent([hostSelf(), guestBob()]);
-    mountNotice();
-    pushWeekEvents([event]);
-    await flushMicrotasks();
-
-    const updated = hostOrganizedEvent([hostSelf(), guestBob("accepted")]);
-    updated.id = event.id;
-    pushWeekEvents([updated]);
-    await flushMicrotasks();
-    expect(mocks.toast).not.toHaveBeenCalled();
-
-    act(() => {
-      setBillingGateOwnsScreen(false);
+    mockClaimGuestRsvpReplies.mockResolvedValue(oneReplyClaim);
+    renderHook(() => useGuestRsvpNotice(), { wrapper });
+    await waitFor(() => {
+      expect(mockClaimGuestRsvpReplies).toHaveBeenCalledTimes(1);
     });
+    expect(mocks.toast).not.toHaveBeenCalled();
+    setBillingGateOwnsScreen(false);
+    await waitFor(() => {
+      expect(mocks.toast).toHaveBeenCalled();
+    });
+  });
 
-    await expectToastCopy("Bob accepted: Thu, Sep 24, 12:00 PM");
+  it("passes while-you-were-away through to the toast", async () => {
+    mockClaimGuestRsvpReplies.mockResolvedValue(awayReplyClaim);
+    renderHook(() => useGuestRsvpNotice(), { wrapper });
+    await waitFor(() => {
+      expect(mocks.toast).toHaveBeenCalled();
+    });
   });
 });

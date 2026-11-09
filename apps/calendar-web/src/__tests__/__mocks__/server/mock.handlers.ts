@@ -108,6 +108,17 @@ export const globalHandlers = [
       { status: Status.OK },
     );
   }),
+  http.post(
+    `${ENV_WEB.API_BASEURL}/booking/page/guest-rsvp-replies/claim`,
+    () => {
+      return HttpResponse.json({
+        count: 0,
+        latest: null,
+        whileYouWereAway: false,
+      });
+    },
+  ),
+
   http.post(`${ENV_WEB.API_BASEURL}/booking/page/new-meetings/claim`, () => {
     return HttpResponse.json({ count: 0, latest: null }, { status: Status.OK });
   }),

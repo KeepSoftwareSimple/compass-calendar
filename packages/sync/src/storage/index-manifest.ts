@@ -318,6 +318,22 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
       options: { expireAfterSeconds: 0 },
     },
   ],
+  [SYNC_COLLECTIONS.hostGuestRsvpObservations]: [
+    {
+      name: "principal_notice_cursor",
+      key: { principalId: 1, firstObservedAt: 1, _id: 1 },
+    },
+    {
+      name: "guest_reply_identity",
+      key: {
+        principalId: 1,
+        eventId: 1,
+        guestEmailLower: 1,
+        responseStatus: 1,
+      },
+      options: { unique: true },
+    },
+  ],
   [SYNC_COLLECTIONS.invalidations]: [
     // Keyset resume for GET /internal/changes: filter by owner, page by _id.
     {
