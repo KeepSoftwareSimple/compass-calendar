@@ -134,12 +134,15 @@ function mergeReplaceContent(
     colorHex: _existingColorHex,
     ...existingDetails
   } = existing;
-  const merged = { ...existingDetails, ...detailsWithoutColor };
+  const merged: typeof existing = {
+    ...existingDetails,
+    ...detailsWithoutColor,
+  };
   const withColor = mergeEditableContentColor(
     existing,
     { color: incomingColor },
     merged,
-  );
+  ) as typeof existing;
   if (incomingColor !== undefined && incomingColor !== null) {
     const { colorHex: _dropped, ...withoutHex } = withColor;
     return withoutHex;

@@ -207,7 +207,7 @@ public final class EventsStore {
     public func createOptimistic(
         input: CreateEventInput,
         optimisticEvent: Event,
-        onOptimisticCacheUpdated: (@Sendable (_ events: [Event]) -> Void)? = nil
+        onOptimisticCacheUpdated: ((_ events: [Event]) -> Void)? = nil
     ) async throws {
         beginMutation()
         defer { endMutation() }
@@ -237,7 +237,7 @@ public final class EventsStore {
         id: EventId,
         input: ReplaceEventInput,
         optimisticEvent: Event,
-        onOptimisticCacheUpdated: (@Sendable (_ events: [Event]) -> Void)? = nil
+        onOptimisticCacheUpdated: ((_ events: [Event]) -> Void)? = nil
     ) async throws {
         beginMutation()
         defer { endMutation() }
