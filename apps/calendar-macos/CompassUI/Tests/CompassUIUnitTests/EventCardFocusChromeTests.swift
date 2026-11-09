@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class EventCardFocusChromeTests: XCTestCase {
     func testSidebarRingUsesContrastOnDefaultFillWithCalendarGray() throws {
-        var scenario = GridLayoutSnapshotFixtures.parityScenario(
+        let scenario = GridLayoutSnapshotFixtures.parityScenario(
             layoutMode: .week, visibleDateKeys: ["2026-05-20"])
         scenario.timedEvents[0].colorHex = nil
         let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
@@ -33,7 +33,7 @@ final class EventCardFocusChromeTests: XCTestCase {
     }
 
     func testDraftWithProviderHexKeepsReadableEdgeFocus() throws {
-        var scenario = GridLayoutSnapshotFixtures.parityScenario(
+        let scenario = GridLayoutSnapshotFixtures.parityScenario(
             layoutMode: .week, visibleDateKeys: ["2026-05-20"])
         let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
         var card = try XCTUnwrap(snapshot.cards.first { $0.eventId == "overlap-a" })

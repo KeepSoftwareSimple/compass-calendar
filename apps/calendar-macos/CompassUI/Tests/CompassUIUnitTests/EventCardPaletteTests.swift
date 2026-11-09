@@ -5,16 +5,28 @@ import XCTest
 
 @MainActor
 final class EventCardPaletteTests: XCTestCase {
-    func testCalendarColorStaysInAccentAndFocusWhileDefaultFillFollowsTheme() throws {
+    func testCalendarColorStaysInAccentWhileDefaultFillUsesReadableFocusRing() throws {
         let scenario = GridLayoutSnapshotFixtures.parityScenario(layoutMode: .week, visibleDateKeys: ["2026-05-20"])
+        let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
+        let card = try XCTUnwrap(snapshot.cards.first { $0.eventId == "overlap-a" })
         for (theme, hex) in [(NativeWebTheme.lightBeach, "#454442"), (.darkAbyss, "#82A0B2")] {
-            let view = try cardView(scenario: scenario, theme: theme)
+            let view = EventCardView(frame: .zero)
+            view.apply(card: card, theme: theme, isFocused: true)
             assertColor(view.layer?.backgroundColor, hex: hex)
             let accent = try XCTUnwrap(view.layer?.sublayers?.first { $0.frame.width == 3 })
             XCTAssertFalse(accent.isHidden)
             assertColor(accent.backgroundColor, hex: "#3b82f6")
             let ring = try XCTUnwrap(sublayer(named: EventCardChromeLayerName.focusRing, in: view))
-            assertColor(ring.borderColor, hex: "#3b82f6")
+            let expected = GridEventFocusChrome.resolveIndicatorHex(
+                focusHex: card.focusColorHex,
+                fillHex: hex,
+                theme: theme.compassThemeName
+            )
+            assertColor(ring.borderColor, hex: expected)
+            XCTAssertGreaterThanOrEqual(
+                GridEventFocusChrome.contrastRatio(expected, hex),
+                GridEventFocusChrome.minIndicatorContrast
+            )
         }
     }
 
