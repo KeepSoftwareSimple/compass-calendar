@@ -5,7 +5,7 @@ public enum ContextualHintTiers {
     public struct TieredHint: Equatable {
         public let primary: [String]
         public let secondary: [String]
-        public let hasSecondary: Bool { !secondary.isEmpty }
+        public var hasSecondary: Bool { !secondary.isEmpty }
     }
 
     public static func eventFormDatePickerFooter() -> TieredHint {
