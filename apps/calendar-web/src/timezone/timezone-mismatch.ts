@@ -3,7 +3,7 @@ import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { createStorageBackedStore } from "@web/common/utils/external-store.util";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
-import { timeZoneCityName } from "@web/timezone/timezone-catalog";
+import { timeZoneCityName } from "@web/timezone/timezone-iana-label.util";
 import { isUtcLikeTimeZone } from "@web/timezone/utc-like-timezone";
 
 export function shouldShowTimezoneMismatch(

@@ -8,6 +8,10 @@ import {
   useState,
 } from "react";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
+import {
+  preloadPlaceTimeZoneSearch,
+  whenPlaceTimeZoneSearchReady,
+} from "@web/timezone/place-timezone-search.lazy";
 import { TimezoneOptionButton } from "@web/timezone/TimezoneOptionButton";
 import {
   buildTimeZoneList,
@@ -67,6 +71,14 @@ export function TimezoneCombobox({
   const listId = useId();
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(VISIBLE_PAGE);
+  const [placeSearchReadyTick, setPlaceSearchReadyTick] = useState(0);
+
+  useEffect(() => {
+    preloadPlaceTimeZoneSearch();
+    void whenPlaceTimeZoneSearchReady().then(() => {
+      setPlaceSearchReadyTick((tick) => tick + 1);
+    });
+  }, []);
   const now = useMemo(() => new Date(), []);
   const anchorZone = sortAround ?? value ?? "";
 
@@ -98,7 +110,7 @@ export function TimezoneCombobox({
 
   const zones = useMemo(
     () => filterTimeZones(catalog, query),
-    [catalog, query],
+    [catalog, query, placeSearchReadyTick],
   );
 
   const [activeId, setActiveId] = useState(value ?? headOptions[0]?.id ?? "");
