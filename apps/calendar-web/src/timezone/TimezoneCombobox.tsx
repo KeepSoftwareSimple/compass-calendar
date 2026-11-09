@@ -109,7 +109,7 @@ export function TimezoneCombobox({
     : headOptions;
   const optionIds = [
     ...shownHeadOptions.map((option) => option.id),
-    ...zones.map((zone) => zone.id),
+    ...zones.map((zone) => zone.listKey ?? zone.id),
   ];
   const visibleZones = zones.slice(0, visibleCount);
   const fallbackId = optionIds[0] ?? "";
@@ -125,6 +125,11 @@ export function TimezoneCombobox({
     const head = headOptions.find((option) => option.id === id);
     if (head) {
       onSelect(head.value);
+      return;
+    }
+    const zone = zones.find((entry) => (entry.listKey ?? entry.id) === id);
+    if (zone) {
+      onSelect(zone.id);
       return;
     }
     if (id !== "") onSelect(id);
@@ -178,14 +183,14 @@ export function TimezoneCombobox({
           // Typing seats the top result; clearing seats a head row that
           // survives a query (Auto), else the top result (Hide second timezone)
           // row is gone by then).
+          const topZoneKey = nextZones[0]?.listKey ?? nextZones[0]?.id ?? "";
           const nextActive =
             nextQuery.trim().length > 0
-              ? (nextZones[0]?.id ??
-                headOptions.find((option) => !option.hideOnQuery)?.id ??
-                "")
+              ? topZoneKey ||
+                headOptions.find((option) => !option.hideOnQuery)?.id ||
+                ""
               : (headOptions.find((option) => !option.hideOnQuery)?.id ??
-                nextZones[0]?.id ??
-                headOptions[0]?.id ??
+                (topZoneKey || headOptions[0]?.id) ??
                 "");
           setActiveId(nextActive);
           setVisibleCount(VISIBLE_PAGE);
@@ -214,17 +219,20 @@ export function TimezoneCombobox({
             selected={option.selected}
           />
         ))}
-        {visibleZones.map((zone) => (
-          <TimezoneOptionButton
-            active={currentActiveId === zone.id}
-            description={zone.secondary}
-            id={`${listId}-${zone.id}`}
-            key={zone.id}
-            label={zone.city}
-            onSelect={() => onSelect(zone.id)}
-            selected={zone.id === value}
-          />
-        ))}
+        {visibleZones.map((zone) => {
+          const optionKey = zone.listKey ?? zone.id;
+          return (
+            <TimezoneOptionButton
+              active={currentActiveId === optionKey}
+              description={zone.secondary}
+              id={`${listId}-${optionKey}`}
+              key={optionKey}
+              label={zone.placeLabel ?? zone.city}
+              onSelect={() => onSelect(zone.id)}
+              selected={zone.id === value}
+            />
+          );
+        })}
       </div>
     </div>
   );

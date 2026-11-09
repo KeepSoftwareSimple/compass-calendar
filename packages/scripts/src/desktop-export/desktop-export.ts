@@ -1,4 +1,8 @@
 import {
+  CITY_TIMEZONE_INDEX_JSON_PATH,
+  emitCityTimezoneIndexJson,
+} from "@scripts/desktop-export/emit-city-timezone-index";
+import {
   emitPhosphorIconsSwift,
   emitPhosphorSvgFiles,
   PHOSPHOR_ICONS_SWIFT_PATH,
@@ -90,6 +94,10 @@ const buildScriptGeneratedFiles = (): GeneratedFile[] => {
     {
       path: PHOSPHOR_ICONS_SWIFT_PATH,
       contents: emitPhosphorIconsSwift(),
+    },
+    {
+      path: CITY_TIMEZONE_INDEX_JSON_PATH,
+      contents: emitCityTimezoneIndexJson(),
     },
     ...emitPhosphorSvgFiles(),
   ];

@@ -37,3 +37,11 @@ Agent branch: `cursor/mac-f-preview-audit-afc2`. Runtime proof for native behavi
 
 - Native XCTest and strict macOS workflow must run on exact PR head after push.
 - Linux `bun run verify` covers web/scripts; Swift tests require CI.
+
+## City timezone search (`cursor/city-timezone-search-afc2`)
+
+Bare **f** event-jump wiring landed on main via #5183; city search is this PR only.
+
+- **User report:** Second timezone picker, typing `tampa`, no results.
+- **Architecture:** `city-timezones` in `@core/timezone/city-timezone-search`; web `filterTimeZones`; `city-timezone-index.json` via `desktop:export` for `CityTimezoneSearch.swift`.
+- **Florida:** US state query prefers US rows; surfaces both `America/New_York` and `America/Chicago` with span note.

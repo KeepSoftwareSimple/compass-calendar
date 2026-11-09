@@ -16,11 +16,9 @@ struct TimezonePickerDialogView: View {
         purpose == .timeTravel ? "Second timezone" : "Change default timezone"
     }
 
-    private var filteredZones: [String] {
+    private var filteredResults: [TimezonePickerResult] {
         let all = TimeZone.knownTimeZoneIdentifiers.sorted()
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return Array(all.prefix(40)) }
-        return all.filter { $0.localizedCaseInsensitiveContains(trimmed) }.prefix(40).map { $0 }
+        return CityTimezoneSearch.filterZones(query: query, zones: all, limit: 40)
     }
 
     var body: some View {
@@ -35,7 +33,7 @@ struct TimezonePickerDialogView: View {
                 if purpose == .timeTravel {
                     ModalDialogMessage("Compare your calendar hours in a second timezone.")
                 }
-                TextField("Search timezones", text: $query)
+                TextField("Search city, region, or abbreviation", text: $query)
                     .textFieldStyle(.roundedBorder)
                 if purpose == .pin {
                     timezoneRow(label: "Use browser timezone (Auto)", value: nil)
@@ -45,11 +43,12 @@ struct TimezonePickerDialogView: View {
                 }
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 4) {
-                        ForEach(filteredZones, id: \.self) { zone in
-                            if purpose != .timeTravel || zone != viewStore.effectiveTimeZone {
+                        ForEach(filteredResults, id: \.listKey) { result in
+                            if purpose != .timeTravel || result.iana != viewStore.effectiveTimeZone {
                                 timezoneRow(
-                                    label: "\(TimeZoneFormatting.cityName(for: zone)) (\(TimeZoneFormatting.abbreviation(for: zone)))",
-                                    value: zone)
+                                    label: result.title,
+                                    detail: result.subtitle,
+                                    value: result.iana)
                             }
                         }
                     }
@@ -64,8 +63,13 @@ struct TimezonePickerDialogView: View {
     }
 
     @ViewBuilder
-    private func timezoneRow(label: String, value: String?, clearsTravel: Bool = false) -> some View {
-        Button(label) {
+    private func timezoneRow(
+        label: String,
+        detail: String? = nil,
+        value: String?,
+        clearsTravel: Bool = false
+    ) -> some View {
+        Button {
             if purpose == .timeTravel {
                 if clearsTravel {
                     settingsStore.setTimeTravelTimeZone(nil)
@@ -76,11 +80,20 @@ struct TimezonePickerDialogView: View {
                 settingsStore.setPinnedTimeZone(value)
             }
             settingsStore.dismissTimezoneDialog()
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .foregroundStyle(theme.textColor)
+                    .font(.rubik(13))
+                if let detail {
+                    Text(detail)
+                        .foregroundStyle(theme.textMutedColor)
+                        .font(.rubik(11))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 6)
-        .foregroundStyle(theme.textColor)
-        .font(.rubik(13))
     }
 }

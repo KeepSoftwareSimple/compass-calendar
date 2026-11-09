@@ -681,6 +681,21 @@
       "review": "2026-11-08 cursor/mac-f-preview-audit-afc2: web e2e tap-f semantics audited; native wiring defect confirmed in source."
     },
     {
+      "id": "timezone-city-search",
+      "behavior": "Second timezone and default timezone pickers find IANA zones by city or region name (e.g. Tampa, Florida)",
+      "web": [
+        "apps/calendar-web/src/timezone/timezone-catalog.test.ts",
+        "packages/core/src/timezone/city-timezone-search.test.ts"
+      ],
+      "native": [
+        "apps/calendar-macos/CompassKit/Tests/CompassKitTests/CityTimezoneSearchTests.swift"
+      ],
+      "status": "passing",
+      "evidence": "PR head d3f971d75: macOS workflow 42671066386 (swift-packages job 129347767249, macos-build 129347543318, aggregate macos 129359491825, macos-ui-shard 1–4 jobs 129350704925/195/565/789); core+web city search tests; e2e booking host-settings Buenos Aires listKey row.",
+      "reason": "City/region search in second-timezone and booking pickers matches web filterTimeZones + native CityTimezoneSearch index decode.",
+      "review": "2026-11-09 agent: compared place labels, Florida dual-zone note, DST abbreviations, and macOS XCTest decode fixture to web catalog tests."
+    },
+    {
       "id": "legend-escape",
       "behavior": "Question mark opens shortcuts legend, Escape dismisses it",
       "web": ["docs/acceptance/shortcuts.md"],
