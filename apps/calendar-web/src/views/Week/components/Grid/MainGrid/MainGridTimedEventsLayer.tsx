@@ -3,6 +3,7 @@ import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import { GridBusyPeriods } from "@web/grid/components/GridBusyPeriods";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { MainGridEvents } from "@web/views/Week/components/Grid/MainGrid/MainGridEvents";
+import { MainGridPastePreview } from "@web/views/Week/components/Grid/MainGrid/MainGridPastePreview";
 import { MainGridQuickTimeSlots } from "@web/views/Week/components/Grid/MainGrid/MainGridQuickTimeSlots";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
@@ -33,6 +34,7 @@ export const MainGridTimedEventsLayer: FC<Props> = ({
       visibleDates={visibleDates}
     />
     <MainGridQuickTimeSlots measurements={measurements} weekProps={weekProps} />
+    <MainGridPastePreview measurements={measurements} weekProps={weekProps} />
     <MainGridEvents measurements={measurements} weekProps={weekProps} />
   </>
 );

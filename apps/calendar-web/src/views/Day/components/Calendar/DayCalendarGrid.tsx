@@ -25,6 +25,7 @@ import {
   createGridEventDraftFromGridEvent,
   getGridDraftId,
 } from "@web/events/grid-event-draft.adapter";
+import { EventPastePreviewTimedLayer } from "@web/events/paste-preview/EventPastePreviewLayer";
 import { useDayEventViewModel } from "@web/events/queries/useDayEventsQuery";
 import {
   draftActions,
@@ -433,6 +434,12 @@ export function DayCalendarGrid() {
           slots={quickTimeSlots}
           visibleDates={visibleDates}
         />
+        <EventPastePreviewTimedLayer
+          columnIndex={quickTimeColumnIndex}
+          fallbackDay={dateInView}
+          measurements={measurements}
+          visibleDates={visibleDates}
+        />
         <DayCalendarTimedEventsLayer
           events={displayedTimedEvents}
           getCalendarColumnIndex={getCalendarColumnIndex}
@@ -457,6 +464,7 @@ export function DayCalendarGrid() {
       quickTimeSlots,
       startDate,
       visibleDates,
+      dateInView,
     ],
   );
 

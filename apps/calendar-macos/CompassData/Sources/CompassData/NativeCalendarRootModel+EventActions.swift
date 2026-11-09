@@ -82,14 +82,18 @@ extension NativeCalendarRootModel {
     public func copyFocusedEvent() {
         guard let event = focusedEvent() else { return }
         clipboardStore.copy(event)
+        let targetDay = draftTargetDay()
+        beginEventPastePreview(from: event, targetDay: targetDay)
         recordShortcut(.editCopy)
     }
 
     public func pasteCopiedEvent() {
         guard viewStore.view != .life, let source = clipboardStore.event else { return }
-        let sourceDay = EventOnTargetDay.startDay(for: source)
-        let targetDay = draftTargetDay()
+        let targetDay = pastePreviewStore.isActive
+            ? draftTargetDay()
+            : EventOnTargetDay.startDay(for: source)
         let adjusted = EventOnTargetDay.moved(source, to: targetDay)
+        endEventPastePreview()
         Task { await commitDuplicate(from: adjusted, recordUndo: true) }
         recordShortcut(.editPaste)
     }

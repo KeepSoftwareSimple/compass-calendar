@@ -12,11 +12,16 @@ import {
 import { useShortcutWriteLocked } from "@web/billing/useBillingWriteLock";
 import { SYNC_STATUS_VARIANT_CLASSNAME } from "@web/calendars/sync-status.types";
 import { useHasPendingEventMutations } from "@web/events/mutations/useEventPending";
+import { EventPastePreviewIndicator } from "@web/events/paste-preview/EventPastePreviewIndicator";
 import {
   selectDraftActivity,
   selectIsEventFormOpen,
   useDraftStore,
 } from "@web/events/stores/draft.store";
+import {
+  selectEventPastePreviewActive,
+  useEventPastePreviewStore,
+} from "@web/events/stores/event-paste-preview.store";
 import { EdgeFocusIndicator } from "@web/grid/shortcuts/EdgeFocusIndicator";
 import {
   selectEdgeFocusActive,
@@ -68,6 +73,9 @@ export const SidebarStatusBar: FC = () => {
   const draftActivity = useDraftStore(selectDraftActivity);
   const isDraftFormOpen = useDraftStore(selectIsEventFormOpen);
   const isKeyboardPlace = draftActivity === "keyboardPlace" && !isDraftFormOpen;
+  const isPastePreview = useEventPastePreviewStore(
+    selectEventPastePreviewActive,
+  );
   const isTimeTraveling = useTimeTravelZone() !== null;
   const isSaving = useHasPendingEventMutations();
   // The unscoped hook's `connection` is the primary connection (the one
@@ -102,6 +110,8 @@ export const SidebarStatusBar: FC = () => {
   // its own in well under a second, so it outranks every mode indicator.
   const indicator = quickTimeDigits ? (
     <QuickTimeIndicator />
+  ) : isPastePreview ? (
+    <EventPastePreviewIndicator />
   ) : showEventJump ? (
     <EventJumpIndicator />
   ) : showEdgeFocus ? (

@@ -54,6 +54,11 @@ import {
   useEventMutations,
 } from "@web/events/mutations/useEventMutations";
 import { useUpdateEvent } from "@web/events/mutations/useUpdateEvent";
+import {
+  beginEventPastePreview,
+  endEventPastePreview,
+  pastePreviewTargetDay,
+} from "@web/events/paste-preview/event-paste-preview.lifecycle";
 import { findEventInCache } from "@web/events/queries/event.query.cache";
 import {
   draftActions,
@@ -64,6 +69,7 @@ import {
   eventClipboardActions,
   useEventClipboardStore,
 } from "@web/events/stores/event-clipboard.store";
+import { isEventPastePreviewActive } from "@web/events/stores/event-paste-preview.store";
 import {
   edgeFocusActions,
   useEdgeFocusStore,
@@ -379,6 +385,11 @@ export function useGridEventEditShortcuts({
 
     claimShortcut(keyboardEvent);
     eventClipboardActions.copy(sourceEvent);
+    const targetDay = pastePreviewTargetDay(
+      sourceEvent,
+      (sourceDay) => getPasteTargetDay?.(sourceDay) ?? sourceDay,
+    );
+    beginEventPastePreview(sourceEvent, targetDay);
   };
 
   const pasteCopiedCalendarEvent = (keyboardEvent: KeyboardEvent) => {
@@ -394,7 +405,13 @@ export function useGridEventEditShortcuts({
     // Read the create-target day before spending the column selection
     // (the #3388 gotcha: setActive(false) clears activeDayKeys).
     const sourceDay = eventStartDay(sourceEvent);
-    const targetDay = getPasteTargetDay?.(sourceDay) ?? sourceDay;
+    const targetDay = isEventPastePreviewActive()
+      ? pastePreviewTargetDay(
+          sourceEvent,
+          (day) => getPasteTargetDay?.(day) ?? day,
+        )
+      : (getPasteTargetDay?.(sourceDay) ?? sourceDay);
+    endEventPastePreview();
     eventJumpActions.setPointerDraftIntent(null);
     if (isEventJumpActive()) eventJumpActions.setActive(false);
     duplicateSourceEvent(sourceEvent, targetDay);

@@ -54,6 +54,10 @@ import {
   useEventClipboardStore,
 } from "@web/events/stores/event-clipboard.store";
 import {
+  initialEventPastePreviewState,
+  useEventPastePreviewStore,
+} from "@web/events/stores/event-paste-preview.store";
+import {
   initialUndoHistoryState,
   useUndoHistoryStore,
 } from "@web/events/stores/undo.store";
@@ -110,6 +114,7 @@ const storeResets: StoreReset[] = [
   () => useDraftStore.setState(initialDraftState, true),
   () => useEventFormCmdStore.setState(initialEventFormCmdState, true),
   () => useEventClipboardStore.setState(initialEventClipboardState, true),
+  () => useEventPastePreviewStore.setState(initialEventPastePreviewState, true),
   () => useUndoHistoryStore.setState(initialUndoHistoryState, true),
   recurrenceScopeOpportunityActions.reset,
   resetEventRepositorySourceForTests,

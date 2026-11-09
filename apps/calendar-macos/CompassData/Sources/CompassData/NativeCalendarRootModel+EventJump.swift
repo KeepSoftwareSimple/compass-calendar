@@ -259,7 +259,7 @@ extension NativeCalendarRootModel {
     }
 
     func buildQuickTimeSlotHints() -> [QuickTimeSlotHint] {
-        guard eventJumpSelection.modeActive else { return [] }
+        guard eventJumpSelection.modeActive, !pastePreviewStore.isActive else { return [] }
         let focusedDay = QuickTime.quickTimeFocusedColumnDay(
             activeDayKeys: eventJumpSelection.activeDayKeys)
         let targetDay = QuickTime.quickTimeTargetDay(

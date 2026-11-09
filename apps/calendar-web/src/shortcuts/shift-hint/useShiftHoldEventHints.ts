@@ -5,9 +5,11 @@ import { KEYMAP } from "@core/shortcuts/keymap";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
+import { endEventPastePreview } from "@web/events/paste-preview/event-paste-preview.lifecycle";
 import { isRecurrenceScopeAskReady } from "@web/events/recurrence/recurrence-scope-opportunity.store";
 import { recurrenceScopeForToastDigit } from "@web/events/recurrence/recurrence-scope-toast-digit";
 import { isEventFormOpen } from "@web/events/stores/draft.store";
+import { isEventPastePreviewActive } from "@web/events/stores/event-paste-preview.store";
 import { isAppLocked } from "@web/shortcuts/app-lock";
 import {
   digitPickIndex,
@@ -294,6 +296,8 @@ export function useShiftHoldEventHints({
       // A bare Shift keydown precedes every digit on layouts where the top row
       // is shifted, so it must never abandon a half-typed time.
       if (MODIFIER_KEYS.has(event.key)) return false;
+
+      if (isEventPastePreviewActive()) return false;
 
       if (
         isAppLocked() ||
@@ -629,6 +633,10 @@ export function useShiftHoldEventHints({
         if (isHigherEscapeOwner()) return;
         event.preventDefault();
         event.stopPropagation();
+        if (isEventPastePreviewActive()) {
+          endEventPastePreview();
+          return;
+        }
         deactivate();
         return;
       }

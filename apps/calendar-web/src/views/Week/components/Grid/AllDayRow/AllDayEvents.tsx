@@ -16,6 +16,7 @@ import {
   resolvePlaceholderCardChrome,
 } from "@web/grid/grid-event-card-chrome";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
+import { AllDayPastePreview } from "@web/views/Week/components/Grid/AllDayRow/AllDayPastePreview";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { useWeekVisibleDates } from "@web/views/Week/hooks/grid/useWeekVisibleDates";
@@ -140,6 +141,12 @@ export const AllDayEvents = ({
             );
           },
         )}
+      <AllDayPastePreview
+        measurements={measurements}
+        queryEndOfView={queryEndOfView}
+        queryStartOfView={queryStartOfView}
+        weekDays={weekDays}
+      />
     </div>
   );
 };

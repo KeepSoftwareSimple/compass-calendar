@@ -44,6 +44,10 @@ import {
   initialEventClipboardState,
   useEventClipboardStore,
 } from "@web/events/stores/event-clipboard.store";
+import {
+  initialEventPastePreviewState,
+  useEventPastePreviewStore,
+} from "@web/events/stores/event-paste-preview.store";
 import { initialViewState, useViewStore } from "@web/events/stores/view.store";
 import {
   getWeekInteractionTargetAttributes,
@@ -594,6 +598,38 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     const state = useDraftStore.getState();
     expect(state.status?.isFormOpen).toBe(false);
     expect(state.gridDraft).toBeNull();
+  });
+
+  it("enters paste preview and event jump when copying a focused event", () => {
+    const button = addCalendarTarget();
+    button.focus();
+    renderShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    expect(useEventClipboardStore.getState().event?.id).toBe(editableEvent.id);
+    expect(useEventPastePreviewStore.getState().isActive).toBe(true);
+    expect(useEventJumpStore.getState().isActive).toBe(true);
+  });
+
+  it("cancels paste preview on Escape without clearing the in-app clipboard", () => {
+    const button = addCalendarTarget();
+    button.focus();
+    renderShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("Escape");
+
+    expect(useEventPastePreviewStore.getState()).toEqual(
+      initialEventPastePreviewState,
+    );
+    expect(useEventClipboardStore.getState().event?.id).toBe(editableEvent.id);
   });
 
   it("copies a focused event with Mod+C and pastes a duplicate at the original time with Mod+V", () => {

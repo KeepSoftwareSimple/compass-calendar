@@ -445,6 +445,11 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
+        if keyEvent.modifiers.isEmpty, keyEvent.key == .named(.escape), model.pastePreviewStore.isActive {
+            model.endEventPastePreview()
+            return true
+        }
+
         if keyEvent.modifiers.isEmpty, keyEvent.key == .named(.escape), model.eventJumpSelection.isActive {
             model.clearEventJumpSelection()
             return true
