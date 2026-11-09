@@ -185,11 +185,13 @@ export function searchPlaceTimeZones(
 }
 
 export function buildCityTimezoneIndexRows(): CityTimezoneIndexRow[] {
-  return cityMapping.map((entry) => ({
-    city: entry.city_ascii,
-    province: entry.province,
-    iso2: entry.iso2,
-    iana: entry.timezone,
-    pop: entry.pop,
-  }));
+  return cityMapping
+    .filter((entry) => Boolean(entry.timezone))
+    .map((entry) => ({
+      city: entry.city_ascii,
+      province: entry.province,
+      iso2: entry.iso2,
+      iana: entry.timezone,
+      pop: entry.pop,
+    }));
 }

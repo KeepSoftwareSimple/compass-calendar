@@ -1,4 +1,5 @@
 import {
+  buildCityTimezoneIndexRows,
   normalizePlaceSearchQuery,
   searchPlaceTimeZones,
 } from "@core/timezone/city-timezone-search";
@@ -30,6 +31,12 @@ describe("city-timezone-search", () => {
     const hits = searchPlaceTimeZones("sao paulo");
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0]?.iana).toMatch(/^America\//);
+  });
+
+  it("exports only rows with IANA ids for native JSON decode", () => {
+    const rows = buildCityTimezoneIndexRows();
+    expect(rows.length).toBeGreaterThan(1000);
+    expect(rows.every((row) => row.iana.length > 0)).toBe(true);
   });
 
   it("returns nothing for nonsense query", () => {

@@ -27,7 +27,7 @@ public enum CityTimezoneSearch {
     private nonisolated(unsafe) static var cachedRows: [CityTimezoneIndexRow]?
 
     private static func indexJSONURL(bundle: Bundle = CompassKitResourceBundle.resources) -> URL? {
-        for subdirectory in ["Resources", ""] {
+        for subdirectory in ["Resources", "Resources/Fixtures", "Fixtures", ""] {
             if let url = bundle.url(
                 forResource: "city-timezone-index",
                 withExtension: "json",
