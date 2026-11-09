@@ -48,6 +48,7 @@ struct EventFormFooterTipsView: View {
         }
         .buttonStyle(.plain)
         .focusable()
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(showMoreHints ? "Less" : "More")
         .accessibilityValue(showMoreHints ? "Expanded" : "Collapsed")
         .accessibilityHint(

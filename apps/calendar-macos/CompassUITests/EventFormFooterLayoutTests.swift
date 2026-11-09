@@ -25,7 +25,7 @@ final class EventFormFooterLayoutTests: XCTestCase {
         let betweenFields = window.staticTexts["between fields"]
         XCTAssertTrue(betweenFields.exists)
         XCTAssertLessThan(betweenFields.frame.height, 20)
-        let more = window.buttons["compass-event-form-footer-hints-more"].firstMatch
+        let more = footer.descendants(matching: .any)["compass-event-form-footer-hints-more"].firstMatch
         XCTAssertTrue(more.waitForExistence(timeout: 4))
         XCTAssertLessThan(more.frame.height, 20)
         more.click()
