@@ -23,9 +23,14 @@ final class NativeGridKeyboardRouterEventJumpTests: XCTestCase {
         model.openKeyboardEditForFocusedEvent()
         model.openEventFormForCurrentDraft()
         XCTAssertTrue(model.isEventFormVisible)
+        // Exercise the dispatch path even if future UI autofocuses a title field.
+        NSApp.keyWindow?.makeFirstResponder(nil)
+        XCTAssertFalse(NSApp.keyWindow?.firstResponder is NSTextView)
 
         let fDown = try keyDown("f", code: 3)
-        _ = router.handleKeyDown(fDown)
+        XCTAssertFalse(
+            router.handleKeyDown(fDown),
+            "Bare letters belong to the form field while typing")
         XCTAssertFalse(
             model.eventJumpSelection.modeActive,
             "Bare f must not latch event-jump while the event form is open")
