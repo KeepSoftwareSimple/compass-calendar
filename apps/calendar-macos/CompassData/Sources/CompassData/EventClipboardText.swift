@@ -12,7 +12,7 @@ public enum EventClipboardText {
         switch event.schedule {
         case .timed(let timed):
             let formatter = DateFormatter()
-            formatter.timeZone = TimeZone(identifier: timed.timeZone.id) ?? .current
+            formatter.timeZone = TimeZone(identifier: timed.timeZone.rawValue) ?? .current
             formatter.dateFormat = "EEE, MMM d"
             guard
                 let start = CompassDateParsing.parseInEffectiveTimeZone(timed.start.rawValue),
