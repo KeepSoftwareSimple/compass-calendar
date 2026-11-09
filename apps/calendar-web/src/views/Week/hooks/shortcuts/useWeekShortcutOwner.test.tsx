@@ -600,6 +600,21 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     expect(state.gridDraft).toBeNull();
   });
 
+  it("does not open the form when Enter is pressed during paste placement", () => {
+    const button = addCalendarTarget();
+    button.focus();
+    renderShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("Enter");
+
+    expect(useDraftStore.getState().status?.activity).toBe("pastePlace");
+    expect(useDraftStore.getState().status?.isFormOpen).toBe(false);
+  });
+
   it("enters paste placement with a form-closed outline when copying a focused event", () => {
     const button = addCalendarTarget();
     button.focus();

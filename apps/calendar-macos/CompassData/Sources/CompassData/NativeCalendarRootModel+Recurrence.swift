@@ -54,7 +54,10 @@ extension NativeCalendarRootModel {
     }
 
     public func requestSaveDraft() async {
-        guard let draft = draftStore.gridDraft, !isEventFormReadOnly(for: draft) else { return }
+        guard let draft = draftStore.gridDraft,
+            draftStore.status.activity != .pastePlace,
+            !isEventFormReadOnly(for: draft)
+        else { return }
         let baseline = baselineEvent(for: draft)
         let resolvedSeriesMaster = baseline.flatMap { seriesMaster(for: $0) }
         let decision = GridEventDraftRecurrence.resolveSaveDecision(

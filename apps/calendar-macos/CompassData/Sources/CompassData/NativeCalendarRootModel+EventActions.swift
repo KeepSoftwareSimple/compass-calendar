@@ -122,9 +122,7 @@ extension NativeCalendarRootModel {
         }
 
         guard let source = clipboardStore.event else { return false }
-        let adjusted = EventOnTargetDay.moved(
-            source,
-            to: EventOnTargetDay.startDay(for: source))
+        let adjusted = EventOnTargetDay.moved(source, to: draftTargetDay())
         endEventPastePreview()
         Task { await commitDuplicate(from: adjusted, recordUndo: true) }
         recordShortcut(.editPaste)

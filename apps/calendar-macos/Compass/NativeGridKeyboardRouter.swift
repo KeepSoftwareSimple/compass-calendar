@@ -579,7 +579,9 @@ final class NativeGridKeyboardRouter {
             return true
         }
         if keyEvent.modifiers == [.command], keyEvent.key == .named(.enter) {
-            Task { await model.saveDraft() }
+            if model.draftStore.status.activity != .pastePlace {
+                Task { await model.saveDraft() }
+            }
             return true
         }
 
@@ -816,6 +818,9 @@ final class NativeGridKeyboardRouter {
                 if model.draftStore.status.isFormOpen {
                     return false
                 }
+                if model.draftStore.status.activity == .pastePlace {
+                    return true
+                }
                 if model.draftStore.status.activity == .keyboardPlace {
                     model.saveKeyboardPlacedDraftNow()
                     return true
@@ -835,6 +840,10 @@ final class NativeGridKeyboardRouter {
         if keyEvent.key == .named(.escape), keyEvent.modifiers.isEmpty {
             if !model.draftStore.quickTimeDigits.isEmpty {
                 model.draftStore.setQuickTimeDigits("")
+                return true
+            }
+            if model.draftStore.status.activity == .pastePlace {
+                model.endEventPastePreview()
                 return true
             }
             if model.draftStore.gridDraft != nil {
@@ -1012,6 +1021,9 @@ final class NativeGridKeyboardRouter {
             return true
         case .editOpen:
             if model.draftStore.gridDraft != nil {
+                if model.draftStore.status.activity == .pastePlace {
+                    return true
+                }
                 if !model.draftStore.status.isFormOpen {
                     model.openEventFormForCurrentDraft()
                 }
