@@ -127,15 +127,23 @@ export const draftActions = {
   // re-render every status subscriber.
   setFormOpen: (isFormOpen: boolean) =>
     useDraftStore.setState(
-      (state) =>
-        Boolean(state.status?.isFormOpen) === isFormOpen
+      (state) => {
+        if (
+          isFormOpen &&
+          state.status?.activity === "pastePlace" &&
+          state.gridDraft
+        ) {
+          return {};
+        }
+        return Boolean(state.status?.isFormOpen) === isFormOpen
           ? {}
           : {
               status: {
                 ...(state.status ?? initialDraftStatus),
                 isFormOpen,
               },
-            },
+            };
+      },
       false,
       { type: "setFormOpen" },
     ),

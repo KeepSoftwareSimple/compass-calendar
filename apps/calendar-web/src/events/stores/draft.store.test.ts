@@ -69,6 +69,40 @@ describe("draftActions.startGridDraft", () => {
 
     expect(useDraftStore.getState().status?.isFormOpen).toBe(true);
   });
+
+  it("keeps the form closed for paste placement", () => {
+    const draft = createGridEventDraft({
+      kind: "allDay",
+      start: new Date("2026-05-20"),
+      end: new Date("2026-05-21"),
+    });
+
+    draftActions.startGridDraft({ activity: "pastePlace", draft });
+
+    expect(useDraftStore.getState().status?.isFormOpen).toBe(false);
+  });
+});
+
+describe("draftActions.setFormOpen", () => {
+  const timedDraft = () =>
+    createGridEventDraft(
+      timedGridSchedule(
+        new Date("2026-05-20T10:00:00.000Z"),
+        new Date("2026-05-20T11:00:00.000Z"),
+      ),
+    );
+
+  it("does not open the form during paste placement", () => {
+    draftActions.startGridDraft({
+      activity: "pastePlace",
+      draft: timedDraft(),
+    });
+
+    draftActions.setFormOpen(true);
+
+    expect(useDraftStore.getState().status?.isFormOpen).toBe(false);
+    expect(useDraftStore.getState().status?.activity).toBe("pastePlace");
+  });
 });
 
 describe("draftActions.setGridDraft", () => {

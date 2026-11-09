@@ -246,4 +246,29 @@ describe("useSaveEventForm", () => {
       resetOfflineDataStoreForTests();
     }
   });
+
+  it("does not commit a create while paste placement is active", () => {
+    const draft = createGridEventDraft(
+      timedGridSchedule(
+        new Date("2026-05-20T09:00:00.000Z"),
+        new Date("2026-05-20T10:00:00.000Z"),
+      ),
+      undefined,
+      calendarId,
+    );
+    draftActions.startGridDraft({ activity: "pastePlace", draft });
+
+    const { queryClient, Wrapper } = createWrapper();
+    const { result } = renderHook(() => useSaveEventForm(), {
+      wrapper: Wrapper,
+    });
+
+    act(() => {
+      result.current.saveEventForm(draft);
+    });
+
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+    expect(useDraftStore.getState().status?.activity).toBe("pastePlace");
+    expect(useDraftStore.getState().status?.isFormOpen).toBe(false);
+  });
 });
