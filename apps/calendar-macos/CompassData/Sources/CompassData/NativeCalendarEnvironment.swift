@@ -35,7 +35,8 @@ public struct NativeCalendarEnvironment: Sendable {
         urlSession: URLSession = .shared,
         analytics: ProductAnalyticsClient = NoOpProductAnalyticsClient(),
         analyticsIdentity: AnalyticsIdentityCoordinator = NoOpAnalyticsIdentityCoordinator(),
-        sessionPresenter: any HostedBillingSessionPresenting = UnavailableHostedBillingSessionPresenter()
+        sessionPresenter: any HostedBillingSessionPresenting = UnavailableHostedBillingSessionPresenter(),
+        hiddenEventsRemoteClient: (any HiddenEventsRemoteClient)? = nil
     ) throws {
         let sessionStore: any SessionStore = sessionStore ?? KeychainSessionStore()
         let database = try inMemoryDatabase ? AppDatabase.inMemory() : AppDatabase.openPersistent()
@@ -70,7 +71,7 @@ public struct NativeCalendarEnvironment: Sendable {
         let hiddenSource: HiddenEventRepositorySource = source == .local ? .local : .remote
         hiddenEventsStore = HiddenEventsStore(
             repository: HiddenEventRepository(database: database),
-            remoteClient: UserAPI(client: apiClient),
+            remoteClient: hiddenEventsRemoteClient ?? UserAPI(client: apiClient),
             source: hiddenSource
         )
         clipboardStore = ClipboardStore()
