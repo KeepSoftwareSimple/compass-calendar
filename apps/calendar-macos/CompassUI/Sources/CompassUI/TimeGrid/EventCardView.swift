@@ -1,5 +1,4 @@
 import AppKit
-import CompassData
 import CompassKit
 
 @MainActor
@@ -17,6 +16,7 @@ final class EventCardView: NSView {
     private let deckEdgeLayer = CAShapeLayer()
     private var shadowSpreadInset: CGFloat = 0
     private let focusRingLayer = CALayer()
+    private let edgeGutterLayer = CALayer()
     private let edgeFocusLayer = CALayer()
     /// Web `outline-dashed outline-1 outline-text-muted/50` for unsettled cards.
     private let unsettledOutlineLayer = CAShapeLayer()
@@ -53,12 +53,19 @@ final class EventCardView: NSView {
         unsettledOutlineLayer.isHidden = true
         layer?.addSublayer(unsettledOutlineLayer)
 
+        focusRingLayer.name = EventCardChromeLayerName.focusRing
         focusRingLayer.borderWidth = 2
         focusRingLayer.cornerRadius = 6
         focusRingLayer.backgroundColor = NSColor.clear.cgColor
         focusRingLayer.isHidden = true
         layer?.addSublayer(focusRingLayer)
 
+        edgeGutterLayer.name = EventCardChromeLayerName.edgeGutter
+        edgeGutterLayer.backgroundColor = NSColor.clear.cgColor
+        edgeGutterLayer.isHidden = true
+        layer?.addSublayer(edgeGutterLayer)
+
+        edgeFocusLayer.name = EventCardChromeLayerName.edgeFocus
         edgeFocusLayer.backgroundColor = NSColor.clear.cgColor
         edgeFocusLayer.isHidden = true
         layer?.addSublayer(edgeFocusLayer)
@@ -156,16 +163,21 @@ final class EventCardView: NSView {
         accentLayer.backgroundColor = EventCardColorParser.nsColor(hex: card.calendarAccentColorHex)?.cgColor
         accentLayer.isHidden = card.calendarAccentColorHex == nil
 
-        let indicator = eventFocusIndicatorColor(
+        let fillHex = card.fillColorHex ?? defaultEventFillHex(for: theme)
+        let indicatorHex = GridEventFocusChrome.resolveIndicatorHex(
             focusHex: card.focusColorHex,
-            fill: fill,
-            theme: theme
+            fillHex: fillHex,
+            theme: theme.compassThemeName
         )
+        let indicator = EventCardColorParser.nsColor(hex: indicatorHex) ?? contrastText(on: fill, theme: theme)
         focusRingLayer.borderColor = indicator.cgColor
         activeFocusedEdge = isFocused ? focusedEdge : nil
         let showEdge = activeFocusedEdge != nil
         let showWholeCardRing = (isFocused || isSidebarEditing) && !showEdge
         focusRingLayer.isHidden = !showWholeCardRing
+        let paper = NSColor(theme.backgroundColor)
+        edgeGutterLayer.isHidden = !showEdge
+        edgeGutterLayer.backgroundColor = paper.cgColor
         edgeFocusLayer.isHidden = !showEdge
         edgeFocusLayer.backgroundColor = indicator.cgColor
         unsettledOutlineLayer.strokeColor = unsettledOutlineColor(theme).cgColor
@@ -231,12 +243,19 @@ final class EventCardView: NSView {
             cornerWidth: 4.375, cornerHeight: 4.375, transform: nil)
         focusRingLayer.frame = bounds.insetBy(dx: -4, dy: -4)
         if !edgeFocusLayer.isHidden, let activeFocusedEdge {
-            let indicatorHeight: CGFloat = 3
-            let y: CGFloat = switch activeFocusedEdge {
-            case .startDate: 0
-            case .endDate: max(0, bounds.height - indicatorHeight)
+            let barHeight: CGFloat = 3
+            let gutterHeight: CGFloat = 1
+            switch activeFocusedEdge {
+            case .startDate:
+                edgeGutterLayer.frame = CGRect(x: 0, y: -gutterHeight, width: bounds.width, height: gutterHeight)
+                edgeFocusLayer.frame = CGRect(
+                    x: 0, y: -(gutterHeight + barHeight), width: bounds.width, height: barHeight)
+            case .endDate:
+                edgeGutterLayer.frame = CGRect(
+                    x: 0, y: bounds.height, width: bounds.width, height: gutterHeight)
+                edgeFocusLayer.frame = CGRect(
+                    x: 0, y: bounds.height + gutterHeight, width: bounds.width, height: barHeight)
             }
-            edgeFocusLayer.frame = CGRect(x: 0, y: y, width: bounds.width, height: indicatorHeight)
         }
         // A CSS outline sits just outside the border box.
         let outlineRect = bounds.insetBy(dx: -0.5, dy: -0.5)
@@ -395,13 +414,15 @@ private final class FocusedEventAccessibilityAnchorView: NSView {
 }
 
 /// Web `EVENT_BASE_COLOR`: the fill for events with no color of their own.
-private func defaultEventFill(for theme: NativeWebTheme) -> NSColor {
+private func defaultEventFillHex(for theme: NativeWebTheme) -> String {
     switch theme {
-    case .lightBeach:
-        EventCardColorParser.nsColor(hex: "#454442") ?? .darkGray
-    case .darkAbyss:
-        EventCardColorParser.nsColor(hex: "#82A0B2") ?? .gray
+    case .lightBeach: "#454442"
+    case .darkAbyss: "#82A0B2"
     }
+}
+
+private func defaultEventFill(for theme: NativeWebTheme) -> NSColor {
+    EventCardColorParser.nsColor(hex: defaultEventFillHex(for: theme)) ?? .darkGray
 }
 
 /// Web `theme.getContrastText`: whichever of the theme's text and on-accent
@@ -419,34 +440,6 @@ private func contrastText(on fill: NSColor, theme: NativeWebTheme) -> NSColor {
         return (max(textLuminance, fillLuminance) + 0.05) / (min(textLuminance, fillLuminance) + 0.05)
     }
     return contrast(candidates[0]) >= contrast(candidates[1]) ? candidates[0] : candidates[1]
-}
-
-private let minEventFocusIndicatorContrast: CGFloat = 3
-
-/// Web `resolveEventFocusIndicatorColor`: calendar color when it reads on the
-/// fill, otherwise the same contrast token used for title/time text.
-private func eventFocusIndicatorColor(
-    focusHex: String?,
-    fill: NSColor,
-    theme: NativeWebTheme
-) -> NSColor {
-    let calendar = focusHex.flatMap { EventCardColorParser.nsColor(hex: $0) }
-    let paper = NSColor(theme.backgroundColor)
-    let resolvedCalendar: NSColor? = calendar.flatMap { color in
-        contrastRatio(color, paper) >= minEventFocusIndicatorContrast ? color : nil
-    }
-    if let resolvedCalendar,
-        contrastRatio(resolvedCalendar, fill) >= minEventFocusIndicatorContrast
-    {
-        return resolvedCalendar
-    }
-    return contrastText(on: fill, theme: theme)
-}
-
-private func contrastRatio(_ a: NSColor, _ b: NSColor) -> CGFloat {
-    let aLum = relativeLuminance(a)
-    let bLum = relativeLuminance(b)
-    return (max(aLum, bLum) + 0.05) / (min(aLum, bLum) + 0.05)
 }
 
 private func unsettledOutlineColor(_ theme: NativeWebTheme) -> NSColor {

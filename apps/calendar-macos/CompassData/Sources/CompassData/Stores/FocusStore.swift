@@ -5,11 +5,6 @@
 import CompassKit
 import Foundation
 
-public enum EventEdge: String, Sendable, Hashable {
-    case startDate
-    case endDate
-}
-
 public struct PageJumpTarget: Sendable, Hashable, Identifiable {
     public var id: String
     public var digit: String
