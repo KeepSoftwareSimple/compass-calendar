@@ -6,7 +6,7 @@ import XCTest
 @MainActor
 final class EventCardFocusChromeTests: XCTestCase {
     func testSidebarRingUsesContrastOnDefaultFillWithCalendarGray() throws {
-        let scenario = GridLayoutSnapshotFixtures.parityScenario(
+        var scenario = GridLayoutSnapshotFixtures.parityScenario(
             layoutMode: .week, visibleDateKeys: ["2026-05-20"])
         scenario.timedEvents[0].colorHex = nil
         let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
