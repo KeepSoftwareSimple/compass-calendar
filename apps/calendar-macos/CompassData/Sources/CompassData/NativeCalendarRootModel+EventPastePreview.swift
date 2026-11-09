@@ -23,8 +23,8 @@ extension NativeCalendarRootModel {
 
         pastePreviewStore.activate()
         draftStore.startGridDraft(activity: .pastePlace, draft: placed)
-        focusStore.focusedEventId = placed.clientId.rawValue
         rebuildPresentation()
+        focusDraftCard()
         let text = EventClipboardText.format(event: source)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
