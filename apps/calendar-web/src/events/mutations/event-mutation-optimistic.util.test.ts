@@ -73,6 +73,34 @@ describe("event-mutation-optimistic.util", () => {
     expect(merged.content).toMatchObject({ title: "Renamed" });
   });
 
+  test("mergeReplaceInput keeps colorHex when replace sends color null on a hex-only event", () => {
+    const existing = createMockEvent({
+      content: {
+        kind: "details",
+        title: "Devotion",
+        description: "",
+        colorHex: "#E67C73",
+      },
+    });
+    const merged = mergeReplaceInput(existing, {
+      content: {
+        kind: "details",
+        title: "Devotion",
+        description: "",
+        location: "",
+        color: null,
+      },
+      schedule: existing.schedule,
+      recurrence: { kind: "preserve" },
+      scope: "this",
+    });
+    expect(merged.content).toMatchObject({
+      kind: "details",
+      colorHex: "#E67C73",
+    });
+    expect(merged.content).not.toHaveProperty("color");
+  });
+
   test("seriesWriteKey collapses scope-all edits onto the root series id", () => {
     const seriesId = EventIdSchema.parse("bbbbbbbbbbbbbbbbbbbbbbbb");
     const occurrence = createMockEvent({

@@ -145,10 +145,21 @@ public enum GridEventDraftMapping {
                 responseStatus: existing?.attendees?.first { $0.email == attendee.email }?.responseStatus ?? .needsAction
             )
         }
+        var merged = EditableContentColorMerge.Fields(
+            color: nil,
+            colorHex: nil
+        )
+        merged = EditableContentColorMerge.mergeFromDraftSlot(
+            existing: existing.map {
+                EditableContentColorMerge.Fields(color: $0.color, colorHex: $0.colorHex)
+            },
+            draftSlot: draft.color,
+            merged: merged
+        )
         return EventContent_DetailsPayload(
             attendees: attendees,
-            color: draftColorEnum(draft),
-            colorHex: draft.color == nil ? existing?.colorHex : nil,
+            color: merged.color,
+            colorHex: merged.colorHex,
             conference: existing?.conference,
             description: draft.description,
             kind: "details",
