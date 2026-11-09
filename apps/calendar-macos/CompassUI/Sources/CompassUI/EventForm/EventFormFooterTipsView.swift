@@ -23,13 +23,7 @@ struct EventFormFooterTipsView: View {
                     hintRow(secondarySegments)
                 }
                 if tiered.hasSecondary {
-                    Button(showMoreHints ? "Less" : "More") {
-                        showMoreHints.toggle()
-                    }
-                    .buttonStyle(.plain)
-                    .font(.rubik(11))
-                    .foregroundStyle(theme.textMutedColor)
-                    .underline(color: theme.textMutedColor.opacity(0.5))
+                    disclosureControl
                 }
             }
             .font(.rubik(11))
@@ -41,6 +35,29 @@ struct EventFormFooterTipsView: View {
                 showMoreHints = false
             }
         }
+    }
+
+    private var disclosureControl: some View {
+        Button {
+            showMoreHints.toggle()
+        } label: {
+            Text(showMoreHints ? "Less" : "More")
+                .font(.rubik(11))
+                .foregroundStyle(theme.textMutedColor)
+                .underline(color: theme.textMutedColor.opacity(0.5))
+        }
+        .buttonStyle(.plain)
+        .focusable()
+        .accessibilityLabel(showMoreHints ? "Less" : "More")
+        .accessibilityValue(showMoreHints ? "Expanded" : "Collapsed")
+        .accessibilityHint(
+            showMoreHints
+                ? "Hides additional keyboard shortcuts"
+                : "Shows additional keyboard shortcuts")
+        .accessibilityIdentifier(
+            showMoreHints
+                ? "compass-event-form-footer-hints-less"
+                : "compass-event-form-footer-hints-more")
     }
 
     private var primarySegments: [HintSegment] {
