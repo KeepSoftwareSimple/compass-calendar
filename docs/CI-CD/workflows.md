@@ -46,8 +46,8 @@ Compass Desktop lives in `apps/calendar-macos`. Product context:
 
 Source: [`.github/workflows/test-macos.yml`](../../.github/workflows/test-macos.yml)
 
-- **Triggers:** pull requests and merge groups to `main`; pushes to `main`
-  that touch `apps/calendar-macos/**` or the workflow file.
+- **Triggers:** pull requests and merge groups to `main`; manual
+  `workflow_dispatch` (`strict_verify`). No push-to-`main` run.
 - **Runner:** `macos-latest`.
 - **Jobs:** `swift-packages` (`swift test` on CompassKit and CompassData,
   cached, no XcodeGen); `build` (`brew install xcodegen`, `xcodegen generate`,
