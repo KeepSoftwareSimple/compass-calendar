@@ -675,7 +675,7 @@
         "apps/calendar-macos/CompassNativeTests/NativeGridKeyboardRouterEventJumpTests.swift",
         "apps/calendar-macos/CompassData/Tests/CompassDataTests/NativeCalendarRootModelEventJumpTests.swift"
       ],
-      "status": "unverified",
+      "status": "missing",
       "evidence": "Linux agent: router regression compiles; macOS CI required for XCTest proof. Fix: register focus-shift-hold on NativeGridKeyboardRouter dispatcher.",
       "reason": "focusShiftHold was omitted from handlerIds so bare f never reached activateEventJumpMode despite model/store parity.",
       "review": "2026-11-08 cursor/mac-f-preview-audit-afc2: web e2e tap-f semantics audited; native wiring defect confirmed in source."

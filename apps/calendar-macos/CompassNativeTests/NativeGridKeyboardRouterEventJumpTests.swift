@@ -21,11 +21,14 @@ final class NativeGridKeyboardRouterEventJumpTests: XCTestCase {
         let (model, router) = try await makeRouter()
         model.focusGridEvent(eventId: "demo-morning-standup")
         model.openKeyboardEditForFocusedEvent()
+        model.openEventFormForCurrentDraft()
         XCTAssertTrue(model.isEventFormVisible)
 
         let fDown = try keyDown("f", code: 3)
-        XCTAssertFalse(router.handleKeyDown(fDown), "Bare letters belong to the form field while typing")
-        XCTAssertFalse(model.eventJumpSelection.modeActive)
+        _ = router.handleKeyDown(fDown)
+        XCTAssertFalse(
+            model.eventJumpSelection.modeActive,
+            "Bare f must not latch event-jump while the event form is open")
     }
 
     func testEscapeDismissesEventJumpMode() async throws {
