@@ -797,6 +797,7 @@ public final class NativeCalendarRootModel {
             scenario: scenario,
             trackWidth: contentTrackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
+            focusedEdge: focusStore.edge,
             sidebarEditingEventId: sidebarEditingGridEventId(),
             eventJumpHints: eventJumpHintLabels,
             quickTimeSlotHints: quickTimeSlotHintLabels,

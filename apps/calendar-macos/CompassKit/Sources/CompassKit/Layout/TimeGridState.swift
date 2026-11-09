@@ -6,6 +6,8 @@ public struct TimeGridState: Sendable {
     public var scenario: GridLayoutScenario
     public var trackWidth: CGFloat
     public var focusedEventId: String?
+    /// Start/end edge focus for the focused grid card (web `edge-focus.store`).
+    public var focusedEdge: EventEdge?
     /// Grid card whose event is open in the sidebar form (keyboard focus may be elsewhere).
     public var sidebarEditingEventId: String?
     public var eventJumpHints: [EventJumpChipHint]
@@ -29,6 +31,7 @@ public struct TimeGridState: Sendable {
         scenario: GridLayoutScenario,
         trackWidth: CGFloat = 1010,
         focusedEventId: String? = nil,
+        focusedEdge: EventEdge? = nil,
         sidebarEditingEventId: String? = nil,
         eventJumpHints: [EventJumpChipHint] = [],
         quickTimeSlotHints: [QuickTimeSlotHint] = [],
@@ -47,6 +50,7 @@ public struct TimeGridState: Sendable {
         self.scenario = scenario
         self.trackWidth = trackWidth
         self.focusedEventId = focusedEventId
+        self.focusedEdge = focusedEdge
         self.sidebarEditingEventId = sidebarEditingEventId
         self.eventJumpHints = eventJumpHints
         self.quickTimeSlotHints = quickTimeSlotHints

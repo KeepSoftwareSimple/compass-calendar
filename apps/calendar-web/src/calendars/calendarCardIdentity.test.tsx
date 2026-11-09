@@ -13,10 +13,12 @@ import {
   resolveCalendarFocusColor,
   useCalendarLookup,
 } from "@web/calendars/useCalendarLookup";
+import { getEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { assembleGridEvent } from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
+import { resolveEventFocusIndicatorColor } from "@web/grid/components/calendar-accent.util";
 import { TimedEventCard } from "@web/grid/components/TimedEventCard";
 import { describe, expect, it } from "bun:test";
 
@@ -219,7 +221,9 @@ describe("resolveCalendarFocusColor", () => {
     ]);
 
     const card = screen.getByRole("button", { name: /Team sync/ });
-    expect(card.style.getPropertyValue("--event-focus-color")).toBe("#616161");
+    expect(card.style.getPropertyValue("--event-focus-color")).toBe(
+      resolveEventFocusIndicatorColor("#616161", getEventPalette().base),
+    );
     expect(card.className).not.toContain("ring-accent");
   });
 });

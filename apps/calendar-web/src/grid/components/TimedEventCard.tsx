@@ -19,8 +19,9 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
   eventCardFill,
-  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+  gridEventSidebarEditingBoxShadow,
   joinGridEventBoxShadow,
+  resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
 import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
 import {
@@ -165,21 +166,21 @@ const TimedEventCardBase = (
   // Ring color follows --text so it contrasts with the page in both themes;
   // a fixed white ring vanished on the light theme's paper background. Pair
   // with a background halo so the ring stays visible on dark default fills.
+  const contentColor = theme.getContrastText(fill.fillStops);
+  const focusIndicatorColor = resolveEventFocusIndicatorColor(
+    focusColor,
+    fill.fillStops,
+  );
   const { focusedEdge, focusColorCss, edgeFocusShadow } = useGridEventEdgeFocus(
     event._id,
     focusColor,
+    fill.fillStops,
     "vertical",
   );
 
-  // The fill is neutral and its lightness swings widely across states, so the
-  // text color is chosen per-state (whichever of dark/light reads better
-  // across every stop) and set on the content wrapper so the title and time
-  // label share it.
-  const contentColor = theme.getContrastText(fill.fillStops);
-
   const eventStyle = gridEventCardStyle({
     boxShadow: joinGridEventBoxShadow(
-      isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+      isSelected && gridEventSidebarEditingBoxShadow(focusIndicatorColor),
       boxShadow,
       edgeFocusShadow,
     ),

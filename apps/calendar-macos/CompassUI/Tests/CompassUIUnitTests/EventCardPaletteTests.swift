@@ -18,6 +18,50 @@ final class EventCardPaletteTests: XCTestCase {
         }
     }
 
+    func testDefaultFillUsesContrastIndicatorForSidebarEditingRing() throws {
+        var scenario = GridLayoutSnapshotFixtures.parityScenario(layoutMode: .week, visibleDateKeys: ["2026-05-20"])
+        scenario.timedEvents[0].colorHex = nil
+        let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
+        let card = try XCTUnwrap(snapshot.cards.first { $0.eventId == scenario.timedEvents[0].eventId })
+        let view = EventCardView(frame: .zero)
+        view.apply(card: card, theme: .lightBeach, isFocused: false, isSidebarEditing: true)
+        let ring = try XCTUnwrap(view.layer?.sublayers?.first { $0.borderWidth == 2 })
+        XCTAssertFalse(ring.isHidden)
+        let fill = try XCTUnwrap(EventCardColorParser.nsColor(hex: "#454442"))
+        let indicator = try XCTUnwrap(ring.borderColor.flatMap { NSColor(cgColor: $0) })
+        XCTAssertGreaterThanOrEqual(contrastRatio(indicator, fill), 3)
+    }
+
+    func testStartEdgeFocusRendersOnDefaultFill() throws {
+        let scenario = GridLayoutSnapshotFixtures.parityScenario(layoutMode: .week, visibleDateKeys: ["2026-05-20"])
+        let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
+        var card = try XCTUnwrap(snapshot.cards.first { $0.eventId == "overlap-a" })
+        card.fillColorHex = "#454442"
+        let view = EventCardView(frame: NSRect(x: 0, y: 0, width: 120, height: 80))
+        view.apply(card: card, theme: .lightBeach, isFocused: true, focusedEdge: .startDate)
+        let ring = try XCTUnwrap(view.layer?.sublayers?.first { $0.borderWidth == 2 })
+        XCTAssertTrue(ring.isHidden)
+        let edge = try XCTUnwrap(view.layer?.sublayers?.first { $0 !== ring && $0.backgroundColor != nil && !$0.isHidden && $0.frame.height == 3 })
+        let fill = try XCTUnwrap(EventCardColorParser.nsColor(hex: "#454442"))
+        let indicator = try XCTUnwrap(edge.backgroundColor.flatMap { NSColor(cgColor: $0) })
+        XCTAssertGreaterThanOrEqual(contrastRatio(indicator, fill), 3)
+    }
+
+    private func contrastRatio(_ a: NSColor, _ b: NSColor) -> CGFloat {
+        func lum(_ color: NSColor) -> CGFloat {
+            guard let rgb = color.usingColorSpace(.sRGB) else { return 0 }
+            func linear(_ channel: CGFloat) -> CGFloat {
+                channel <= 0.03928 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * linear(rgb.redComponent)
+                + 0.7152 * linear(rgb.greenComponent)
+                + 0.0722 * linear(rgb.blueComponent)
+        }
+        let aLum = lum(a)
+        let bLum = lum(b)
+        return (max(aLum, bLum) + 0.05) / (min(aLum, bLum) + 0.05)
+    }
+
     func testExplicitEventColorDoesNotReplaceCalendarAccent() throws {
         var scenario = GridLayoutSnapshotFixtures.parityScenario(layoutMode: .week, visibleDateKeys: ["2026-05-20"])
         scenario.timedEvents[0].colorHex = "#8e24aa"

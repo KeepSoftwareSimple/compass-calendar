@@ -725,11 +725,13 @@ public final class TimeGridView: NSView {
 
             let isFocused = state.focusedEventId == card.eventId
             let isSidebarEditing = state.sidebarEditingEventId == card.eventId
+            let focusedEdge = isFocused ? state.focusedEdge : nil
             view.apply(
                 card: card,
                 theme: theme,
                 isFocused: isFocused,
                 isSidebarEditing: isSidebarEditing,
+                focusedEdge: focusedEdge,
                 isUnsettled: state.unsettledEventIds.contains(card.eventId),
                 isPast: EventCardPastFill.isPast(card, state: state),
                 timeLabel: EventCardTimeLabel.text(for: card, state: state)

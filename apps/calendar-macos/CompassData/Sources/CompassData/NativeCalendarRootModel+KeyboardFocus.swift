@@ -501,6 +501,7 @@ extension NativeCalendarRootModel {
             scenario: scenario,
             trackWidth: timeGridState.trackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
+            focusedEdge: focusStore.edge,
             sidebarEditingEventId: sidebarEditingGridEventId(),
             eventJumpHints: eventJumpHintLabels,
             quickTimeSlotHints: quickTimeSlotHintLabels,
