@@ -9,7 +9,21 @@ final class NativeCalendarRootModelPendingRecurringColorTests: XCTestCase {
     func testKeyboardNudgeKeepsCoralFillOnDraftOverlayBeforeSave() async throws {
         EffectiveTimeZone.identifier = "UTC"
         let devotion = try googleSyncedCoralOccurrence()
-        let model = try await modelWithEvents([devotion])
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
+        try environment.localEventRepository.putMany([
+            LocalEventRecord(id: devotion.id, event: devotion, isDemo: false),
+        ])
+        try environment.calendarRepository.upsert(calendars: [
+            LocalCalendarSentinel.synthesizeCalendar(id: devotion.calendarId),
+        ])
+        let model = NativeCalendarRootModel(environment: environment)
+        await model.start()
+        model.loadedEvents = [devotion]
+        model.viewStore.setAnchorDate(CalendarWindowMath.sundayWeekViewStart(
+            containing: CompassDateParsing.parseInEffectiveTimeZone("2026-07-06T12:00:00.000Z")!
+        ))
+        model.updateContentTrackWidth(1200)
+        model.rebuildPresentation()
         model.focusEvent(eventId: devotion.id.rawValue)
         model.openKeyboardEditForFocusedEvent()
         XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: false, altKey: false))
@@ -30,8 +44,7 @@ final class NativeCalendarRootModelPendingRecurringColorTests: XCTestCase {
             repositorySource: .remote
         )
         try AuthRememberedState.markUserHasAuthenticated(repository: environment.userMetadataRepository)
-        let repository = EventRepository(database: environment.database)
-        try repository.upsert(events: [devotion], isLocal: false)
+        try EventRepository(database: environment.database).upsert(events: [devotion], isLocal: false)
         try environment.calendarRepository.upsert(calendars: [
             LocalCalendarSentinel.synthesizeCalendar(id: devotion.calendarId),
         ])
@@ -88,7 +101,7 @@ final class NativeCalendarRootModelPendingRecurringColorTests: XCTestCase {
             .fillColorHex
     }
 
-    private func modelWithEvents(_ events: [Event]) throws -> NativeCalendarRootModel {
+    private func modelWithEvents(_ events: [Event]) async throws -> NativeCalendarRootModel {
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let repository = EventRepository(database: environment.database)
         for event in events {
@@ -100,7 +113,7 @@ final class NativeCalendarRootModelPendingRecurringColorTests: XCTestCase {
             LocalCalendarSentinel.synthesizeCalendar(id: $0.calendarId)
         })
         let model = NativeCalendarRootModel(environment: environment)
-        _ = try await model.start()
+        await model.start()
         model.loadedEvents = events
         model.viewStore.setAnchorDate(CalendarWindowMath.sundayWeekViewStart(
             containing: CompassDateParsing.parseInEffectiveTimeZone("2026-07-06T12:00:00.000Z")!
