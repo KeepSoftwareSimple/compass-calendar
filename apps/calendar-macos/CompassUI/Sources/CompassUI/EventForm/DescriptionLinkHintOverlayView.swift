@@ -4,33 +4,81 @@ import AppKit
 final class DescriptionLinkHintOverlayView: NSView {
     weak var textView: DescriptionTextView?
     var hintsVisible = false {
-        didSet { needsLayout = true }
+        didSet {
+            laidOutFingerprint = nil
+            needsLayout = true
+        }
+    }
+    private var isLayingOutLinkHints = false
+    private var laidOutFingerprint: LayoutFingerprint?
+
+    /// Placement + geometry inputs for digit keycaps (not hint visibility).
+    private struct LayoutFingerprint: Equatable {
+        let linksPlacementKey: String
+        let overlayBoundsSize: NSSize
+        let textContainerWidth: CGFloat
+        let numberOfGlyphs: Int
+    }
+
+    func invalidateLayoutCache() {
+        laidOutFingerprint = nil
     }
 
     override var isFlipped: Bool { true }
 
     override func layout() {
         super.layout()
-        subviews.forEach { $0.removeFromSuperview() }
+        guard !isLayingOutLinkHints else { return }
         guard hintsVisible,
               let textView,
               textView.window != nil,
               textView.window === window,
               let layoutManager = textView.layoutManager,
               let textContainer = textView.textContainer
-        else { return }
+        else {
+            if !subviews.isEmpty {
+                subviews.forEach { $0.removeFromSuperview() }
+            }
+            laidOutFingerprint = nil
+            return
+        }
+
+        let linkEntries = textView.orderedLinkAttributeEntries()
+        guard !linkEntries.isEmpty else {
+            if !subviews.isEmpty {
+                subviews.forEach { $0.removeFromSuperview() }
+            }
+            laidOutFingerprint = nil
+            setAccessibilityIdentifier("")
+            return
+        }
+
+        let fingerprint = LayoutFingerprint(
+            linksPlacementKey: linkEntries.map { entry in
+                "\(entry.range.location):\(entry.range.length):\(entry.href)"
+            }.joined(separator: "\u{1e}"),
+            overlayBoundsSize: bounds.size,
+            textContainerWidth: textContainer.containerSize.width,
+            numberOfGlyphs: layoutManager.numberOfGlyphs
+        )
+        if fingerprint == laidOutFingerprint, subviews.count == linkEntries.count {
+            return
+        }
+
+        isLayingOutLinkHints = true
+        defer { isLayingOutLinkHints = false }
+
+        subviews.forEach { $0.removeFromSuperview() }
 
         var linkIndex = 0
-        let storage = textView.textStorage
-        let length = storage?.length ?? 0
-        guard length > 0 else { return }
-
-        storage?.enumerateAttribute(.link, in: NSRange(location: 0, length: length)) { _, range, _ in
-            guard linkIndex < 9 else { return }
+        for entry in linkEntries {
+            guard linkIndex < 9 else { break }
             let glyphRange = layoutManager.glyphRange(
-                forCharacterRange: range,
+                forCharacterRange: entry.range,
                 actualCharacterRange: nil
             )
+            guard glyphRange.length > 0 else { continue }
+            layoutManager.ensureLayout(forGlyphRange: glyphRange)
             let linkRect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
             let slotOrigin = textView.convert(
                 NSPoint(
@@ -52,6 +100,8 @@ final class DescriptionLinkHintOverlayView: NSView {
             addSubview(chip)
             linkIndex += 1
         }
+
+        laidOutFingerprint = fingerprint
         if hintsVisible, linkIndex > 0 {
             setAccessibilityIdentifier("compass-description-link-digit-hints")
         } else {

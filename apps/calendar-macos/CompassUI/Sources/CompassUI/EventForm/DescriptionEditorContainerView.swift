@@ -10,6 +10,7 @@ final class DescriptionEditorContainerView: NSView {
     private let toolbar = NSStackView()
     private var buttons: [NSButton] = []
     private let placeholderLabel = NSTextField(labelWithString: descriptionPlaceholder)
+    private var laidOutScrollContentWidth: CGFloat = -1
 
     override var isFlipped: Bool { true }
 
@@ -48,6 +49,8 @@ final class DescriptionEditorContainerView: NSView {
             self?.updateControls()
             self?.updateDescriptionPlaceholder()
         }
+        textView.setAccessibilityIdentifier("compass-event-form-description")
+        textView.setAccessibilityLabel("Description")
         placeholderLabel.isEditable = false
         placeholderLabel.isBordered = false
         placeholderLabel.drawsBackground = false
@@ -61,6 +64,8 @@ final class DescriptionEditorContainerView: NSView {
         addSubview(scrollView)
         addSubview(linkHintOverlay)
     }
+
+    var descriptionLinkDigitHintsVisible: Bool { linkHintOverlay.hintsVisible }
 
     func updateLinkHintOverlay(visible: Bool) {
         guard window != nil else {
@@ -87,6 +92,7 @@ final class DescriptionEditorContainerView: NSView {
     func syncLinkHintSlots(reserved: Bool) {
         guard textView.window != nil else { return }
         textView.syncLinkHintSlots(reserved: reserved)
+        linkHintOverlay.invalidateLayoutCache()
         if linkHintOverlay.hintsVisible {
             linkHintOverlay.needsLayout = true
         }
@@ -100,6 +106,19 @@ final class DescriptionEditorContainerView: NSView {
         toolbar.frame = NSRect(x: 0, y: 0, width: 108, height: 24)
         scrollView.frame = NSRect(x: 0, y: 28, width: bounds.width, height: max(0, bounds.height - 28))
         linkHintOverlay.frame = scrollView.frame
+
+        let scrollWidth = bounds.width
+        if abs(scrollWidth - laidOutScrollContentWidth) > 0.5 {
+            laidOutScrollContentWidth = scrollWidth
+            if let textContainer = textView.textContainer, let layoutManager = textView.layoutManager {
+                layoutManager.textContainerChangedGeometry(textContainer)
+            }
+            if linkHintOverlay.hintsVisible {
+                linkHintOverlay.invalidateLayoutCache()
+                linkHintOverlay.needsLayout = true
+            }
+        }
+
         layoutDescriptionPlaceholder()
     }
 
