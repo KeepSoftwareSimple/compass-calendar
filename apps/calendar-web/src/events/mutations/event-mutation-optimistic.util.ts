@@ -129,7 +129,12 @@ function mergeReplaceContent(
   if (replayInput.kind !== "details") return replayInput;
 
   const { color: incomingColor, ...detailsWithoutColor } = replayInput;
-  const merged = { ...existing, ...detailsWithoutColor };
+  const {
+    color: _existingColor,
+    colorHex: _existingColorHex,
+    ...existingDetails
+  } = existing;
+  const merged = { ...existingDetails, ...detailsWithoutColor };
   const withColor = mergeEditableContentColor(
     existing,
     { color: incomingColor },
