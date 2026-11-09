@@ -8,7 +8,7 @@ import {
   pressShortcut,
 } from "../utils/event-test-utils";
 
-test("Mod+C shows a paste preview ghost and Esc cancels without pasting", async ({
+test("Mod+C shows a paste placement outline and Esc cancels without pasting", async ({
   page,
 }) => {
   await prepareTimedCalendarPage(page);
@@ -22,16 +22,20 @@ test("Mod+C shows a paste preview ghost and Esc cancels without pasting", async 
   await eventButton.focus();
   await pressShortcut(page, "c", { ctrlKey: true });
 
-  await expect(page.locator("[data-event-paste-preview]")).toHaveCount(1);
+  await expect(
+    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
+  ).toHaveCount(1);
 
   await page.keyboard.press("Escape");
-  await expect(page.locator("[data-event-paste-preview]")).toHaveCount(0);
+  await expect(
+    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
+  ).toHaveCount(0);
   await expect
     .poll(async () => (await getSavedEventsByTitle(page, title)).length)
     .toBe(1);
 });
 
-test("Mod+V after Shift day column lands the duplicate on that day", async ({
+test("Mod+V after ArrowLeft lands the duplicate on the moved day", async ({
   page,
 }) => {
   await prepareTimedCalendarPage(page);
@@ -47,9 +51,10 @@ test("Mod+V after Shift day column lands the duplicate on that day", async ({
   const sourceDay = before.startDate.slice(0, 10);
 
   await pressShortcut(page, "c", { ctrlKey: true });
-  await expect(page.locator("[data-event-paste-preview]")).toHaveCount(1);
-  // Pinned clock is Friday 2026-04-24; Shift+W selects Wednesday 2026-04-22.
-  await pressShortcut(page, "w", { shiftKey: true });
+  await expect(
+    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
+  ).toHaveCount(1);
+  await page.keyboard.press("ArrowLeft");
   await pressShortcut(page, "v", { ctrlKey: true });
 
   await expect
@@ -75,10 +80,14 @@ test("Mod+V pastes a duplicate without opening the form", async ({ page }) => {
     .getByRole("button", { name: title });
   await eventButton.focus();
   await pressShortcut(page, "c", { ctrlKey: true });
-  await expect(page.locator("[data-event-paste-preview]")).toHaveCount(1);
+  await expect(
+    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
+  ).toHaveCount(1);
 
   await pressShortcut(page, "v", { ctrlKey: true });
-  await expect(page.locator("[data-event-paste-preview]")).toHaveCount(0);
+  await expect(
+    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
+  ).toHaveCount(0);
   await expect
     .poll(async () => (await getSavedEventsByTitle(page, title)).length)
     .toBe(2);

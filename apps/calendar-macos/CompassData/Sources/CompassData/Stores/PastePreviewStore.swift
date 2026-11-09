@@ -6,17 +6,14 @@ import Foundation
 @Observable
 public final class PastePreviewStore {
     public private(set) var isActive = false
-  public private(set) var ownsEventJump = false
 
     public init() {}
 
-    public func activate(ownsEventJump: Bool) {
+    public func activate() {
         isActive = true
-        self.ownsEventJump = ownsEventJump
     }
 
     public func deactivate() {
         isActive = false
-        ownsEventJump = false
     }
 }

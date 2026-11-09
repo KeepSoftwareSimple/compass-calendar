@@ -20,6 +20,7 @@ public enum DraftNudgeActivity: String, Sendable {
     case gridClick
     case keyboardEdit
     case keyboardPlace
+    case pastePlace
     case eventRightClick
 }
 
@@ -159,7 +160,7 @@ public enum DraftNudge {
 
     private static func canRepositionDraftByKeyboard(activity: DraftNudgeActivity?) -> Bool {
         switch activity {
-        case .createShortcut, .gridClick, .keyboardEdit, .keyboardPlace:
+        case .createShortcut, .gridClick, .keyboardEdit, .keyboardPlace, .pastePlace:
             true
         default:
             false

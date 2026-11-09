@@ -13,7 +13,11 @@ export type Activity_DraftEvent =
    * Shift+Arrow place-create: timed draft on the grid with the form closed so
    * the user can keep repositioning before opening details with Enter.
    */
-  | "keyboardPlace";
+  | "keyboardPlace"
+  /**
+   * Mod+C paste placement: outline on the grid, arrows reposition, Mod+V commits.
+   */
+  | "pastePlace";
 
 const OPENS_FORM_ON_START: ReadonlySet<Activity_DraftEvent> = new Set([
   "createShortcut",

@@ -600,7 +600,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     expect(state.gridDraft).toBeNull();
   });
 
-  it("enters paste preview and event jump when copying a focused event", () => {
+  it("enters paste placement with a form-closed outline when copying a focused event", () => {
     const button = addCalendarTarget();
     button.focus();
     renderShortcuts();
@@ -612,7 +612,14 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
 
     expect(useEventClipboardStore.getState().event?.id).toBe(editableEvent.id);
     expect(useEventPastePreviewStore.getState().isActive).toBe(true);
-    expect(useEventJumpStore.getState().isActive).toBe(true);
+    expect(useEventJumpStore.getState().isActive).toBe(false);
+    const { gridDraft, status } = useDraftStore.getState();
+    expect(status?.activity).toBe("pastePlace");
+    expect(status?.isFormOpen).toBe(false);
+    expect(gridDraft?.values.title).toBe("Editable event");
+    expect(dayjs(gridDraft!.values.schedule.start).format()).toBe(
+      dayjs("2026-05-20T10:00:00.000Z").format(),
+    );
   });
 
   it("cancels paste preview on Escape without clearing the in-app clipboard", () => {
@@ -632,7 +639,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     expect(useEventClipboardStore.getState().event?.id).toBe(editableEvent.id);
   });
 
-  it("pastes onto the jump-selected day while paste preview is active", () => {
+  it("pastes onto the arrow-moved day while paste placement is active", () => {
     const button = addCalendarTarget();
     button.focus();
     const { queryClient } = renderShortcuts();
@@ -641,7 +648,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
       keyDownInit: { ctrlKey: true },
       keyUpInit: { ctrlKey: true },
     });
-    eventJumpActions.setActiveDayKeys(["2026-05-22"], "Sunday selected");
+    pressKey("ArrowLeft");
 
     pressKey("v", {
       keyDownInit: { ctrlKey: true },
@@ -657,10 +664,10 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
         schedule: { kind: "timed"; start: string };
       };
     };
-    expect(input.schedule.start).toMatch(/^2026-05-22T09:00:00/);
+    expect(input.schedule.start).toMatch(/^2026-05-19T10:00:00/);
   });
 
-  it("copies a focused event with Mod+C and pastes a duplicate at the original time with Mod+V", () => {
+  it("copies a focused event with Mod+C and pastes a duplicate at the placement outline with Mod+V", () => {
     const button = addCalendarTarget();
     button.focus();
     const { queryClient } = renderShortcuts();
@@ -686,6 +693,10 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     };
     expect(input.calendarId).toBe(editableEvent.calendarId);
     expect(input.content.title).toBe("Editable event");
+    const { input: scheduleInput } = created!.state.variables as {
+      input: { schedule: { start: string } };
+    };
+    expect(scheduleInput.schedule.start).toMatch(/^2026-05-20T10:00:00/);
     expect(useDraftStore.getState().gridDraft).toBeNull();
   });
 
@@ -1924,6 +1935,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyDownInit: { ctrlKey: true },
       keyUpInit: { ctrlKey: true },
     });
+    pressKey("Escape");
     button.blur();
     act(() => {
       pressKey("R", shiftKey);
@@ -1961,6 +1973,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyDownInit: { ctrlKey: true },
       keyUpInit: { ctrlKey: true },
     });
+    pressKey("Escape");
     button.blur();
     pressKey("v", {
       keyDownInit: { ctrlKey: true },
@@ -1986,6 +1999,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyDownInit: { ctrlKey: true },
       keyUpInit: { ctrlKey: true },
     });
+    pressKey("Escape");
     button.blur();
     act(() => {
       pressKey("R", shiftKey);

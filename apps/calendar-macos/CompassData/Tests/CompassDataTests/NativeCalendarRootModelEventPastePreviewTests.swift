@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class NativeCalendarRootModelEventPastePreviewTests: XCTestCase {
-    func testCopyFocusedEventActivatesPastePreview() async throws {
+    func testCopyFocusedEventActivatesPastePlacementDraft() async throws {
         let fixture = try DemoSeedFixture.load()
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
@@ -20,6 +20,8 @@ final class NativeCalendarRootModelEventPastePreviewTests: XCTestCase {
 
         XCTAssertTrue(model.pastePreviewStore.isActive)
         XCTAssertNotNil(model.eventPastePreviewStatusText)
+        XCTAssertEqual(model.draftStore.status.activity, .pastePlace)
+        XCTAssertFalse(model.draftStore.status.isFormOpen)
         let overlay = try XCTUnwrap(model.timeGridState.scenario.draftOverlay)
         XCTAssertFalse(overlay.showsInlineTitleEditor)
     }
@@ -41,7 +43,7 @@ final class NativeCalendarRootModelEventPastePreviewTests: XCTestCase {
         XCTAssertNil(model.timeGridState.scenario.draftOverlay)
     }
 
-    func testPastePreviewOverlayIsReadOnlyAndShowsCoralSlotColor() async throws {
+    func testPastePlacementOverlayShowsCoralSlotColor() async throws {
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: try DemoSeedFixture.load())
         await model.start()
@@ -65,21 +67,15 @@ final class NativeCalendarRootModelEventPastePreviewTests: XCTestCase {
                 updatedAt: event.updatedAt
             )
         }
-        model.clipboardStore.copy(event)
-        model.pastePreviewStore.activate(ownsEventJump: false)
-        model.eventJumpSelection.selectDay(
-            key: CompassDateParsing.formatCalendarDay(EventOnTargetDay.startDay(for: event)),
-            announcement: nil,
-            buffer: ""
-        )
-        model.rebuildPresentation()
+        model.focusEvent(eventId: event.id.rawValue)
+        model.copyFocusedEvent()
 
         let overlay = try XCTUnwrap(model.timeGridState.scenario.draftOverlay)
         XCTAssertFalse(overlay.showsInlineTitleEditor)
         XCTAssertEqual(overlay.colorHex, EventColorSlotHex.hex(for: .coral))
     }
 
-    func testPasteMovesDuplicateToJumpSelectedDay() async throws {
+    func testPasteMovesDuplicateAfterArrowNudge() async throws {
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: try DemoSeedFixture.load())
         await model.start()
@@ -94,12 +90,7 @@ final class NativeCalendarRootModelEventPastePreviewTests: XCTestCase {
         }()
         model.focusEvent(eventId: event.id.rawValue)
         _ = model.copyFocusedEvent()
-        let targetDay = Calendar.current.date(byAdding: .day, value: 3, to: EventOnTargetDay.startDay(for: event))!
-        model.eventJumpSelection.selectDay(
-            key: CompassDateParsing.formatCalendarDay(targetDay),
-            announcement: nil,
-            buffer: ""
-        )
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowLeft", shiftKey: false, altKey: false))
         _ = model.pasteCopiedEvent()
 
         let deadline = Date().addingTimeInterval(3)
@@ -117,7 +108,9 @@ final class NativeCalendarRootModelEventPastePreviewTests: XCTestCase {
             return d.title == title
         }
         XCTAssertEqual(copies.count, 2)
-        XCTAssertTrue(copies.contains { Calendar.current.isDate(
-            EventOnTargetDay.startDay(for: $0), inSameDayAs: targetDay) })
+        let originalDay = EventOnTargetDay.startDay(for: event)
+        XCTAssertTrue(copies.contains {
+            !Calendar.current.isDate(EventOnTargetDay.startDay(for: $0), inSameDayAs: originalDay)
+        })
     }
 }

@@ -44,7 +44,7 @@ final class EventPastePreviewKeyboardTests: XCTestCase {
         window.close()
     }
 
-    func testPasteCreatesDuplicateAtJumpSelectedDay() async throws {
+    func testPasteCreatesDuplicateAfterArrowNudge() async throws {
         _ = NSApplication.shared
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: try DemoSeedFixture.load())
@@ -58,14 +58,14 @@ final class EventPastePreviewKeyboardTests: XCTestCase {
             guard case .details(let details) = event.content else { return "" }
             return details.title
         }()
+        let originalDay = EventOnTargetDay.startDay(for: event)
         model.focusEvent(eventId: event.id.rawValue)
         let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
         router.dispatcher.pushScope(.grid)
 
         XCTAssertTrue(router.handleKeyDown(try key("c", code: 8, modifiers: .command)))
-        let targetDay = Calendar.current.date(byAdding: .day, value: 2, to: EventOnTargetDay.startDay(for: event))!
-        let targetKey = CompassDateParsing.formatCalendarDay(targetDay)
-        model.eventJumpSelection.selectDay(key: targetKey, announcement: nil, buffer: "")
+        XCTAssertEqual(model.draftStore.status.activity, .pastePlace)
+        XCTAssertFalse(model.eventJumpSelection.isActive)
 
         let before = model.loadedEvents.filter {
             guard case .details(let d) = $0.content else { return false }
@@ -73,6 +73,7 @@ final class EventPastePreviewKeyboardTests: XCTestCase {
         }.count
         XCTAssertEqual(before, 1)
 
+        XCTAssertTrue(model.nudgeDraftOrPlace(key: "ArrowLeft", shiftKey: false, altKey: false))
         XCTAssertTrue(router.handleKeyDown(try key("v", code: 9, modifiers: .command)))
 
         let deadline = Date().addingTimeInterval(3)
@@ -90,9 +91,9 @@ final class EventPastePreviewKeyboardTests: XCTestCase {
             return d.title == sourceTitle
         }
         XCTAssertEqual(copies.count, 2)
-        let days = Set(copies.map { EventOnTargetDay.startDay(for: $0) })
-        XCTAssertEqual(days.count, 2)
-        XCTAssertTrue(days.contains(targetDay))
+        XCTAssertTrue(copies.contains {
+            !Calendar.current.isDate(EventOnTargetDay.startDay(for: $0), inSameDayAs: originalDay)
+        })
     }
 
     func testEscapeEndsPastePreviewFromKeyboard() async throws {

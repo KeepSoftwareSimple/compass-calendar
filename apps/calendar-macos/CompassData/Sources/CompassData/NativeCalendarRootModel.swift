@@ -784,8 +784,7 @@ public final class NativeCalendarRootModel {
             hiddenEventIds: hiddenIds,
             demoEventIds: demoIds
         )
-        scenario.draftOverlay =
-            draftOverlayForPresentation() ?? pastePreviewOverlayForPresentation()
+        scenario.draftOverlay = draftOverlayForPresentation()
         scenario.pinnedDayColumnCalendarIds = pinnedDayColumnCalendarIds()
         scenario.defaultTargetCalendarId = defaultTargetCalendarId()?.rawValue
         let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil

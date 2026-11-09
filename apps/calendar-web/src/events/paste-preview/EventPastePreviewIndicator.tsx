@@ -1,13 +1,10 @@
 import { type FC } from "react";
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
-import { KEYMAP } from "@core/shortcuts/keymap";
 import { ShortcutTipParts } from "@web/shortcuts/tips/ShortcutTipParts";
 import { type ShortcutTipPart } from "@web/shortcuts/tips/shortcut-tips.data";
 
 export const EVENT_PASTE_PREVIEW_HINT_PARTS: readonly ShortcutTipPart[] = [
-  "Copied · ",
-  { key: KEYMAP.eventJump.bareLetter },
-  " move day · ",
+  "Arrows move · ",
   { keys: [...APP_SHORTCUT_BINDINGS.editPaste.keycaps] },
   " paste · ",
   { key: "Esc" },
@@ -15,8 +12,7 @@ export const EVENT_PASTE_PREVIEW_HINT_PARTS: readonly ShortcutTipPart[] = [
 ];
 
 /**
- * Sidebar hint while an event is on the in-app clipboard and the paste preview
- * is showing on the grid.
+ * Sidebar hint while a copied event's paste placement outline is on the grid.
  */
 export const EventPastePreviewIndicator: FC = () => (
   <span

@@ -8,22 +8,22 @@ extension NativeCalendarRootModel {
     public var eventPastePreviewStatusText: String? {
         guard pastePreviewStore.isActive else { return nil }
         let paste = shortcutRegistry.entries.first { $0.id == .editPaste }?.displayKeycaps.joined(separator: "")
-        return "Copied · f move day · \(paste ?? "⌘V") paste · Esc cancel"
+        return "Arrows move · \(paste ?? "⌘V") paste · Esc cancel"
     }
 
-    func beginEventPastePreview(from source: Event, targetDay: Date) {
+    func beginEventPastePreview(from source: Event) {
         guard draftStore.gridDraft == nil, !isEventFormVisible else { return }
-        let ownsJump = !(eventJumpSelection.modeActive || eventJumpSelection.isActive)
-        pastePreviewStore.activate(ownsEventJump: ownsJump)
-        if ownsJump {
-            activateEventJumpMode()
-        }
-        let key = CompassDateParsing.formatCalendarDay(targetDay)
-        eventJumpSelection.selectDay(
-            key: key,
-            announcement: "Copied. Choose where to paste.",
-            buffer: "")
-        refreshEventJumpPresentation()
+        guard let draft = GridEventDraftFromEvent.duplicateDraft(from: source, calendars: calendars),
+              let schedule = Self.initialPasteSchedule(from: source)
+        else { return }
+
+        var placed = draft
+        placed.schedule = schedule
+        placed.clientId = GridEventDraftFactory.makeClientEventId()
+
+        pastePreviewStore.activate()
+        draftStore.startGridDraft(activity: .pastePlace, draft: placed)
+        focusStore.focusedEventId = placed.clientId.rawValue
         rebuildPresentation()
         let text = EventClipboardText.format(event: source)
         NSPasteboard.general.clearContents()
@@ -32,37 +32,31 @@ extension NativeCalendarRootModel {
 
     func endEventPastePreview() {
         guard pastePreviewStore.isActive else { return }
-        let ownsJump = pastePreviewStore.ownsEventJump
         pastePreviewStore.deactivate()
-        if ownsJump {
-            clearEventJumpSelection()
-            refreshEventJumpPresentation()
+        if draftStore.status.activity == .pastePlace {
+            draftStore.discard()
         }
         clearPointerDraftIntent()
         rebuildPresentation()
     }
 
-    func pastePreviewOverlayForPresentation() -> GridLayoutDraftOverlay? {
-        guard pastePreviewStore.isActive,
-              draftStore.gridDraft == nil,
-              let source = clipboardStore.event
-        else { return nil }
-
-        let targetDay = draftTargetDay()
-        let moved = EventOnTargetDay.moved(source, to: targetDay)
-        guard let draft = GridEventDraftFromEvent.duplicateDraft(from: moved, calendars: calendars)
-        else { return nil }
-
-        return GridLayoutDraftOverlay(
-            eventId: "paste-preview-\(draft.clientId.rawValue)",
-            schedule: draft.schedule,
-            title: draft.title,
-            calendarId: draft.calendarId?.rawValue,
-            colorHex: GridEventDraftMapping.presentationColorHex(
-                draft: draft,
-                sourceColorHex: Self.detailsColorHex(from: moved)
-            ),
-            showsInlineTitleEditor: false
-        )
+    static func initialPasteSchedule(from source: Event) -> DraftSchedule? {
+        switch source.schedule {
+        case .timed(let timed):
+            guard let start = CompassDateParsing.parseInEffectiveTimeZone(timed.start.rawValue),
+                  let end = CompassDateParsing.parseInEffectiveTimeZone(timed.end.rawValue)
+            else { return nil }
+            let duration = end.timeIntervalSince(start)
+            let nextStart = end
+            return DraftSchedule(start: nextStart, end: nextStart.addingTimeInterval(duration), kind: .timed)
+        case .allDay(let allDay):
+            guard let start = CompassDateParsing.calendarDateInEffectiveTimeZone(allDay.start),
+                  let end = CompassDateParsing.calendarDateInEffectiveTimeZone(allDay.end)
+            else { return nil }
+            let span = max(1, Calendar.current.dateComponents([.day], from: start, to: end).day ?? 1)
+            let nextStart = end
+            let nextEnd = Calendar.current.date(byAdding: .day, value: span, to: nextStart) ?? nextStart
+            return DraftSchedule(start: nextStart, end: nextEnd, kind: .allDay)
+        }
     }
 }

@@ -10,16 +10,15 @@ describe("event-paste-preview.store", () => {
     useEventPastePreviewStore.setState(initialEventPastePreviewState, true);
   });
 
-  it("activates and records whether jump mode was already on", () => {
-    eventPastePreviewActions.activate(true);
+  it("activates paste placement mode", () => {
+    eventPastePreviewActions.activate();
     expect(useEventPastePreviewStore.getState()).toMatchObject({
       isActive: true,
-      ownsEventJump: true,
     });
   });
 
   it("deactivates back to the initial state", () => {
-    eventPastePreviewActions.activate(false);
+    eventPastePreviewActions.activate();
     eventPastePreviewActions.deactivate();
     expect(useEventPastePreviewStore.getState()).toEqual(
       initialEventPastePreviewState,

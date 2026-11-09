@@ -1,7 +1,7 @@
 import CompassData
 import SwiftUI
 
-/// Web `EventPastePreviewIndicator`: copy/paste target hints while the ghost preview is showing.
+/// Web `EventPastePreviewIndicator`: hints while a paste placement outline is active.
 struct EventPastePreviewStatusLine: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable var model: NativeCalendarRootModel

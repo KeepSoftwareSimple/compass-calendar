@@ -1,54 +1,50 @@
-import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
+import { type Calendar } from "@core/types/calendar.contracts";
 import { type Event } from "@core/types/event.contracts";
-import { type Dayjs } from "@core/util/date/dayjs";
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";
+import { focusCalendarEventElement } from "@web/common/utils/event/event.util";
 import { formatEventClipboardText } from "@web/events/event-clipboard-text.util";
-import { eventStartDay } from "@web/events/mutations/event-on-target-day";
-import { isEventFormOpen, useDraftStore } from "@web/events/stores/draft.store";
+import { getGridDraftId } from "@web/events/grid-event-draft.adapter";
+import { duplicateDraftForPastePlacement } from "@web/events/paste-preview/paste-placement.util";
+import {
+  draftActions,
+  isEventFormOpen,
+  useDraftStore,
+} from "@web/events/stores/draft.store";
 import {
   eventPastePreviewActions,
   useEventPastePreviewStore,
 } from "@web/events/stores/event-paste-preview.store";
-import {
-  eventJumpActions,
-  isEventJumpActive,
-} from "@web/shortcuts/shift-hint/event-jump.store";
 
 export function beginEventPastePreview(
   sourceEvent: Event,
-  targetDay: Dayjs,
+  calendars: Calendar[],
 ): void {
-  if (isEventFormOpen() || useDraftStore.getState().gridDraft) return;
+  if (isEventFormOpen()) return;
 
-  const targetKey = targetDay.format(YEAR_MONTH_DAY_FORMAT);
-  const ownsEventJump = !isEventJumpActive();
-  eventPastePreviewActions.activate(ownsEventJump);
-
-  if (ownsEventJump) {
-    eventJumpActions.setActive(true);
+  const { gridDraft, status } = useDraftStore.getState();
+  if (gridDraft && status?.activity !== "pastePlace") return;
+  if (status?.activity === "pastePlace") {
+    draftActions.discard();
+    eventPastePreviewActions.deactivate();
   }
-  eventJumpActions.setActiveDayKeys(
-    [targetKey],
-    "Copied. Choose where to paste.",
-  );
+
+  const placement = duplicateDraftForPastePlacement(sourceEvent, calendars);
+  if (!placement) return;
+
+  eventPastePreviewActions.activate();
+  draftActions.startGridDraft({ activity: "pastePlace", draft: placement });
   void copyText(formatEventClipboardText(sourceEvent));
+  const draftId = getGridDraftId(placement);
+  if (draftId) focusCalendarEventElement(draftId);
 }
 
 export function endEventPastePreview(): void {
-  const { isActive, ownsEventJump } = useEventPastePreviewStore.getState();
+  const { isActive } = useEventPastePreviewStore.getState();
   if (!isActive) return;
 
-  eventPastePreviewActions.deactivate();
-  if (ownsEventJump && isEventJumpActive()) {
-    eventJumpActions.setActive(false);
+  const { status } = useDraftStore.getState();
+  if (status?.activity === "pastePlace") {
+    draftActions.discard();
   }
-  eventJumpActions.setPointerDraftIntent(null);
-}
-
-export function pastePreviewTargetDay(
-  sourceEvent: Event,
-  resolveTargetDay: (sourceDay: Dayjs) => Dayjs,
-): Dayjs {
-  const sourceDay = eventStartDay(sourceEvent);
-  return resolveTargetDay(sourceDay).startOf("day");
+  eventPastePreviewActions.deactivate();
 }
