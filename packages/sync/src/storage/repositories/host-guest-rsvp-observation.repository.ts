@@ -24,6 +24,10 @@ export type HostGuestRsvpObservationInsert = {
   firstObservedAt: Date;
 };
 
+/** Claimed or unclaimed rows expire this long after first observed. */
+export const HOST_GUEST_RSVP_OBSERVATION_RETENTION_MS =
+  90 * 24 * 60 * 60 * 1000;
+
 export class HostGuestRsvpObservationRepository {
   private readonly collection: Collection<HostGuestRsvpObservationRecord>;
 
@@ -41,6 +45,10 @@ export class HostGuestRsvpObservationRepository {
     const ops: AnyBulkWriteOperation<HostGuestRsvpObservationRecord>[] = [];
     for (const row of inserts) {
       const { reply } = row;
+      const expiresAt = new Date(
+        row.firstObservedAt.getTime() +
+          HOST_GUEST_RSVP_OBSERVATION_RETENTION_MS,
+      );
       ops.push({
         updateOne: {
           filter: {
@@ -61,6 +69,7 @@ export class HostGuestRsvpObservationRepository {
               responseStatus: reply.status,
               slotStart: new Date(reply.slotStart),
               firstObservedAt: row.firstObservedAt,
+              expiresAt,
             },
           },
           upsert: true,

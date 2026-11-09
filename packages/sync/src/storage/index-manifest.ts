@@ -333,6 +333,11 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
       },
       options: { unique: true },
     },
+    {
+      name: "ttl_expires_at",
+      key: { expiresAt: 1 },
+      options: { expireAfterSeconds: 0 },
+    },
   ],
   [SYNC_COLLECTIONS.invalidations]: [
     // Keyset resume for GET /internal/changes: filter by owner, page by _id.

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { type PropsWithChildren } from "react";
 import {
   type BookingGuestRsvpClaimResponse,
@@ -7,6 +7,7 @@ import {
 } from "@core/types/booking.contracts";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import { createFakeServerMessageBus } from "@web/__tests__/utils/sse-message-bus.test.util";
 import * as realBookingApi from "@web/api/booking.api";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import {
@@ -18,6 +19,7 @@ import {
   useGuestRsvpNotice,
 } from "@web/booking/useGuestRsvpNotice";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
+import * as realSseClient from "@web/sse/client/sse.client";
 import {
   afterEach,
   beforeEach,
@@ -27,6 +29,12 @@ import {
   mock,
   setSystemTime,
 } from "bun:test";
+
+const sseBus = createFakeServerMessageBus();
+
+mockModuleForFile("@web/sse/client/sse.client", realSseClient, {
+  onServerMessage: sseBus.onServerMessage,
+});
 
 const mockClaimGuestRsvpReplies = mock(
   async (): Promise<BookingGuestRsvpClaimResponse> => ({
@@ -83,6 +91,7 @@ describe("useGuestRsvpNotice", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
+    sseBus.clear();
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -150,6 +159,41 @@ describe("useGuestRsvpNotice", () => {
     renderHook(() => useGuestRsvpNotice(), { wrapper });
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalled();
+    });
+  });
+
+  it("claims on eventsChanged and respects the SSE floor", async () => {
+    renderHook(() => useGuestRsvpNotice(), { wrapper });
+    await waitFor(() => {
+      expect(mockClaimGuestRsvpReplies).toHaveBeenCalledTimes(1);
+    });
+
+    const eventsChanged = () =>
+      sseBus.emit({
+        type: "eventsChanged",
+        calendarId: "000000000000000000000000",
+        eventIds: [],
+        reason: "updated",
+      } as never);
+
+    act(() => {
+      eventsChanged();
+    });
+    await waitFor(() => {
+      expect(mockClaimGuestRsvpReplies).toHaveBeenCalledTimes(2);
+    });
+
+    act(() => {
+      eventsChanged();
+    });
+    expect(mockClaimGuestRsvpReplies).toHaveBeenCalledTimes(2);
+
+    setSystemTime(new Date("2026-09-09T12:00:11.000Z"));
+    act(() => {
+      eventsChanged();
+    });
+    await waitFor(() => {
+      expect(mockClaimGuestRsvpReplies).toHaveBeenCalledTimes(3);
     });
   });
 });

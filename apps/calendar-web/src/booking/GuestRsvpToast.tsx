@@ -149,26 +149,6 @@ export function showGuestRsvpToastFromClaim(
   mountGuestRsvpToast(payload);
 }
 
-/** @deprecated Client-side diff only; kept for tests that still import the batch API. */
-export function showGuestRsvpToast(
-  replies: readonly GuestRsvpReplyNotice[],
-): void {
-  if (replies.length === 0) {
-    return;
-  }
-  const latest = replies[replies.length - 1]!;
-  const payload: GuestRsvpToastPayload = {
-    count: replies.length,
-    latest,
-    whileYouWereAway: false,
-  };
-  if (shouldDeferAttentionToasts()) {
-    rememberPendingGuestRsvp(payload);
-    return;
-  }
-  mountGuestRsvpToast(payload);
-}
-
 export function flushDeferredGuestRsvpToast(): void {
   const pending = takePendingGuestRsvp();
   if (!pending) {

@@ -17,6 +17,7 @@ export const HostGuestRsvpObservationRecordSchema = z.strictObject({
   responseStatus: AttendeeResponseStatusSchema,
   slotStart: z.date(),
   firstObservedAt: z.date(),
+  expiresAt: z.date(),
 });
 export type HostGuestRsvpObservationRecord = z.infer<
   typeof HostGuestRsvpObservationRecordSchema

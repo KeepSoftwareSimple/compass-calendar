@@ -5,6 +5,7 @@ import {
   BookingGuestRsvpClaimResponseSchema,
 } from "@core/types/booking.contracts";
 import { HostGuestRsvpSummarizeRequestSchema } from "@core/types/sync/host-guest-rsvp.contracts";
+import { hostGuestRsvpSummarizeCursor } from "@backend/booking/host-guest-rsvp-notice.cursor";
 import { hostGuestRsvpNoticeRepository } from "@backend/booking/host-guest-rsvp-notice.repository";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
 import { unwrapSyncResult } from "@backend/common/services/sync-service/unwrap-sync-result";
@@ -26,12 +27,7 @@ class HostGuestRsvpNoticeService {
     const state = await hostGuestRsvpNoticeRepository.findOrCreate(userId);
     const summarizeBody = HostGuestRsvpSummarizeRequestSchema.parse({
       principalId: userId.toString(),
-      cursor: {
-        firstObservedAt: (state.noticedAt ?? state.createdAt).toISOString(),
-        ...(state.noticedObservationId
-          ? { observationId: state.noticedObservationId.toString() }
-          : {}),
-      },
+      cursor: hostGuestRsvpSummarizeCursor(state),
     });
 
     const summary = unwrapSyncResult(

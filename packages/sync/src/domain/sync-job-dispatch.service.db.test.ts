@@ -42,7 +42,7 @@ import { CommandRepository } from "@sync/storage/repositories/command.repository
 import { CredentialRepository } from "@sync/storage/repositories/credential.repository";
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
-import { type HostGuestRsvpObservationRepository } from "@sync/storage/repositories/host-guest-rsvp-observation.repository";
+import { HostGuestRsvpObservationRepository } from "@sync/storage/repositories/host-guest-rsvp-observation.repository";
 import { InvalidationRepository } from "@sync/storage/repositories/invalidation.repository";
 import { JobRepository } from "@sync/storage/repositories/job.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
