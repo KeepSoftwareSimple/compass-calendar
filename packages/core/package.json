@@ -15,7 +15,7 @@
     "bson": "^7.3.3",
     "city-timezones": "^1.3.4",
     "dayjs": "^1.11.23",
-    "google-auth-library": "^11.1.0",
+    "google-auth-library": "^11.3.3",
     "lodash": "^4.18.1",
     "logform": "^2.7.0",
     "posthog-node": "^5.56.2",
