@@ -90,5 +90,7 @@ Playwright. Docs index: `docs/README.md`.
 - Skills (files to read, not slash commands): `.agents/skills/README.md`
 - Agent-ready issues: `.github/ISSUE_TEMPLATE/3-agent-task.yml`
 - Agent loop Routine: `docs/CI-CD/agent-loop-routine.md`
+- Tech-debt sweep bar (no PR is the expected result):
+  `.agents/skills/tech-debt-sweep/SKILL.md`
 - Error autofix Routine: `docs/CI-CD/error-autofix-routine.md`
 - Testing playbook: `docs/development/testing-playbook.md`
