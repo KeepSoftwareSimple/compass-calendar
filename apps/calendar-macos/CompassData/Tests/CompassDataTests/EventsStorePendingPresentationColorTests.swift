@@ -246,16 +246,3 @@ final class EventsStorePendingPresentationColorTests: XCTestCase {
         return try ContractTestDecoding.decodeJSON(json, as: ReplaceEventInput.self)
     }
 }
-
-private actor AsyncTestGate {
-    private var continuation: CheckedContinuation<Void, Never>?
-
-    func wait() async {
-        await withCheckedContinuation { continuation = $0 }
-    }
-
-    func resume() {
-        continuation?.resume()
-        continuation = nil
-    }
-}
