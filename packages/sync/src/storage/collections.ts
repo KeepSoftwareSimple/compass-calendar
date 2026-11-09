@@ -15,6 +15,7 @@ export const SYNC_COLLECTIONS = {
   deletionMarkers: "deletion_markers",
   // Append-only, content-free invalidation outbox for GET /internal/changes.
   invalidations: "invalidations",
+  hostGuestRsvpObservations: "host_guest_rsvp_observations",
 } as const;
 
 export type SyncCollectionName =

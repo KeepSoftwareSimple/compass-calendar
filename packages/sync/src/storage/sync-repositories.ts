@@ -3,6 +3,7 @@ import { CredentialRepository } from "@sync/storage/repositories/credential.repo
 import { DeletionMarkerRepository } from "@sync/storage/repositories/deletion-marker.repository";
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
+import { HostGuestRsvpObservationRepository } from "@sync/storage/repositories/host-guest-rsvp-observation.repository";
 import { InvalidationRepository } from "@sync/storage/repositories/invalidation.repository";
 import { JobRepository } from "@sync/storage/repositories/job.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
@@ -21,6 +22,7 @@ export interface SyncRepositories {
   deletionMarkers: DeletionMarkerRepository;
   invalidations: InvalidationRepository;
   commands: CommandRepository;
+  hostGuestRsvpObservations: HostGuestRsvpObservationRepository;
 }
 
 // Every repository, bound to the connected db. They are cheap, stateless
@@ -42,5 +44,6 @@ export function syncRepositories(mongo: SyncMongoService): SyncRepositories {
     deletionMarkers: new DeletionMarkerRepository(db),
     invalidations: new InvalidationRepository(db),
     commands: new CommandRepository(db),
+    hostGuestRsvpObservations: new HostGuestRsvpObservationRepository(db),
   };
 }

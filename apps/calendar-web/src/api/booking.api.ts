@@ -3,6 +3,8 @@ import {
   type AdminGetBookingPageResult,
   AdminGetBookingPageSetupResponseSchema,
   type AdminPutBookingPageInput,
+  type BookingGuestRsvpClaimResponse,
+  BookingGuestRsvpClaimResponseSchema,
   type BookingNewMeetingsClaimResponse,
   BookingNewMeetingsClaimResponseSchema,
   type BookingPageStatusResponse,
@@ -40,6 +42,13 @@ const BookingApi = {
       `/booking/page/new-meetings/claim`,
     );
     return BookingNewMeetingsClaimResponseSchema.parse(response.data);
+  },
+
+  async claimGuestRsvpReplies(): Promise<BookingGuestRsvpClaimResponse> {
+    const response = await BaseApi.post<unknown>(
+      `/booking/page/guest-rsvp-replies/claim`,
+    );
+    return BookingGuestRsvpClaimResponseSchema.parse(response.data);
   },
 
   async cancelReservation(

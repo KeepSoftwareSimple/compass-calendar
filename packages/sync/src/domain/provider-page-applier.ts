@@ -5,6 +5,7 @@ import {
   type SyncEventRecurrence,
 } from "@core/types/sync/event.contracts";
 import { type ProviderEventId } from "@core/types/sync/identity.contracts";
+import { recordHostGuestRsvpObservations } from "@sync/domain/host-guest-rsvp-observation-recorder";
 import { occurrenceScheduleAt } from "@sync/domain/occurrence-projection";
 import { providerManagedMetadataEntry } from "@sync/domain/provider-managed-metadata";
 import {
@@ -21,8 +22,10 @@ import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-ca
 import {
   type EventRepository,
   type ProviderEventUpsert,
+  type UpsertByProviderIdentityOptions,
 } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
+import { type HostGuestRsvpObservationRepository } from "@sync/storage/repositories/host-guest-rsvp-observation.repository";
 
 // The stored provider-fact bag for an imported read, null when empty. Busy is
 // the overwhelming default, so only a free ("transparent") event records its
@@ -91,7 +94,28 @@ export class ProviderPageApplier {
     private readonly calendar: ProviderCalendarRecord,
     private readonly generation: number,
     private readonly now: () => Date,
+    private readonly hostGuestRsvpObservation?: {
+      accountEmail: string;
+      observations: HostGuestRsvpObservationRepository;
+    },
   ) {}
+
+  #upsertOptions(base?: {
+    preserveIcalUidWhenAbsent?: true;
+  }): UpsertByProviderIdentityOptions {
+    const options: UpsertByProviderIdentityOptions = { ...base };
+    const ctx = this.hostGuestRsvpObservation;
+    if (ctx) {
+      options.recordHostGuestRsvpReplies = (pairs) =>
+        recordHostGuestRsvpObservations(
+          ctx.observations,
+          ctx.accountEmail,
+          pairs,
+          this.now(),
+        );
+    }
+    return options;
+  }
 
   // Distinct events written so far (masters, singles, override and cancelled
   // exceptions).
@@ -231,7 +255,7 @@ export class ProviderPageApplier {
             },
           };
         }),
-        { preserveIcalUidWhenAbsent: true },
+        this.#upsertOptions({ preserveIcalUidWhenAbsent: true }),
       );
       for (const [index, read] of active.entries()) {
         const record = records[index];
@@ -363,7 +387,7 @@ export class ProviderPageApplier {
     if (group.length === 0) return;
     const records = await this.events.upsertManyByProviderIdentity(
       group.map((entry) => entry.input),
-      options,
+      this.#upsertOptions(options),
     );
     for (let i = 0; i < group.length; i += 1) {
       const entry = group[i];
@@ -517,7 +541,7 @@ export class ProviderPageApplier {
     if (toWrite.length === 0) return results;
     const records = await this.events.upsertManyByProviderIdentity(
       toWrite.map((read) => this.#eventUpsert(read, recurrenceFor(read))),
-      options,
+      this.#upsertOptions(options),
     );
     for (let i = 0; i < toWrite.length; i += 1) {
       const read = toWrite[i];

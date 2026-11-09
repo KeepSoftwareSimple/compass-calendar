@@ -182,11 +182,16 @@ Times use the host's effective timezone. Claim scans `lastGuestActionAt`
 (create, cancel, and reschedule success) after `hostNoticedAt`; rows that
 predate the cursor are never announced. Compass does not send email.
 
-While Compass stays open, a separate hook watches refetched events the host
-organizes and toasts guest RSVP replies (`Bob accepted: …`, `Bob declined:
-…`, `Bob replied maybe: …`, with the same plural Latest pattern). Replies
-that land while no tab is open are not announced; grid card styling covers
-that case (see RSVP-aware grid cards below).
+Guest RSVP replies on events the host organizes are recorded during calendar
+sync (first observed time per guest response change), then claimed like new
+meeting notices: on mount, tab focus (five-minute floor), and SSE
+`eventsChanged` (ten-second floor). Copy labels the slot as the meeting, for
+example `Jen accepted (meeting Mon, Nov 23, 11:00 AM)`. Several unclaimed
+replies use `since you last looked` or `while you were away` when sync first
+saw the reply more than a few minutes ago. `hostGuestRsvpNoticeState` on the
+API database and `host_guest_rsvp_observations` on the sync database back
+the cursor. Grid card styling still covers replies when no toast fired (see
+RSVP-aware grid cards below).
 
 ### Guest
 
