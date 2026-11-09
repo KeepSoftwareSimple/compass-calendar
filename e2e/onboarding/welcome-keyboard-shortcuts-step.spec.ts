@@ -1,10 +1,14 @@
 import { expect, type Page, test } from "@playwright/test";
-import { openCommandPaletteWithKeyboard } from "../utils/event-test-utils";
+import {
+  installDeterministicBrowserClock,
+  openCommandPaletteWithKeyboard,
+} from "../utils/event-test-utils";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1280, height: 900 } });
 
 const openEssentialShortcutsStep = async (page: Page) => {
+  await installDeterministicBrowserClock(page);
   await page.goto("/week", { waitUntil: "domcontentloaded" });
 
   const welcomeDialog = page.getByRole("dialog", {

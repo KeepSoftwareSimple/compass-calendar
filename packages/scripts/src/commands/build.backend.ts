@@ -3,7 +3,6 @@
  *
  * Bundles the Express app into a single Bun-native file.
  * All JS/TS dependencies (including @compass/core) are inlined.
- * All dependencies are inlined.
  *
  * Usage:
  *   bun run build:backend
@@ -68,7 +67,7 @@ await Bun.write(
   JSON.stringify({ dependencies: { "@resvg/resvg-js": "2.6.2" } }, null, 2),
 );
 
-for (const asset of ["Rubik-Regular.ttf", "OFL.txt"]) {
+for (const asset of ["Rubik-Regular.ttf", "Rubik-SemiBold.ttf", "OFL.txt"]) {
   await Bun.write(
     path.join(BACKEND_BUILD, "assets", asset),
     Bun.file(

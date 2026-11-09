@@ -1,27 +1,37 @@
 import { Resvg } from "@resvg/resvg-js";
 import { PDFDocument, PDFString } from "pdf-lib";
-import { DEFAULT_LIFESPAN, getCompletedLifeWeeks } from "@core/life/life-math";
+import {
+  DEFAULT_LIFESPAN,
+  getCompletedLifeWeeks,
+  WEEKS_PER_ROW,
+} from "@core/life/life-math";
+import { LIFE_PDF_QUOTE } from "@core/life/life-quotes";
 import { escapeHtml } from "@core/util/escape-html.util";
-import { reflectionLifeProgress } from "@backend/email/reflection-life-progress";
 import { fileURLToPath } from "node:url";
 
-const fontPath = fileURLToPath(
-  new URL("./assets/Rubik-Regular.ttf", import.meta.url),
+const fontPaths = ["Rubik-Regular.ttf", "Rubik-SemiBold.ttf"].map((name) =>
+  fileURLToPath(new URL(`./assets/${name}`, import.meta.url)),
 );
 const PAGE_WIDTH = 600;
-const LIFE_URL_LEFT = 24;
-const LIFE_URL_BASELINE = 101;
-const LIFE_URL_FONT_SIZE = 14;
+const GRID_TOP = 119;
+const ROW_PITCH = 8;
+const WEEK_COL_PITCH = 10.3;
+const DOT_SIZE = 6;
+const FOOTER_RESERVE = 48;
+const QUOTE_WRAP_CHARS = 35;
+const GRID_INK = "#222";
+const GRID_EMPTY = "#e5e5e5";
+const LIFE_URL_INSET_X = 24;
+const LIFE_URL_BASELINE_FROM_BOTTOM = 18;
+const LIFE_URL_FONT_SIZE = 12;
 const LIFE_URL_HIT_PAD = 6;
 
-function lifeUrlLinkRect(pageHeight: number) {
-  const top = LIFE_URL_BASELINE - LIFE_URL_FONT_SIZE;
-  const bottom = LIFE_URL_BASELINE + LIFE_URL_HIT_PAD;
+function lifeUrlLinkRect() {
   return [
-    LIFE_URL_LEFT,
-    pageHeight - bottom,
-    PAGE_WIDTH - 25,
-    pageHeight - top,
+    LIFE_URL_INSET_X,
+    LIFE_URL_BASELINE_FROM_BOTTOM - LIFE_URL_HIT_PAD,
+    PAGE_WIDTH - LIFE_URL_INSET_X,
+    LIFE_URL_BASELINE_FROM_BOTTOM + LIFE_URL_FONT_SIZE,
   ];
 }
 
@@ -34,29 +44,44 @@ export function renderReflectionLifeSvg(
   const visibleUrl = new URL(lifeUrl);
   const completed = getCompletedLifeWeeks(birthDate, date);
   const rows = DEFAULT_LIFESPAN;
-  const height = 146 + rows * 8;
-  const text = (x: number, y: number, content: string, size = 14) =>
-    `<text x="${x}" y="${y}" font-family="Rubik" font-weight="400" font-size="${size}" fill="#222">${escapeHtml(content)}</text>`;
+  const height = GRID_TOP + rows * ROW_PITCH + FOOTER_RESERVE;
+  const text = (
+    x: number,
+    y: number,
+    content: string,
+    size = 14,
+    weight = 400,
+    anchor = "start",
+  ) =>
+    `<text x="${x}" y="${y}" font-family="Rubik" font-weight="${weight}" font-size="${size}" text-anchor="${anchor}" fill="${GRID_INK}">${escapeHtml(content)}</text>`;
+  const quoteLines: string[] = [];
+  for (const word of LIFE_PDF_QUOTE.split(/\s+/)) {
+    const last = quoteLines.length - 1;
+    if (last < 0 || `${quoteLines[last]} ${word}`.length > QUOTE_WRAP_CHARS)
+      quoteLines.push(word);
+    else quoteLines[last] += ` ${word}`;
+  }
   const grid = Array.from({ length: rows }, (_, year) => {
     const label =
       year === 0 || (year + 1) % 10 === 0
-        ? text(12, 126 + year * 8, String(year + 1), 9)
+        ? text(12, GRID_TOP + 7 + year * ROW_PITCH, String(year + 1), 9)
         : "";
     return (
       label +
-      Array.from({ length: 52 }, (_, week) => {
-        const index = year * 52 + week;
-        return `<rect x="${38 + week * 10.3}" y="${119 + year * 8}" width="6" height="6" rx="1" fill="${index < completed ? "#222" : "#e5e5e5"}"${index === completed ? ' stroke="#222" stroke-width="1.5"' : ""}/>`;
+      Array.from({ length: WEEKS_PER_ROW }, (_, week) => {
+        const index = year * WEEKS_PER_ROW + week;
+        return `<rect x="${38 + week * WEEK_COL_PITCH}" y="${GRID_TOP + year * ROW_PITCH}" width="${DOT_SIZE}" height="${DOT_SIZE}" rx="1" fill="${index < completed ? GRID_INK : GRID_EMPTY}"${index === completed ? ` stroke="${GRID_INK}" stroke-width="1.5"` : ""}/>`;
       }).join("")
     );
   }).join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${PAGE_WIDTH}" height="${height}" viewBox="0 0 ${PAGE_WIDTH} ${height}">
     <rect width="${PAGE_WIDTH}" height="${height}" fill="white"/>
-    ${text(24, 30, "Your Life In Weeks", 16)}
-    ${text(24, 53, "Each square is a week")}
-    ${text(24, 77, reflectionLifeProgress(completed))}
-    ${text(LIFE_URL_LEFT, LIFE_URL_BASELINE, `${visibleUrl.host.replace(/^www\./, "")}${visibleUrl.pathname}`)}
+    ${text(38, 42, "Your Life", 24, 600)}
+    ${text(38, 71, "In Weeks", 24, 600)}
+    <line x1="235" y1="22" x2="235" y2="86" stroke="#ddd"/>
+    ${quoteLines.map((line, index) => text(270, 35 + index * 21, line)).join("")}
     ${grid}
+    ${text(PAGE_WIDTH / 2, height - LIFE_URL_BASELINE_FROM_BOTTOM, `${visibleUrl.host.replace(/^www\./, "")}${visibleUrl.pathname}`, LIFE_URL_FONT_SIZE, 400, "middle")}
   </svg>`;
 }
 
@@ -69,7 +94,7 @@ export function renderReflectionLifePng(
     new Resvg(renderReflectionLifeSvg(birthDate, date, lifeUrl), {
       fitTo: { mode: "width", value: 1200 },
       font: {
-        fontFiles: [fontPath],
+        fontFiles: fontPaths,
         loadSystemFonts: false,
         defaultFontFamily: "Rubik",
       },
@@ -102,7 +127,7 @@ export async function renderReflectionLifePdf(
   const link = document.context.obj({
     Type: "Annot",
     Subtype: "Link",
-    Rect: lifeUrlLinkRect(height),
+    Rect: lifeUrlLinkRect(),
     Border: [0, 0, 0],
     A: { Type: "Action", S: "URI", URI: PDFString.of(targetUrl.toString()) },
   });

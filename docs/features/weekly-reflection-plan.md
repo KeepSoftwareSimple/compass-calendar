@@ -6,9 +6,9 @@ Status: implementation plan, November 2, 2026. No delivery is enabled by this do
 
 The current trial uses a plain email titled `Weekly review (ISO week)`, compact
 section/date headings and year-only memory labels. Counts and highlights deduplicate
-matching cross-calendar facts. The Life View uses Rubik Regular, a restrained
-16/14-point hierarchy, percentage progress and one downloadable PDF containing the
-weekly grid plus a clickable `/life` link. This supersedes the earlier PNG/CID and
+matching cross-calendar facts. The Life View PDF uses Rubik Regular and SemiBold, a two-column title/quote
+header, the weekly grid, and a centered clickable `/life` link in the footer.
+Percentage progress stays in the email body only. This supersedes the earlier PNG/CID and
 completed-week-count presentation below. Private delivery is daily at 10:30 a.m.
 America/Denver for the bound trial account; public rollout remains disabled.
 

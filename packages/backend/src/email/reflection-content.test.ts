@@ -1,4 +1,8 @@
-import { LIFE_QUOTES, REFLECTION_EMAIL_QUOTES } from "@core/life/life-quotes";
+import {
+  LIFE_PDF_QUOTE,
+  LIFE_QUOTES,
+  REFLECTION_EMAIL_QUOTES,
+} from "@core/life/life-quotes";
 import { ReflectionEventSchema } from "@core/types/sync/reflection.contracts";
 import {
   renderReflectionEmail,
@@ -311,9 +315,9 @@ describe("reflection content", () => {
     expect(
       REFLECTION_EMAIL_QUOTES.some((quote) => rendered.text.endsWith(quote)),
     ).toBe(true);
-    // The email's three must stay part of the Life view's catalog.
+    // The email's three and the PDF quote must stay part of the Life catalog.
     expect(LIFE_QUOTES).toEqual(
-      expect.arrayContaining(REFLECTION_EMAIL_QUOTES),
+      expect.arrayContaining([...REFLECTION_EMAIL_QUOTES, LIFE_PDF_QUOTE]),
     );
   });
 

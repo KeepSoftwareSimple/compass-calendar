@@ -9,7 +9,10 @@ import {
 } from "@sync/providers/provider-event-reader.port";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
-import { type SyncResourceRecord } from "@sync/storage/contracts/sync-resource.contracts";
+import {
+  hasCertifiedHistoryCoverage,
+  type SyncResourceRecord,
+} from "@sync/storage/contracts/sync-resource.contracts";
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
@@ -86,7 +89,7 @@ export async function repairCalendar(
   );
   // A routine replacement retains its previously certified active archive.
   // Initial/legacy history stays uncertified until the complete pass succeeds.
-  if (resource.historyCoverageVersion !== 1) {
+  if (!hasCertifiedHistoryCoverage(resource)) {
     await deps.resources.recordHistoryCoverage(resource, 0, false, now());
   }
 

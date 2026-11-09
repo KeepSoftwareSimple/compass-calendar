@@ -914,11 +914,20 @@
  * declarations, and nesting day colors in that same rule would lose to
  * react-datepicker's unlayered `color: #000`.
  */
-.c-date-picker {
-  @apply select-none rounded-xs border-0 shadow-[0_4px_4px_var(--color-shadow-default)];
+/*
+ * Grid poppers: vertical scroll on the Popper-positioned node; max-height is set
+ * inline by DatePicker's Popper modifiers so the popper cannot extend past the
+ * viewport. Keyboard reveal scrolls this host in date-picker-keyboard-dom.util.ts.
+ */
+.c-date-picker-popper-grid.react-datepicker-popper {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .c-date-picker {
+  @apply select-none rounded-xs border-0 shadow-[0_4px_4px_var(--color-shadow-default)];
   background-color: var(--date-picker-bg);
   font-size: 11px;
   --date-picker-hover-bg: color-mix(
@@ -950,9 +959,12 @@
   & .react-datepicker__month-container {
     display: flex;
     width: 100%;
-    height: 240px;
+    /* Grid popovers: min-height keeps six-row months sized. */
+    min-height: 240px;
     flex-direction: column;
-    padding: 0 12px;
+    /* Match top breathing room: header uses padding-top 8px; last row focus
+       rings need space below the grid (Tyler t217u bottom padding feedback). */
+    padding: 0 12px 12px;
   }
 
   &[data-view="sidebar"] .react-datepicker__month-container {
@@ -970,6 +982,10 @@
     margin: 0;
   }
 
+  &:not([data-view="sidebar"]) .react-datepicker__month {
+    flex: 0 0 auto;
+  }
+
   & .react-datepicker__week {
     display: flex;
     width: 100%;
@@ -982,7 +998,7 @@
     align-items: start;
     border-bottom: 0;
     background: unset;
-    padding: 8px 0 0 2px;
+    padding: 10px 0 6px 2px;
   }
 
   &[data-view="sidebar"] .react-datepicker__header {
@@ -1055,7 +1071,7 @@
     width: 100%;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
 
   & .react-datepicker__day.react-datepicker__day--selected {
@@ -1148,9 +1164,8 @@
   }
 
   &.calendar--open {
-    /* Match the month-container height so 6-row months aren't clipped by the
-       overflow:hidden on .calendar. The two heights must stay in sync. */
-    height: 240px;
+    height: auto;
+    min-height: 240px;
   }
 
   &[data-view="sidebar"].calendar--open {

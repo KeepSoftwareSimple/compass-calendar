@@ -92,6 +92,11 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             }
             EventJumpChipsAccessibilityProbe.publish(hints: hints)
         }
+        model.onCommandPaletteStatusAnnouncementChanged = { [weak self] announcement in
+            let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
+            CommandPaletteStatusAccessibilityProbe.publish(
+                announcement: announcement, hostWindow: window)
+        }
         applyTheme()
         deepLinkRouter.onDeliver = { [weak self] url in
             self?.deliverDeepLink(url)

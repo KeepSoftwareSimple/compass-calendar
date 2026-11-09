@@ -671,10 +671,10 @@
       "native": [
         "apps/calendar-macos/CompassUITests/NativeLaunchTests.swift#testQuestionMarkTogglesShortcutsLegend"
       ],
-      "status": "failing",
-      "evidence": "Exact head c6354219a, run40981800450 native strict log line13698: XCTAssertFalse failed after Escape. Normal40981345021 passed. Artifact inspection pending. Failure video inspected: actual legend visible. Native-only exact-head retry dispatched run40981800450 attempt2 after inspecting event attachment and keyboard routing; web passing job retained. No fix or stability claimed.",
-      "reason": "",
-      "review": "Failure triage, not proved attributable to icon changes. Web automated baseline mapping pending."
+      "status": "passing",
+      "evidence": "Stale failing row reconciled 2026-11-07: prior evidence head c6354219a run40981800450 not reproduced on current main c936b14a2. Merge-queue macOS run42331015525 and PR head run42334055012: NativeLaunchTests testQuestionMarkTogglesShortcutsLegend passed; CompassKitTests ShortcutsLegendEscapeKeyboardTests testEscapeClosesShortcutsLegendWhenOpen passed 0.210s.",
+      "reason": "Inventory still cited pre-reconciliation failure; behavior passes on current main with no product router change since c6354219a.",
+      "review": "2026-11-07 agent: compared NativeGridKeyboardRouter handleOverlayKeyDown Escape path to XCTest; GitHub Mac evidence at c936b14a2; added native unit regression only."
     },
     {
       "id": "title-edit",
@@ -1424,39 +1424,84 @@
     },
     {
       "id": "go-to-date-iso",
-      "behavior": "G opens palette, 2026-12-15 offers exact named date, Enter closes palette, reveals 2026-12-15 and announces chosen week",
+      "behavior": "G opens palette, 2026-12-15 offers exact named date, Enter closes palette, reveals 2026-12-15",
       "web": ["e2e/navigation/go-to-date.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testISODateNavigatesFromBareG"
       ],
-      "status": "missing",
-      "reason": "Pure vectors cover parsing/label/announcement strings, not actual native keyboard palette integration or visible day/status. Native anchor/view replaces browser URL; pin current year for month-first input.",
-      "evidence": "",
-      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+      "status": "passing",
+      "reason": "Real native bare-G search, exact named selected date option, Return dismissal and hittable positive chosen-day header are asserted. The existing demo reference date fixes the month-first year. Native visible date replaces browser URL navigation. Actual accessibility announcement is tracked independently; sampled light-theme captures do not pass broad visual or signed-in gates.",
+      "evidence": "Merged #5091 at2026-11-04T13:37:56Z, exactd7c39bc7607d3fbcf7f2e55a7ebbed4da08bdda9 BOTHstrict41827629001 actual downloaded native/web VERDICTPASS/no checks skipped /tmp/compass-gdate-d7c-strict; normalfullnative41827631836PASS; all3actual captures inspected /tmp/compass-gdate-d7c-shots. Merge-group native41835411040PASS.",
+      "review": "2026-11-04 agent: full frozen cf5 source and new native UI assertions reviewed; downloaded verdicts and each capture inspected. Navigation and announcement split without excluding either requirement."
+    },
+    {
+      "id": "go-to-date-iso-announcement",
+      "behavior": "After 2026-12-15 navigation, announce the chosen week through native accessibility",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors",
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testISODateNavigatesFromBareG",
+        "apps/calendar-macos/CompassData/Tests/CompassDataTests/CommandPaletteStatusAnnouncementDeliveryTests.swift",
+        "apps/calendar-macos/CompassNativeTests/CommandPaletteStatusAccessibilityProbePublishTests.swift"
+      ],
+      "status": "passing",
+      "reason": "Production CommandPaletteStatusAccessibilityProbe.publish posts NSAccessibility.announcementRequested on the host window without -COMPASS_UI_TEST probe attach; shipping publish regression and planner tests guard that boundary. UI-test mirror asserts status region text. Spoken VoiceOver output is not automated and does not pass broad #4783 acceptance.",
+      "evidence": "Merged #5114 c936b14a23943048dcbd6cddde96cb0d02324467; exact-source strict42329280430 at0746db0a5cf4304ab1ab5779bbbc1d1e3c9a1951 PASS/VERDICT PASS; CompassKitTests CommandPaletteStatusAccessibilityProbePublishTests passed on GitHub Mac.",
+      "review": "2026-11-07 agent: accounting after protected-queue merge; API emission only, not audio."
     },
     {
       "id": "go-to-date-slash",
-      "behavior": "G opens palette, 2026/10/29 offers exact named date, Enter closes palette, reveals 2026-10-29 and announces chosen week",
+      "behavior": "G opens palette, 2026/10/29 offers exact named date, Enter closes palette, reveals 2026-10-29",
       "web": ["e2e/navigation/go-to-date.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testSlashSeparatedDateNavigatesFromBareG"
       ],
-      "status": "missing",
-      "reason": "Pure vectors cover parsing/label/announcement strings, not actual native keyboard palette integration or visible day/status. Native anchor/view replaces browser URL; pin current year for month-first input.",
-      "evidence": "",
-      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+      "status": "passing",
+      "reason": "Real native bare-G search, exact named selected date option, Return dismissal and hittable positive chosen-day header are asserted. The existing demo reference date fixes the month-first year. Native visible date replaces browser URL navigation. Actual accessibility announcement is tracked independently; sampled light-theme captures do not pass broad visual or signed-in gates.",
+      "evidence": "Merged #5091 at2026-11-04T13:37:56Z, exactd7c39bc7607d3fbcf7f2e55a7ebbed4da08bdda9 BOTHstrict41827629001 actual downloaded native/web VERDICTPASS/no checks skipped /tmp/compass-gdate-d7c-strict; normalfullnative41827631836PASS; all3actual captures inspected /tmp/compass-gdate-d7c-shots. Merge-group native41835411040PASS.",
+      "review": "2026-11-04 agent: full frozen cf5 source and new native UI assertions reviewed; downloaded verdicts and each capture inspected. Navigation and announcement split without excluding either requirement."
+    },
+    {
+      "id": "go-to-date-slash-announcement",
+      "behavior": "After 2026/10/29 navigation, announce the chosen week through native accessibility",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors",
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testSlashSeparatedDateNavigatesFromBareG",
+        "apps/calendar-macos/CompassData/Tests/CompassDataTests/CommandPaletteStatusAnnouncementDeliveryTests.swift",
+        "apps/calendar-macos/CompassNativeTests/CommandPaletteStatusAccessibilityProbePublishTests.swift"
+      ],
+      "status": "passing",
+      "reason": "Same native announcement emission and regression coverage as go-to-date-iso-announcement; slash path covered in GoToDateKeyboardTests. Spoken VoiceOver output remains a human residual under #4783.",
+      "evidence": "Merged #5114 c936b14a; strict42329280430 at0746db0a5 PASS.",
+      "review": "2026-11-07 agent: accounting after merge; API emission only."
     },
     {
       "id": "go-to-date-month-first",
-      "behavior": "G opens palette, 10/29 offers exact named date, Enter closes palette, reveals 2026-10-29 and announces chosen week",
+      "behavior": "G opens palette, 10/29 offers exact named date, Enter closes palette, reveals 2026-10-29",
       "web": ["e2e/navigation/go-to-date.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors"
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testMonthFirstDateUsesDemoReferenceYear"
       ],
-      "status": "missing",
-      "reason": "Pure vectors cover parsing/label/announcement strings, not actual native keyboard palette integration or visible day/status. Native anchor/view replaces browser URL; pin current year for month-first input.",
-      "evidence": "",
-      "review": "2026-11-01 agent: complete frozen cf5 source assertions and native candidate methods reviewed; no counts/fixture-to-UI equivalence inferred."
+      "status": "passing",
+      "reason": "Real native bare-G search, exact named selected date option, Return dismissal and hittable positive chosen-day header are asserted. The existing demo reference date fixes the month-first year. Native visible date replaces browser URL navigation. Actual accessibility announcement is tracked independently; sampled light-theme captures do not pass broad visual or signed-in gates.",
+      "evidence": "Merged #5091 at2026-11-04T13:37:56Z, exactd7c39bc7607d3fbcf7f2e55a7ebbed4da08bdda9 BOTHstrict41827629001 actual downloaded native/web VERDICTPASS/no checks skipped /tmp/compass-gdate-d7c-strict; normalfullnative41827631836PASS; all3actual captures inspected /tmp/compass-gdate-d7c-shots. Merge-group native41835411040PASS.",
+      "review": "2026-11-04 agent: full frozen cf5 source and new native UI assertions reviewed; downloaded verdicts and each capture inspected. Navigation and announcement split without excluding either requirement."
+    },
+    {
+      "id": "go-to-date-month-first-announcement",
+      "behavior": "After 10/29 navigation, announce the chosen week through native accessibility",
+      "web": ["e2e/navigation/go-to-date.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/GoToDateParityTests.swift#testGoToDateVectors",
+        "apps/calendar-macos/CompassUITests/GoToDateKeyboardTests.swift#testMonthFirstDateUsesDemoReferenceYear",
+        "apps/calendar-macos/CompassData/Tests/CompassDataTests/CommandPaletteStatusAnnouncementDeliveryTests.swift",
+        "apps/calendar-macos/CompassNativeTests/CommandPaletteStatusAccessibilityProbePublishTests.swift"
+      ],
+      "status": "passing",
+      "reason": "Same native announcement emission and regression coverage as other go-to-date announcement rows; month-first path covered in GoToDateKeyboardTests. Spoken VoiceOver output remains a human residual under #4783.",
+      "evidence": "Merged #5114 c936b14a; strict42329280430 at0746db0a5 PASS.",
+      "review": "2026-11-07 agent: accounting after merge; API emission only."
     },
     {
       "id": "shortcut-badge-initial",

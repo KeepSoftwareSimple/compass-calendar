@@ -284,7 +284,7 @@ const TimedEventCardBase = (
           )}
         </div>
       )}
-      {showRepeatIcon && <EventRepeatIcon baseColor={fill.bgColor} />}
+      {showRepeatIcon && <EventRepeatIcon contentColor={contentColor} />}
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { parseCompassEventDate } from "@core/util/event/event.util";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
+import { RecurrenceUntilPickerHintEffect } from "@web/shortcuts/tips/useDatePickerSidebarHints";
 
 export interface EndsOnDateProps {
   minDate?: string;
@@ -19,6 +20,7 @@ export const EndsOnDate = ({
 
   return (
     <div className="mb-1 flex w-full basis-full items-center gap-2 p-0">
+      <RecurrenceUntilPickerHintEffect open={open} />
       <span className="relative text-m">Ends on:</span>
 
       <div

@@ -56,6 +56,7 @@
         "@compass/core": "1.0.0",
         "@floating-ui/react": "^0.27.20",
         "@phosphor-icons/react": "^2.1.7",
+        "@popperjs/core": "^2.11.8",
         "@react-oauth/google": "^0.13.5",
         "@stripe/react-stripe-js": "7.0.0",
         "@stripe/stripe-js": "10.1.0",

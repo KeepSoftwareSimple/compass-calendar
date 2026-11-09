@@ -1,5 +1,17 @@
-import { PDFDict, PDFDocument, PDFName, PDFString } from "pdf-lib";
-import { getCompletedLifeWeeks } from "@core/life/life-math";
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFNumber,
+  PDFString,
+} from "pdf-lib";
+import {
+  DEFAULT_LIFESPAN,
+  getCompletedLifeWeeks,
+  WEEKS_PER_ROW,
+} from "@core/life/life-math";
+import { LIFE_PDF_QUOTE } from "@core/life/life-quotes";
 import {
   renderReflectionLifePdf,
   renderReflectionLifePng,
@@ -14,7 +26,7 @@ describe("reflection life image", () => {
     expect(getCompletedLifeWeeks("2000-01-01", "2000-01-09")).toBe(1);
     expect(getCompletedLifeWeeks("2000-01-01", "2000-01-15")).toBe(2);
   });
-  it("renders a self-contained 1200px PNG with a simple white grid and percentage", () => {
+  it("renders a self-contained 1200px PNG with a two-column header and a centered footer link", () => {
     const png = renderReflectionLifePng(
       "2000-01-01",
       "2026-11-02",
@@ -28,11 +40,17 @@ describe("reflection life image", () => {
       "2026-11-02",
       "https://www.compasscalendar.com/life?utm_source=email",
     );
-    expect(svg).toContain("100% done (79-year average)</text>");
-    expect(svg).toContain(
-      'font-size="14" fill="#222">100% done (79-year average)</text>',
-    );
-    expect(svg).toContain("Your Life In Weeks");
+    expect(svg).not.toContain("% done");
+    expect(svg).not.toContain("year average");
+    expect(svg).toContain('font-weight="600" font-size="24"');
+    expect(svg).toContain(">Your Life</text>");
+    expect(svg).toContain(">In Weeks</text>");
+    const quoteText = [...svg.matchAll(/<text x="270"[^>]*>([^<]*)<\/text>/g)]
+      .map((match) => match[1])
+      .join(" ");
+    expect(quoteText).toBe(LIFE_PDF_QUOTE);
+    expect(svg).toContain('x="300" y="781"');
+    expect(svg).toContain('text-anchor="middle"');
     expect(svg).toContain(">compasscalendar.com/life</text>");
     expect(svg).not.toContain("https://");
     const visibleText = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)]
@@ -40,8 +58,7 @@ describe("reflection life image", () => {
       .join("\n");
     expect(visibleText).not.toContain("www.");
     expect(svg).not.toContain("utm_");
-    expect(svg).not.toMatch(/font-size="(?:18|24)"/);
-    expect(svg).toContain(">Each square is a week</text>");
+    expect(svg).not.toContain("Each square");
     expect(svg).not.toContain("Filled:");
     expect(svg).not.toContain("Outlined:");
     expect(svg).toContain('fill="white"');
@@ -49,7 +66,9 @@ describe("reflection life image", () => {
     expect(svg).not.toContain("U.S. reference");
     expect(svg).not.toContain("prediction");
     expect(svg).not.toContain("A closer look");
-    expect(svg.match(/<rect /g)).toHaveLength(79 * 52 + 1);
+    expect(svg.match(/<rect /g)).toHaveLength(
+      DEFAULT_LIFESPAN * WEEKS_PER_ROW + 1,
+    );
     expect(svg).not.toContain("weeks remaining");
   });
   it("wraps the image in one PDF page with a direct clickable Life View link", async () => {
@@ -70,6 +89,14 @@ describe("reflection life image", () => {
     expect(link.lookup(PDFName.of("Subtype"), PDFName).toString()).toBe(
       "/Link",
     );
+    const bounds = link.lookup(PDFName.of("Rect"), PDFArray);
+    const left = bounds.lookup(0, PDFNumber).asNumber();
+    const bottom = bounds.lookup(1, PDFNumber).asNumber();
+    const right = bounds.lookup(2, PDFNumber).asNumber();
+    const top = bounds.lookup(3, PDFNumber).asNumber();
+    expect((left + right) / 2).toBe(page.getWidth() / 2);
+    expect(bottom).toBeGreaterThanOrEqual(0);
+    expect(top).toBeLessThan(40);
     const action = link.lookup(PDFName.of("A"), PDFDict);
     expect(action.lookup(PDFName.of("S"), PDFName).toString()).toBe("/URI");
     const target = new URL(
@@ -98,6 +125,6 @@ describe("reflection life image", () => {
         "2026-11-05",
         "https://example.com/life",
       ),
-    ).toContain("42% done (79-year average)</text>");
+    ).not.toContain("% done");
   });
 });

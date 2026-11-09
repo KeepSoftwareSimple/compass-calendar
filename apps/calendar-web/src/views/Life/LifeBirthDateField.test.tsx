@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type PropsWithChildren, useState } from "react";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
+import { getPartsPlainText } from "@web/shortcuts/tips/shortcut-tips.data";
 import { LifeBirthDateField } from "@web/views/Life/LifeBirthDateField";
 import { describe, expect, it, mock } from "bun:test";
 
@@ -171,6 +172,69 @@ describe("LifeBirthDateField", () => {
     expect(committed.getFullYear()).toBe(1993);
     expect(committed.getMonth()).toBe(0);
     expect(committed.getDate()).toBeGreaterThan(1);
+  });
+
+  it("registers grid keyboard hints while the calendar is open before the grid is focused", async () => {
+    const onCommit = mock(() => {});
+
+    render(
+      <LifeBirthDateField
+        id="life-birth-date"
+        isOpen
+        maxDate={today}
+        minDate={minDate}
+        onCalendarClose={() => {}}
+        onCalendarOpen={() => {}}
+        onCommit={onCommit}
+        storedBirthDate=""
+        today={today}
+      />,
+      { wrapper },
+    );
+
+    const input = screen.getByRole("textbox", { name: "Date of birth" });
+    act(() => {
+      input.blur();
+    });
+
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+    await waitFor(() => {
+      const top = useDatePickerHintStore.getState().stack.at(-1);
+      expect(top?.id).toBe("date-picker-life");
+      const plain = getPartsPlainText(top!.parts);
+      expect(plain).toContain("PageDown");
+      expect(plain).not.toMatch(/open/i);
+    });
+  });
+
+  it("registers grid keyboard hints in the sidebar help store after moving focus into the calendar", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    const onCommit = mock(() => {});
+
+    render(
+      <ControlledBirthDateField onCommit={onCommit} storedBirthDate="" />,
+      { wrapper },
+    );
+
+    const input = screen.getByRole("textbox", { name: "Date of birth" });
+    await user.click(input);
+    await user.type(input, "1993-09-14");
+    await user.keyboard("{ArrowDown}");
+
+    await waitFor(() => {
+      expect(screen.getByText("Sep 1993")).toBeInTheDocument();
+    });
+
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+    await waitFor(() => {
+      const top = useDatePickerHintStore.getState().stack.at(-1);
+      expect(top?.id).toBe("date-picker-life");
+      expect(getPartsPlainText(top!.parts)).toMatch(/day/i);
+    });
   });
 
   it("selects a day from the open grid with a click", async () => {

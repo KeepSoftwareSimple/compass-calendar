@@ -46,6 +46,7 @@ public final class NativeCalendarRootModel {
     public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?
     public var onRecurrenceScopeAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onStatusToastAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onCommandPaletteStatusAnnouncementChanged: ((String) -> Void)?
     public var onShortcutsLegendAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onEventJumpChipsAccessibilityProbeChanged: (([EventJumpChipHint]) -> Void)?
     /// Web `view-select` page jump opens the view dropdown, like clicking it.
@@ -262,6 +263,9 @@ public final class NativeCalendarRootModel {
         bookingStore.setAuthenticated(authStore.authenticated)
         overlayStores.statusToast.onVisibilityChanged = { [weak self] visible in
             self?.onStatusToastAccessibilityProbeChanged?(visible)
+        }
+        overlayStores.palette.onAnnouncementChanged = { [weak self] announcement in
+            self?.onCommandPaletteStatusAnnouncementChanged?(announcement)
         }
         overlayStores.legend.onOpenChanged = { [weak self] open in
             self?.onShortcutsLegendAccessibilityProbeChanged?(open)
