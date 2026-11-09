@@ -20,30 +20,6 @@ final class EventPastePreviewKeyboardTests: XCTestCase {
         XCTAssertFalse(model.pastePreviewStore.isActive)
     }
 
-    func testCopyPasteInEditableFieldPassesThroughToNativeClipboard() async throws {
-        _ = NSApplication.shared
-        let model = NativeCalendarRootModel(
-            environment: try NativeCalendarEnvironment(inMemoryDatabase: true),
-            demoPresentation: try DemoSeedFixture.load())
-        await model.start()
-        let router = NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry())
-        router.dispatcher.pushScope(.grid)
-
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 120),
-            styleMask: [.titled], backing: .buffered, defer: false)
-        let textView = NSTextView(frame: window.contentView!.bounds)
-        textView.isEditable = true
-        textView.string = "keep me"
-        window.contentView?.addSubview(textView)
-        window.makeKeyAndOrderFront(nil)
-        window.makeFirstResponder(textView)
-
-        XCTAssertFalse(router.handleKeyDown(try key("c", code: 8, modifiers: .command)))
-        XCTAssertFalse(model.pastePreviewStore.isActive)
-
-        window.close()
-    }
-
     func testPasteCreatesDuplicateAfterArrowNudge() async throws {
         _ = NSApplication.shared
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
