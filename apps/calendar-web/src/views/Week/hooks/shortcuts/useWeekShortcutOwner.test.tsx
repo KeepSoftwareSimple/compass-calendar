@@ -632,6 +632,34 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     expect(useEventClipboardStore.getState().event?.id).toBe(editableEvent.id);
   });
 
+  it("pastes onto the jump-selected day while paste preview is active", () => {
+    const button = addCalendarTarget();
+    button.focus();
+    const { queryClient } = renderShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    eventJumpActions.setActiveDayKeys(["2026-05-22"], "Sunday selected");
+
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const created = queryClient
+      .getMutationCache()
+      .getAll()
+      .find((mutation) => mutation.options.mutationKey?.[2] === "create");
+    const { input } = created!.state.variables as {
+      input: {
+        schedule: { kind: "timed"; start: string };
+      };
+    };
+    expect(input.schedule.start).toMatch(/^2026-05-22T09:00:00/);
+  });
+
   it("copies a focused event with Mod+C and pastes a duplicate at the original time with Mod+V", () => {
     const button = addCalendarTarget();
     button.focus();

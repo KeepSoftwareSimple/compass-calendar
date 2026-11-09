@@ -79,16 +79,19 @@ extension NativeCalendarRootModel {
         }
     }
 
-    public func copyFocusedEvent() {
-        guard let event = focusedEvent() else { return }
+    @discardableResult
+    public func copyFocusedEvent() -> Bool {
+        guard let event = focusedEvent() else { return false }
         clipboardStore.copy(event)
         let targetDay = draftTargetDay()
         beginEventPastePreview(from: event, targetDay: targetDay)
         recordShortcut(.editCopy)
+        return true
     }
 
-    public func pasteCopiedEvent() {
-        guard viewStore.view != .life, let source = clipboardStore.event else { return }
+    @discardableResult
+    public func pasteCopiedEvent() -> Bool {
+        guard viewStore.view != .life, let source = clipboardStore.event else { return false }
         let targetDay = pastePreviewStore.isActive
             ? draftTargetDay()
             : EventOnTargetDay.startDay(for: source)
@@ -96,6 +99,7 @@ extension NativeCalendarRootModel {
         endEventPastePreview()
         Task { await commitDuplicate(from: adjusted, recordUndo: true) }
         recordShortcut(.editPaste)
+        return true
     }
 
     public func deleteFocusedEvent() {

@@ -53,12 +53,16 @@ extension NativeCalendarRootModel {
         guard let draft = GridEventDraftFromEvent.duplicateDraft(from: moved, calendars: calendars)
         else { return nil }
 
-        let status = DraftStatus(activity: .keyboardPlace, isFormOpen: false, isDrafting: true)
-        return GridEventDraftMapping.overlay(
-            from: draft,
-            activity: .keyboardPlace,
-            status: status,
-            sourceColorHex: Self.detailsColorHex(from: moved)
+        return GridLayoutDraftOverlay(
+            eventId: "paste-preview-\(draft.clientId.rawValue)",
+            schedule: draft.schedule,
+            title: draft.title,
+            calendarId: draft.calendarId?.rawValue,
+            colorHex: GridEventDraftMapping.presentationColorHex(
+                draft: draft,
+                sourceColorHex: Self.detailsColorHex(from: moved)
+            ),
+            showsInlineTitleEditor: false
         )
     }
 }
