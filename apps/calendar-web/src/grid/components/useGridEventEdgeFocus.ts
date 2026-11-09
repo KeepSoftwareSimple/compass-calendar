@@ -1,6 +1,6 @@
 import {
   eventEdgeFocusShadow,
-  eventFocusColor,
+  resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
 import {
   selectEdgeForEvent,
@@ -23,10 +23,11 @@ export type GridEventEdgeFocus = {
 export function useGridEventEdgeFocus(
   eventId: string | null | undefined,
   focusColor: string | null | undefined,
+  cardFill: string | string[],
   axis: "horizontal" | "vertical",
 ): GridEventEdgeFocus {
   const focusedEdge = useEdgeFocusStore(selectEdgeForEvent(eventId));
-  const focusColorCss = eventFocusColor(focusColor);
+  const focusColorCss = resolveEventFocusIndicatorColor(focusColor, cardFill);
 
   return {
     focusedEdge,

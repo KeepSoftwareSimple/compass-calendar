@@ -4,7 +4,10 @@ import * as Track from "@web/auth/posthog/track";
 import { brighten } from "@web/common/styles/color.utils";
 import { getEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
-import { GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW } from "@web/grid/components/calendar-accent.util";
+import {
+  gridEventSidebarEditingBoxShadow,
+  resolveEventFocusIndicatorColor,
+} from "@web/grid/components/calendar-accent.util";
 import { pastEventFill } from "@web/grid/components/grid-event-card-shell";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
@@ -198,7 +201,9 @@ describe("EventCard", () => {
       getEventPalette().base,
     );
     expect(card.style.boxShadow).toContain(
-      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+      gridEventSidebarEditingBoxShadow(
+        resolveEventFocusIndicatorColor(null, getEventPalette().base),
+      ),
     );
   });
 
@@ -222,7 +227,9 @@ describe("EventCard", () => {
     });
     expect(card.style.getPropertyValue("--event-bg")).toBe("#c4b5fd");
     expect(card.style.boxShadow).toContain(
-      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+      gridEventSidebarEditingBoxShadow(
+        resolveEventFocusIndicatorColor(null, "#c4b5fd"),
+      ),
     );
   });
 
@@ -240,7 +247,9 @@ describe("EventCard", () => {
       name: "All-day event: Conference",
     });
     expect(card.style.boxShadow).toContain(
-      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+      gridEventSidebarEditingBoxShadow(
+        resolveEventFocusIndicatorColor(null, getEventPalette().base),
+      ),
     );
   });
 
@@ -768,7 +777,9 @@ describe("EventCard", () => {
     const card = screen.getByRole("button", {
       name: "Timed event: Planning block, 9 - 10 AM",
     });
-    expect(card.style.getPropertyValue("--event-focus-color")).toBe("#616161");
+    expect(card.style.getPropertyValue("--event-focus-color")).toBe(
+      resolveEventFocusIndicatorColor("#616161", getEventPalette().base),
+    );
     expect(card.className).not.toContain("ring-accent");
     expect(card.className).toContain(
       "focus-visible:outline-(--event-focus-color)",
@@ -776,7 +787,7 @@ describe("EventCard", () => {
     expect(card.className).toContain("focus-visible:outline-2");
   });
 
-  it("paints start/end edge focus outside the card with the calendar color", () => {
+  it("paints start/end edge focus outside the card with a fill-aware indicator", () => {
     const event = createEvent({
       startDate: "2099-01-15T09:00:00.000Z",
       endDate: "2099-01-15T10:00:00.000Z",
@@ -800,8 +811,12 @@ describe("EventCard", () => {
     const card = screen.getByRole("button", {
       name: /editing start time/,
     });
+    const indicator = resolveEventFocusIndicatorColor(
+      "#616161",
+      getEventPalette().base,
+    );
     expect(card).toHaveAttribute("data-edge-focus", "startDate");
-    expect(card.style.boxShadow).toContain("0 -3px 0 0 #616161");
+    expect(card.style.boxShadow).toContain(`0 -4px 0 0 ${indicator}`);
     expect(card.className).toContain("focus-visible:outline-none");
     expect(card.className).not.toContain("ring-accent");
     expect(card.className).not.toContain("bg-accent");
@@ -831,9 +846,13 @@ describe("EventCard", () => {
 
     expect(screen.getByText("Do drops")).toBeInTheDocument();
     const card = screen.getByRole("button", { name: /Do drops/ });
+    const indicator = resolveEventFocusIndicatorColor(
+      "#616161",
+      getEventPalette().base,
+    );
     expect(card).toHaveAttribute("data-edge-focus", "startDate");
     // Outside shadow, not an inset accent bar covering the title.
-    expect(card.style.boxShadow).toContain("0 -3px 0 0 #616161");
+    expect(card.style.boxShadow).toContain(`0 -4px 0 0 ${indicator}`);
     expect(card.querySelector("[data-edge-focus]")).toBeNull();
   });
 
@@ -860,8 +879,9 @@ describe("EventCard", () => {
     const card = screen.getByRole("button", {
       name: /editing end date/,
     });
+    const indicator = card.style.getPropertyValue("--event-focus-color");
     expect(card).toHaveAttribute("data-edge-focus", "endDate");
-    expect(card.style.boxShadow).toContain("3px 0 0 0 #3b82f6");
+    expect(card.style.boxShadow).toContain(`4px 0 0 0 ${indicator}`);
     expect(card.className).not.toContain("ring-accent");
   });
 
