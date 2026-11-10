@@ -1,4 +1,5 @@
 import CompassData
+import CompassKit
 import SwiftUI
 
 /// Web `QuickTimeIndicator`: echoes half-typed grid quick-time digits.
