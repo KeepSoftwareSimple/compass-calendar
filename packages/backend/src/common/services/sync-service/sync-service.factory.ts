@@ -41,3 +41,8 @@ export function getSyncServiceClient(): SyncServiceClient {
   });
   return cached;
 }
+
+export function resetSyncServiceClientCacheForTests(): void {
+  if (process.env.NODE_ENV !== "test") return;
+  cached = undefined;
+}

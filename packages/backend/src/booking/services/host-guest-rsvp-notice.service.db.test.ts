@@ -65,6 +65,7 @@ describe("HostGuestRsvpNoticeService", () => {
     await cleanupCollections();
     syncSpies.forEach((spy) => spy.mockRestore());
     syncSpies = [];
+    syncServiceFactory.resetSyncServiceClientCacheForTests();
   });
 
   afterAll(cleanupTestDb);
@@ -76,15 +77,33 @@ describe("HostGuestRsvpNoticeService", () => {
     return new ObjectId(created.userId);
   };
 
-  const mockSummarize = (count: number, latest: unknown | null) => {
+  const mockSummarize = (
+    count: number,
+    latest: unknown | null,
+    options?: { overlap?: "pair" },
+  ) => {
+    let summarizeWaiters = 0;
+    let releaseSummarize: (() => void) | undefined;
+    const summarizeOverlap = new Promise<void>((resolve) => {
+      releaseSummarize = resolve;
+    });
     const spy = spyOn(
       syncServiceFactory,
       "getSyncServiceClient",
     ).mockReturnValue({
-      summarizeHostGuestRsvpReplies: async () => ({
-        ok: true,
-        value: { count, latest },
-      }),
+      summarizeHostGuestRsvpReplies: async () => {
+        if (options?.overlap === "pair") {
+          summarizeWaiters += 1;
+          if (summarizeWaiters >= 2) {
+            releaseSummarize?.();
+          }
+          await summarizeOverlap;
+        }
+        return {
+          ok: true,
+          value: { count, latest },
+        };
+      },
     } as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>);
     syncSpies.push(spy);
   };
@@ -156,7 +175,7 @@ describe("HostGuestRsvpNoticeService", () => {
       await hostGuestRsvpNoticeService.claimGuestRsvpReplies(userId);
     expect(first.count).toBe(1);
 
-    mockSummarizeBacklog([ada, bob]);
+    mockSummarize(1, bob, { overlap: "pair" });
 
     const [second, third] = await Promise.all([
       hostGuestRsvpNoticeService.claimGuestRsvpReplies(userId),
