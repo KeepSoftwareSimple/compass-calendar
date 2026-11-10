@@ -13,6 +13,16 @@ struct MainWindowGeometryProbeReading: Equatable {
 }
 
 enum MeetingLinkViewportXCUITestSupport {
+    /// Resolves the main window by accessibility identifier. Avoids title-based `windows["Compass"]`
+    /// while the AX tree is still growing on wide viewport launches.
+    @MainActor
+    static func waitForMainWindow(app: XCUIApplication, timeout: TimeInterval) -> XCUIElement {
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout))
+        let window = app.windows.matching(NSPredicate(format: "identifier == %@", "Compass")).firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: timeout))
+        return window
+    }
+
     /// Reads the window-value geometry mirror only. Avoids `descendants` while the SwiftUI tree is still mounting.
     @MainActor
     static func waitForGeometryPayload(on window: XCUIElement, timeout: TimeInterval) -> String {

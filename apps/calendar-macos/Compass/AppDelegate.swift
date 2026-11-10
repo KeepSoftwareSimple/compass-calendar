@@ -64,6 +64,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let window = makeMainWindow()
         self.window = window
         installRootContent(on: window)
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            MeetingLinkWideViewportPolicy.applyIfNeeded(to: window, markStableForXCTest: false)
+        }
         if UITestLaunchPolicy.isParityCapture {
             // Parity XCUITest must match web 1280×820; never restore a narrow autosaved frame.
             ParityCaptureWindowPolicy.scheduleReapply(to: window)

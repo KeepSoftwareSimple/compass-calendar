@@ -41,4 +41,11 @@ enum MainWindowGeometryProbe {
                 "screenH": "\(Int(visible.height))",
             ])
     }
+
+    static func publish(target: NSSize, on window: NSWindow?, markStableForXCTest: Bool) {
+        publish(target: target, on: window)
+        if markStableForXCTest {
+            WideViewportLaunchCoordination.noteStableGeometryPublished()
+        }
+    }
 }

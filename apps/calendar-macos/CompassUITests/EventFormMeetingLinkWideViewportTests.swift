@@ -13,8 +13,7 @@ final class EventFormMeetingLinkWideViewportTests: XCTestCase {
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK", "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
         ]
         app.launch()
-        let window = app.windows["Compass"]
-        XCTAssertTrue(window.waitForExistence(timeout: 8))
+        let window = MeetingLinkViewportXCUITestSupport.waitForMainWindow(app: app, timeout: 8)
         let rawValue = MeetingLinkViewportXCUITestSupport.waitForGeometryPayload(on: window, timeout: 8)
         let titleProbe = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleProbe.waitForExistence(timeout: 12))

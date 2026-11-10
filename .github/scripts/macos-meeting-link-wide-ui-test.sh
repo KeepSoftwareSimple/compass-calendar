@@ -54,24 +54,37 @@ watchdog_loop() {
   done
 }
 
-echo "── wide meeting-link viewport XCTest (instrumented) ──"
-set +e
-xcodebuild test-without-building "${common_args[@]}" \
-  -resultBundlePath build/Compass-meeting-link-wide.xcresult \
-  -only-testing:CompassUITests/EventFormMeetingLinkWideViewportTests &
-xcode_pid=$!
-set -e
+repeat_count="${WIDE_VIEWPORT_UI_TEST_REPEAT:-3}"
+echo "── wide meeting-link viewport XCTest (instrumented, ${repeat_count} consecutive passes required) ──"
+test_status=0
+for attempt in $(seq 1 "$repeat_count"); do
+  echo "── wide pass ${attempt}/${repeat_count} ──"
+  set +e
+  xcodebuild test-without-building "${common_args[@]}" \
+    -resultBundlePath "build/Compass-meeting-link-wide-${attempt}.xcresult" \
+    -only-testing:CompassUITests/EventFormMeetingLinkWideViewportTests &
+  xcode_pid=$!
+  set -e
 
-watchdog_loop "$xcode_pid" &
-watchdog_pid=$!
+  watchdog_loop "$xcode_pid" &
+  watchdog_pid=$!
 
-set +e
-wait "$xcode_pid"
-test_status=$?
-set -e
+  set +e
+  wait "$xcode_pid"
+  pass_status=$?
+  set -e
 
-kill "$watchdog_pid" 2>/dev/null || true
-wait "$watchdog_pid" 2>/dev/null || true
+  kill "$watchdog_pid" 2>/dev/null || true
+  wait "$watchdog_pid" 2>/dev/null || true
+
+  if [[ "$pass_status" -ne 0 ]]; then
+    test_status=$pass_status
+    cp -R "build/Compass-meeting-link-wide-${attempt}.xcresult" build/Compass-meeting-link-wide.xcresult 2>/dev/null || true
+    echo "Wide viewport pass ${attempt}/${repeat_count} failed (exit ${pass_status})"
+    break
+  fi
+  cp -R "build/Compass-meeting-link-wide-${attempt}.xcresult" build/Compass-meeting-link-wide.xcresult 2>/dev/null || true
+done
 
 if [[ -f "$TRACE_PATH" ]]; then
   cp "$TRACE_PATH" build/wide-uitest-watchdog/trace-final.ndjson

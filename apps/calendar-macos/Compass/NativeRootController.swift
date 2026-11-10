@@ -146,7 +146,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             self.view.window?.makeFirstResponder(nil)
         }
         if UITestLaunchPolicy.meetingLinkWideViewport {
-            MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window)
+            MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window, markStableForXCTest: true)
             WideViewportUITestTrace.record("wide_viewport_geometry_reattached_viewDidAppear")
             return
         }

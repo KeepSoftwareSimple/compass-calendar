@@ -6,7 +6,7 @@ enum MeetingLinkWideViewportPolicy {
     private static let contentSize = NSSize(width: 1440, height: 960)
 
     @MainActor
-    static func applyIfNeeded(to window: NSWindow?) {
+    static func applyIfNeeded(to window: NSWindow?, markStableForXCTest: Bool = false) {
         guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
         WideViewportUITestTrace.record(
             "policy_apply_begin",
@@ -42,7 +42,7 @@ enum MeetingLinkWideViewportPolicy {
         window.setFrame(NSRect(origin: origin, size: frame.size), display: true, animate: false)
         window.setContentSize(appliedContent)
         window.contentView?.setFrameSize(appliedContent)
-        MainWindowGeometryProbe.publish(target: target, on: window)
+        MainWindowGeometryProbe.publish(target: target, on: window, markStableForXCTest: markStableForXCTest)
         WideViewportUITestTrace.record(
             "policy_apply_end",
             fields: [
@@ -55,9 +55,11 @@ enum MeetingLinkWideViewportPolicy {
     }
 
     @MainActor
-    static func scheduleReapply(to window: NSWindow?) {
+    static func scheduleReapply(to window: NSWindow?, markStableForXCTest: Bool = false) {
         guard UITestLaunchPolicy.meetingLinkWideViewport, let window else { return }
-        WideViewportUITestTrace.record("policy_schedule_reapply")
-        applyIfNeeded(to: window)
+        WideViewportUITestTrace.record(
+            "policy_schedule_reapply",
+            fields: ["markStable": markStableForXCTest ? "1" : "0"])
+        applyIfNeeded(to: window, markStableForXCTest: markStableForXCTest)
     }
 }
