@@ -22,10 +22,6 @@ export function preloadPlaceTimeZoneSearch(): void {
   void startLoad();
 }
 
-export function isPlaceTimeZoneSearchReady(): boolean {
-  return loadedModule !== null;
-}
-
 export function whenPlaceTimeZoneSearchReady(): Promise<CityTimezoneSearchModule> {
   return startLoad();
 }
@@ -40,9 +36,4 @@ export function searchPlaceTimeZonesLazy(
 
 export async function ensurePlaceTimeZoneSearchForTests(): Promise<void> {
   await startLoad();
-}
-
-export function resetPlaceTimeZoneSearchForTests(): void {
-  loadedModule = null;
-  loadPromise = null;
 }
