@@ -197,5 +197,5 @@ export function resolveRecurringReplaceTarget(
   if (scope !== "thisAndFollowing") return undefined;
   const parts = decodeOccurrenceId(id);
   if (!parts) return undefined;
-  return findByRecurrenceId(parts.recurrenceId);
+  return findByRecurrenceId(DateTimeSchema.parse(parts.recurrenceId));
 }

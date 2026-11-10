@@ -792,7 +792,8 @@ export function useEventMutations(
         const existing =
           originalOverride ??
           resolveRecurringReplaceTarget(
-            (candidate) => findEventInCache(queryClient, candidate, source),
+            (candidate) =>
+              findEventInCache(queryClient, candidate, source) ?? undefined,
             (recurrenceId) =>
               findOccurrenceInCacheByRecurrenceId(
                 queryClient,
