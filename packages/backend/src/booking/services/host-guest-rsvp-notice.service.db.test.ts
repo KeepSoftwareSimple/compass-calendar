@@ -10,7 +10,11 @@ import {
 import { ensureBookingIndexes } from "@backend/booking/booking-indexes";
 import { hostGuestRsvpNoticeRepository } from "@backend/booking/host-guest-rsvp-notice.repository";
 import hostGuestRsvpNoticeService from "@backend/booking/services/host-guest-rsvp-notice.service";
-import * as syncServiceFactory from "@backend/common/services/sync-service/sync-service.factory";
+import { SyncServiceClient } from "@backend/common/services/sync-service/sync-service.client";
+import {
+  getSyncServiceClient,
+  resetSyncServiceClientCacheForTests,
+} from "@backend/common/services/sync-service/sync-service.factory";
 import userService from "@backend/user/services/user.service";
 import {
   afterAll,
@@ -25,7 +29,7 @@ import {
 const observationId = () => new ObjectId().toString();
 
 describe("HostGuestRsvpNoticeService", () => {
-  let syncSpies: Array<{ mockRestore: () => void }> = [];
+  let summarizeSpy: ReturnType<typeof spyOn> | undefined;
 
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
@@ -34,8 +38,9 @@ describe("HostGuestRsvpNoticeService", () => {
 
   beforeEach(async () => {
     await cleanupCollections();
-    syncSpies.forEach((spy) => spy.mockRestore());
-    syncSpies = [];
+    summarizeSpy?.mockRestore();
+    summarizeSpy = undefined;
+    resetSyncServiceClientCacheForTests();
   });
 
   afterAll(cleanupTestDb);
@@ -47,17 +52,33 @@ describe("HostGuestRsvpNoticeService", () => {
     return new ObjectId(created.userId);
   };
 
-  const mockSummarize = (count: number, latest: unknown | null) => {
-    const spy = spyOn(
-      syncServiceFactory,
-      "getSyncServiceClient",
-    ).mockReturnValue({
-      summarizeHostGuestRsvpReplies: async () => ({
+  const mockSummarize = (
+    count: number,
+    latest: unknown | null,
+    options?: { overlap?: "pair" },
+  ) => {
+    getSyncServiceClient();
+    let summarizeWaiters = 0;
+    let releaseSummarize: (() => void) | undefined;
+    const summarizeOverlap = new Promise<void>((resolve) => {
+      releaseSummarize = resolve;
+    });
+    summarizeSpy = spyOn(
+      SyncServiceClient.prototype,
+      "summarizeHostGuestRsvpReplies",
+    ).mockImplementation(async () => {
+      if (options?.overlap === "pair") {
+        summarizeWaiters += 1;
+        if (summarizeWaiters >= 2) {
+          releaseSummarize?.();
+        }
+        await summarizeOverlap;
+      }
+      return {
         ok: true,
         value: { count, latest },
-      }),
-    } as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>);
-    syncSpies.push(spy);
+      };
+    });
   };
 
   it("claims backlog on first stamp using the epoch cursor", async () => {
@@ -98,13 +119,17 @@ describe("HostGuestRsvpNoticeService", () => {
       await hostGuestRsvpNoticeService.claimGuestRsvpReplies(userId);
     expect(first.count).toBe(1);
 
-    mockSummarize(1, {
-      id: observationId(),
-      guestName: "Bob",
-      responseStatus: "declined",
-      slotStart: "2026-11-24T18:00:00.000Z",
-      firstObservedAt: observedB,
-    });
+    mockSummarize(
+      1,
+      {
+        id: observationId(),
+        guestName: "Bob",
+        responseStatus: "declined",
+        slotStart: "2026-11-24T18:00:00.000Z",
+        firstObservedAt: observedB,
+      },
+      { overlap: "pair" },
+    );
 
     const [second, third] = await Promise.all([
       hostGuestRsvpNoticeService.claimGuestRsvpReplies(userId),
@@ -116,16 +141,14 @@ describe("HostGuestRsvpNoticeService", () => {
 
   it("does not advance the watermark when summarize fails", async () => {
     const userId = await createUserId();
-    const spy = spyOn(
-      syncServiceFactory,
-      "getSyncServiceClient",
-    ).mockReturnValue({
-      summarizeHostGuestRsvpReplies: async () => ({
-        ok: false,
-        error: { kind: "unavailable", correlationId: "corr", detail: null },
-      }),
-    } as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>);
-    syncSpies.push(spy);
+    getSyncServiceClient();
+    summarizeSpy = spyOn(
+      SyncServiceClient.prototype,
+      "summarizeHostGuestRsvpReplies",
+    ).mockResolvedValue({
+      ok: false,
+      error: { kind: "unavailable", correlationId: "corr", detail: null },
+    });
 
     await expect(
       hostGuestRsvpNoticeService.claimGuestRsvpReplies(userId),
