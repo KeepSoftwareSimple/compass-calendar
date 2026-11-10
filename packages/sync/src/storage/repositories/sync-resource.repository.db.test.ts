@@ -476,6 +476,50 @@ describe("SyncResourceRepository", () => {
     ).toEqual(new Date("2026-08-27T11:00:00.000Z"));
   });
 
+  it("clears sync-token-unsupported verdicts older than the retry window", async () => {
+    const tenantId = objectId() as SyncResourceUpsert["tenantId"];
+    const principalId = objectId() as SyncResourceUpsert["principalId"];
+    const connectionId = objectId() as SyncResourceUpsert["connectionId"];
+    const stale = await repo.ensure(
+      upsert({ tenantId, principalId, connectionId }),
+    );
+    const fresh = await repo.ensure(
+      upsert({ tenantId, principalId, connectionId }),
+    );
+    await repo.markSyncTokenUnsupported(
+      tenantId,
+      principalId,
+      stale._id,
+      new Date("2026-08-25T00:00:00.000Z"),
+    );
+    await repo.markSyncTokenUnsupported(
+      tenantId,
+      principalId,
+      fresh._id,
+      new Date("2026-08-27T11:00:00.000Z"),
+    );
+
+    await repo.clearSyncTokenUnsupportedByConnection(
+      tenantId,
+      principalId,
+      connectionId,
+      new Date("2026-08-26T12:00:00.000Z"),
+    );
+
+    expect(
+      (await repo.findById(tenantId, principalId, stale._id))
+        ?.syncTokenUnsupportedAt,
+    ).toBeNull();
+    expect(
+      (await repo.findById(tenantId, principalId, fresh._id))
+        ?.syncTokenUnsupportedAt,
+    ).toEqual(new Date("2026-08-27T11:00:00.000Z"));
+    expect(
+      (await repo.findById(tenantId, principalId, stale._id))
+        ?.cursorExpiredStreak,
+    ).toBe(0);
+  });
+
   it("scopes findById to the owning principal", async () => {
     const resource = await repo.ensure(upsert());
     expect(

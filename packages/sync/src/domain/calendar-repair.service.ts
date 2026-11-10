@@ -37,6 +37,7 @@ export type CalendarRepairResult =
       imported: number;
       deleted: number;
       skipped: number;
+      unchanged?: boolean;
     }
   | {
       // The provider pass could not be trusted as complete. Reads stay on the
@@ -67,6 +68,7 @@ export async function repairCalendar(
   deps: CalendarRepairDeps,
   calendar: ProviderCalendarRecord,
   now: () => Date,
+  options: { skipUnchangedWrites?: boolean } = {},
 ): Promise<CalendarRepairResult> {
   const resource = await deps.resources.ensure({
     tenantId: calendar.tenantId,
@@ -119,6 +121,8 @@ export async function repairCalendar(
     calendar,
     newGeneration,
     now,
+    undefined,
+    options.skipUnchangedWrites === true ? resource.activeGeneration : null,
   );
   const colorLabels = toColorLabelMap(calendar.eventLabels);
   const calendarDefaultPopupReminderMinutes =
@@ -184,6 +188,79 @@ export async function repairCalendar(
       resource._id,
     );
     return { status: "incomplete", resource };
+  }
+
+  const absentFromSnapshot =
+    await deps.events.countProviderLinkedAtGenerationAbsentFromSnapshot(
+      calendar.tenantId,
+      calendar.principalId,
+      calendar._id,
+      resource.activeGeneration,
+      applier.seenProviderEventIds,
+    );
+  const noopRepair =
+    options.skipUnchangedWrites === true &&
+    applier.physicalWriteCount === 0 &&
+    absentFromSnapshot === 0 &&
+    skipped === 0;
+  if (noopRepair) {
+    await deps.resources.abandonStagingGeneration(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      resource.activeGeneration,
+    );
+    await deps.resources.advanceCursor(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      cursor,
+      now(),
+    );
+    if (certified) {
+      await deps.resources.recordHistoryCoverage(
+        resource,
+        skipped,
+        certified,
+        now(),
+      );
+    }
+    const updated = await deps.resources.findById(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+    );
+    return {
+      status: "repaired",
+      resource: updated ?? resource,
+      generation: resource.activeGeneration,
+      imported: 0,
+      deleted: 0,
+      skipped,
+      unchanged: true,
+    };
+  }
+
+  if (
+    options.skipUnchangedWrites === true &&
+    absentFromSnapshot > 0 &&
+    applier.physicalWriteCount === 0
+  ) {
+    await deps.resources.abandonStagingGeneration(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      resource.activeGeneration,
+    );
+    const refreshed = await deps.resources.findById(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+    );
+    if (!refreshed) throw new Error("repair: resource missing after abandon");
+    return repairCalendar(deps, calendar, now, {
+      skipUnchangedWrites: false,
+    });
   }
 
   // A snapshot must not erase local intent still waiting for provider work.
@@ -306,4 +383,14 @@ export async function repairCalendar(
     deleted,
     skipped,
   };
+}
+
+// First repair attempt may skip unchanged etag writes to detect a no-op snapshot.
+// Callers use the default; pull paths invoke repair with skipUnchangedWrites.
+export function repairCalendarForPull(
+  deps: CalendarRepairDeps,
+  calendar: ProviderCalendarRecord,
+  now: () => Date,
+): Promise<CalendarRepairResult> {
+  return repairCalendar(deps, calendar, now, { skipUnchangedWrites: true });
 }

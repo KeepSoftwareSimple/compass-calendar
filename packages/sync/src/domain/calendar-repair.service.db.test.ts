@@ -160,6 +160,30 @@ describe("repairCalendar", () => {
       .collection(SYNC_COLLECTIONS.events)
       .countDocuments({ calendarId, generation });
 
+  it("skips generation promotion when every provider version matches the active generation", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedImported(calendar);
+    await seedEvent(calendar, "keep", resource.activeGeneration);
+    const reader = new FakeReader([
+      page([single("keep")], { nextSyncToken: "cursor-1" }),
+    ]);
+
+    const result = await repairCalendar(deps(reader), calendar, now, {
+      skipUnchangedWrites: true,
+    });
+
+    expect(result.status).toBe("repaired");
+    if (result.status !== "repaired") throw new Error("unreachable");
+    expect(result.unchanged).toBe(true);
+    expect(result.generation).toBe(resource.activeGeneration);
+    expect(result.resource.activeGeneration).toBe(resource.activeGeneration);
+    expect(result.resource.importGeneration).toBe(resource.activeGeneration);
+    expect(await eventCountAt(calendar._id, resource.activeGeneration)).toBe(1);
+    expect(await occAtGeneration(calendar._id, resource.activeGeneration)).toBe(
+      1,
+    );
+  });
+
   it("rebuilds into a new generation, activates it, and clears the old one", async () => {
     const calendar = await seedCalendar();
     await seedImported(calendar);

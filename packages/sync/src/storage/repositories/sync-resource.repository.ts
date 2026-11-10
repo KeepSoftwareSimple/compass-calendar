@@ -350,6 +350,64 @@ export class SyncResourceRepository {
     });
   }
 
+  // Record that incremental sync tokens for this calendar never survive. Clears
+  // cursor-expiry backoff because full snapshots replace the hot repair loop.
+  async markSyncTokenUnsupported(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    id: string,
+    at: Date,
+  ): Promise<void> {
+    await this.#patch(tenantId, principalId, id, {
+      syncTokenUnsupportedAt: at,
+      cursorExpiredStreak: 0,
+      cursorExpiredBackoffUntil: null,
+    });
+  }
+
+  async clearSyncTokenUnsupported(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    id: string,
+  ): Promise<void> {
+    await this.#patch(tenantId, principalId, id, {
+      syncTokenUnsupportedAt: null,
+    });
+  }
+
+  // Give every sync-token-unsupported resource on a connection one token re-probe
+  // per interval (see clearWatchUnsupportedByConnection).
+  async clearSyncTokenUnsupportedByConnection(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    connectionId: ConnectionId,
+    olderThan: Date,
+  ): Promise<void> {
+    await this.collection.updateMany(
+      {
+        tenantId,
+        principalId,
+        connectionId,
+        syncTokenUnsupportedAt: { $ne: null, $lt: olderThan },
+      },
+      { $set: { syncTokenUnsupportedAt: null, updatedAt: new Date() } },
+    );
+  }
+
+  // Drop a staged repair generation that was never activated (noop snapshot).
+  async abandonStagingGeneration(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    id: string,
+    activeGeneration: number,
+  ): Promise<void> {
+    await this.#patch(tenantId, principalId, id, {
+      importGeneration: activeGeneration,
+      repairPageCursor: null,
+      repairSkipped: 0,
+    });
+  }
+
   // Record that the provider DURABLY rejected reads for this resource (a 4xx
   // retrying cannot fix). The job that hit it is settled and removed rather than
   // left to burn its retry ladder, so this marker is the only evidence left —

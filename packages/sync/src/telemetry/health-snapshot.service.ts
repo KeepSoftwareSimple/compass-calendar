@@ -309,11 +309,29 @@ async function summarizeFreshness(
       p95Ms: null,
       p99Ms: null,
       percentOver30s: null,
+      syncTokenUnsupported: 0,
+      cursorExpiryStreak: 0,
     };
   }
 
-  const rows = await db
-    .collection(SYNC_COLLECTIONS.syncResources)
+  const collection = db.collection(SYNC_COLLECTIONS.syncResources);
+  const eventsFilter = {
+    resourceKind: "events" as const,
+    connectionId: { $in: connectionIds },
+  };
+  const [syncTokenUnsupported, cursorExpiryStreak] = await Promise.all([
+    collection.countDocuments({
+      ...eventsFilter,
+      syncTokenUnsupportedAt: { $ne: null },
+    }),
+    collection.countDocuments({
+      ...eventsFilter,
+      syncTokenUnsupportedAt: null,
+      cursorExpiredStreak: { $gt: 0 },
+    }),
+  ]);
+
+  const rows = await collection
     .aggregate<{ lastSuccessAt: Date | null }>([
       {
         $match: {
@@ -334,6 +352,8 @@ async function summarizeFreshness(
       p95Ms: null,
       p99Ms: null,
       percentOver30s: null,
+      syncTokenUnsupported,
+      cursorExpiryStreak,
     };
   }
 
@@ -353,6 +373,8 @@ async function summarizeFreshness(
       p95Ms: null,
       p99Ms: null,
       percentOver30s: null,
+      syncTokenUnsupported,
+      cursorExpiryStreak,
     };
   }
 
@@ -363,6 +385,8 @@ async function summarizeFreshness(
     p95Ms: percentile(ages, 0.95),
     p99Ms: percentile(ages, 0.99),
     percentOver30s: Math.round((over30 / ages.length) * 1000) / 10,
+    syncTokenUnsupported,
+    cursorExpiryStreak,
   };
 }
 

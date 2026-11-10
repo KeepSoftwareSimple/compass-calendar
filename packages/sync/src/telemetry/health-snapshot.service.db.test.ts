@@ -285,6 +285,42 @@ describe("computeHealthSnapshot", () => {
     expect(snapshot.freshness.percentOver30s).toBe(0);
   });
 
+  it("reports sync-token-unsupported and cursor-expiry streak counts separately", async () => {
+    const healthy = await seedConnection("google", "healthy");
+    const tenantId = healthy.tenantId;
+    const principalId = healthy.principalId;
+    const tokenUnsupported = await resources.ensure({
+      tenantId,
+      principalId,
+      connectionId: healthy._id as ConnectionId,
+      resourceKind: "events",
+      calendarId: objectId() as never,
+    });
+    await resources.markSyncTokenUnsupported(
+      tenantId,
+      principalId,
+      tokenUnsupported._id,
+      NOW,
+    );
+    const cursorStreak = await resources.ensure({
+      tenantId,
+      principalId,
+      connectionId: healthy._id as ConnectionId,
+      resourceKind: "events",
+      calendarId: objectId() as never,
+    });
+    await resources.recordCursorExpiry(
+      tenantId,
+      principalId,
+      cursorStreak._id,
+      NOW,
+    );
+
+    const snapshot = await computeHealthSnapshotForProvider(deps(), "google");
+    expect(snapshot.freshness.syncTokenUnsupported).toBe(1);
+    expect(snapshot.freshness.cursorExpiryStreak).toBe(1);
+  });
+
   it("reports the older importing connection age", async () => {
     const older = await seedConnection("google", "importing");
     const newer = await seedConnection("google", "importing");
