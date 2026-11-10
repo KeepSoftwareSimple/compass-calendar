@@ -60,9 +60,18 @@ final class ProjectRecurringEditTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(projection.removeIds, Set([events[1].id.rawValue, events[2].id.rawValue]))
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(
+            seriesId: seriesId,
+            splitAt: "2026-07-06T16:00:00.000Z"
+        )
+        let splitPointId = "\(remainderMasterEventId.rawValue)|2026-07-06T16:00:00.000Z"
+        XCTAssertEqual(
+            projection.removeIds,
+            Set([events[1].id.rawValue, events[2].id.rawValue])
+        )
         XCTAssertEqual(projection.upserts[0].id, seriesId)
-        XCTAssertEqual(projection.upserts[1].id, edited.id)
+        XCTAssertEqual(projection.upserts[1].id, remainderMasterEventId)
+        XCTAssertTrue(projection.upserts.contains { $0.id.rawValue == splitPointId })
         if case .series = projection.upserts[1].recurrence {
             // expected remainder master
         } else {
@@ -72,6 +81,7 @@ final class ProjectRecurringEditTests: XCTestCase {
         var cache = [master] + events
         cache = applyProjection(to: cache, projection: projection)
         let slotCount = cache.filter { event in
+            guard case .occurrence = event.recurrence else { return false }
             guard case .timed(let payload) = event.schedule else { return false }
             return payload.start.rawValue.hasPrefix("2026-07-06T16:00:00")
         }.count

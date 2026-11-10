@@ -20,8 +20,8 @@ describe("splitInstantAfterTruncation", () => {
 describe("remainderMasterId chain", () => {
   it("matches sync split semantics for Tyler's Unwind sequence", () => {
     const original = "65b80e635088efa5d8477a66" as const;
-    const splitAt = "2026-11-12T00:00:00.000Z" as DateTime;
+    const splitAt = "2026-11-13T00:00:00.000Z" as DateTime;
     const remainder = remainderMasterId(original, splitAt);
-    expect(remainder).not.toBe(original);
+    expect(remainder).toBe("54cf84fba54571284ca2e4be");
   });
 });

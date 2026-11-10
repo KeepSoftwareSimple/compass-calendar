@@ -1,4 +1,5 @@
 import {
+  type DateTime,
   DateTimeSchema,
   type EventId,
   EventIdSchema,
@@ -15,7 +16,10 @@ import {
   type ReplaceEventInput,
 } from "@core/types/event-command.contracts";
 import { mergeEditableContentColor } from "@core/util/event/merge-editable-content-color";
-import { rootSeriesMasterId } from "@core/util/occurrence-id";
+import {
+  decodeOccurrenceId,
+  rootSeriesMasterId,
+} from "@core/util/occurrence-id";
 
 const nowDateTime = () => DateTimeSchema.parse(new Date().toISOString());
 
@@ -180,4 +184,18 @@ export function seriesWriteKey(
   return EventIdSchema.parse(
     rootSeriesMasterId(seriesIdOf(original) ?? fallbackId),
   );
+}
+
+export function resolveRecurringReplaceTarget(
+  findEvent: (id: EventId) => Event | undefined,
+  findByRecurrenceId: (recurrenceId: DateTime) => Event | undefined,
+  id: EventId,
+  scope: RecurrenceScope,
+): Event | undefined {
+  const direct = findEvent(id);
+  if (direct) return direct;
+  if (scope !== "thisAndFollowing") return undefined;
+  const parts = decodeOccurrenceId(id);
+  if (!parts) return undefined;
+  return findByRecurrenceId(DateTimeSchema.parse(parts.recurrenceId));
 }

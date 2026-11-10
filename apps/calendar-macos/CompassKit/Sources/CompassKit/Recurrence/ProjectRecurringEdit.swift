@@ -71,7 +71,12 @@ public enum ProjectRecurringEdit {
             )
         }
 
-        let remainderSeriesId = input.edited.id
+        let splitRecurrenceId = recurrenceIdString(for: input.original)
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(
+            seriesId: input.seriesMaster!.id,
+            splitAt: splitRecurrenceId
+        )
+        let remainderSeriesId = remainderMasterEventId
         let remainderRules: [String]
         if case .series(let editedSeries) = input.edited.recurrence {
             remainderRules = editedSeries.rules
@@ -81,7 +86,7 @@ public enum ProjectRecurringEdit {
 
         let remainderMaster = copyEvent(
             input.edited,
-            id: remainderSeriesId,
+            id: remainderMasterEventId,
             recurrence: .series(.init(kind: "series", rules: remainderRules))
         )
         let truncatedMaster = copyEvent(
@@ -92,12 +97,6 @@ public enum ProjectRecurringEdit {
                     rules: truncateSeriesRules(masterPayload.rules, beforeStart: splitInstant)
                 )
             )
-        )
-
-        let splitRecurrenceId = recurrenceIdString(for: input.original)
-        let remainderMasterEventId = SeriesSplit.remainderMasterId(
-            seriesId: input.seriesMaster!.id,
-            splitAt: splitRecurrenceId
         )
 
         let removeIds = Set(affected.map(\.id.rawValue))
@@ -169,7 +168,7 @@ public enum ProjectRecurringEdit {
             } else {
                 shifted = shiftEvent(event: withSeries, original: original, edited: edited)
             }
-            if let remainderSeriesId, let remainderMasterEventId, event.id != edited.id,
+            if let remainderMasterEventId,
                let tail = event.id.rawValue.split(separator: "|", maxSplits: 1).last
             {
                 return copyEvent(

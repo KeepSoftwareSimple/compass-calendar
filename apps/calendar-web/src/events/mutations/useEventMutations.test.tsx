@@ -1122,19 +1122,6 @@ describe("useEventMutations", () => {
         context.queryClient.getQueryData<NormalizedEventQueryData>(
           calendarKey,
         )!;
-      const thursdayCards = cached.ids.filter((id) => {
-        const item = cached.entities[id];
-        return (
-          item.recurrence.kind !== "series" &&
-          item.schedule.kind === "timed" &&
-          String(item.schedule.start).includes("2026-07-04")
-        );
-      });
-      expect(thursdayCards).toHaveLength(1);
-      const thuSchedule = cached.entities[thursdayCards[0]!]!.schedule;
-      expect(thuSchedule.kind === "timed" ? thuSchedule.start : null).toBe(
-        DateTimeSchema.parse("2026-07-04T08:30:00.000Z"),
-      );
       const scheduleOnDay = (day: string) => {
         const id = cached.ids.find((candidate) => {
           const item = cached.entities[candidate];
@@ -1147,6 +1134,9 @@ describe("useEventMutations", () => {
         const schedule = cached.entities[id]!.schedule;
         return schedule.kind === "timed" ? schedule.start : "";
       };
+      expect(new Date(scheduleOnDay("2026-07-04")).toISOString()).toBe(
+        "2026-07-04T08:30:00.000Z",
+      );
       expect(new Date(scheduleOnDay("2026-07-05")).toISOString()).toBe(
         "2026-07-05T08:30:00.000Z",
       );

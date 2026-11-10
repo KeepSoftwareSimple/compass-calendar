@@ -1,3 +1,4 @@
+import { Logger } from "@core/logger/winston.logger";
 import { type DateTime } from "@core/types/domain-primitives";
 import dayjs from "@core/util/date/dayjs";
 import { remainderMasterId } from "@core/util/series-split";
@@ -7,6 +8,18 @@ import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 
 const MAX_SPLIT_CHAIN = 16;
+
+const seriesSplitSuccessorLogger = Logger("sync:series-split-successor");
+
+export const logOccurrencePastSplit = (
+  command: Pick<CommandRecord, "_id" | "eventId">,
+  masterId: string,
+  recurrenceId: DateTime,
+): void => {
+  seriesSplitSuccessorLogger.warn(
+    `Command ${command._id} (${command.eventId}): occurrencePastSplit at recurrenceId ${recurrenceId} (master ${masterId})`,
+  );
+};
 
 const splitRecurrenceIdCandidates = (
   master: EventRecord,
@@ -37,7 +50,7 @@ export type ResolveSeriesMasterForOccurrenceResult =
 // inside the master's bounded rules, or report that no successor exists.
 export async function resolveSeriesMasterForOccurrence(
   events: EventRepository,
-  command: Pick<CommandRecord, "tenantId" | "principalId">,
+  command: Pick<CommandRecord, "tenantId" | "principalId" | "_id" | "eventId">,
   master: EventRecord,
   recurrenceId: DateTime,
 ): Promise<ResolveSeriesMasterForOccurrenceResult> {
@@ -69,10 +82,12 @@ export async function resolveSeriesMasterForOccurrence(
       successor = null;
     }
     if (!successor) {
+      logOccurrencePastSplit(command, current._id, recurrenceId);
       return { ok: false, master: current, reason: "occurrencePastSplit" };
     }
     current = successor;
   }
 
+  logOccurrencePastSplit(command, current._id, recurrenceId);
   return { ok: false, master: current, reason: "occurrencePastSplit" };
 }
