@@ -11,6 +11,59 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-10
+
+Swept merges after #5187 (2026-11-09 afternoon through #5197). One finding,
+shipped as #5201 (`HostGuestRsvpSummarizeReplySchema` and the detector now
+use `RsvpResponseStatusSchema` instead of a parallel three-value enum and
+Set). Everything below was examined and kept.
+
+- **Date-picker hint cluster** (`EventFormDateField.tsx`,
+  `LifeBirthDateField.tsx`, `date-picker-keyboard-dom.util.ts`,
+  `contextual-hint-tiers.ts`, sidebar month-picker hints from #5195). Off
+  limits under the 30-day churn guard. Prior sweeps already split key
+  semantics from form closed-field behavior and named the keyboard-DOM
+  helper as load-bearing mess.
+
+- **Timezone city search** (`city-timezone-search.ts`, web catalog, macOS
+  `CityTimezoneSearch.swift`). Web imports the core search; native consumes
+  the exported JSON index. Swift's Florida-only multi-zone caption is a
+  platform port, not a silent copy of `US_STATE_NAMES`. Widening it would
+  change macOS copy.
+
+- **Event color merge** (`merge-editable-content-color.ts`). #5189 already
+  owns the rule in core; web optimistic merge and sync `mergeUpdateContent`
+  call it. Native draft mapping is a generated-payload port, not a second
+  TypeScript copy.
+
+- **Focus chrome contrast** (`calendar-accent.util.ts`,
+  `GridEventFocusChrome.swift`). `LIGHT_PAGE_PAPER` and the two `3` floors
+  sit in the owning web module next to each other; Swift reimplements WCAG
+  math because it cannot import the web helper. Folding the two `3`s is
+  taste. Touch only for a real contrast defect.
+
+- **Reflection send time vs copy.** `reflectionSendAt` uses `10:30`;
+  Settings and welcome copy say "10:30 a.m." Schedule time and user-facing
+  cadence copy can change independently, same as the section-cap judgment
+  on 2026-11-09.
+
+- **Copy/paste placement** (#5194). Web `paste-placement.util.ts` and macOS
+  paste-preview stores are platform parallels with different draft models.
+
+- **Booking claim limiter** (#5193 / #5196). `scope` is already gone;
+  guest RSVP and new-meetings keep separate limiter instances because a
+  claim on one must not suppress the other.
+
+- **Guest RSVP observation record** uses `AttendeeResponseStatusSchema` on
+  purpose: storage is the detector's output plus identity fields. Tightening
+  it to RSVP-only would be a schema change without a current write that
+  needs it. The HTTP claim schema stays aligned with that stored shape.
+
+- **CI macOS queue** (#5197). Workflow config, not domain duplication.
+
+- **Prior sweep output.** #5184, #5186, #5187, #5191, #5196 are finished
+  work, not leads.
+
 ## 2026-11-09
 
 Swept 2026-11-02 to 2026-11-09, 50 merges. One finding, shipped as #5187
