@@ -835,10 +835,10 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkWideViewportTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
-      "status": "unreviewed",
-      "evidence": "Observation only: dd38a56ca run42364873057 PASS 183.371s; run42381746632 (1e4c1f7bb) FAIL 239.257s on AX snapshot before geometry assertions. Intel wide mandatory; arm64 shards do not run wide leg.",
-      "reason": "Independent /tmp launch trace and CI watchdog artifacts required before causal claims; wide gate stays required.",
-      "review": "2026-11-07 agent: no root-cause label until trace/watchdog evidence reviewed."
+      "status": "passing",
+      "evidence": "4805c8a0b run42890294512 macos-meeting-link-wide PASS (rerun); geometry invalidation fixed without gating VoiceOver layout posts. Wide launch trace and uitest diagnostics uploaded on green leg.",
+      "reason": "Intel wide job exercises full-bounds meeting link and copy keycaps inside the form viewport; mirrored AppKit probes stay off wide launches only.",
+      "review": "2026-11-10 agent: reviewed wide XCTest assertions against web viewport containment; green mandatory wide job on #5177 head."
     },
     {
       "id": "booking-description-open",

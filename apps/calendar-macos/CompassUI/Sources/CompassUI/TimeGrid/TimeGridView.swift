@@ -800,8 +800,11 @@ public final class TimeGridView: NSView {
         focusedEventAccessibilityProxy.isHidden = false
         focusedEventAccessibilityProxy.sync(label: card.label, frameInParent: frameInGrid)
 
-        guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes, let window,
-            !focusedEventAccessibilityProxy.isHidden
+        guard TimeGridFocusedAccessibilityNotifications.shouldPostLayoutChangedAfterProxySync(
+            meetingLinkWideViewport: UITestLaunchPolicy.meetingLinkWideViewport,
+            proxyIsHidden: focusedEventAccessibilityProxy.isHidden,
+            hasWindow: window != nil
+        ), let window
         else { return }
         NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
         NSAccessibility.post(element: window, notification: .layoutChanged)
