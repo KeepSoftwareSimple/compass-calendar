@@ -15,6 +15,7 @@ final class NativeCalendarRootModelLifeSidebarHintsTests: XCTestCase {
 
     func testLifeThisWeekSidebarTipRequiresBirthDate() async throws {
         let model = try await makeModel()
+        XCTAssertTrue(model.lifeStore.updateBirthDate(""))
         model.handleShortcut(.navLifeView)
         XCTAssertFalse(model.showsLifeThisWeekSidebarTip)
         XCTAssertTrue(model.lifeStore.updateBirthDate("1990-01-01"))
@@ -23,6 +24,7 @@ final class NativeCalendarRootModelLifeSidebarHintsTests: XCTestCase {
 
     func testLifeWithoutBirthDateShowsCommandPaletteIdleTip() async throws {
         let model = try await makeModel()
+        XCTAssertTrue(model.lifeStore.updateBirthDate(""))
         model.handleShortcut(.navLifeView)
         XCTAssertFalse(model.showsLifeThisWeekSidebarTip)
         XCTAssertEqual(model.lifeSidebarIdleTip, .commandPalette)
