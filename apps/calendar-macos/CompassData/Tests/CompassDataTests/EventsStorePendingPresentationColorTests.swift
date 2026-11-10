@@ -59,15 +59,18 @@ final class EventsStorePendingPresentationColorTests: XCTestCase {
 
         let input = try replaceInput(scope: .this)
         let apiGate = AsyncTestGate()
+        let apiReached = AsyncTestSignal()
+        defer { Task { await apiGate.resume() } }
         mockAPI.replaceHandler = { _, _ in
-            try await apiGate.waitForTest()
+            await apiReached.signal()
+            await apiGate.wait()
             return try StoreSampleEvents.response(from: edited)
         }
 
         var presentationEvents: [Event] = [occurrence]
         var refreshedBeforeSettle = false
 
-        let replaceTask = Task {
+        let replaceTask = Task { @MainActor in
             try await store.replaceOptimistic(
                 id: occurrence.id,
                 input: input,
@@ -89,6 +92,7 @@ final class EventsStorePendingPresentationColorTests: XCTestCase {
             .colorHex
         XCTAssertEqual(renderedHex, "#E67C73")
 
+        try await apiReached.waitForTest()
         await apiGate.resume()
         _ = try await replaceTask.value
     }
@@ -111,13 +115,16 @@ final class EventsStorePendingPresentationColorTests: XCTestCase {
 
         let input = try replaceInput(scope: .this)
         let apiGate = AsyncTestGate()
+        let apiReached = AsyncTestSignal()
+        defer { Task { await apiGate.resume() } }
         mockAPI.replaceHandler = { _, _ in
-            try await apiGate.waitForTest()
+            await apiReached.signal()
+            await apiGate.wait()
             return try StoreSampleEvents.response(from: edited)
         }
 
         var staleLoaded = [occurrence]
-        let replaceTask = Task {
+        let replaceTask = Task { @MainActor in
             try await store.replaceOptimistic(
                 id: occurrence.id,
                 input: input,
@@ -141,6 +148,7 @@ final class EventsStorePendingPresentationColorTests: XCTestCase {
             "#E67C73"
         )
 
+        try await apiReached.waitForTest()
         await apiGate.resume()
         _ = try await replaceTask.value
     }

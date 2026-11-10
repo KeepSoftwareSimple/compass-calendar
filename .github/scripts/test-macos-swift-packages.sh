@@ -52,15 +52,9 @@ run_package_tests() {
 }
 
 job_start=$(date +%s)
-pids=()
-for name in "${PACKAGES[@]}"; do
-  run_package_tests "$name" &
-  pids+=("$!")
-done
-
 status=0
-for pid in "${pids[@]}"; do
-  if ! wait "$pid"; then
+for name in "${PACKAGES[@]}"; do
+  if ! run_package_tests "$name"; then
     status=1
   fi
 done
