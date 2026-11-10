@@ -1,4 +1,5 @@
 import AppKit
+import CompassData
 import CompassKit
 
 @MainActor
@@ -267,6 +268,13 @@ final class EventCardView: NSView {
     }
 
     private func syncFocusAccessibilityAnchor(isFocused: Bool, label: String) {
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            if showsFocusAccessibilityAnchor {
+                showsFocusAccessibilityAnchor = false
+                focusAccessibilityAnchor.removeFromSuperview()
+            }
+            return
+        }
         if isFocused {
             setAccessibilityElement(true)
             if focusAccessibilityAnchor.superview == nil {
@@ -327,7 +335,10 @@ final class EventCardView: NSView {
         }
         guard bounds.width > 0.5, bounds.height > 0.5, let window else { return nil }
         let screenFrame = window.convertToScreen(convert(bounds, to: nil))
-        guard screenFrame.width > 0.5, screenFrame.height > 0.5 else { return nil }
+        guard screenFrame.width > 0.5, screenFrame.height > 0.5,
+            screenFrame.width.isFinite, screenFrame.height.isFinite,
+            screenFrame.minX.isFinite, screenFrame.minY.isFinite
+        else { return nil }
         return screenFrame
     }
 
@@ -338,7 +349,10 @@ final class EventCardView: NSView {
         let rectInWindow = superview.convert(layoutRectInParent, to: nil)
         guard rectInWindow.width > 0.5, rectInWindow.height > 0.5 else { return nil }
         let screenFrame = window.convertToScreen(rectInWindow)
-        guard screenFrame.width > 0.5, screenFrame.height > 0.5 else { return nil }
+        guard screenFrame.width > 0.5, screenFrame.height > 0.5,
+            screenFrame.width.isFinite, screenFrame.height.isFinite,
+            screenFrame.minX.isFinite, screenFrame.minY.isFinite
+        else { return nil }
         return screenFrame
     }
 
@@ -409,7 +423,11 @@ private final class FocusedEventAccessibilityAnchorView: NSView {
     private func syncAccessibilityFrame() {
         guard bounds.width > 0.5, bounds.height > 0.5, let window, let superview else { return }
         let rectInWindow = superview.convert(bounds, to: nil)
-        setAccessibilityFrame(window.convertToScreen(rectInWindow))
+        let screenFrame = window.convertToScreen(rectInWindow)
+        guard screenFrame.width.isFinite, screenFrame.height.isFinite,
+            screenFrame.minX.isFinite, screenFrame.minY.isFinite
+        else { return }
+        setAccessibilityFrame(screenFrame)
     }
 }
 

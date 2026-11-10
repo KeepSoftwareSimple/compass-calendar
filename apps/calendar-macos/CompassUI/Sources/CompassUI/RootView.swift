@@ -66,10 +66,15 @@ public struct RootView: View {
             titleBarChrome
                 .frame(maxWidth: .infinity, alignment: .leading)
             pointerHintLayer
-            GridFocusAccessibilityOverlay(focusedLabel: model.gridFocusAccessibilityLabel)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(.top, MacTitleBarChromeMetrics.mainContentTopInset + 8)
-                .padding(.leading, contentLeadingInset + 8)
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityHidden(true)
+                .allowsHitTesting(false)
+                .overlay(alignment: .topLeading) {
+                    GridFocusAccessibilityOverlay(focusedLabel: model.gridFocusAccessibilityLabel)
+                        .padding(.top, MacTitleBarChromeMetrics.mainContentTopInset + 8)
+                        .padding(.leading, contentLeadingInset + 8)
+                }
         }
     }
 

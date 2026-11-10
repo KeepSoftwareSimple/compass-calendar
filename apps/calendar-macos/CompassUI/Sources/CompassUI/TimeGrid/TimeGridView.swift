@@ -772,6 +772,11 @@ public final class TimeGridView: NSView {
     }
 
     private func syncFocusedEventAccessibilityProxy(snapshot: GridLayoutSnapshot) {
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            focusedEventAccessibilityProxy.isHidden = true
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            return
+        }
         guard let focusedId = state.focusedEventId,
             let card = snapshot.cards.first(where: { $0.eventId == focusedId })
                 .map({ displayCard($0, snapshot: snapshot) })
