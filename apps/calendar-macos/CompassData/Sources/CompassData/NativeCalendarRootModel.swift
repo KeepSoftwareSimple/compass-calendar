@@ -832,6 +832,7 @@ public final class NativeCalendarRootModel {
             didApplyDemoFixtureScroll = true
         }
         applyInitialUIFocusIfNeeded()
+        tryOpenUITestFocusedEventFormIfNeeded()
         gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
             resolveGridFocusLabel(eventId: focusedId.rawValue, cards: snapshot.cards)
         }
@@ -848,27 +849,30 @@ public final class NativeCalendarRootModel {
         didApplyInitialUIFocus = true
         focusGridEvent(eventId: eventId)
         publishGridFocusAccessibilityProbe(eventId: eventId)
-        scheduleUITestFocusedEventFormOpenIfNeeded()
+        tryOpenUITestFocusedEventFormIfNeeded()
     }
 
-    private func scheduleUITestFocusedEventFormOpenIfNeeded() {
+    @discardableResult
+    private func tryOpenUITestFocusedEventFormIfNeeded() -> Bool {
         guard !didApplyUITestFocusedEventForm,
             UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus,
             focusStore.focusedEventId != nil
-        else { return }
+        else { return false }
+        openKeyboardEditForFocusedEvent()
+        guard draftStore.gridDraft != nil else { return false }
         didApplyUITestFocusedEventForm = true
-        Task { @MainActor in
-            openKeyboardEditForFocusedEvent()
-            openEventFormForCurrentDraft()
-            if let title = UITestLaunchPolicy.presetEventFormTitle {
-                updateDraftFromForm(title: title)
-                onEventFormTitleAccessibilityProbeTitleSync?(title)
-            }
-            publishEventFormTitleAccessibilityProbe()
-            if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+        openEventFormForCurrentDraft()
+        if let title = UITestLaunchPolicy.presetEventFormTitle {
+            updateDraftFromForm(title: title)
+            onEventFormTitleAccessibilityProbeTitleSync?(title)
+        }
+        publishEventFormTitleAccessibilityProbe()
+        if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+            Task { @MainActor in
                 await saveDraftWithInvitationGate()
             }
         }
+        return true
     }
 
     func currentGridCards() -> [GridLayoutCardSnapshot] {
