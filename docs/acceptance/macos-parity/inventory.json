@@ -836,9 +836,9 @@
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
       "status": "passing",
-      "evidence": "4805c8a0b run42890294512 macos-meeting-link-wide PASS (rerun); geometry invalidation fixed without gating VoiceOver layout posts. Wide launch trace and uitest diagnostics uploaded on green leg.",
+      "evidence": "1dbe09b23 run42919219627 macos-meeting-link-wide first-attempt PASS with 3 consecutive wide XCTest passes; window identifier lookup + deferred form open after stable geometry probe.",
       "reason": "Intel wide job exercises full-bounds meeting link and copy keycaps inside the form viewport; mirrored AppKit probes stay off wide launches only.",
-      "review": "2026-11-10 agent: reviewed wide XCTest assertions against web viewport containment; green mandatory wide job on #5177 head."
+      "review": "2026-11-10 agent: reviewed wide XCTest assertions and launch sequencing; green mandatory wide job without workflow reruns on #5177 head."
     },
     {
       "id": "booking-description-open",
