@@ -150,6 +150,13 @@ jobs:
           MACOS_SWIFT_PACKAGES_INCLUDE_COMPASSKIT: "0"
         run: bash .github/scripts/test-macos-swift-packages.sh
 
+      - name: Stress HiddenEventsStore superseded test (50x)
+        if: >-
+          github.event_name == 'pull_request' &&
+          (github.head_ref == 'cursor/hidden-events-superseded-test-8feb' ||
+           github.head_ref == 'cursor/meeting-copy-keycap-8feb')
+        run: bash .github/scripts/test-hidden-events-store-stress.sh 50
+
   macos-build:
     needs: changes
     if: needs.changes.outputs.macos == 'true'
