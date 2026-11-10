@@ -88,7 +88,8 @@ final class HiddenEventsStoreTests: XCTestCase {
         XCTAssertTrue(store.isHidden(eventId))
 
         await putGate.resume()
-        XCTAssertEqual(try await hide, .applied)
+        let hideResult = try await hide
+        XCTAssertEqual(hideResult, .applied)
         XCTAssertTrue(store.isHidden(eventId))
     }
 
