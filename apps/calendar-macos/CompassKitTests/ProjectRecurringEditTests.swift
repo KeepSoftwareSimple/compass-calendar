@@ -81,6 +81,7 @@ final class ProjectRecurringEditTests: XCTestCase {
         var cache = [master] + events
         cache = applyProjection(to: cache, projection: projection)
         let slotCount = cache.filter { event in
+            guard case .occurrence = event.recurrence else { return false }
             guard case .timed(let payload) = event.schedule else { return false }
             return payload.start.rawValue.hasPrefix("2026-07-06T16:00:00")
         }.count
