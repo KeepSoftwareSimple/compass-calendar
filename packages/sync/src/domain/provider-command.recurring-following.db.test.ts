@@ -402,6 +402,61 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
 
       expect(result.outcome.state).toBe("pending");
     });
+
+    it("resolves the remainder master for a stale thisAndFollowing split (truncated series id)", async () => {
+      const { tenantId, principalId, calendar, master } = await seedMaster();
+      const firstSplitWriter = new FakeProviderEventWriter();
+      firstSplitWriter.fetchEventResult = providerSeries(
+        "Old",
+        "etag-1",
+        weekly3,
+      );
+      firstSplitWriter.createResult = {
+        providerEventId: "g-remainder-1" as ProviderEventId,
+        providerVersion: "etag-2",
+      };
+      const firstSplit = await followingCommand(master, "update");
+      await executeProviderSeriesFollowingUpdate(
+        deps(firstSplitWriter),
+        firstSplit,
+        master,
+        calendar,
+        now,
+      );
+
+      const truncated = await events.findById(
+        tenantId,
+        principalId,
+        master._id,
+      );
+      expect(truncated).not.toBeNull();
+
+      const thirdSplit = await followingCommand(
+        master,
+        "update",
+        "2026-07-28T09:00:00-06:00",
+        "Second split",
+      );
+      const writer = new FakeProviderEventWriter();
+      writer.fetchEventResult = providerSeries("Split", "etag-3", [
+        "RRULE:FREQ=WEEKLY;COUNT=2",
+      ]);
+      writer.createResult = {
+        providerEventId: "g-remainder-2" as ProviderEventId,
+        providerVersion: "etag-4",
+      };
+
+      const result = await executeProviderSeriesFollowingUpdate(
+        deps(writer),
+        thirdSplit,
+        truncated!,
+        calendar,
+        now,
+      );
+
+      expect(result.outcome.state).toBe("confirmed");
+      expect(writer.createCalls).toHaveLength(1);
+    });
   });
 });
 

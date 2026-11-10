@@ -1,5 +1,6 @@
 import {
   DateOnlySchema,
+  type DateTime,
   DateTimeSchema,
   type EventId,
   EventIdSchema,
@@ -628,11 +629,18 @@ describe("projectRecurringEdit", () => {
       seriesMaster: master,
     });
 
+    const splitRecurrenceId =
+      decodeOccurrenceId(original.id)?.recurrenceId ??
+      DateTimeSchema.parse(original.schedule.start as string);
+    const remainderMasterEventId = remainderMasterId(
+      SERIES_ID,
+      splitRecurrenceId as DateTime,
+    );
     expect([...projection.removeIds].sort()).toEqual(
       [events[1].id, events[2].id].sort(),
     );
     expect(projection.upserts[0]?.id).toBe(SERIES_ID);
-    expect(projection.upserts[1]?.id).toBe(edited.id);
+    expect(projection.upserts[1]?.id).toBe(remainderMasterEventId);
     expect(projection.upserts[1]?.recurrence.kind).toBe("series");
 
     const cache = applyProjection(
@@ -645,7 +653,16 @@ describe("projectRecurringEdit", () => {
       },
       projection,
     );
-    expect(timedSlotCount(cache, "2026-07-06T16:00:00.000Z")).toBe(1);
+    expect(cache.ids).not.toContain(events[1]!.id);
+    expect(cache.ids).toContain(remainderMasterEventId);
+    const splitPointRecurrenceId = DateTimeSchema.parse(
+      (edited.schedule as { start: string }).start,
+    ) as DateTime;
+    expect(cache.ids).toContain(
+      EventIdSchema.parse(
+        `${remainderMasterEventId}::${splitPointRecurrenceId}`,
+      ),
+    );
   });
 
   test("repoints following occurrence ids at the deterministic remainder master", () => {
@@ -683,6 +700,13 @@ describe("projectRecurringEdit", () => {
     expect(repointedIds).toContain(
       EventIdSchema.parse(`${remainderMasterEventId}::${start3}`),
     );
+    expect(repointedIds).toContain(
+      EventIdSchema.parse(`${remainderMasterEventId}::${start2}`),
+    );
+    const remainderMaster = projection.upserts.find(
+      (event) => event.id === remainderMasterEventId,
+    );
+    expect(remainderMaster?.recurrence.kind).toBe("series");
   });
 
   test("keeps an already-moved-earlier instance in a this-and-following promote", () => {

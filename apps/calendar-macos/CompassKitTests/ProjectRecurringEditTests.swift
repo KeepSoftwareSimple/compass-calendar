@@ -60,9 +60,18 @@ final class ProjectRecurringEditTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(projection.removeIds, Set([events[1].id.rawValue, events[2].id.rawValue]))
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(
+            seriesId: seriesId,
+            splitAt: "2026-07-06T16:00:00.000Z"
+        )
+        let splitPointId = "\(remainderMasterEventId.rawValue)|2026-07-06T16:00:00.000Z"
+        XCTAssertEqual(
+            projection.removeIds,
+            Set([events[1].id.rawValue, events[2].id.rawValue])
+        )
         XCTAssertEqual(projection.upserts[0].id, seriesId)
-        XCTAssertEqual(projection.upserts[1].id, edited.id)
+        XCTAssertEqual(projection.upserts[1].id, remainderMasterEventId)
+        XCTAssertTrue(projection.upserts.contains { $0.id.rawValue == splitPointId })
         if case .series = projection.upserts[1].recurrence {
             // expected remainder master
         } else {

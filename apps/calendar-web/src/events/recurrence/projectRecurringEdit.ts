@@ -198,7 +198,7 @@ const patchAffectedOccurrences = (
       event.id === edited.id
         ? { ...withSeries, schedule: edited.schedule }
         : shiftEvent(withSeries, original, edited);
-    if (remainderSeriesId && remainderMasterEventId && event.id !== edited.id) {
+    if (remainderSeriesId && remainderMasterEventId) {
       return withRemainderOccurrenceId(
         shifted,
         remainderMasterEventId,
@@ -277,7 +277,6 @@ export function projectRecurringEdit({
     });
   }
 
-  const remainderSeriesId = edited.id;
   const splitRecurrenceId =
     recurrenceIdForOccurrence(original) ??
     (DateTimeSchema.parse(new Date(splitInstant).toISOString()) as DateTime);
@@ -285,13 +284,14 @@ export function projectRecurringEdit({
     seriesMaster.id,
     splitRecurrenceId,
   );
+  const remainderSeriesId = remainderMasterEventId;
   const remainderRules =
     edited.recurrence.kind === "series"
       ? edited.recurrence.rules
       : stripRuleBounds(seriesMaster.recurrence.rules);
   const remainderMaster: Event = {
     ...edited,
-    id: remainderSeriesId,
+    id: remainderMasterEventId,
     recurrence: { kind: "series", rules: remainderRules },
   };
   const truncatedMaster: Event = {
