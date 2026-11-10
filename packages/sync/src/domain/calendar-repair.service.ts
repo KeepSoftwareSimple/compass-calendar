@@ -241,11 +241,9 @@ export async function repairCalendar(
     };
   }
 
-  if (
-    options.skipUnchangedWrites === true &&
-    absentFromSnapshot > 0 &&
-    applier.physicalWriteCount === 0
-  ) {
+  // Any partial skip pass must not activate: unchanged rows were left on the old
+  // generation and deleteStaleProviderEventsBelowGeneration would erase them.
+  if (options.skipUnchangedWrites === true && !noopRepair) {
     await deps.resources.abandonStagingGeneration(
       resource.tenantId,
       resource.principalId,
