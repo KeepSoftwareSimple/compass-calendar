@@ -108,10 +108,11 @@ export function TimezoneCombobox({
     return list;
   }, [anchorZone, excludeZone, now, value]);
 
-  const zones = useMemo(
-    () => filterTimeZones(catalog, query),
-    [catalog, query, placeSearchReadyTick],
-  );
+  const zones = useMemo(() => {
+    // Re-filter when the city-timezones chunk finishes loading.
+    void placeSearchReadyTick;
+    return filterTimeZones(catalog, query);
+  }, [catalog, query, placeSearchReadyTick]);
 
   const [activeId, setActiveId] = useState(value ?? headOptions[0]?.id ?? "");
 

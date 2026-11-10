@@ -1,5 +1,5 @@
 import { type DateTime, type EventId } from "@core/types/domain-primitives";
-import { createHash } from "node:crypto";
+import { sha256HexFromUtf8 } from "@core/util/sha256-hex.util";
 
 // A deterministic event id for the remainder series of a thisAndFollowing
 // split, so the same split always resolves to the same master and a retry
@@ -9,8 +9,5 @@ export function remainderMasterId(
   seriesId: EventId,
   splitAt: DateTime,
 ): EventId {
-  return createHash("sha256")
-    .update(`${seriesId}:${splitAt}`)
-    .digest("hex")
-    .slice(0, 24) as EventId;
+  return sha256HexFromUtf8(`${seriesId}:${splitAt}`).slice(0, 24) as EventId;
 }

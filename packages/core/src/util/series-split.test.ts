@@ -10,5 +10,8 @@ describe("remainderMasterId", () => {
       remainderMasterId(seriesId, splitAt),
     );
     expect(remainderMasterId(seriesId, splitAt)).toHaveLength(24);
+    expect(remainderMasterId(seriesId, splitAt)).toBe(
+      "c41b923eedccbca418a541da",
+    );
   });
 });
