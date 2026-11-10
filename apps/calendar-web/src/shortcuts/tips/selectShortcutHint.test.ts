@@ -52,8 +52,19 @@ describe("selectShortcutHint", () => {
       hintFor({
         ...calendarIdle,
         isLifeView: true,
+        lifeThisWeekEligible: true,
       }).id,
     ).toBe("life-this-week");
+  });
+
+  it("hides the Life T tip when this week cannot be shown", () => {
+    expect(
+      hintFor({
+        ...calendarIdle,
+        isLifeView: true,
+        lifeThisWeekEligible: false,
+      }).id,
+    ).toBe("command-palette");
   });
 
   it("prefers a focused event over the first-event create prompt", () => {
@@ -224,7 +235,10 @@ describe("selectShortcutHint", () => {
 
   it("falls through to the command palette after Life T is demonstrated", () => {
     expect(
-      hintFor({ ...calendarIdle, isLifeView: true }, ["life-this-week"]).id,
+      hintFor(
+        { ...calendarIdle, isLifeView: true, lifeThisWeekEligible: true },
+        ["life-this-week"],
+      ).id,
     ).toBe("command-palette");
   });
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { parseLifeDate } from "@core/life/life-math";
 import { sidebarDatePickerHintEligible } from "@core/shortcuts/sidebar-hint-surface";
 import dayjs from "@core/util/date/dayjs";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
@@ -27,6 +28,7 @@ import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personali
 import { useShortcutHintProgress } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useIsTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
+import { readLifePreferences } from "@web/views/Life/life-preferences.storage";
 
 /** Re-rank this often so a tip that nothing else disturbs still gives way.
  * Impressions are only recorded when the rendered tip changes, so without a
@@ -47,6 +49,8 @@ export function useShortcutHintContext() {
   const eventFocused = useIsAnyCalendarEventFocused();
   const pathname = window.location.pathname;
   const isLifeView = isLifePathname(pathname);
+  const lifeThisWeekEligible =
+    parseLifeDate(readLifePreferences().birthDate) !== null;
   const isWeekView =
     pathname === ROOT_ROUTES.WEEK ||
     pathname.startsWith(`${ROOT_ROUTES.WEEK}/`);
@@ -93,6 +97,7 @@ export function useShortcutHintContext() {
       isFormOpen,
       formFocusInside,
       isLifeView,
+      lifeThisWeekEligible,
       isWeekView,
       eventFocused,
       firstEventDone: firstEventDone || isCelebrating,

@@ -21,6 +21,7 @@ import {
   SHORTCUT_HINT_ROTATION_MS,
   useShortcutHintContext,
 } from "@web/shortcuts/tips/useShortcutHintContext";
+import { writeLifePreferences } from "@web/views/Life/life-preferences.storage";
 import { afterEach, beforeEach, describe, expect, it, jest } from "bun:test";
 
 const focusCalendarEvent = () => {
@@ -85,6 +86,11 @@ describe("useShortcutHintContext", () => {
   });
 
   it("returns life-this-week on the Life path", () => {
+    writeLifePreferences({
+      birthDate: "1990-01-01",
+      lifespan: 80,
+      variation: "average",
+    });
     window.history.replaceState({}, "", "/life");
     const { result } = renderHook(() => useShortcutHintContext());
     expect(result.current!.id).toBe("life-this-week");

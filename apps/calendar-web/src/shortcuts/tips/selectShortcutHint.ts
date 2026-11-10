@@ -21,6 +21,8 @@ export type ShortcutHintContext = {
   jumpableDayPrefixes?: readonly string[];
   /** 0=Sunday … 6=Saturday, used to teach the week forward from today. */
   todayWeekday?: number;
+  /** False when Life has no birth date, so T does not jump to this week. */
+  lifeThisWeekEligible?: boolean;
 };
 
 const IDLE_POOL = [
@@ -127,7 +129,11 @@ export function selectShortcutHint(
     return pick(FORM_POOL);
   }
   if (ctx.isLifeView) {
-    return pick(LIFE_POOL);
+    const pool =
+      ctx.lifeThisWeekEligible === false
+        ? (["command-palette"] as const)
+        : LIFE_POOL;
+    return pick(pool);
   }
   if (ctx.eventFocused) {
     return pick(withWeekDayFocus(FOCUSED_POOL, showWeekDay));

@@ -44,6 +44,7 @@ import {
   resetTimeTravelStoreForTests,
   setTimeTravelZone,
 } from "@web/timezone/time-travel.store";
+import { writeLifePreferences } from "@web/views/Life/life-preferences.storage";
 import {
   afterAll,
   afterEach,
@@ -436,6 +437,11 @@ describe("SidebarStatusBar", () => {
   });
 
   it("hides keyboardPlace draft hints on Life view and shows the life shortcut tip", () => {
+    writeLifePreferences({
+      birthDate: "1990-01-01",
+      lifespan: 80,
+      variation: "average",
+    });
     useFirstEventPromptStore.setState({ isDone: true }, false);
     window.history.replaceState({}, "", "/life");
     seedKeyboardPlaceDraft();
