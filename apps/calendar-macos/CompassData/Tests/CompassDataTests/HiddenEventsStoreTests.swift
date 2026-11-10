@@ -59,9 +59,11 @@ final class HiddenEventsStoreTests: XCTestCase {
         let repository = HiddenEventRepository(database: database)
         let remote = MockUserAPI()
         let putGate = AsyncTestGate()
+        let hideReachedGate = AsyncTestGate()
         remote.hiddenIds = []
         remote.setHiddenHandler = { input in
             if input.hidden {
+                await hideReachedGate.resume()
                 await putGate.wait()
                 remote.hiddenIds = [input.eventId.rawValue]
                 return remote.hiddenIds
@@ -78,6 +80,7 @@ final class HiddenEventsStoreTests: XCTestCase {
         let eventId = EventId(rawValue: "evt-refetch")
 
         async let hide = store.setEventHidden(eventId: eventId, hidden: true)
+        await hideReachedGate.wait()
         XCTAssertTrue(store.isHidden(eventId))
 
         remote.hiddenIds = []
@@ -85,7 +88,7 @@ final class HiddenEventsStoreTests: XCTestCase {
         XCTAssertTrue(store.isHidden(eventId))
 
         await putGate.resume()
-        _ = try await hide
+        XCTAssertEqual(try await hide, .applied)
         XCTAssertTrue(store.isHidden(eventId))
     }
 
@@ -94,6 +97,7 @@ final class HiddenEventsStoreTests: XCTestCase {
         let repository = HiddenEventRepository(database: database)
         let remote = MockUserAPI()
         let unhideGate = AsyncTestGate()
+        let unhideReachedGate = AsyncTestGate()
         remote.hiddenIds = []
         remote.setHiddenHandler = { input in
             if input.hidden {
@@ -102,6 +106,7 @@ final class HiddenEventsStoreTests: XCTestCase {
                 }
                 return remote.hiddenIds
             }
+            await unhideReachedGate.resume()
             await unhideGate.wait()
             remote.hiddenIds.removeAll { $0 == input.eventId.rawValue }
             return remote.hiddenIds
@@ -117,11 +122,14 @@ final class HiddenEventsStoreTests: XCTestCase {
         try await store.setEventHidden(eventId: eventId, hidden: true)
         async let unhide = store.setEventHidden(eventId: eventId, hidden: false)
         async let rehide = store.setEventHidden(eventId: eventId, hidden: true)
+        await unhideReachedGate.wait()
         await unhideGate.resume()
-        try await unhide
-        try await rehide
+        let unhideResult = try await unhide
+        let rehideResult = try await rehide
 
+        XCTAssertEqual(rehideResult, .applied)
         XCTAssertTrue(store.isHidden(eventId))
+        _ = unhideResult
     }
 
     func testHiddenEventRollbackOnFailure() async throws {
