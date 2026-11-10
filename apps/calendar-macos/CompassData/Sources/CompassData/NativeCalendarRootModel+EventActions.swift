@@ -63,7 +63,10 @@ extension NativeCalendarRootModel {
         Task {
             let beforeHidden = hidden
             do {
-                try await environment.hiddenEventsStore.setEventHidden(eventId: eventId, hidden: next)
+                let result = try await environment.hiddenEventsStore.setEventHidden(
+                    eventId: eventId,
+                    hidden: next)
+                guard result == .applied else { return }
                 if !undoStore.isRestoringHistory() {
                     undoStore.record(.hidden(eventId: eventId, hidden: next))
                 }

@@ -44,12 +44,16 @@ final class MockEventsAPI: EventsAPIProtocol, @unchecked Sendable {
 final class MockUserAPI: HiddenEventsRemoteClient, @unchecked Sendable {
     var hiddenIds: [String] = []
     var setHiddenError: Error?
+    var setHiddenHandler: ((SetEventHiddenInput) async throws -> [String])?
 
     func hiddenEventIds() async throws -> [String] {
         hiddenIds
     }
 
     func setHiddenEvents(_ input: SetEventHiddenInput) async throws -> [String] {
+        if let setHiddenHandler {
+            return try await setHiddenHandler(input)
+        }
         if let setHiddenError { throw setHiddenError }
         if input.hidden {
             if !hiddenIds.contains(input.eventId.rawValue) {
@@ -72,6 +76,23 @@ actor AsyncTestGate {
     func resume() {
         continuation?.resume()
         continuation = nil
+    }
+}
+
+/// One-shot signal that tolerates `signal()` before `wait()`.
+actor AsyncTestSignal {
+    private var signaled = false
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func signal() {
+        signaled = true
+        continuation?.resume()
+        continuation = nil
+    }
+
+    func wait() async {
+        if signaled { return }
+        await withCheckedContinuation { continuation = $0 }
     }
 }
 
