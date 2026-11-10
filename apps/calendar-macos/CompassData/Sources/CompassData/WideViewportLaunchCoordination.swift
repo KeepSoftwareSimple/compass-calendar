@@ -2,6 +2,7 @@ import Foundation
 
 /// Wide viewport XCTest sequencing: publish a window geometry mirror before the tree
 /// grows, then open the event form only after a stable layout pass.
+@MainActor
 public enum WideViewportLaunchCoordination {
     public static let stableGeometryPublishedNotification =
         Notification.Name("CompassWideViewportStableGeometryPublished")
