@@ -14,9 +14,9 @@ reason it stays.
 ## 2026-11-10
 
 Swept merges after #5187 (2026-11-09 afternoon through #5197). One finding,
-shipped as the host-guest RSVP status share: `HostGuestRsvpSummarizeReplySchema`
-and the detector now use `RsvpResponseStatusSchema` instead of a parallel
-three-value enum and Set. Everything below was examined and kept.
+shipped as #5201 (`HostGuestRsvpSummarizeReplySchema` and the detector now
+use `RsvpResponseStatusSchema` instead of a parallel three-value enum and
+Set). Everything below was examined and kept.
 
 - **Date-picker hint cluster** (`EventFormDateField.tsx`,
   `LifeBirthDateField.tsx`, `date-picker-keyboard-dom.util.ts`,
