@@ -168,7 +168,7 @@ public enum ProjectRecurringEdit {
             } else {
                 shifted = shiftEvent(event: withSeries, original: original, edited: edited)
             }
-            if let remainderSeriesId, let remainderMasterEventId,
+            if let remainderMasterEventId,
                let tail = event.id.rawValue.split(separator: "|", maxSplits: 1).last
             {
                 return copyEvent(

@@ -84,13 +84,19 @@ final class EventsStoreRecurringTests: XCTestCase {
 
         try await store.replaceOptimistic(id: split.id, input: input, optimisticEvent: edited)
 
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(
+            seriesId: seriesId,
+            splitAt: "2026-07-06T16:00:00.000Z"
+        )
+        let splitPointId = "\(remainderMasterEventId.rawValue)|2026-07-06T16:00:00.000Z"
+
         let stored = try repository.fetchAll()
         let ids = Set(stored.map(\.id.rawValue))
-        // Web parity: remainderSeriesId is edited.id (same as the split occurrence id).
         XCTAssertFalse(ids.contains(following.id.rawValue))
+        XCTAssertFalse(ids.contains(split.id.rawValue))
         XCTAssertTrue(ids.contains(seriesId.rawValue))
-        XCTAssertTrue(ids.contains(edited.id.rawValue))
-        XCTAssertEqual(stored.filter { $0.id == edited.id }.count, 1)
+        XCTAssertTrue(ids.contains(remainderMasterEventId.rawValue))
+        XCTAssertTrue(ids.contains(splitPointId))
 
         let gridInputs = CalendarEventViewModel.gridInputs(from: stored)
         let julySix = gridInputs.timedEvents.filter { $0.startDate.hasPrefix("2026-07-06T16:00:00") }
@@ -178,11 +184,18 @@ final class EventsStoreRecurringTests: XCTestCase {
         let input = try replaceInput(scope: .thisAndFollowing)
         try await store.replaceOptimistic(id: split.id, input: input, optimisticEvent: edited)
 
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(
+            seriesId: seriesId,
+            splitAt: "2026-06-12T14:00:00.000Z"
+        )
+        let splitPointId = "\(remainderMasterEventId.rawValue)|2026-06-12T14:00:00.000Z"
+
         let stored = try localEvents.fetchAll().map(\.event)
         let titleById = Dictionary(uniqueKeysWithValues: stored.map { ($0.id.rawValue, eventTitle($0)) })
         XCTAssertEqual(titleById[first.id.rawValue], "Series")
-        XCTAssertEqual(titleById[split.id.rawValue], "Split weekly sync")
+        XCTAssertNil(titleById[split.id.rawValue])
         XCTAssertNil(titleById[following.id.rawValue])
+        XCTAssertEqual(titleById[splitPointId], "Split weekly sync")
     }
 
     func testLocalReplaceThisUpdatesOccurrenceTitle() async throws {
