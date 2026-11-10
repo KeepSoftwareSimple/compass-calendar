@@ -1,6 +1,10 @@
-import { searchPlaceTimeZones } from "@core/timezone/city-timezone-search";
+import { type PlaceTimeZoneSearchHit } from "@core/timezone/city-timezone-search";
 import { scoreCommandItem } from "@web/components/CommandPalette/command-palette.search";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
+import { searchPlaceTimeZonesLazy } from "@web/timezone/place-timezone-search.lazy";
+import { timeZoneCityName } from "@web/timezone/timezone-iana-label.util";
+
+export { timeZoneCityName } from "@web/timezone/timezone-iana-label.util";
 
 export interface TimeZoneListItem {
   id: string;
@@ -17,11 +21,6 @@ export interface TimeZoneListItem {
   placeLabel?: string;
   listKey?: string;
   multiZoneRegionNote?: string;
-}
-
-export function timeZoneCityName(id: string): string {
-  const last = id.split("/").pop() ?? id;
-  return last.replaceAll("_", " ");
 }
 
 function regionFromIanaId(id: string): string {
@@ -163,7 +162,7 @@ function zoneById(
 }
 
 function regionSpanNote(
-  placeHits: ReturnType<typeof searchPlaceTimeZones>,
+  placeHits: PlaceTimeZoneSearchHit[],
 ): string | undefined {
   const labeled = placeHits.find((hit) => hit.multiZoneRegion);
   if (!labeled) return undefined;
@@ -202,7 +201,7 @@ export function filterTimeZones(
         : entry,
     );
 
-  const placeHits = searchPlaceTimeZones(trimmed);
+  const placeHits = searchPlaceTimeZonesLazy(trimmed);
   const regionNote = regionSpanNote(placeHits);
 
   const merged: { zone: TimeZoneListItem; score: number }[] = [];
