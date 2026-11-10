@@ -115,8 +115,8 @@ final class HiddenEventsStoreTests: XCTestCase {
         let eventId = EventId(rawValue: "evt-race")
 
         try await store.setEventHidden(eventId: eventId, hidden: true)
-        async let unhide: Void = store.setEventHidden(eventId: eventId, hidden: false)
-        async let rehide: Void = store.setEventHidden(eventId: eventId, hidden: true)
+        async let unhide = store.setEventHidden(eventId: eventId, hidden: false)
+        async let rehide = store.setEventHidden(eventId: eventId, hidden: true)
         await unhideGate.resume()
         try await unhide
         try await rehide
