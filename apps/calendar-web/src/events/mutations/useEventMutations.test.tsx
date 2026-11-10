@@ -1135,20 +1135,24 @@ describe("useEventMutations", () => {
       expect(thuSchedule.kind === "timed" ? thuSchedule.start : null).toBe(
         DateTimeSchema.parse("2026-07-04T08:30:00.000Z"),
       );
-      expect(
-        new Date(
-          cached.entities[fri.id]!.schedule.kind === "timed"
-            ? cached.entities[fri.id]!.schedule.start
-            : 0,
-        ).toISOString(),
-      ).toBe("2026-07-05T08:30:00.000Z");
-      expect(
-        new Date(
-          cached.entities[sat.id]!.schedule.kind === "timed"
-            ? cached.entities[sat.id]!.schedule.start
-            : 0,
-        ).toISOString(),
-      ).toBe("2026-07-06T08:30:00.000Z");
+      const scheduleOnDay = (day: string) => {
+        const id = cached.ids.find((candidate) => {
+          const item = cached.entities[candidate];
+          return (
+            item?.schedule.kind === "timed" &&
+            String(item.schedule.start).includes(day)
+          );
+        });
+        if (!id) throw new Error(`missing cached event on ${day}`);
+        const schedule = cached.entities[id]!.schedule;
+        return schedule.kind === "timed" ? schedule.start : "";
+      };
+      expect(new Date(scheduleOnDay("2026-07-05")).toISOString()).toBe(
+        "2026-07-05T08:30:00.000Z",
+      );
+      expect(new Date(scheduleOnDay("2026-07-06")).toISOString()).toBe(
+        "2026-07-06T08:30:00.000Z",
+      );
     });
 
     await waitFor(() =>
