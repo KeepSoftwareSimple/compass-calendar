@@ -35,7 +35,21 @@ final class HiddenEventsStoreTests: XCTestCase {
         let database = try AppDatabase.inMemory()
         let repository = HiddenEventRepository(database: database)
         let remote = MockUserAPI()
+        let unhideGate = AsyncTestGate()
+        let unhideReached = AsyncTestSignal()
         remote.hiddenIds = ["evt-race"]
+        remote.setHiddenHandler = { input in
+            if !input.hidden {
+                await unhideReached.signal()
+                await unhideGate.wait()
+                remote.hiddenIds.removeAll { $0 == input.eventId.rawValue }
+                return remote.hiddenIds
+            }
+            if !remote.hiddenIds.contains(input.eventId.rawValue) {
+                remote.hiddenIds.append(input.eventId.rawValue)
+            }
+            return remote.hiddenIds
+        }
         let store = HiddenEventsStore(
             repository: repository,
             remoteClient: remote,
@@ -45,7 +59,9 @@ final class HiddenEventsStoreTests: XCTestCase {
         let eventId = EventId(rawValue: "evt-race")
 
         async let unhide = store.setEventHidden(eventId: eventId, hidden: false)
+        await unhideReached.wait()
         async let rehide = store.setEventHidden(eventId: eventId, hidden: true)
+        await unhideGate.resume()
         let first = try await unhide
         let second = try await rehide
 
