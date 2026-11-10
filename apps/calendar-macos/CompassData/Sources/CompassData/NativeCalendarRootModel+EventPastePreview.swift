@@ -6,6 +6,11 @@ extension NativeCalendarRootModel {
     public var pastePreviewStore: PastePreviewStore { environment.pastePreviewStore }
 
     public var eventPastePreviewStatusText: String? {
+        guard CalendarGridSidebarHints.calendarGridModeHintsEligible(
+            isLifeView: viewStore.view == .life)
+        else {
+            return nil
+        }
         guard pastePreviewStore.isActive else { return nil }
         let paste = shortcutRegistry.entries.first { $0.id == .editPaste }?.displayKeycaps.joined(separator: "")
         return "Arrows move · \(paste ?? "⌘V") paste · Esc cancel"

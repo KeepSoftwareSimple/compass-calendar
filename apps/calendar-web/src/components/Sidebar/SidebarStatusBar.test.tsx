@@ -44,6 +44,7 @@ import {
   resetTimeTravelStoreForTests,
   setTimeTravelZone,
 } from "@web/timezone/time-travel.store";
+import { writeLifePreferences } from "@web/views/Life/life-preferences.storage";
 import {
   afterAll,
   afterEach,
@@ -148,6 +149,7 @@ const focusCalendarEvent = () => {
 
 describe("SidebarStatusBar", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/week");
     googleState = "HEALTHY";
     isConnecting = false;
     connection = null;
@@ -434,6 +436,25 @@ describe("SidebarStatusBar", () => {
     expect(screen.getByRole("status")).toHaveTextContent(KEYBOARD_PLACE_HINT);
   });
 
+  it("hides keyboardPlace draft hints on Life view and shows the life shortcut tip", () => {
+    writeLifePreferences({
+      birthDate: "1990-01-01",
+      lifespan: 80,
+      variation: "average",
+    });
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+    window.history.replaceState({}, "", "/life");
+    seedKeyboardPlaceDraft();
+    const { wrapper } = createStoreWrapper();
+
+    render(<SidebarStatusBar />, { wrapper });
+
+    expect(screen.queryByText(KEYBOARD_PLACE_HINT)).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      getHintPlainText(getShortcutHint("life-this-week")),
+    );
+  });
+
   it("hides the keyboardPlace hint once the form is open", () => {
     seedKeyboardPlaceDraft();
     draftActions.setFormOpen(true);
@@ -443,6 +464,29 @@ describe("SidebarStatusBar", () => {
 
     expect(screen.queryByText(KEYBOARD_PLACE_HINT)).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(FIRST_EVENT_SAVE_HINT);
+  });
+
+  it("shows Life tips instead of hidden form tips when an open draft survives on Life", () => {
+    writeLifePreferences({
+      birthDate: "1990-01-01",
+      lifespan: 80,
+      variation: "average",
+    });
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+    window.history.replaceState({}, "", "/life");
+    seedKeyboardPlaceDraft();
+    draftActions.setFormOpen(true);
+    const { wrapper } = createStoreWrapper();
+
+    render(<SidebarStatusBar />, { wrapper });
+
+    expect(screen.queryByText(KEYBOARD_PLACE_HINT)).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent(
+      FIRST_EVENT_SAVE_HINT,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      getHintPlainText(getShortcutHint("life-this-week")),
+    );
   });
 
   it("shows hold-Mod after the first event is done and the calendar is idle", () => {

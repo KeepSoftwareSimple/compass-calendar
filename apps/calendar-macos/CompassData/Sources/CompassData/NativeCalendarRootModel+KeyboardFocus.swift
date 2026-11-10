@@ -181,7 +181,9 @@ extension NativeCalendarRootModel {
         case .navLifeCurrent:
             lifeStore.focusCurrentWeek()
         case .navLifeView:
+            let previous = viewStore.view
             viewStore.view = .life
+            suspendCalendarGridIfEnteringLife(from: previous)
             rebuildPresentation()
         case .navDayView:
             viewStore.view = .day
