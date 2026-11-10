@@ -70,18 +70,19 @@ Playwright. Docs index: `docs/README.md`.
 - Branches `type/action[-issue-number]`. Commits conventional, lower case,
   present tense: `fix(web): handle disconnected google state`.
 - Stage explicit paths. Never force-push, rewrite published history, weaken
-  tests, or widen timeouts to go green.
+  tests, or widen timeouts to go green. macOS: batch pushes; no PR-only Mac
+  jobs or strict `test-macos.yml` spam.
 - Ship: implement, `bun run verify --strict`, open a PR with `Fixes #N`
   and the `VERDICT:` line, mark it ready, run `gh pr merge --auto`. `main`
   merges only via the merge queue, which squash-merges once required checks
   pass. No labels, no path denylist. Sandbox Playwright timeouts in untouched
   specs are PR evidence, not local blockers; CI decides. Do not wait for CI
-  or "merge" on a green PR. Product choices go in the PR body. Procedure:
+  on a green PR. Procedure:
   `.agents/skills/ship/SKILL.md`.
 - Escalate with the `agent-loop-needs-human` label for product ambiguity,
   production deploy, secrets, OAuth grants, deletion, and access grants.
 - Claude Code web: `apt-get install -y gh` each session (not persistent).
-  GraphQL blocked on `gh issue/pr list` (403); use REST `gh api`. Omit
+  GraphQL blocked; use REST `gh api`. Omit
   `Authorization` from `GITHUB_TOKEN` on GitHub API curls. Milestones via REST;
   a human sets `AGENT_LOOP_MILESTONES` (Actions variables blocked).
 

@@ -94,6 +94,12 @@ public enum ProjectRecurringEdit {
             )
         )
 
+        let splitRecurrenceId = recurrenceIdString(for: input.original)
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(
+            seriesId: input.seriesMaster!.id,
+            splitAt: splitRecurrenceId
+        )
+
         let removeIds = Set(affected.map(\.id.rawValue))
         let upserts =
             [truncatedMaster, remainderMaster]
@@ -101,7 +107,8 @@ public enum ProjectRecurringEdit {
                 affected: affected,
                 edited: input.edited,
                 original: input.original,
-                remainderSeriesId: remainderSeriesId
+                remainderSeriesId: remainderSeriesId,
+                remainderMasterEventId: remainderMasterEventId
             )
 
         return RecurringEditProjection(removeIds: removeIds, upserts: upserts)
@@ -142,7 +149,8 @@ public enum ProjectRecurringEdit {
         affected: [Event],
         edited: Event,
         original: Event,
-        remainderSeriesId: EventId? = nil
+        remainderSeriesId: EventId? = nil,
+        remainderMasterEventId: EventId? = nil
     ) -> [Event] {
         affected.map { event in
             let patched = seriesPatch(event: event, edited: edited)
@@ -155,11 +163,30 @@ public enum ProjectRecurringEdit {
             } else {
                 withSeries = patched
             }
+            let shifted: Event
             if event.id == edited.id {
-                return copyEvent(withSeries, schedule: edited.schedule)
+                shifted = copyEvent(withSeries, schedule: edited.schedule)
+            } else {
+                shifted = shiftEvent(event: withSeries, original: original, edited: edited)
             }
-            return shiftEvent(event: withSeries, original: original, edited: edited)
+            if let remainderSeriesId, let remainderMasterEventId, event.id != edited.id,
+               let tail = event.id.rawValue.split(separator: "|", maxSplits: 1).last
+            {
+                return copyEvent(
+                    shifted,
+                    id: EventId(rawValue: "\(remainderMasterEventId.rawValue)|\(tail)")
+                )
+            }
+            return shifted
         }
+    }
+
+    private static func recurrenceIdString(for event: Event) -> String {
+        let raw = event.id.rawValue
+        if let tail = raw.split(separator: "|", maxSplits: 1).last {
+            return String(tail)
+        }
+        return scheduleStartString(event.schedule)
     }
 
     private static func seriesPatch(event: Event, edited: Event) -> Event {
