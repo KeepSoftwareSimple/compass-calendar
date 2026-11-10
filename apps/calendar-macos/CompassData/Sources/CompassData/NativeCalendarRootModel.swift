@@ -187,7 +187,8 @@ public final class NativeCalendarRootModel {
         environment: NativeCalendarEnvironment,
         demoPresentation: DemoSeedFixture? = nil,
         overlayStores: OverlayStores = OverlayStores(),
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        lifeStoreDefaults: UserDefaults = .standard
     ) {
         self.environment = environment
         self.demoPresentation = demoPresentation
@@ -210,7 +211,9 @@ public final class NativeCalendarRootModel {
         billingStore = environment.billingStore
         bookingStore = environment.bookingStore
         levelsStore = environment.levelsStore
-        lifeStore = LifeStore(today: { demoPresentation?.referenceNow ?? now() })
+        lifeStore = LifeStore(
+            defaults: lifeStoreDefaults,
+            today: { demoPresentation?.referenceNow ?? now() })
         lifeViewIntroStore = LifeViewIntroStore(
             userAPI: UserAPI(client: environment.apiClient),
             analytics: environment.productAnalytics)
