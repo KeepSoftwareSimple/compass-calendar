@@ -102,6 +102,13 @@ public final class HiddenEventsStore {
                 let list = try await remoteClient.setHiddenEvents(
                     SetEventHiddenInput(eventId: eventId, hidden: hidden)
                 )
+                guard hiddenWriteChains[eventId]?.generation == generation else {
+                    if intendedHiddenByEventId[eventId] == hidden {
+                        hiddenEventIds = snapshot
+                        intendedHiddenByEventId.removeValue(forKey: eventId)
+                    }
+                    return .superseded
+                }
                 if intendedHiddenByEventId[eventId] == hidden {
                     hiddenEventIds = Set(list.map { EventId(rawValue: $0) })
                     try repository.replaceAll(eventIds: Array(hiddenEventIds))
