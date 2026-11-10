@@ -17,6 +17,7 @@
       "AnonymousCalendarRowTests",
       "DescriptionLinkCopyShortcutTests",
       "EventFormFooterLayoutTests",
+      "EventFormFooterMoreDisclosureTests",
       "EventFormSaveButtonTests",
       "BookedMeetingActionsTests"
     ],

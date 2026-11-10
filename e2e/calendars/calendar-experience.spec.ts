@@ -356,6 +356,24 @@ async function hideFocusedEventViaMenu(page: Page) {
   await page.keyboard.press("Enter");
 }
 
+/** Pin which hidden-events PUT we wait for. Any PUT matcher can satisfy on a
+ *  late unhide request from an earlier `x` toggle (merge queue run 42706557164). */
+function waitForHiddenEventPut(page: Page, eventId: string, hidden: boolean) {
+  return page.waitForRequest((req) => {
+    if (
+      req.method() !== "PUT" ||
+      !req.url().includes("/api/user/hidden-events")
+    ) {
+      return false;
+    }
+    const body = req.postDataJSON() as {
+      eventId?: unknown;
+      hidden?: unknown;
+    };
+    return body.eventId === eventId && body.hidden === hidden;
+  });
+}
+
 // Playwright's page.keyboard.press is unreliable for bare letters in headless
 // Chromium on Linux. Dispatch a real keydown on the focused card instead.
 async function pressBareLetterOnFocusedCard(page: Page, letter: string) {
@@ -603,6 +621,7 @@ test("day view separates visible calendars into distinct columns", async ({
 
   await page.keyboard.press("d");
   await page.waitForURL((url) => url.pathname.startsWith("/day"), {
+    waitUntil: "domcontentloaded",
     timeout: 10000,
   });
 
@@ -810,7 +829,9 @@ test("a read-only event can be hidden from the menu, shown with x, and stays hid
     .last();
 
   await card.focus();
+  const firstHidePut = waitForHiddenEventPut(page, EVENT_B_ID, true);
   await hideFocusedEventViaMenu(page);
+  await firstHidePut;
   await expect(
     page.locator("#mainGrid").getByRole("button", {
       name: new RegExp(`Timed event: ${EVENT_B_TITLE}`),
@@ -819,15 +840,14 @@ test("a read-only event can be hidden from the menu, shown with x, and stays hid
   const hiddenCard = await expectEventCardWidth(page, EVENT_B_TITLE, true);
 
   await hiddenCard.focus();
+  const unhidePut = waitForHiddenEventPut(page, EVENT_B_ID, false);
   await pressBareLetterOnFocusedCard(page, "x");
+  await unhidePut;
   await expectEventCardWidth(page, EVENT_B_TITLE, false);
 
   const shownCard = gridEventCard(page, EVENT_B_TITLE, false);
   await shownCard.focus();
-  const hidePut = page.waitForRequest(
-    (req) =>
-      req.method() === "PUT" && req.url().includes("/api/user/hidden-events"),
-  );
+  const hidePut = waitForHiddenEventPut(page, EVENT_B_ID, true);
   await hideFocusedEventViaMenu(page);
   await hidePut;
   await expect(
@@ -1014,6 +1034,7 @@ test("day view keeps calendar column labels clipped with many visible columns", 
 
   await page.keyboard.press("d");
   await page.waitForURL((url) => url.pathname.startsWith("/day"), {
+    waitUntil: "domcontentloaded",
     timeout: 10000,
   });
 

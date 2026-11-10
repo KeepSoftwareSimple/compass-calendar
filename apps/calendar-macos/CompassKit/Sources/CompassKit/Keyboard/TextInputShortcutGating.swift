@@ -5,10 +5,19 @@ import Foundation
 /// `e` bails on editable targets, so "Quarterly" never jumps to recurrence). Mod
 /// chords, Escape, and Enter still route.
 public enum TextInputShortcutGating {
+    private static let nativeClipboardLetters: Set<Character> = ["a", "c", "v", "x"]
+
     public static func shouldDispatch(_ event: KeyEvent) -> Bool {
         if event.matches(KeyChord(token: .named(.escape))) { return true }
         if event.matches(KeyChord(token: .named(.enter))) { return true }
-        if event.isModChord { return true }
+        if event.isModChord {
+            if case .character(let char) = event.key,
+               nativeClipboardLetters.contains(Character(char.lowercased()))
+            {
+                return false
+            }
+            return true
+        }
         if event.isBareLetter { return false }
         return true
     }

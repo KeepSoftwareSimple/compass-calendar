@@ -4,6 +4,84 @@ import XCTest
 
 @MainActor
 final class NativeCalendarRootModelUpNextTests: XCTestCase {
+    func testOpenUpNextShowsEventDetails() async throws {
+        let model = try await demoModel()
+        let id = try XCTUnwrap(model.upNextState.snapshot.upNext?.id)
+
+        model.openUpNextEvent()
+
+        XCTAssertTrue(model.isEventFormVisible)
+        XCTAssertEqual(model.draftStore.gridDraft?.sourceEventId?.rawValue, id)
+        XCTAssertEqual(model.focusStore.focusedEventId?.rawValue, id)
+    }
+
+    func testOpenUpNextUsesSidebandEventOutsideLoadedGridAndLeavesLifeView() async throws {
+        let model = try await demoModel()
+        let id = try XCTUnwrap(model.upNextState.snapshot.upNext?.id)
+        let event = try XCTUnwrap(model.sidebandEvents.first { $0.id.rawValue == id })
+        model.loadedEvents = []
+        model.sidebandEvents = [event]
+        model.viewStore.view = .life
+
+        model.openUpNextEvent()
+
+        XCTAssertEqual(model.viewStore.view, .week)
+        XCTAssertTrue(model.isEventFormVisible)
+        XCTAssertEqual(model.draftStore.gridDraft?.sourceEventId, event.id)
+        XCTAssertEqual(model.baselineEvent(for: try XCTUnwrap(model.draftStore.gridDraft)), event)
+    }
+
+    func testOpenUpNextPreservesAnExistingDraft() async throws {
+        let model = try await demoModel()
+        model.handleShortcut(.createTimed)
+        model.updateDraftFromForm(title: "Unfinished event")
+        let draft = try XCTUnwrap(model.draftStore.gridDraft)
+        let anchor = model.viewStore.anchorDate
+
+        model.openUpNextEvent()
+
+        XCTAssertEqual(model.draftStore.gridDraft, draft)
+        XCTAssertEqual(model.viewStore.anchorDate, anchor)
+    }
+
+    func testEventDeepLinkFocusesItsEventFromLifeView() async throws {
+        let model = try await demoModel()
+        let id = try XCTUnwrap(model.upNextState.snapshot.upNext?.id)
+        let event = try XCTUnwrap(model.sidebandEvents.first { $0.id.rawValue == id })
+        model.loadedEvents = []
+        model.sidebandEvents = [event]
+        model.viewStore.view = .life
+
+        model.handleDeepLink("compass://event/\(id)")
+
+        XCTAssertEqual(model.viewStore.view, .week)
+        XCTAssertEqual(model.focusStore.focusedEventId?.rawValue, id)
+        XCTAssertTrue(model.loadedEvents.contains { $0.id == event.id })
+        XCTAssertFalse(model.isEventFormVisible)
+    }
+
+    func testAllDayEventDeepLinkNavigatesAndFocuses() async throws {
+        let model = try await demoModel()
+        let event = try XCTUnwrap(model.loadedEvents.first {
+            if case .allDay = $0.schedule { return true }
+            return false
+        })
+
+        model.handleDeepLink("compass://event/\(event.id.rawValue)")
+
+        XCTAssertEqual(model.focusStore.focusedEventId, event.id)
+        XCTAssertEqual(model.focusStore.focusedEventType, .allDay)
+        XCTAssertTrue(EffectiveTimeZone.calendar.isDate(
+            model.viewStore.anchorDate, inSameDayAs: model.eventStart(event)))
+    }
+
+    private func demoModel() async throws -> NativeCalendarRootModel {
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
+        let model = NativeCalendarRootModel(environment: environment, demoPresentation: try .load())
+        await model.start()
+        return model
+    }
+
     /// Regression: anonymous local-mode users saw "All clear" because the
     /// sideband only loaded for signed-in sessions.
     func testLocalModeUpNextShowsTheNextLocalEvent() async throws {

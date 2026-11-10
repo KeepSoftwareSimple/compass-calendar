@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { parseUserDate } from "@web/common/utils/datetime/web.date.util";
 import { resolveFormControlJumpIds } from "@web/common/utils/form/form.util";
@@ -13,19 +13,20 @@ import {
   consumeDatePickerKey,
   focusKeyboardSelectedDay,
 } from "@web/components/DatePicker/date-picker-keyboard-dom.util";
+import {
+  calendarAction,
+  datePickerPageStep,
+  isDatePickerCalendarKey,
+  isDatePickerClosedFieldKey,
+  movePickerCursor,
+} from "@web/components/DatePicker/date-picker-keys.util";
 import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { useCaptionableGridDatePickerHint } from "@web/shortcuts/tips/useDatePickerSidebarHints";
 import {
   EVENT_FORM_DATE_INPUT_FORMAT,
   formatEventFormDateLabel,
 } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateField.util";
-import {
-  calendarAction,
-  closedFieldAction,
-  isEventFormDateCalendarKey,
-  isEventFormDateFieldClosedKey,
-  movePickerCursor,
-} from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
+import { closedFieldAction } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateFieldKeys.util";
 
 const DATE_FIELD_CLASSNAME =
   "c-event-form-date-field flex min-w-0 flex-1 items-center [&_.react-datepicker-wrapper]:w-full [&_.react-datepicker\\_\\_input-container]:w-full [&_input]:w-full [&_input]:min-w-0";
@@ -73,10 +74,12 @@ export const EventFormDateField = ({
   };
   const [pickerCursor, setPickerCursor] = useState<Dayjs | null>(null);
   const pickerCursorRef = useRef<Dayjs | null>(null);
-  const [gridFocused, setGridFocused] = useState(false);
-  const setGridFocusedSync = (next: boolean) => {
-    setGridFocused(next);
-  };
+  const [gridFocused, setGridFocusedState] = useState(false);
+  const isGridFocusedRef = useRef(false);
+  const setGridFocused = useCallback((next: boolean) => {
+    isGridFocusedRef.current = next;
+    setGridFocusedState(next);
+  }, []);
   const setPickerCursorSync = (next: Dayjs | null) => {
     pickerCursorRef.current = next;
     setPickerCursor(next);
@@ -107,12 +110,16 @@ export const EventFormDateField = ({
     }
     calendarCloseRequestedRef.current = false;
     setPickerMonth(dayjs(selected).startOf("month"));
-  }, [isOpen, selected]);
+  }, [isOpen, selected, setGridFocused]);
 
   useEffect(() => {
     if (!isOpen || pickerCursor === null || !calendarClassName) return;
     const id = window.requestAnimationFrame(() => {
-      focusKeyboardSelectedDay(calendarClassName, pickerCursor.toDate());
+      focusKeyboardSelectedDay(
+        calendarClassName,
+        pickerCursor.toDate(),
+        () => isGridFocusedRef.current,
+      );
     });
     return () => window.cancelAnimationFrame(id);
   }, [isOpen, pickerCursor, calendarClassName]);
@@ -211,27 +218,22 @@ export const EventFormDateField = ({
 
     if (event.key === "Tab") {
       if (input instanceof HTMLInputElement) commitOrRevert(input);
-      setGridFocusedSync(false);
+      setGridFocused(false);
       skipBlurCloseRef.current = true;
       requestCalendarClose();
       event.stopPropagation();
       return;
     }
 
-    if (event.key === "PageDown") {
+    const pageStep = datePickerPageStep(event.key, event.shiftKey);
+    if (pageStep) {
       consumeDatePickerKey(event);
-      if (event.shiftKey) stepCalendarYear(1);
-      else stepCalendarMonth(1);
-      return;
-    }
-    if (event.key === "PageUp") {
-      consumeDatePickerKey(event);
-      if (event.shiftKey) stepCalendarYear(-1);
-      else stepCalendarMonth(-1);
+      if (pageStep.unit === "year") stepCalendarYear(pageStep.delta);
+      else stepCalendarMonth(pageStep.delta);
       return;
     }
 
-    if (!isEventFormDateCalendarKey(event.key)) return;
+    if (!isDatePickerCalendarKey(event.key)) return;
 
     if (
       isInputTarget &&
@@ -252,8 +254,12 @@ export const EventFormDateField = ({
     ) {
       const anchor = dayjs(selectedRef.current).startOf("day");
       setPickerCursorSync(anchor);
-      setGridFocusedSync(true);
-      focusKeyboardSelectedDay(calendarClassName, selectedRef.current);
+      setGridFocused(true);
+      focusKeyboardSelectedDay(
+        calendarClassName,
+        selectedRef.current,
+        () => isGridFocusedRef.current,
+      );
       return;
     }
 
@@ -270,8 +276,12 @@ export const EventFormDateField = ({
         if (!next.isSame(pickerMonth, "month")) {
           setPickerMonth(next.startOf("month"));
         }
-        setGridFocusedSync(true);
-        focusKeyboardSelectedDay(calendarClassName, next.toDate());
+        setGridFocused(true);
+        focusKeyboardSelectedDay(
+          calendarClassName,
+          next.toDate(),
+          () => isGridFocusedRef.current,
+        );
         break;
       }
       case "pickCursor":
@@ -279,7 +289,7 @@ export const EventFormDateField = ({
         break;
       case "close":
         requestCalendarClose();
-        setGridFocusedSync(false);
+        setGridFocused(false);
         input?.focus();
         break;
     }
@@ -303,7 +313,7 @@ export const EventFormDateField = ({
       return;
     }
 
-    if (!isEventFormDateFieldClosedKey(event.key)) {
+    if (!isDatePickerClosedFieldKey(event.key)) {
       if (event.key === "Escape") {
         revertInput(target);
         event.stopPropagation();
@@ -353,7 +363,7 @@ export const EventFormDateField = ({
         if (next instanceof Element && next.closest(".react-datepicker"))
           return;
         if (isOpen) {
-          setGridFocusedSync(false);
+          setGridFocused(false);
           if (skipBlurCloseRef.current) {
             skipBlurCloseRef.current = false;
           } else {
@@ -390,7 +400,7 @@ export const EventFormDateField = ({
         onInputClick={onCalendarOpen}
         onFocus={(event) => {
           if (event.target instanceof HTMLInputElement) {
-            setGridFocusedSync(false);
+            setGridFocused(false);
             event.target.select();
           }
         }}

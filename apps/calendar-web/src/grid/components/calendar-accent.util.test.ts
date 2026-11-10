@@ -1,3 +1,7 @@
+import { readability } from "@web/common/styles/color.utils";
+import { theme } from "@web/common/styles/theme";
+import { EVENT_COLOR_SLOT_HEX } from "@web/common/styles/theme.util";
+import { useThemeStore } from "@web/settings/theme/theme.store";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
@@ -7,7 +11,9 @@ import {
   eventFocusColor,
   eventFocusOutlineClass,
   joinGridEventBoxShadow,
+  MIN_EVENT_FOCUS_INDICATOR_CONTRAST,
   mergedCalendarStops,
+  resolveEventFocusIndicatorColor,
 } from "./calendar-accent.util";
 import { describe, expect, it } from "bun:test";
 
@@ -125,6 +131,36 @@ describe("calendarAccentAccessibleSuffix", () => {
   });
 });
 
+describe("resolveEventFocusIndicatorColor", () => {
+  const defaultFill = "#454442";
+  const paletteFills = Object.values(EVENT_COLOR_SLOT_HEX);
+
+  it("keeps the calendar color when it contrasts with the card fill", () => {
+    expect(resolveEventFocusIndicatorColor("#22c55e", defaultFill)).toBe(
+      "#22c55e",
+    );
+  });
+
+  it("falls back to contrast text on the default fill when calendar gray matches the body", () => {
+    useThemeStore.setState({ theme: "light-beach" });
+    const indicator = resolveEventFocusIndicatorColor("#616161", defaultFill);
+    expect(indicator).toBe(theme.getContrastText(defaultFill));
+    expect(readability(indicator, defaultFill)).toBeGreaterThanOrEqual(
+      MIN_EVENT_FOCUS_INDICATOR_CONTRAST,
+    );
+  });
+
+  it("meets the contrast floor for every palette slot on its own fill", () => {
+    useThemeStore.setState({ theme: "light-beach" });
+    for (const fill of paletteFills) {
+      const indicator = resolveEventFocusIndicatorColor(fill, fill);
+      expect(readability(indicator, fill)).toBeGreaterThanOrEqual(
+        MIN_EVENT_FOCUS_INDICATOR_CONTRAST,
+      );
+    }
+  });
+});
+
 describe("eventFocusColor", () => {
   it("uses the calendar color when it contrasts with the page", () => {
     expect(eventFocusColor("#616161")).toBe("#616161");
@@ -160,19 +196,19 @@ describe("eventFocusOutlineClass", () => {
 describe("eventEdgeFocusShadow", () => {
   it("paints outside the timed card for start and end edges", () => {
     expect(eventEdgeFocusShadow("startDate", "vertical", "#9e9e9e")).toBe(
-      "0 -3px 0 0 #9e9e9e",
+      "0 -1px 0 0 var(--background), 0 -4px 0 0 #9e9e9e",
     );
     expect(eventEdgeFocusShadow("endDate", "vertical", "#9e9e9e")).toBe(
-      "0 3px 0 0 #9e9e9e",
+      "0 1px 0 0 var(--background), 0 4px 0 0 #9e9e9e",
     );
   });
 
   it("paints outside the all-day card for start and end edges", () => {
     expect(eventEdgeFocusShadow("startDate", "horizontal", "#3b82f6")).toBe(
-      "-3px 0 0 0 #3b82f6",
+      "-1px 0 0 0 var(--background), -4px 0 0 0 #3b82f6",
     );
     expect(eventEdgeFocusShadow("endDate", "horizontal", "#3b82f6")).toBe(
-      "3px 0 0 0 #3b82f6",
+      "1px 0 0 0 var(--background), 4px 0 0 0 #3b82f6",
     );
   });
 });

@@ -44,6 +44,7 @@ import { type CommandRepository } from "@sync/storage/repositories/command.repos
 import { type CredentialRepository } from "@sync/storage/repositories/credential.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
+import { type HostGuestRsvpObservationRepository } from "@sync/storage/repositories/host-guest-rsvp-observation.repository";
 import { type InvalidationRepository } from "@sync/storage/repositories/invalidation.repository";
 import { type JobRepository } from "@sync/storage/repositories/job.repository";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
@@ -72,6 +73,7 @@ export interface SyncJobDispatchDeps {
   // provider pull. Without this, incremental pulls update Sync storage but the
   // open SPA never refetches (S40 gap).
   invalidations: InvalidationRepository;
+  hostGuestRsvpObservations: HostGuestRsvpObservationRepository;
   // Optional: a bootstrap/repair job settling "done" is otherwise invisible
   // (drops and errors are logged; "done" is not) - an hour of a resource
   // repairing every ~2 minutes produced zero log lines (2026-08-04 staging).

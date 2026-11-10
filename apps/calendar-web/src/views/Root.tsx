@@ -1,6 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { UserProvider } from "@web/auth/compass/user/context/UserProvider";
 import { isMeetingSetupRequested } from "@web/booking/meeting-setup.search";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthenticatedLayout } from "@web/components/AuthenticatedLayout/AuthenticatedLayout";
@@ -36,12 +35,10 @@ export const RootView = () => {
   }
 
   return (
-    <UserProvider>
-      <SSEProvider>
-        <GlobalShortcutsHost />
-        <DocumentTitle />
-        <AuthenticatedLayout />
-      </SSEProvider>
-    </UserProvider>
+    <SSEProvider>
+      <GlobalShortcutsHost />
+      <DocumentTitle />
+      <AuthenticatedLayout />
+    </SSEProvider>
   );
 };

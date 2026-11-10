@@ -52,6 +52,7 @@ test.describe("public booking reschedule", () => {
     const rescheduleUrl = new URL(rescheduleHref ?? "", page.url());
     await page.goto(
       publicBookingAppUrl(`${rescheduleUrl.pathname}${rescheduleUrl.search}`),
+      { waitUntil: "domcontentloaded" },
     );
 
     await expect(page).toHaveURL(

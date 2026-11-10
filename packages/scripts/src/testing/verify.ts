@@ -86,7 +86,7 @@ export type Verdict = "PASS" | "INCOMPLETE" | "FAIL";
 const MACOS_CI_ONLY_REASON =
   "Swift/AppKit builds run in CI only (test-macos.yml); no Xcode on this machine";
 const MACOS_PACKAGES_CI_ONLY_REASON =
-  "swift test on CompassKit and CompassData runs in CI only (test-macos.yml swift-packages job); no Xcode on this machine";
+  "swift test on CompassData and CompassUI runs in CI only (test-macos.yml swift-packages; CompassKit duplicates macos-build); no Xcode on this machine";
 const MACOS_PACKAGE_CHECKS: Array<{ id: string; cmd: string[] }> = [
   { id: "test:macos:packages", cmd: ["bun", "run", "test:macos:packages"] },
   { id: "test:macos", cmd: ["bun", "run", "test:macos"] },

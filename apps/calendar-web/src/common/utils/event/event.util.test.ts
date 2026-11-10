@@ -582,6 +582,20 @@ describe("focusCalendarEventElementAfterDiscard", () => {
     expect(document.activeElement).toBe(savedCard);
   });
 
+  it("does not take focus back after the user moves to another control", () => {
+    const save = document.createElement("button");
+    document.body.appendChild(save);
+    save.focus();
+    focusCalendarEventElementAfterDiscard(EVENT_ID);
+    save.remove();
+    const grid = document.createElement("button");
+    document.body.appendChild(grid);
+    grid.focus();
+    addEventElement();
+    flushFrame();
+    expect(document.activeElement).toBe(grid);
+  });
+
   it("waits for a remounted card when only a draft portal is present", () => {
     const draftPortal = addEventElement();
     draftPortal.setAttribute("data-grid-event-surface", "draft");

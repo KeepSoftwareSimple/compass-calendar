@@ -1,4 +1,5 @@
 import {
+  type DateTime,
   DateTimeSchema,
   type EventId,
   EventIdSchema,
@@ -14,7 +15,11 @@ import {
   type RecurrenceScope,
   type ReplaceEventInput,
 } from "@core/types/event-command.contracts";
-import { rootSeriesMasterId } from "@core/util/occurrence-id";
+import { mergeEditableContentColor } from "@core/util/event/merge-editable-content-color";
+import {
+  decodeOccurrenceId,
+  rootSeriesMasterId,
+} from "@core/util/occurrence-id";
 
 const nowDateTime = () => DateTimeSchema.parse(new Date().toISOString());
 
@@ -125,11 +130,28 @@ function mergeReplaceContent(
       ? details
       : { ...details, attendees: optimisticAttendees };
   if (existing.kind !== "details") return replayInput;
-  if (replayInput.kind === "details" && replayInput.color !== undefined) {
-    const { colorHex: _cleared, ...withoutHex } = existing;
-    return { ...withoutHex, ...replayInput };
+  if (replayInput.kind !== "details") return replayInput;
+
+  const { color: incomingColor, ...detailsWithoutColor } = replayInput;
+  const {
+    color: _existingColor,
+    colorHex: _existingColorHex,
+    ...existingDetails
+  } = existing;
+  const merged: typeof existing = {
+    ...existingDetails,
+    ...detailsWithoutColor,
+  };
+  const withColor = mergeEditableContentColor(
+    existing,
+    { color: incomingColor },
+    merged,
+  ) as typeof existing;
+  if (incomingColor !== undefined && incomingColor !== null) {
+    const { colorHex: _dropped, ...withoutHex } = withColor;
+    return withoutHex;
   }
-  return { ...existing, ...replayInput };
+  return withColor;
 }
 
 export function mergeReplaceInput(
@@ -162,4 +184,18 @@ export function seriesWriteKey(
   return EventIdSchema.parse(
     rootSeriesMasterId(seriesIdOf(original) ?? fallbackId),
   );
+}
+
+export function resolveRecurringReplaceTarget(
+  findEvent: (id: EventId) => Event | undefined,
+  findByRecurrenceId: (recurrenceId: DateTime) => Event | undefined,
+  id: EventId,
+  scope: RecurrenceScope,
+): Event | undefined {
+  const direct = findEvent(id);
+  if (direct) return direct;
+  if (scope !== "thisAndFollowing") return undefined;
+  const parts = decodeOccurrenceId(id);
+  if (!parts) return undefined;
+  return findByRecurrenceId(DateTimeSchema.parse(parts.recurrenceId));
 }

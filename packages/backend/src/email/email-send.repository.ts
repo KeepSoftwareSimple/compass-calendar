@@ -32,9 +32,15 @@ const patchRow = async (
   fields: (now: Date) => MatchKeysAndValues<EmailSendRecord>,
 ): Promise<EmailSendRecord | null> => {
   const now = new Date();
+  const patch = fields(now);
   const result = await mongoService.emailSend.findOneAndUpdate(
     filter,
-    { $set: { ...fields(now), updatedAt: now } },
+    {
+      $set: { ...patch, updatedAt: now },
+      ...(patch.status && patch.status !== "queued"
+        ? { $unset: { "reflection.prepared": "" } }
+        : {}),
+    },
     { returnDocument: "after" },
   );
   return result ? parseRecord(result) : null;
@@ -194,7 +200,10 @@ class EmailSendRepository {
     const now = new Date();
     const result = await mongoService.emailSend.updateMany(
       { userId, status: "queued" },
-      { $set: { status: "canceled", updatedAt: now } },
+      {
+        $set: { status: "canceled", updatedAt: now },
+        $unset: { "reflection.prepared": "" },
+      },
     );
     return result.modifiedCount;
   }
@@ -206,22 +215,44 @@ class EmailSendRepository {
     const now = new Date();
     const result = await mongoService.emailSend.updateMany(
       { userId, sequence, status: "queued" },
-      { $set: { status: "canceled", updatedAt: now } },
+      {
+        $set: { status: "canceled", updatedAt: now },
+        $unset: { "reflection.prepared": "" },
+      },
     );
     return result.modifiedCount;
   }
 
-  async cancelQueuedReflection(userId: ObjectId): Promise<number> {
+  async cancelQueuedReflection(
+    userId: ObjectId,
+    includeOnboarding = false,
+  ): Promise<number> {
+    const sequenceFilter: Filter<EmailSendRecord> = includeOnboarding
+      ? {
+          $or: [
+            { sequence: "reflection" },
+            { sequence: "welcome", stepKey: "weekly-review" },
+          ],
+        }
+      : { sequence: "reflection" };
     const now = new Date();
     const result = await mongoService.emailSend.updateMany(
-      { userId, sequence: "reflection", status: "queued" },
+      {
+        userId,
+        status: "queued",
+        ...sequenceFilter,
+      },
       {
         $set: { status: "canceled", updatedAt: now },
         $unset: { "reflection.prepared": "" },
       },
     );
     await mongoService.emailSend.updateMany(
-      { userId, sequence: "reflection", status: "canceled" },
+      {
+        userId,
+        status: "canceled",
+        ...sequenceFilter,
+      },
       { $unset: { "reflection.prepared": "" } },
     );
     return result.modifiedCount;

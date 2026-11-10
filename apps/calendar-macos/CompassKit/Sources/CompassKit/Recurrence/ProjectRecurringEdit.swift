@@ -71,7 +71,12 @@ public enum ProjectRecurringEdit {
             )
         }
 
-        let remainderSeriesId = input.edited.id
+        let splitRecurrenceId = recurrenceIdString(for: input.original)
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(
+            seriesId: input.seriesMaster!.id,
+            splitAt: splitRecurrenceId
+        )
+        let remainderSeriesId = remainderMasterEventId
         let remainderRules: [String]
         if case .series(let editedSeries) = input.edited.recurrence {
             remainderRules = editedSeries.rules
@@ -81,7 +86,7 @@ public enum ProjectRecurringEdit {
 
         let remainderMaster = copyEvent(
             input.edited,
-            id: remainderSeriesId,
+            id: remainderMasterEventId,
             recurrence: .series(.init(kind: "series", rules: remainderRules))
         )
         let truncatedMaster = copyEvent(
@@ -101,7 +106,8 @@ public enum ProjectRecurringEdit {
                 affected: affected,
                 edited: input.edited,
                 original: input.original,
-                remainderSeriesId: remainderSeriesId
+                remainderSeriesId: remainderSeriesId,
+                remainderMasterEventId: remainderMasterEventId
             )
 
         return RecurringEditProjection(removeIds: removeIds, upserts: upserts)
@@ -142,7 +148,8 @@ public enum ProjectRecurringEdit {
         affected: [Event],
         edited: Event,
         original: Event,
-        remainderSeriesId: EventId? = nil
+        remainderSeriesId: EventId? = nil,
+        remainderMasterEventId: EventId? = nil
     ) -> [Event] {
         affected.map { event in
             let patched = seriesPatch(event: event, edited: edited)
@@ -155,11 +162,71 @@ public enum ProjectRecurringEdit {
             } else {
                 withSeries = patched
             }
+            let shifted: Event
             if event.id == edited.id {
-                return copyEvent(withSeries, schedule: edited.schedule)
+                shifted = copyEvent(withSeries, schedule: edited.schedule)
+            } else {
+                shifted = shiftEvent(event: withSeries, original: original, edited: edited)
             }
-            return shiftEvent(event: withSeries, original: original, edited: edited)
+            if let remainderMasterEventId {
+                return copyEvent(
+                    shifted,
+                    id: EventId(
+                        rawValue: repointedOccurrenceId(
+                            for: event,
+                            remainderMasterEventId: remainderMasterEventId
+                        )
+                    )
+                )
+            }
+            return shifted
         }
+    }
+
+    // Mirrors `recurrenceIdForOccurrence` on the web: the recurrenceId a
+    // composite occurrence id carries, or the event's own schedule start when
+    // the id is not one. A server-minted id uses the canonical `::` format; a
+    // demo-seeded local id still carries the legacy `|` separator.
+    private static func recurrenceIdString(for event: Event) -> String {
+        let raw = event.id.rawValue
+        return OccurrenceIdFormat.recurrenceId(of: raw)
+            ?? legacyLocalRecurrenceId(of: raw)
+            ?? scheduleStartString(event.schedule)
+    }
+
+    // Repoint one affected occurrence onto the remainder master. A server-minted
+    // id is recomposed in the canonical `::` format, the only one the write path
+    // can decode back into a single-occurrence command target. A demo-seeded
+    // local id keeps its own separator: those ids never reach the sync API, and
+    // the local store has to stay self-consistent.
+    private static func repointedOccurrenceId(
+        for event: Event,
+        remainderMasterEventId: EventId
+    ) -> String {
+        let raw = event.id.rawValue
+        if let recurrenceId = OccurrenceIdFormat.recurrenceId(of: raw) {
+            return OccurrenceIdFormat.compose(
+                eventId: remainderMasterEventId.rawValue,
+                recurrenceId: recurrenceId
+            )
+        }
+        if let recurrenceId = legacyLocalRecurrenceId(of: raw) {
+            return "\(remainderMasterEventId.rawValue)\(legacyLocalSeparator)\(recurrenceId)"
+        }
+        return OccurrenceIdFormat.compose(
+            eventId: remainderMasterEventId.rawValue,
+            recurrenceId: scheduleStartString(event.schedule)
+        )
+    }
+
+    private static let legacyLocalSeparator = "|"
+
+    // Demo seed data (`DemoSeedFixture`) composes local occurrence ids with `|`.
+    // They are read here but never minted, so demo splits keep working while
+    // every id that came from the server round-trips in the canonical format.
+    private static func legacyLocalRecurrenceId(of id: String) -> String? {
+        guard let range = id.range(of: legacyLocalSeparator) else { return nil }
+        return String(id[range.upperBound...])
     }
 
     private static func seriesPatch(event: Event, edited: Event) -> Event {

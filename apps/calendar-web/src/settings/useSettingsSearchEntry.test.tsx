@@ -70,6 +70,18 @@ describe("useSettingsSearchEntry", () => {
     });
   });
 
+  it("opens notification settings from a reflection email", async () => {
+    await renderEntry({
+      authenticated: true,
+      path: "/?settings=notifications",
+    });
+    await waitFor(() =>
+      expect(selectSettingsPage(useSettingsStore.getState())).toBe(
+        "notifications",
+      ),
+    );
+  });
+
   it("does not reopen Settings when the back button restores the param", async () => {
     const router = await renderEntry({ authenticated: true });
     await waitFor(() => {

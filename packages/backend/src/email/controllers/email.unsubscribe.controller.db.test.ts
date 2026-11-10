@@ -30,6 +30,40 @@ describe("EmailUnsubscribeController db", () => {
 
   afterAll(cleanupTestDb);
 
+  it("can stop reviews before enrollment without writing incomplete preferences", async () => {
+    const originalSecret = CONFIG.EMAIL_UNSUBSCRIBE_SECRET;
+    CONFIG.EMAIL_UNSUBSCRIBE_SECRET = "test-unsubscribe-secret";
+    try {
+      const userId = new ObjectId();
+      await mongoService.user.insertOne({
+        _id: userId,
+        email: "new@example.com",
+        firstName: "New",
+        lastName: "User",
+        name: "New User",
+        locale: "en",
+      });
+      const token = createUnsubscribeToken(
+        userId.toHexString(),
+        CONFIG.EMAIL_UNSUBSCRIBE_SECRET,
+      );
+      const res = {
+        status: mock(() => res),
+        type: mock(() => res),
+        send: mock(() => {}),
+      };
+      await emailUnsubscribeController.confirmUnsubscribe(
+        { body: { token, scope: "reflection" } } as never,
+        res as never,
+      );
+      const user = await mongoService.user.findOne({ _id: userId });
+      expect(user?.emailPreferences?.reflectionDisabledAt).toBeInstanceOf(Date);
+      expect(user?.reflectionPreferences).toBeUndefined();
+    } finally {
+      CONFIG.EMAIL_UNSUBSCRIBE_SECRET = originalSecret;
+    }
+  });
+
   it("POST sets unsubscribedAt and cancels queued rows", async () => {
     const originalSecret = CONFIG.EMAIL_UNSUBSCRIBE_SECRET;
     CONFIG.EMAIL_UNSUBSCRIBE_SECRET = "test-unsubscribe-secret";
@@ -72,6 +106,7 @@ describe("EmailUnsubscribeController db", () => {
     await emailUnsubscribeController.confirmUnsubscribe(req, res as never);
 
     expect(body).toContain("You are unsubscribed");
+    expect(body).toContain("Share feedback by email (optional)");
     const row = await mongoService.emailSend.findOne({ userId });
     expect(row?.status).toBe("canceled");
     const user = await mongoService.user.findOne({ _id: userId });

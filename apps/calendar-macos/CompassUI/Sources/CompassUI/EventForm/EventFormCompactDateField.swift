@@ -88,7 +88,7 @@ struct EventFormCompactDateField: View {
                     today: Date(),
                     daysAreClickable: true,
                     focusedDate: cursor,
-                    trailingHeader: AnyView(calendarKeyHints)
+                    trailingHeader: nil
                 )
                 .frame(width: 252)
                 .padding(12)
@@ -123,20 +123,6 @@ struct EventFormCompactDateField: View {
     }
 
     private var showsArrowDownHint: Bool { isFocused && !showsCalendar }
-
-    /// Web event form date picker: shortcut hints appear in the sidebar status bar while the grid is open.
-    private var calendarKeyHints: some View {
-        HStack(spacing: 4) {
-            ShortcutHintChip(label: KeycapGlyphs.display(["ArrowUp"]))
-            ShortcutHintChip(label: KeycapGlyphs.display(["ArrowDown"]))
-            Text("·").font(.rubik(11)).foregroundStyle(theme.textMutedColor)
-            ShortcutHintChip(label: "Enter")
-            Text("·").font(.rubik(11)).foregroundStyle(theme.textMutedColor)
-            ShortcutHintChip(label: KeycapGlyphs.display(["Esc"]))
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Arrow keys move in the calendar, Enter selects the day, Escape closes the calendar")
-    }
 
     private func syncKeyOwner() {
         if isFocused || showsCalendar || pickerFocused {

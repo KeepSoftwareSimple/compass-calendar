@@ -916,7 +916,7 @@ describe("useDayEventNudgeShortcuts", () => {
     expect(useEdgeFocusStore.getState().eventId).toBeNull();
   });
 
-  it("pastes a copied timed event onto the focused column day", () => {
+  it("pastes a copied timed event at the placement outline on the focused column day", () => {
     focusCalendarTarget(TIMED_EVENT_ID, "timed");
     const { queryClient } = renderEditShortcuts();
 
@@ -937,14 +937,14 @@ describe("useDayEventNudgeShortcuts", () => {
     };
     expect(input.content.title).toBe("Timed event");
     expect(dayjs(input.schedule.start).format("YYYY-MM-DDTHH:mm")).toBe(
-      "2026-08-05T09:00",
+      "2026-05-20T10:00",
     );
     expect(dayjs(input.schedule.end).format("YYYY-MM-DDTHH:mm")).toBe(
-      "2026-08-05T10:00",
+      "2026-05-20T11:00",
     );
   });
 
-  it("pastes an all-day copy onto the focused column and keeps its length", () => {
+  it("pastes an all-day copy at the placement outline on the focused column", () => {
     focusCalendarTarget(ALL_DAY_EVENT_ID, "all-day");
     const { queryClient } = renderEditShortcuts({
       allDayEvents: [allDayEvent],
@@ -964,8 +964,8 @@ describe("useDayEventNudgeShortcuts", () => {
     };
     expect(input.schedule).toEqual({
       kind: "allDay",
-      start: "2026-08-05",
-      end: "2026-08-06",
+      start: "2026-05-21",
+      end: "2026-05-22",
     });
   });
 });

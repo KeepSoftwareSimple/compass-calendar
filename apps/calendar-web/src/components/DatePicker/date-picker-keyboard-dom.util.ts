@@ -10,20 +10,14 @@ const FOCUS_REVEAL_PAD_PX = 4;
 const GRID_POPPER_SELECTOR =
   ".c-date-picker-popper-grid.react-datepicker-popper";
 
-function isScrollableOverflowY(host: HTMLElement): boolean {
-  const oy = getComputedStyle(host).overflowY;
-  return (
-    (oy === "auto" || oy === "scroll" || oy === "overlay") &&
-    host.scrollHeight > host.clientHeight + 1
-  );
-}
-
-function isScrollableOverflowX(host: HTMLElement): boolean {
-  const ox = getComputedStyle(host).overflowX;
-  return (
-    (ox === "auto" || ox === "scroll" || ox === "overlay") &&
-    host.scrollWidth > host.clientWidth + 1
-  );
+function isScrollable(host: HTMLElement, axis: "x" | "y"): boolean {
+  const style = getComputedStyle(host);
+  const overflow = axis === "y" ? style.overflowY : style.overflowX;
+  if (overflow !== "auto" && overflow !== "scroll" && overflow !== "overlay")
+    return false;
+  return axis === "y"
+    ? host.scrollHeight > host.clientHeight + 1
+    : host.scrollWidth > host.clientWidth + 1;
 }
 
 /**
@@ -36,8 +30,8 @@ function padRevealInScrollHost(
   pad: number,
 ) {
   for (let i = 0; i < 8; i++) {
-    const canY = isScrollableOverflowY(host);
-    const canX = isScrollableOverflowX(host);
+    const canY = isScrollable(host, "y");
+    const canX = isScrollable(host, "x");
     if (!canY && !canX) return;
 
     const er = el.getBoundingClientRect();
@@ -139,9 +133,7 @@ function forEachSearchRoot(
 ) {
   if (calendarClassName) {
     document
-      .querySelectorAll<HTMLElement>(
-        `.react-datepicker-popper .calendar.${calendarClassName}, .calendar.${calendarClassName}`,
-      )
+      .querySelectorAll<HTMLElement>(`.calendar.${calendarClassName}`)
       .forEach((el) => visit(el));
     return;
   }
@@ -180,8 +172,10 @@ export function findKeyboardSelectedDay(
 export function focusKeyboardSelectedDay(
   calendarClassName?: string,
   cursorDate?: Date | null,
+  shouldFocus: () => boolean = () => true,
 ) {
   const run = () => {
+    if (!shouldFocus()) return;
     const day = findKeyboardSelectedDay(calendarClassName, cursorDate);
     if (!day) return;
     const scope = day.closest(".react-datepicker") ?? day.closest(".calendar");

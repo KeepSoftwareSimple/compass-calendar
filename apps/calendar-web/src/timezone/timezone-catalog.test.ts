@@ -1,14 +1,82 @@
+import { ensurePlaceTimeZoneSearchForTests } from "@web/timezone/place-timezone-search.lazy";
 import {
   buildTimeZoneList,
   filterTimeZones,
   sortTimeZonesByOffsetDistance,
 } from "@web/timezone/timezone-catalog";
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 
 const at = new Date("2026-07-15T18:00:00.000Z");
 
 describe("timezone-catalog", () => {
+  beforeAll(async () => {
+    await ensurePlaceTimeZoneSearchForTests();
+  });
   const zones = buildTimeZoneList(at);
+
+  it("finds Buenos Aires by city name for booking settings", () => {
+    const hits = filterTimeZones(zones, "Buenos Aires");
+    expect(
+      hits.some(
+        (zone) =>
+          zone.id === "America/Argentina/Buenos_Aires" ||
+          zone.id === "America/Buenos_Aires",
+      ),
+    ).toBe(true);
+    expect(
+      hits.some(
+        (zone) =>
+          zone.placeLabel?.includes("Buenos Aires") ||
+          zone.city === "Buenos Aires",
+      ),
+    ).toBe(true);
+  });
+
+  it("maps city index IANA ids onto supportedValuesOf link names", () => {
+    const browserStyle: typeof zones = [
+      {
+        id: "America/Buenos_Aires",
+        city: "Buenos Aires",
+        name: "",
+        region: "America",
+        abbreviation: "GMT-3",
+        offset: "",
+        offsetMinutes: -180,
+        secondary: "Buenos Aires",
+        keywords: ["buenos aires"],
+      },
+    ];
+    const hits = filterTimeZones(browserStyle, "Buenos Aires");
+    const buenosAiresCity = hits.find(
+      (zone) =>
+        zone.listKey === "America/Argentina/Buenos_Aires:Buenos Aires:AR",
+    );
+    expect(buenosAiresCity?.placeLabel).toMatch(
+      /Buenos Aires, Ciudad de Buenos Aires/,
+    );
+  });
+
+  it("finds us cities by common name (Tampa)", () => {
+    const tampa = filterTimeZones(zones, "tampa");
+    expect(tampa.length).toBeGreaterThan(0);
+    expect(tampa[0]?.id).toBe("America/New_York");
+    expect(tampa[0]?.placeLabel).toMatch(/Tampa/i);
+  });
+
+  it("keeps Tampa on America/New_York in winter and summer", () => {
+    const winter = buildTimeZoneList(new Date("2026-01-15T18:00:00.000Z"));
+    const summer = buildTimeZoneList(new Date("2026-07-15T18:00:00.000Z"));
+    expect(filterTimeZones(winter, "tampa")[0]?.abbreviation).toMatch(/EST|ET/);
+    expect(filterTimeZones(summer, "tampa")[0]?.abbreviation).toMatch(/EDT|ET/);
+  });
+
+  it("does not collapse Florida to one zone", () => {
+    const florida = filterTimeZones(zones, "florida");
+    const zoneIds = new Set(florida.map((zone) => zone.id));
+    expect(zoneIds.has("America/New_York")).toBe(true);
+    expect(zoneIds.has("America/Chicago")).toBe(true);
+    expect(florida[0]?.multiZoneRegionNote).toMatch(/multiple time zones/i);
+  });
 
   it("filters by city, abbreviation, and region", () => {
     const chicago = filterTimeZones(zones, "Chi").map((zone) => zone.id);

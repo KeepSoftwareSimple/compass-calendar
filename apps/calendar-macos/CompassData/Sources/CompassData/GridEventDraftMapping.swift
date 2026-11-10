@@ -11,7 +11,7 @@ public enum GridEventDraftMapping {
         let showsInline =
             activity == .keyboardPlace && !status.isFormOpen
         let eventId = wireEventId(from: draft).rawValue
-        let colorHex = draft.color == nil ? sourceColorHex : nil
+        let colorHex = presentationColorHex(draft: draft, sourceColorHex: sourceColorHex)
         return GridLayoutDraftOverlay(
             eventId: eventId,
             schedule: draft.schedule,
@@ -169,6 +169,17 @@ public enum GridEventDraftMapping {
 
     private static func draftColorEnum(_ draft: GridEventDraft) -> ColorEnum? {
         draft.color.flatMap { ColorEnum(rawValue: $0.rawValue) }
+    }
+
+    /// Grid draft overlays only carry `colorHex`; slot fills must be resolved like `EventColorSlotHex`.
+    static func presentationColorHex(
+        draft: GridEventDraft,
+        sourceColorHex: String?
+    ) -> String? {
+        if let slot = draft.color, let color = ColorEnum(rawValue: slot.rawValue) {
+            return EventColorSlotHex.hex(for: color)
+        }
+        return sourceColorHex
     }
 
     private static func schedulesEqual(_ left: EventSchedule, _ right: EventSchedule) -> Bool {

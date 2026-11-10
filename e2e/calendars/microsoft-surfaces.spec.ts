@@ -98,6 +98,14 @@ test("Add account starts Microsoft OAuth from the chooser", async ({
 }) => {
   await prepareSignedInBookingSettingsPage(page, { microsoftConnect: true });
 
+  // Verify the app's redirect without depending on Microsoft's live page load.
+  await page.route("https://login.microsoftonline.com/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<title>Microsoft authorization destination</title>",
+    }),
+  );
+
   let beginBody: Record<string, unknown> | undefined;
   await page.route("**/api/auth/connections/begin", async (route) => {
     if (route.request().method() !== "POST") {

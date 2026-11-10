@@ -9,6 +9,7 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  CERTIFIED_HISTORY_COVERAGE_VERSION,
   type ResourceBootstrapState,
   SyncResourceReadSchema,
   type SyncResourceRecord,
@@ -149,6 +150,14 @@ interface SubscriptionInput {
 // cursor holds mid-batch progress so an interrupted pull resumes rather than
 // restarts.
 export class SyncResourceRepository {
+  private readonly collection: Collection<SyncResourceRecord>;
+
+  constructor(db: Db) {
+    this.collection = db.collection<SyncResourceRecord>(
+      SYNC_COLLECTIONS.syncResources,
+    );
+  }
+
   async recordHistoryCoverage(
     resource: SyncResourceRecord,
     skipped: number,
@@ -156,17 +165,11 @@ export class SyncResourceRepository {
     now: Date,
   ) {
     await this.#patch(resource.tenantId, resource.principalId, resource._id, {
-      historyCoverageVersion: complete && skipped === 0 ? 1 : 0,
+      historyCoverageVersion:
+        complete && skipped === 0 ? CERTIFIED_HISTORY_COVERAGE_VERSION : 0,
       historySkipped: skipped,
       historyCheckedAt: now,
     });
-  }
-  private readonly collection: Collection<SyncResourceRecord>;
-
-  constructor(db: Db) {
-    this.collection = db.collection<SyncResourceRecord>(
-      SYNC_COLLECTIONS.syncResources,
-    );
   }
 
   // Owner-scoped single-document $set; every simple mutator below is one of

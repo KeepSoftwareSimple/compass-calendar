@@ -83,6 +83,7 @@ import {
   useNavigationShortcuts,
 } from "@web/shortcuts/useGlobalShortcuts";
 import { isLifePathname } from "./isLifePathname";
+import { useSuspendCalendarGridOnLifeView } from "./useSuspendCalendarGridOnLifeView";
 
 /**
  * The auth modal is driven by the router's `?auth=` search param, so its
@@ -93,6 +94,7 @@ import { isLifePathname } from "./isLifePathname";
 export function RootShell() {
   const { pathname } = useLocation();
   const isLifeView = isLifePathname(pathname);
+  useSuspendCalendarGridOnLifeView();
   const deferCalendarOnboarding = isLifeView;
   const { authenticated } = useContext(SessionContext);
   const guestMeetingSetupActive = useSettingsStore(

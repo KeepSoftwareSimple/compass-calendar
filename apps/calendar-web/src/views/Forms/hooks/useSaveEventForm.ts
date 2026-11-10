@@ -241,6 +241,10 @@ export function useSaveEventForm() {
         return closeEventForm();
       }
 
+      if (useDraftStore.getState().status?.activity === "pastePlace") {
+        return;
+      }
+
       const normalized = normalizeGuestEdit(draft, applyTo);
 
       // A membership-changing guest edit needs the save-time invitation

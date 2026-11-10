@@ -250,8 +250,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
 
   const isCaptionYearView = captionPicker && captionView === "year";
   const isCaptionMonthView = captionPicker && captionView === "month";
-  const isCaptionDayGrid = !isCaptionYearView && !isCaptionMonthView;
-  const shouldCommitSelection = !captionPicker || captionView === "day";
+  const isDayGrid = !isCaptionYearView && !isCaptionMonthView;
 
   const monthStepHandlersRef = useRef({
     onPrev: () => {},
@@ -263,7 +262,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const sidebarMonthNavShortcuts = Boolean(monthNav);
   const monthNavShortcutsEnabled =
     isOpen &&
-    isCaptionDayGrid &&
+    isDayGrid &&
     (gridMonthNavShortcuts ||
       (sidebarMonthNavShortcuts && !isFloatingLayerOpen()));
 
@@ -273,16 +272,10 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
 
   useMonthPickerShortcuts({
     enabled: monthNavShortcutsEnabled,
-    onPrevMonth: () => {
-      monthStepHandlersRef.current.onPrev();
-    },
-    onNextMonth: () => {
-      monthStepHandlersRef.current.onNext();
-    },
+    onPrevMonth: () => monthStepHandlersRef.current.onPrev(),
+    onNextMonth: () => monthStepHandlersRef.current.onNext(),
     onGoToThisMonth: canGoToThisMonthInPicker
-      ? () => {
-          monthStepHandlersRef.current.onGoToThisMonth?.();
-        }
+      ? () => monthStepHandlersRef.current.onGoToThisMonth?.()
       : undefined,
   });
 
@@ -393,9 +386,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
       onCalendarClose={handleCalendarClose}
       onChange={handleChange}
       onSelect={handleSelect}
-      shouldCloseOnSelect={
-        shouldCommitSelection ? props.shouldCloseOnSelect : false
-      }
+      shouldCloseOnSelect={isDayGrid ? props.shouldCloseOnSelect : false}
       showFourColumnMonthYearPicker={isCaptionMonthView}
       showMonthYearPicker={isCaptionMonthView}
       showYearPicker={isCaptionYearView}
@@ -447,11 +438,9 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         monthStepHandlersRef.current = {
           onPrev: headerNav.onPrev,
           onNext: headerNav.onNext,
-          onGoToThisMonth:
-            (view === "sidebar" && monthNav?.onToday) ||
-            (withTodayButton && isCaptionDayGrid)
-              ? jumpToThisMonth
-              : undefined,
+          onGoToThisMonth: canGoToThisMonthInPicker
+            ? jumpToThisMonth
+            : undefined,
         };
 
         const resolvedHeaderEndContent =
@@ -460,8 +449,8 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
             : headerEndContent;
 
         const captionBlock = (
-          <div className={classNames("min-w-16 shrink-0 items-start")}>
-            {captionPicker && captionView === "day" ? (
+          <div className="min-w-16 shrink-0 items-start">
+            {captionPicker && isDayGrid ? (
               <button
                 type="button"
                 aria-label="Choose month and year"
@@ -557,19 +546,17 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         return (
           <div
             className={classNames(
-              "flex items-center px-2 py-2",
+              "flex min-w-0 items-center gap-2 px-2 py-2",
               headerClassName,
             )}
           >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              {captionBlock}
-              {navBlock}
-              {!customHeaderCount && resolvedHeaderEndContent ? (
-                <div className="ml-auto flex min-w-0 items-center">
-                  {resolvedHeaderEndContent}
-                </div>
-              ) : null}
-            </div>
+            {captionBlock}
+            {navBlock}
+            {!customHeaderCount && resolvedHeaderEndContent ? (
+              <div className="ml-auto flex min-w-0 items-center">
+                {resolvedHeaderEndContent}
+              </div>
+            ) : null}
           </div>
         );
       }}

@@ -11,6 +11,13 @@ import {
 } from "@core/types/event-visibility.contracts";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { EMPTY_HIDDEN_EVENT_IDS } from "@web/events/hidden/hidden-event-id";
+import {
+  clearHiddenEventIntentIfCurrent,
+  hiddenEventIntentStillCurrent,
+  mergePendingHiddenIntents,
+  registerHiddenEventIntent,
+  runHiddenEventMutation,
+} from "@web/events/hidden/hidden-event-mutation-coordinator";
 import { HiddenEventsApi } from "@web/events/hidden/hidden-events.api";
 import {
   readHiddenEventIds,
@@ -47,11 +54,18 @@ function withHiddenEventId(
   return ids.filter((id) => id !== eventId);
 }
 
+async function fetchHiddenEventIds(
+  source: EventRepositorySource,
+): Promise<readonly string[]> {
+  const base =
+    source === "remote" ? await HiddenEventsApi.list() : readHiddenEventIds();
+  return mergePendingHiddenIntents(base);
+}
+
 export function hiddenEventsQueryOptions(source: EventRepositorySource) {
   return queryOptions({
     queryKey: hiddenEventsQueryKeys.source(source),
-    queryFn: (): Promise<readonly string[]> | readonly string[] =>
-      source === "remote" ? HiddenEventsApi.list() : readHiddenEventIds(),
+    queryFn: () => fetchHiddenEventIds(source),
     staleTime: 60_000,
   });
 }
@@ -67,6 +81,7 @@ export function useHiddenEventIds(): ReadonlySet<string> {
 }
 
 type HiddenMutationVariables = SetEventHiddenInput & {
+  seq: number;
   undoEntry?: Extract<UndoHistoryEntry, { kind: "hidden" }>;
 };
 
@@ -84,17 +99,19 @@ export function useToggleEventHidden(): {
       hidden,
     }: HiddenMutationVariables): Promise<readonly string[]> => {
       const input = SetEventHiddenInputSchema.parse({ eventId, hidden });
-      if (source === "remote") {
-        return HiddenEventsApi.set(input);
-      }
+      return runHiddenEventMutation(input.eventId, async () => {
+        if (source === "remote") {
+          return HiddenEventsApi.set(input);
+        }
 
-      const next = withHiddenEventId(
-        readHiddenEventIds(),
-        input.eventId,
-        input.hidden,
-      );
-      writeHiddenEventIds(next);
-      return next;
+        const next = withHiddenEventId(
+          readHiddenEventIds(),
+          input.eventId,
+          input.hidden,
+        );
+        writeHiddenEventIds(next);
+        return next;
+      });
     },
     onMutate: async ({ eventId, hidden }) => {
       await queryClient.cancelQueries({ queryKey });
@@ -106,13 +123,41 @@ export function useToggleEventHidden(): {
       );
       return { snapshot };
     },
-    onError: (_error, _input, context) => {
+    onError: (_error, variables, context) => {
+      if (
+        !hiddenEventIntentStillCurrent(
+          variables.eventId,
+          variables.seq,
+          variables.hidden,
+        )
+      ) {
+        return;
+      }
+      clearHiddenEventIntentIfCurrent(
+        variables.eventId,
+        variables.seq,
+        variables.hidden,
+      );
       queryClient.setQueryData(queryKey, context?.snapshot ?? []);
       showErrorToast(HIDDEN_EVENT_FAILURE_MESSAGE, {
         options: { role: "alert" },
       });
     },
     onSuccess: (list, variables) => {
+      if (
+        !hiddenEventIntentStillCurrent(
+          variables.eventId,
+          variables.seq,
+          variables.hidden,
+        )
+      ) {
+        return;
+      }
+      clearHiddenEventIntentIfCurrent(
+        variables.eventId,
+        variables.seq,
+        variables.hidden,
+      );
       queryClient.setQueryData(queryKey, list);
       if (variables.undoEntry) {
         undoHistoryActions.record(variables.undoEntry);
@@ -123,8 +168,10 @@ export function useToggleEventHidden(): {
   const setEventHidden = useCallback(
     (eventId: string, hidden: boolean) => {
       const input = SetEventHiddenInputSchema.parse({ eventId, hidden });
+      const seq = registerHiddenEventIntent(input.eventId, input.hidden);
       mutation.mutate({
         ...input,
+        seq,
         undoEntry: isRestoringHistory()
           ? undefined
           : { kind: "hidden", eventId: input.eventId, hidden: input.hidden },

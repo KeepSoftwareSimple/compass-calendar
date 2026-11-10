@@ -90,9 +90,15 @@ jobs:
             echo "macos=false" >>"$GITHUB_OUTPUT"
           fi
 
+  # After macos-build so a compile failure never keeps this job on a second Mac
+  # slot. Critical path stays build, then max(shards, swift-packages): shards and
+  # swift-packages both need macos-build and run in parallel afterward.
   swift-packages:
-    needs: changes
-    if: needs.changes.outputs.macos == 'true' && !inputs.strict_verify
+    needs: [changes, macos-build]
+    if: >-
+      needs.changes.outputs.macos == 'true' &&
+      needs.macos-build.result == 'success' &&
+      !inputs.strict_verify
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -112,6 +118,10 @@ jobs:
             ${{ runner.os }}-swift-pkgs-
 
       - name: Test native Swift packages
+        env:
+          # CompassKit XCTest cases also run in macos-build (xcodebuild
+          # -only-testing:CompassKitTests); see test-macos-swift-packages.sh.
+          MACOS_SWIFT_PACKAGES_INCLUDE_COMPASSKIT: "0"
         run: bash .github/scripts/test-macos-swift-packages.sh
 
   macos-build:

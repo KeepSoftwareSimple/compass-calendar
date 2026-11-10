@@ -206,7 +206,8 @@ public final class EventsStore {
 
     public func createOptimistic(
         input: CreateEventInput,
-        optimisticEvent: Event
+        optimisticEvent: Event,
+        onOptimisticCacheUpdated: ((_ events: [Event]) -> Void)? = nil
     ) async throws {
         beginMutation()
         defer { endMutation() }
@@ -214,10 +215,12 @@ public final class EventsStore {
         if source == .local {
             let record = LocalEventRecord(id: optimisticEvent.id, event: optimisticEvent, isDemo: false)
             try localEvents.put(record)
+            onOptimisticCacheUpdated?(try fetchAllEvents())
             onWriteLanded?(isNewCreate)
             return
         }
         try repository.upsert(events: [optimisticEvent], isLocal: false)
+        onOptimisticCacheUpdated?(try fetchAllEvents())
         let revision = remoteSessionRevision
         do {
             let response = try await eventsAPI.create(input)
@@ -233,7 +236,8 @@ public final class EventsStore {
     public func replaceOptimistic(
         id: EventId,
         input: ReplaceEventInput,
-        optimisticEvent: Event
+        optimisticEvent: Event,
+        onOptimisticCacheUpdated: ((_ events: [Event]) -> Void)? = nil
     ) async throws {
         beginMutation()
         defer { endMutation() }
@@ -246,6 +250,7 @@ public final class EventsStore {
                     snapshot: snapshot
                 )
             }
+            onOptimisticCacheUpdated?(try fetchAllEvents())
             onWriteLanded?(false)
             return
         }
@@ -255,6 +260,7 @@ public final class EventsStore {
             edited: optimisticEvent,
             snapshot: snapshot
         )
+        onOptimisticCacheUpdated?(try fetchAllEvents())
         // Replace returns a command acknowledgement, not an authoritative event.
         // Preserve the optimistic projection until the invalidated range is read.
         if (try? await eventsAPI.replace(id: id, input: input)) != nil {

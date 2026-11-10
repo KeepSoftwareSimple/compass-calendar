@@ -6,7 +6,11 @@ import {
   PDFNumber,
   PDFString,
 } from "pdf-lib";
-import { getCompletedLifeWeeks } from "@core/life/life-math";
+import {
+  DEFAULT_LIFESPAN,
+  getCompletedLifeWeeks,
+  WEEKS_PER_ROW,
+} from "@core/life/life-math";
 import { LIFE_PDF_QUOTE } from "@core/life/life-quotes";
 import {
   renderReflectionLifePdf,
@@ -62,7 +66,9 @@ describe("reflection life image", () => {
     expect(svg).not.toContain("U.S. reference");
     expect(svg).not.toContain("prediction");
     expect(svg).not.toContain("A closer look");
-    expect(svg.match(/<rect /g)).toHaveLength(79 * 52 + 1);
+    expect(svg.match(/<rect /g)).toHaveLength(
+      DEFAULT_LIFESPAN * WEEKS_PER_ROW + 1,
+    );
     expect(svg).not.toContain("weeks remaining");
   });
   it("wraps the image in one PDF page with a direct clickable Life View link", async () => {

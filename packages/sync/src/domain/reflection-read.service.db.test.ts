@@ -119,6 +119,16 @@ describe("reflection historical reads", () => {
     ]);
     expect(new Set(events.map((event) => event.id)).size).toBe(5);
     expect(
+      events
+        .filter((event) => event.title === "Archived event 5003")
+        .every((event) => event.routine),
+    ).toBe(true);
+    expect(
+      events
+        .filter((event) => !event.recurring)
+        .every((event) => !event.routine),
+    ).toBe(true);
+    expect(
       await db.collection(SYNC_COLLECTIONS.eventOccurrences).countDocuments(),
     ).toBe(0);
     // Expired series remain candidates until recurrence projection can prove
@@ -315,6 +325,16 @@ describe("reflection historical reads", () => {
           rules: ["RRULE:FREQ=WEEKLY;COUNT=3"],
         },
       },
+      ...["MONTHLY", "YEARLY"].map(
+        (frequency): ProviderEvent => ({
+          ...singleEvent(frequency, `${frequency} occasion`),
+          schedule,
+          recurrence: {
+            kind: "seriesMaster",
+            rules: [`RRULE:FREQ=${frequency};COUNT=3`],
+          },
+        }),
+      ),
       {
         ...singleEvent("moved", "Walk with a friend"),
         schedule: {
@@ -369,6 +389,16 @@ describe("reflection historical reads", () => {
     const read = await readReflectionPage(db, calendar, input);
     expect(read.historyComplete).toBe(true);
     expect(read.oldestYear).toBe(2018);
+    for (const frequency of ["MONTHLY", "YEARLY"]) {
+      expect(
+        read.events.find((event) => event.title === `${frequency} occasion`)
+          ?.routine,
+      ).toBe(false);
+    }
+    expect(
+      read.events.find((event) => event.title === "Walk with a friend")
+        ?.routine,
+    ).toBe(true);
     expect(
       read.events.find((event) => event.title === "A memorable trip"),
     ).toBeDefined();

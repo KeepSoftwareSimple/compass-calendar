@@ -24,6 +24,46 @@ import {
 } from "../booking/booking-harness";
 import { expectNoAxeViolations } from "../utils/axe-assertion";
 
+test("notification settings support pausing reviews with optional feedback", async ({
+  page,
+}) => {
+  await prepareSignedInBookingSettingsPage(page);
+  let preferences = {
+    enabled: true,
+    timeZone: "America/Denver",
+    excludedCalendarIds: [],
+  };
+  await page.route("**/api/user/reflection-preferences", async (route) => {
+    const method = route.request().method();
+    if (method === "POST") {
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    if (method === "PUT") preferences = route.request().postDataJSON();
+    await route.fulfill({
+      json: { available: true, trial: false, preferences },
+    });
+  });
+  const settings = page.getByRole("dialog", { name: "Settings" });
+  await settings.getByRole("button", { name: "Notifications" }).click();
+  const reviews = settings.getByRole("checkbox", {
+    name: "Email me calendar reflections",
+  });
+  await expect(reviews).toBeChecked();
+  await reviews.focus();
+  await page.keyboard.press("Space");
+  await expect(reviews).not.toBeChecked();
+  await expect(
+    settings.getByRole("link", { name: "Share feedback by email (optional)" }),
+  ).toBeVisible();
+  // This checkpoint owns the settings dialog; the calendar sidebar behind it
+  // is covered by the app checkpoints.
+  await expectNoAxeViolations(page, {
+    checkpoint: "notification settings with paused reviews",
+    include: "[role='dialog']",
+  });
+});
+
 test.describe("public booking page color scheme", () => {
   (
     [

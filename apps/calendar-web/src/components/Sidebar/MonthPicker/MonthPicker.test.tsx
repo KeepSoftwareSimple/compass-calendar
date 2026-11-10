@@ -18,6 +18,7 @@ import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import * as Track from "@web/auth/posthog/track";
 import { MonthPicker } from "@web/components/Sidebar/MonthPicker/MonthPicker";
 import { rememberSidebarPickerReturnFocus } from "@web/components/Sidebar/util/sidebarFocus.util";
+import { CALENDAR_VIEW_INTERACTION_ID_ATTRIBUTES } from "@web/grid/interaction/view-event-registry";
 import {
   pageJumpHintActions,
   usePageJumpHintStore,
@@ -297,6 +298,12 @@ describe("MonthPicker", () => {
     );
 
     await waitFor(() => {
+      expect(useDatePickerHintStore.getState().stack).toEqual([]);
+    });
+
+    act(() => getTabStopDay()?.focus());
+
+    await waitFor(() => {
       const top = useDatePickerHintStore.getState().stack.at(-1);
       expect(top?.id).toBe("date-picker-sidebar-month");
       const plain = getPartsPlainText(top!.parts);
@@ -312,6 +319,33 @@ describe("MonthPicker", () => {
       const top = useDatePickerHintStore.getState().stack.at(-1);
       expect(top?.id).toBe("date-picker-sidebar-month");
     });
+  });
+
+  it("drops month picker hints when focus moves to a grid event", async () => {
+    renderPicker(<MonthPicker onSelectDate={mock()} {...pickerProps} />);
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+
+    act(() => getTabStopDay()?.focus());
+    await waitFor(() => {
+      expect(
+        useDatePickerHintStore
+          .getState()
+          .stack.some((s) => s.id === "date-picker-sidebar-month"),
+      ).toBe(true);
+    });
+
+    const gridEvent = document.createElement("div");
+    gridEvent.setAttribute(CALENDAR_VIEW_INTERACTION_ID_ATTRIBUTES[0], "evt-1");
+    gridEvent.tabIndex = 0;
+    document.body.append(gridEvent);
+    act(() => gridEvent.focus());
+
+    await waitFor(() => {
+      expect(useDatePickerHintStore.getState().stack).toEqual([]);
+    });
+    gridEvent.remove();
   });
 
   it("uses day stepping for a single-day window and keeps sidebar hints registered", async () => {
@@ -330,15 +364,19 @@ describe("MonthPicker", () => {
       "@web/shortcuts/tips/date-picker-hint.store"
     );
     await waitFor(() => {
+      expect(useDatePickerHintStore.getState().stack).toEqual([]);
+    });
+
+    const tabStop = getTabStopDay();
+    act(() => tabStop?.focus());
+
+    await waitFor(() => {
       expect(
         useDatePickerHintStore
           .getState()
           .stack.some((s) => s.id === "date-picker-sidebar-month"),
       ).toBe(true);
     });
-
-    const tabStop = getTabStopDay();
-    act(() => tabStop?.focus());
     expect(tabStop).toHaveFocus();
   });
 

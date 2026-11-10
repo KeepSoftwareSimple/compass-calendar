@@ -1,5 +1,6 @@
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { readability } from "@web/common/styles/color.utils";
+import { theme } from "@web/common/styles/theme";
 
 /**
  * The accent fill for an ordinary card's identity strip: this calendar's
@@ -105,6 +106,12 @@ export function calendarAccentAccessibleSuffix(
 const LIGHT_PAGE_PAPER = "#f3eee2";
 const MIN_FOCUS_CONTRAST = 3;
 
+/** WCAG contrast floor for focus rings and start/end edge lines on the card fill. */
+export const MIN_EVENT_FOCUS_INDICATOR_CONTRAST = 3;
+
+const worstReadability = (candidate: string, fills: string[]): number =>
+  Math.min(...fills.map((fill) => readability(candidate, fill)));
+
 /**
  * CSS color for event focus chrome. Falls back to `--text` when no calendar
  * color is available, or when that color is too light to read against the
@@ -119,9 +126,31 @@ export function eventFocusColor(focusColor: string | null | undefined): string {
   return focusColor;
 }
 
-/** Sidebar-open editing ring: contrasts with the page in both themes. */
-export const GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW =
-  "0 0 0 1px var(--background), 0 0 0 3px color-mix(in srgb, var(--text) 70%, transparent)";
+/**
+ * Focus-ring and edge-line color for one card. Prefers the calendar focus color
+ * when it contrasts with the card fill; otherwise uses the same token chosen for
+ * title/time text on that fill.
+ */
+export function resolveEventFocusIndicatorColor(
+  focusColor: string | null | undefined,
+  cardFill: string | string[],
+): string {
+  const fills = Array.isArray(cardFill) ? cardFill : [cardFill];
+  if (
+    focusColor &&
+    worstReadability(focusColor, fills) >= MIN_EVENT_FOCUS_INDICATOR_CONTRAST
+  ) {
+    return focusColor;
+  }
+  return theme.getContrastText(fills);
+}
+
+/** Sidebar-open editing ring with a fill-aware indicator color. */
+export function gridEventSidebarEditingBoxShadow(
+  indicatorColor: string,
+): string {
+  return `0 0 0 1px var(--background), 0 0 0 3px color-mix(in srgb, ${indicatorColor} 70%, transparent)`;
+}
 
 export function joinGridEventBoxShadow(
   ...parts: Array<string | undefined | null | false>
@@ -151,10 +180,15 @@ export function eventEdgeFocusShadow(
   axis: "horizontal" | "vertical",
   color: string,
 ): string {
+  const gutter = "var(--background)";
   if (axis === "vertical") {
-    // Timed cards: start = top, end = bottom.
-    return edge === "startDate" ? `0 -3px 0 0 ${color}` : `0 3px 0 0 ${color}`;
+    // Timed cards: start = top, end = bottom. Gutter keeps fill-aware colors
+    // readable once the line sits on grid paper.
+    return edge === "startDate"
+      ? `0 -1px 0 0 ${gutter}, 0 -4px 0 0 ${color}`
+      : `0 1px 0 0 ${gutter}, 0 4px 0 0 ${color}`;
   }
-  // All-day cards: start = left, end = right.
-  return edge === "startDate" ? `-3px 0 0 0 ${color}` : `3px 0 0 0 ${color}`;
+  return edge === "startDate"
+    ? `-1px 0 0 0 ${gutter}, -4px 0 0 0 ${color}`
+    : `1px 0 0 0 ${gutter}, 4px 0 0 0 ${color}`;
 }
