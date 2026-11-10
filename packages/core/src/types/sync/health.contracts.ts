@@ -67,6 +67,10 @@ export const SyncHealthFreshnessSchema = z.object({
   p99Ms: z.number().int().nonnegative().nullable(),
   // Share of sampled events resources whose last success is older than 30s.
   percentOver30s: z.number().min(0).max(100).nullable(),
+  // Calendars polling via full snapshot because incremental tokens never last.
+  syncTokenUnsupported: z.number().int().nonnegative(),
+  // Active events resources with a cursor-expiry streak (excludes the row above).
+  cursorExpiryStreak: z.number().int().nonnegative(),
 });
 export type SyncHealthFreshness = z.infer<typeof SyncHealthFreshnessSchema>;
 

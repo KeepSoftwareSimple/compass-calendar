@@ -594,27 +594,98 @@ describe("dispatchSyncJob", () => {
       expect(stored?.cursorExpiredBackoffUntil).toEqual(now());
     }
 
-    // The third lap is where the cursor is judged unrecoverable and the
-    // hold-off starts widening.
+    // The third lap enters sync-token-unsupported mode instead of widening hold-off.
     const third = await dispatchSyncJob(
       deps(alwaysExpired()),
       jobFor(resource, "incrementalPull"),
       now,
     );
     expect(third.result).toBe("done");
+    expect(third.followup).toBeUndefined();
     const held = await resources.findById(
       calendar.tenantId,
       calendar.principalId,
       resource._id,
     );
-    expect(held?.cursorExpiredStreak).toBe(3);
-    expect(held?.cursorExpiredBackoffUntil).toEqual(
-      new Date(now().getTime() + 5 * 60_000),
-    );
+    expect(held?.syncTokenUnsupportedAt).toEqual(now());
+    expect(held?.cursorExpiredStreak).toBe(0);
+    expect(held?.cursorExpiredBackoffUntil).toBeNull();
   });
 
   // The behaviour the feature exists for, seeded directly rather than reached
   // through three laps, so it still runs when the ladder above changes.
+  it("uses a full snapshot pull while sync-token-unsupported is set", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedResource(calendar, "cursor-0");
+    await resources.markSyncTokenUnsupported(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
+    const reader = new FakeReader([page([], { nextSyncToken: "cursor-full" })]);
+    const outcome = await dispatchSyncJob(
+      deps(reader),
+      jobFor(resource, "incrementalPull"),
+      now,
+    );
+
+    expect(outcome.result).toBe("done");
+    expect(reader.calls[0]?.cursor).toBeUndefined();
+    const stored = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(stored?.syncTokenUnsupportedAt).toEqual(now());
+    expect(stored?.cursorExpiredStreak).toBe(0);
+    const feed = await storage
+      .db()
+      .collection(SYNC_COLLECTIONS.invalidations)
+      .find({ tenantId: calendar.tenantId, principalId: calendar.principalId })
+      .toArray();
+    expect(feed).toHaveLength(1);
+    expect(feed[0]?.invalidation).toMatchObject({
+      kind: "calendar",
+      calendarId: calendar._id,
+    });
+  });
+
+  it("re-probes incremental tokens after a daily calendar-list pass clears the marker", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedResource(calendar, "cursor-0");
+    const markedAt = new Date(now().getTime() - 25 * 60 * 60_000);
+    await resources.markSyncTokenUnsupported(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      markedAt,
+    );
+    await resources.clearSyncTokenUnsupportedByConnection(
+      calendar.tenantId,
+      calendar.principalId,
+      calendar.connectionId,
+      now(),
+    );
+    const reader = new FakeReader([
+      page([single("ok-1")], { nextSyncToken: "cursor-healed" }),
+    ]);
+    const outcome = await dispatchSyncJob(
+      deps(reader),
+      jobFor(resource, "incrementalPull"),
+      now,
+    );
+    expect(outcome.result).toBe("done");
+    expect(reader.calls[0]?.cursor).toBe("cursor-0");
+    const stored = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(stored?.syncTokenUnsupportedAt).toBeNull();
+    expect(stored?.syncCursor).toBe("cursor-healed");
+  });
+
   it("settles a pull inside the hold-off without touching the provider", async () => {
     const calendar = await seedCalendar();
     const resource = await seedResource(calendar, "stale-cursor");
