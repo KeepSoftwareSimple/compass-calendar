@@ -41,6 +41,7 @@ import {
   reprojectMaster,
   truncatedSeriesMaster,
 } from "@sync/domain/series-exception";
+import { resolveSeriesMasterForOccurrence } from "@sync/domain/series-split-successor";
 import {
   ProviderNotConfiguredError,
   type ResolveProviderAdapters,
@@ -463,12 +464,29 @@ async function applyCloudMutation(
   // "this"/"thisAndFollowing" resolve and patch/split the one addressed
   // provider instance.
   if (existing.recurrence.kind === "seriesMaster") {
-    if (existing.connectionId !== null) {
+    let seriesMaster = existing;
+    if (
+      command.input.scope === "this" &&
+      "recurrenceId" in command.input &&
+      command.input.recurrenceId !== null
+    ) {
+      const resolved = await resolveSeriesMasterForOccurrence(
+        deps.events,
+        command,
+        seriesMaster,
+        command.input.recurrenceId,
+      );
+      if (!resolved.ok) {
+        return failCloud(deps, command, "providerRejectedChange");
+      }
+      seriesMaster = resolved.master;
+    }
+    if (seriesMaster.connectionId !== null) {
       if (command.input.scope === "all") {
         return dispatchProviderMutation(
           deps,
           command,
-          existing,
+          seriesMaster,
           now,
           executeProviderSeriesUpdate,
         );
@@ -477,7 +495,7 @@ async function applyCloudMutation(
         return dispatchProviderMutation(
           deps,
           command,
-          existing,
+          seriesMaster,
           now,
           executeProviderOccurrenceUpdate,
         );
@@ -485,18 +503,18 @@ async function applyCloudMutation(
       return dispatchProviderMutation(
         deps,
         command,
-        existing,
+        seriesMaster,
         now,
         executeProviderSeriesFollowingUpdate,
       );
     }
     if (command.input.scope === "all") {
-      return updateCloudSeries(deps, command, existing, now);
+      return updateCloudSeries(deps, command, seriesMaster, now);
     }
     if (command.input.scope === "this") {
-      return updateCloudOccurrence(deps, command, existing, now);
+      return updateCloudOccurrence(deps, command, seriesMaster, now);
     }
-    return updateCloudSeriesFollowing(deps, command, existing, now);
+    return updateCloudSeriesFollowing(deps, command, seriesMaster, now);
   }
   // A bare exception target addressed directly by its own id: see the
   // matching delete-side comment above — unreachable from the browser, but
@@ -816,7 +834,8 @@ async function failCloud(
   failureReason:
     | "unsupportedCapability"
     | "versionConflict"
-    | "permanentProviderError",
+    | "permanentProviderError"
+    | "providerRejectedChange",
 ): Promise<CommandRecord> {
   const failed = await deps.commands.updateOutcome(
     command.tenantId,

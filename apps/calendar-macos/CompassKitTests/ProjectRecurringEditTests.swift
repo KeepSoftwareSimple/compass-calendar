@@ -4,6 +4,32 @@ import XCTest
 final class ProjectRecurringEditTests: XCTestCase {
     private let seriesId = EventId(rawValue: "series-master-id")
 
+    func testThisAndFollowingSplitRepointsFollowingOccurrenceIds() throws {
+        EffectiveTimeZone.identifier = "UTC"
+        let master = try seriesBase()
+        let events = try [occurrence(day: 5), occurrence(day: 6), occurrence(day: 7)]
+        let original = events[1]
+        let edited = copyEvent(
+            original,
+            content: .details(.init(description: "", kind: "details", title: "Split"))
+        )
+        let splitAt = "2026-07-06T16:00:00.000Z"
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(seriesId: seriesId, splitAt: splitAt)
+
+        let projection = ProjectRecurringEdit.projectRecurringEdit(
+            .init(
+                scope: .thisAndFollowing,
+                edited: edited,
+                original: original,
+                seriesEvents: events,
+                seriesMaster: master
+            )
+        )
+
+        let followingId = "\(remainderMasterEventId.rawValue)|2026-07-07T16:00:00.000Z"
+        XCTAssertTrue(projection.upserts.contains(where: { $0.id.rawValue == followingId }))
+    }
+
     func testThisAndFollowingSplitRemovesStaleOccurrenceIds() throws {
         EffectiveTimeZone.identifier = "UTC"
         let master = try seriesBase()
