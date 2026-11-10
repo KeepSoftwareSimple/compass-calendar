@@ -13,6 +13,14 @@ final class NativeCalendarRootModelLifeSidebarHintsTests: XCTestCase {
         XCTAssertFalse(model.showsKeyboardPlaceSidebarHint)
     }
 
+    func testLifeThisWeekSidebarTipRequiresBirthDate() async throws {
+        let model = try await makeModel()
+        model.handleShortcut(.navLifeView)
+        XCTAssertFalse(model.showsLifeThisWeekSidebarTip)
+        XCTAssertTrue(model.lifeStore.updateBirthDate("1990-01-01"))
+        XCTAssertTrue(model.showsLifeThisWeekSidebarTip)
+    }
+
     func testEnteringLifeDropsStaleKeyboardPlaceDraft() async throws {
         let model = try await makeModel()
         model.createTimedDraft(activity: .keyboardPlace)

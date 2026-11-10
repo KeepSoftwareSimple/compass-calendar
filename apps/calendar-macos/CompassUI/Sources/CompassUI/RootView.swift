@@ -290,6 +290,7 @@ public struct RootView: View {
                 levelsStore: model.levelsStore,
                 isEventFormVisible: model.isEventFormVisible,
                 isLifeView: model.viewStore.view == .life,
+                lifeThisWeekEligible: model.lifeStore.hasBirthDate,
                 suppressTips: model.eventJumpStatusText != nil || model.focusStore.pageJumpHintsVisible,
                 suppressForQuickTime: !model.draftStore.quickTimeDigits.isEmpty)
                 .padding(.horizontal, 16)

@@ -8,6 +8,10 @@ extension NativeCalendarRootModel {
             && !draftStore.status.isFormOpen
     }
 
+    public var showsLifeThisWeekSidebarTip: Bool {
+        viewStore.view == .life && lifeStore.hasBirthDate
+    }
+
     /// Web `suspendCalendarGridInteraction`: discard invisible grid state when leaving the grid.
     public func suspendCalendarGridInteraction() {
         if draftStore.gridDraft != nil, !draftStore.status.isFormOpen {

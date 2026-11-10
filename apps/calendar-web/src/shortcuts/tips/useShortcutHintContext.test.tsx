@@ -1,4 +1,8 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { type PropsWithChildren } from "react";
+import { UserApi } from "@web/api/user.api";
+import { UserContext } from "@web/auth/compass/user/context/UserContext";
+import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import {
   initialFirstEventPromptState,
   useFirstEventPromptStore,
@@ -22,7 +26,15 @@ import {
   useShortcutHintContext,
 } from "@web/shortcuts/tips/useShortcutHintContext";
 import { writeLifePreferences } from "@web/views/Life/life-preferences.storage";
-import { afterEach, beforeEach, describe, expect, it, jest } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+  spyOn,
+} from "bun:test";
 
 const focusCalendarEvent = () => {
   const card = document.createElement("div");
@@ -94,6 +106,58 @@ describe("useShortcutHintContext", () => {
     window.history.replaceState({}, "", "/life");
     const { result } = renderHook(() => useShortcutHintContext());
     expect(result.current!.id).toBe("life-this-week");
+  });
+
+  it("uses account life preferences for the Life T tip when signed in", async () => {
+    spyOn(UserApi, "getLifePreferences").mockResolvedValue({
+      preferences: {
+        birthDate: "1990-06-15",
+        lifespan: 80,
+        variation: "average",
+      },
+      revision: 1,
+    });
+    window.history.replaceState({}, "", "/life");
+    const { result } = renderHook(() => useShortcutHintContext(), {
+      wrapper: ({ children }: PropsWithChildren) => (
+        <UserContext.Provider value={{ userId: "signed-in-user" }}>
+          {children}
+        </UserContext.Provider>
+      ),
+    });
+    await waitFor(() => expect(result.current?.id).toBe("life-this-week"));
+  });
+
+  it("shows command-palette on Life when no birth date is set", () => {
+    localStorage.removeItem(STORAGE_KEYS.LIFE_PREFERENCES);
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+    window.history.replaceState({}, "", "/life");
+    const { result } = renderHook(() => useShortcutHintContext());
+    expect(result.current?.id).toBe("command-palette");
+  });
+
+  it("does not show form tips on Life while a sidebar-hidden draft form is open", () => {
+    writeLifePreferences({
+      birthDate: "1990-01-01",
+      lifespan: 80,
+      variation: "average",
+    });
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+    window.history.replaceState({}, "", "/life");
+    act(() => {
+      draftActions.startGridDraft({
+        activity: "createShortcut",
+        draft: createGridEventDraft(
+          timedGridSchedule(
+            new Date("2026-05-20T09:00:00.000"),
+            new Date("2026-05-20T10:00:00.000"),
+          ),
+        ),
+      });
+      draftActions.setFormOpen(true);
+    });
+    const { result } = renderHook(() => useShortcutHintContext());
+    expect(result.current?.id).toBe("life-this-week");
   });
 
   it("advances to event-jump after hold-Mod is demonstrated", () => {

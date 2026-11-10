@@ -11,6 +11,15 @@ test("Life sidebar does not show calendar draft hints after keyboard place-creat
   await page.addInitScript(() => {
     localStorage.setItem("compass.onboarding.first-event-done", "completed");
     localStorage.setItem("compass.view.sidebar-open", "true");
+    localStorage.setItem("compass.onboarding.has-seen-life-view-intro", "true");
+    localStorage.setItem(
+      "compass.life.preferences",
+      JSON.stringify({
+        birthDate: "1990-01-01",
+        lifespan: 80,
+        variation: "average",
+      }),
+    );
   });
   await prepareTimedCalendarPage(page);
 

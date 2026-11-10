@@ -7,6 +7,7 @@ struct ShortcutSidebarFooter: View {
     @Bindable var levelsStore: LevelsStore
     var isEventFormVisible: Bool = false
     var isLifeView: Bool = false
+    var lifeThisWeekEligible: Bool = false
     var suppressTips: Bool = false
     var suppressForQuickTime: Bool = false
 
@@ -35,7 +36,7 @@ struct ShortcutSidebarFooter: View {
     @ViewBuilder
     private var idleShortcutTip: some View {
         VStack(alignment: .center, spacing: 2) {
-            if isLifeView {
+            if isLifeView, lifeThisWeekEligible {
                 lifeThisWeekHint
             } else if let tip = levelsStore.currentTip, tip.shortcutId == "focus-shift-hold" {
                 HStack(spacing: 4) {

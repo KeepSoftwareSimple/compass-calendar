@@ -466,6 +466,29 @@ describe("SidebarStatusBar", () => {
     expect(screen.getByRole("status")).toHaveTextContent(FIRST_EVENT_SAVE_HINT);
   });
 
+  it("shows Life tips instead of hidden form tips when an open draft survives on Life", () => {
+    writeLifePreferences({
+      birthDate: "1990-01-01",
+      lifespan: 80,
+      variation: "average",
+    });
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+    window.history.replaceState({}, "", "/life");
+    seedKeyboardPlaceDraft();
+    draftActions.setFormOpen(true);
+    const { wrapper } = createStoreWrapper();
+
+    render(<SidebarStatusBar />, { wrapper });
+
+    expect(screen.queryByText(KEYBOARD_PLACE_HINT)).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent(
+      FIRST_EVENT_SAVE_HINT,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      getHintPlainText(getShortcutHint("life-this-week")),
+    );
+  });
+
   it("shows hold-Mod after the first event is done and the calendar is idle", () => {
     useFirstEventPromptStore.setState({ isDone: true }, false);
     const { wrapper } = createStoreWrapper();

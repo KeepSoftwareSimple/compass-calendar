@@ -57,6 +57,19 @@ describe("selectShortcutHint", () => {
     ).toBe("life-this-week");
   });
 
+  it("prefers Life tips over a hidden event form on web Life", () => {
+    expect(
+      hintFor({
+        ...calendarIdle,
+        isLifeView: true,
+        isFormOpen: true,
+        isEventFormVisibleInSidebar: false,
+        firstEventDone: true,
+        lifeThisWeekEligible: true,
+      }).id,
+    ).toBe("life-this-week");
+  });
+
   it("hides the Life T tip when this week cannot be shown", () => {
     expect(
       hintFor({
