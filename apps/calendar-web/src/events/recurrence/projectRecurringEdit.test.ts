@@ -1,9 +1,17 @@
 import {
   DateOnlySchema,
+  DateTimeSchema,
   type EventId,
+  EventIdSchema,
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
+import { type Event } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
+import {
+  composeOccurrenceId,
+  decodeOccurrenceId,
+} from "@core/util/occurrence-id";
+import { remainderMasterId } from "@core/util/series-split";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { type NormalizedEventQueryData } from "@web/events/queries/event.query.types";
 import { deriveCalendarEventViewModel } from "@web/events/queries/event.view-model";
@@ -29,6 +37,22 @@ const occurrence = (day: number) =>
     } as never,
     recurrence: { kind: "occurrence", seriesId: SERIES_ID },
   });
+
+const composedOccurrence = (
+  seriesId: EventId,
+  recurrenceId: string,
+  overrides: Partial<Event> = {},
+): Event => {
+  const base = occurrence(Number(recurrenceId.slice(8, 10)));
+  return createMockEvent({
+    ...base,
+    id: EventIdSchema.parse(
+      composeOccurrenceId({ eventId: seriesId, recurrenceId }),
+    ),
+    recurrence: { kind: "occurrence", seriesId },
+    ...overrides,
+  });
+};
 
 const allDayOccurrence = (day: number) =>
   createMockEvent({
@@ -622,6 +646,43 @@ describe("projectRecurringEdit", () => {
       projection,
     );
     expect(timedSlotCount(cache, "2026-07-06T16:00:00.000Z")).toBe(1);
+  });
+
+  test("repoints following occurrence ids at the deterministic remainder master", () => {
+    const master = seriesBase();
+    const start2 = "2026-07-06T16:00:00.000Z";
+    const start3 = "2026-07-07T16:00:00.000Z";
+    const events = [
+      composedOccurrence(SERIES_ID, "2026-07-05T16:00:00.000Z"),
+      composedOccurrence(SERIES_ID, start2),
+      composedOccurrence(SERIES_ID, start3),
+    ];
+    const original = events[1]!;
+    const edited = {
+      ...original,
+      content: { kind: "details" as const, title: "Split", description: "" },
+    };
+    const remainderMasterEventId = remainderMasterId(
+      SERIES_ID,
+      DateTimeSchema.parse(start2),
+    );
+
+    const projection = projectRecurringEdit({
+      scope: "thisAndFollowing",
+      edited,
+      original,
+      seriesEvents: events,
+      seriesMaster: master,
+    });
+
+    const repointedIds = projection.upserts
+      .map((event) => event.id)
+      .filter(
+        (id) => decodeOccurrenceId(id)?.eventId === remainderMasterEventId,
+      );
+    expect(repointedIds).toContain(
+      EventIdSchema.parse(`${remainderMasterEventId}::${start3}`),
+    );
   });
 
   test("keeps an already-moved-earlier instance in a this-and-following promote", () => {

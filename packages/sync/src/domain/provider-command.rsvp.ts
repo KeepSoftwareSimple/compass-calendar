@@ -17,6 +17,7 @@ import { commitProviderOccurrenceOverride } from "@sync/domain/provider-command.
 import { providerLabelPatchFields } from "@sync/domain/provider-patch-fields";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectMaster } from "@sync/domain/series-exception";
+import { resolveSeriesMasterForOccurrence } from "@sync/domain/series-split-successor";
 import { type ProviderEvent } from "@sync/providers/provider-event.port";
 import { type ProviderWriteRecurrence } from "@sync/providers/provider-event-writer.port";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
@@ -81,8 +82,25 @@ export async function executeProviderRsvp(
     throw new Error("executeProviderRsvp requires a linked event");
   }
   const { input } = command;
-  const connectionId = event.connectionId;
-  const seriesProviderEventId = event.providerEventId;
+  let seriesMaster = event;
+  const connectionId = seriesMaster.connectionId!;
+  if (
+    input.scope === "this" &&
+    input.recurrenceId !== null &&
+    seriesMaster.recurrence.kind === "seriesMaster"
+  ) {
+    const resolved = await resolveSeriesMasterForOccurrence(
+      deps.events,
+      command,
+      seriesMaster,
+      input.recurrenceId,
+    );
+    if (!resolved.ok) {
+      return failCommand(deps, command, "providerRejectedChange", connectionId);
+    }
+    seriesMaster = resolved.master;
+  }
+  const seriesProviderEventId = seriesMaster.providerEventId!;
 
   const connection = await deps.connections.findById(
     command.tenantId,
@@ -93,7 +111,7 @@ export async function executeProviderRsvp(
   if (accountEmail === null) {
     return failCommand(deps, command, "unsupportedCapability", connectionId);
   }
-  if (!findSelfAttendee(event.content.attendees, accountEmail)) {
+  if (!findSelfAttendee(seriesMaster.content.attendees, accountEmail)) {
     return failCommand(deps, command, "unsupportedCapability", connectionId);
   }
 
@@ -104,7 +122,7 @@ export async function executeProviderRsvp(
   const perOccurrence =
     input.scope === "this" &&
     input.recurrenceId !== null &&
-    event.recurrence.kind === "seriesMaster";
+    seriesMaster.recurrence.kind === "seriesMaster";
 
   // Fetch the target's current provider state: the master (or single event)
   // itself, or the ONE resolved instance for a per-occurrence answer. Nothing
@@ -121,7 +139,7 @@ export async function executeProviderRsvp(
             calendarId: calendar.providerCalendarId,
             seriesProviderEventId,
             originalStartAt: input.recurrenceId as DateTime,
-            scheduleKind: event.schedule.kind,
+            scheduleKind: seriesMaster.schedule.kind,
           })
         : deps.writer.fetchEvent({
             accessToken,
@@ -181,7 +199,7 @@ export async function executeProviderRsvp(
     return commitProviderOccurrenceOverride(
       deps,
       command,
-      event,
+      seriesMaster,
       input.recurrenceId as DateTime,
       { ...current.content, attendees: intendedAttendees },
       current.schedule,
