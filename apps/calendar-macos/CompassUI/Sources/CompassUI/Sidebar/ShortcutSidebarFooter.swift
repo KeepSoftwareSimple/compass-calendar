@@ -6,6 +6,7 @@ struct ShortcutSidebarFooter: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable var levelsStore: LevelsStore
     var isEventFormVisible: Bool = false
+    var isLifeView: Bool = false
     var suppressTips: Bool = false
     var suppressForQuickTime: Bool = false
 
@@ -34,7 +35,9 @@ struct ShortcutSidebarFooter: View {
     @ViewBuilder
     private var idleShortcutTip: some View {
         VStack(alignment: .center, spacing: 2) {
-            if let tip = levelsStore.currentTip, tip.shortcutId == "focus-shift-hold" {
+            if isLifeView {
+                lifeThisWeekHint
+            } else if let tip = levelsStore.currentTip, tip.shortcutId == "focus-shift-hold" {
                 HStack(spacing: 4) {
                     Text("F shows event and open-time shortcuts")
                         .font(.rubik(11))
@@ -69,6 +72,16 @@ struct ShortcutSidebarFooter: View {
             return tip.shortcutId == pulseKey
         }
         return pulseKey == "focus-page-jump"
+    }
+
+    private var lifeThisWeekHint: some View {
+        HStack(spacing: 4) {
+            Text("Focus current week")
+                .font(.rubik(11))
+                .foregroundStyle(theme.textMutedColor)
+            ShortcutHintChip(label: "T", celebrate: false)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var pageJumpHint: some View {

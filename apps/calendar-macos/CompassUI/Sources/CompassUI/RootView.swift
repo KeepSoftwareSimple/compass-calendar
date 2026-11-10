@@ -275,6 +275,9 @@ public struct RootView: View {
             EventPastePreviewStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 2)
+            KeyboardPlaceStatusLine(model: model)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 2)
             if !model.pastePreviewStore.isActive {
                 EventJumpStatusLine(model: model)
                     .padding(.horizontal, 16)
@@ -286,6 +289,7 @@ public struct RootView: View {
             ShortcutSidebarFooter(
                 levelsStore: model.levelsStore,
                 isEventFormVisible: model.isEventFormVisible,
+                isLifeView: model.viewStore.view == .life,
                 suppressTips: model.eventJumpStatusText != nil || model.focusStore.pageJumpHintsVisible,
                 suppressForQuickTime: !model.draftStore.quickTimeDigits.isEmpty)
                 .padding(.horizontal, 16)

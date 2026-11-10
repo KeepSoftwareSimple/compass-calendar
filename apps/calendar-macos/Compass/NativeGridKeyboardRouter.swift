@@ -810,6 +810,9 @@ final class NativeGridKeyboardRouter {
         }
 
         if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty {
+            if model.viewStore.view == .life {
+                return false
+            }
             if !model.draftStore.quickTimeDigits.isEmpty {
                 model.commitQuickTimeIfBuffered()
                 return true
@@ -838,6 +841,9 @@ final class NativeGridKeyboardRouter {
         }
 
         if keyEvent.key == .named(.escape), keyEvent.modifiers.isEmpty {
+            if model.viewStore.view == .life {
+                return false
+            }
             if !model.draftStore.quickTimeDigits.isEmpty {
                 model.draftStore.setQuickTimeDigits("")
                 return true

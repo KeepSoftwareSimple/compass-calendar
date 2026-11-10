@@ -148,6 +148,7 @@ const focusCalendarEvent = () => {
 
 describe("SidebarStatusBar", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/week");
     googleState = "HEALTHY";
     isConnecting = false;
     connection = null;
@@ -432,6 +433,20 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(KEYBOARD_PLACE_HINT);
+  });
+
+  it("hides keyboardPlace draft hints on Life view and shows the life shortcut tip", () => {
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+    window.history.replaceState({}, "", "/life");
+    seedKeyboardPlaceDraft();
+    const { wrapper } = createStoreWrapper();
+
+    render(<SidebarStatusBar />, { wrapper });
+
+    expect(screen.queryByText(KEYBOARD_PLACE_HINT)).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      getHintPlainText(getShortcutHint("life-this-week")),
+    );
   });
 
   it("hides the keyboardPlace hint once the form is open", () => {

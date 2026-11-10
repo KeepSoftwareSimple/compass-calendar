@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { sidebarDatePickerHintEligible } from "@core/shortcuts/sidebar-hint-surface";
 import dayjs from "@core/util/date/dayjs";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import {
@@ -52,7 +53,15 @@ export function useShortcutHintContext() {
   const progress = useShortcutHintProgress();
   const tipsMuted = useIsTipsMuted();
   const jumpableDayPrefixes = useEventJumpStore(selectJumpableDayPrefixes);
-  const datePickerHintDepth = useDatePickerHintStore((s) => s.stack.length);
+  const datePickerStack = useDatePickerHintStore((s) => s.stack);
+  const datePickerHintOccupiesSidebar = useMemo(
+    () =>
+      sidebarDatePickerHintEligible(
+        pathname,
+        datePickerStack.map((entry) => entry.id),
+      ),
+    [pathname, datePickerStack],
+  );
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -75,7 +84,7 @@ export function useShortcutHintContext() {
     };
   }, []);
 
-  if (datePickerHintDepth > 0) {
+  if (datePickerHintOccupiesSidebar) {
     return null;
   }
 

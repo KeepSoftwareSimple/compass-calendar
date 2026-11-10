@@ -8,7 +8,9 @@ struct QuickTimeStatusLine: View {
 
     var body: some View {
         let digits = model.draftStore.quickTimeDigits
-        if !digits.isEmpty {
+        if CalendarGridSidebarHints.calendarGridModeHintsEligible(view: model.viewStore.view),
+            !digits.isEmpty
+        {
             HStack(spacing: 4) {
                 Text("New event at")
                     .font(.rubik(11))
