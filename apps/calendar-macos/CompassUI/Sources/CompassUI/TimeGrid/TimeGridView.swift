@@ -1,4 +1,5 @@
 import AppKit
+import CompassData
 import CompassKit
 
 @MainActor
@@ -794,10 +795,11 @@ public final class TimeGridView: NSView {
         focusedEventAccessibilityProxy.isHidden = false
         focusedEventAccessibilityProxy.sync(label: card.label, frameInParent: frameInGrid)
 
-        if let window {
-            NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
-            NSAccessibility.post(element: window, notification: .layoutChanged)
-        }
+        guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes, let window,
+            !focusedEventAccessibilityProxy.isHidden
+        else { return }
+        NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
+        NSAccessibility.post(element: window, notification: .layoutChanged)
     }
 
     private func updateNowLine() {

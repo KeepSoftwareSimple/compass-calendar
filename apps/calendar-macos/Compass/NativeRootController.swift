@@ -52,6 +52,9 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         }
         model.onGridFocusAccessibilityLabelChanged = { [weak self] label in
             let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
+            guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes else {
+                return
+            }
             if let window {
                 GridFocusAccessibilityProbe.attach(to: window)
             }
@@ -60,6 +63,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         }
         model.onEventFormTitleAccessibilityProbeChanged = { [weak self] visible in
             guard let self else { return }
+            guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes else { return }
             let window = Self.compassHostWindow(hostingView: self.view) ?? NSApp.mainWindow
             if let window {
                 EventFormAccessibilityProbe.attach(to: window)
@@ -77,15 +81,19 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             EventFormAccessibilityProbe.syncTitle(title)
         }
         model.onRecurrenceScopeAccessibilityProbeChanged = { [weak self] visible in
+            guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes else { return }
             Self.publish(NativeOverlayProbes.recurrenceScope, visible: visible, hostingView: self?.view)
         }
         model.onStatusToastAccessibilityProbeChanged = { [weak self] visible in
+            guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes else { return }
             Self.publish(NativeOverlayProbes.statusToast, visible: visible, hostingView: self?.view)
         }
         model.onShortcutsLegendAccessibilityProbeChanged = { [weak self] open in
+            guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes else { return }
             Self.publish(NativeOverlayProbes.shortcutsLegend, visible: open, hostingView: self?.view)
         }
         model.onEventJumpChipsAccessibilityProbeChanged = { [weak self] hints in
+            guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes else { return }
             let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
             if let window {
                 EventJumpChipsAccessibilityProbe.attach(to: window)
@@ -128,9 +136,6 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         super.viewDidAppear()
         WideViewportUITestTrace.record("native_root_viewDidAppear")
         ParityCaptureWindowPolicy.scheduleReapply(to: view.window)
-        if !UITestLaunchPolicy.meetingLinkWideViewport {
-            MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window)
-        }
         // AppKit hands launch focus to the first key view, the header Previous
         // button, which then draws a ring and swallows Space and typing. The
         // grid owns the keyboard through the router, so start with no control
@@ -141,7 +146,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             self.view.window?.makeFirstResponder(nil)
         }
         if UITestLaunchPolicy.meetingLinkWideViewport {
-            WideViewportUITestTrace.record("wide_probe_attach_skipped_viewDidAppear")
+            MeetingLinkWideViewportPolicy.scheduleReapply(to: view.window)
+            WideViewportUITestTrace.record("wide_viewport_geometry_reattached_viewDidAppear")
             return
         }
         guard let window = view.window else { return }

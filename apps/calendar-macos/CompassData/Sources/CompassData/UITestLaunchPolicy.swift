@@ -18,6 +18,17 @@ public enum UITestLaunchPolicy {
         arguments.contains(uiTestLaunchArgument)
     }
 
+    /// AppKit probe mirrors on the `NSHostingView` container break Intel wide viewport XCTest.
+    /// Wide launches still set `-COMPASS_UI_TEST` for fixtures and SwiftUI accessibility IDs.
+    public static var attachesMirroredAccessibilityProbes: Bool {
+        attachesMirroredAccessibilityProbes(arguments: ProcessInfo.processInfo.arguments)
+    }
+
+    public static func attachesMirroredAccessibilityProbes(arguments: [String]) -> Bool {
+        attachesAccessibilityProbes(arguments: arguments)
+            && !meetingLinkWideViewport(arguments: arguments)
+    }
+
     /// Fixture interaction tests must not prompt for or post real system notifications.
     public static var allowsSystemNotifications: Bool {
         allowsSystemNotifications(arguments: ProcessInfo.processInfo.arguments)

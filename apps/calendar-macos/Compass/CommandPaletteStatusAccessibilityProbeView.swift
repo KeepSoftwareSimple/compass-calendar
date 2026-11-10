@@ -80,7 +80,7 @@ enum CommandPaletteStatusAccessibilityProbe {
             attachesAccessibilityProbes: UITestLaunchPolicy.attachesAccessibilityProbes
         )
 
-        if UITestLaunchPolicy.attachesAccessibilityProbes, let host = window?.contentView {
+        if UITestLaunchPolicy.attachesMirroredAccessibilityProbes, let host = window?.contentView {
             syncProbeMirror(delivery: delivery, hostView: host)
         }
 

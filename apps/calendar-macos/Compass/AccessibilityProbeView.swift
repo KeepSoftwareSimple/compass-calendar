@@ -40,12 +40,18 @@ class AccessibilityProbeView: NSView {
         guard let window, bounds.width > 0, bounds.height > 0 else {
             return super.accessibilityFrame()
         }
-        return window.convertToScreen(convert(bounds, to: nil))
+        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
+        guard AccessibilityFrameMath.isValidScreenRect(screenFrame) else {
+            return super.accessibilityFrame()
+        }
+        return screenFrame
     }
 
     func syncAccessibilityFrame() {
         guard let window, bounds.width > 0, bounds.height > 0 else { return }
-        setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
+        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
+        guard AccessibilityFrameMath.isValidScreenRect(screenFrame) else { return }
+        setAccessibilityFrame(screenFrame)
     }
 
     /// XCUITest re-reads the tree after a layout change on the probe and on
@@ -64,7 +70,7 @@ class AccessibilityProbeView: NSView {
         to hostView: NSView,
         create: () -> T
     ) -> T? {
-        guard UITestLaunchPolicy.attachesAccessibilityProbes else { return nil }
+        guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes else { return nil }
         let placement = probePlacementContainer(for: hostView)
         if let existing, existing.superview === placement.container {
             return existing
@@ -83,5 +89,18 @@ class AccessibilityProbeView: NSView {
             return (container, hostView)
         }
         return (hostView, nil)
+    }
+}
+
+enum AccessibilityFrameMath {
+    static func isValidScreenRect(_ rect: NSRect) -> Bool {
+        rect.origin.x.isFinite
+            && rect.origin.y.isFinite
+            && rect.width.isFinite
+            && rect.height.isFinite
+            && rect.width > 0
+            && rect.width <= 16_384
+            && rect.height > 0
+            && rect.height <= 16_384
     }
 }
