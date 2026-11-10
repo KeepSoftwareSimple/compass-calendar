@@ -3,8 +3,7 @@ import XCTest
 
 final class CalendarGridSidebarHintsTests: XCTestCase {
     func testCalendarGridModeHintsEligibleOnlyOnGridViews() {
-        XCTAssertTrue(CalendarGridSidebarHints.calendarGridModeHintsEligible(view: .week))
-        XCTAssertTrue(CalendarGridSidebarHints.calendarGridModeHintsEligible(view: .day))
-        XCTAssertFalse(CalendarGridSidebarHints.calendarGridModeHintsEligible(view: .life))
+        XCTAssertTrue(CalendarGridSidebarHints.calendarGridModeHintsEligible(isLifeView: false))
+        XCTAssertFalse(CalendarGridSidebarHints.calendarGridModeHintsEligible(isLifeView: true))
     }
 }

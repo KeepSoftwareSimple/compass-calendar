@@ -6,7 +6,9 @@ extension NativeCalendarRootModel {
     public var pastePreviewStore: PastePreviewStore { environment.pastePreviewStore }
 
     public var eventPastePreviewStatusText: String? {
-        guard CalendarGridSidebarHints.calendarGridModeHintsEligible(view: viewStore.view) else {
+        guard CalendarGridSidebarHints.calendarGridModeHintsEligible(
+            isLifeView: viewStore.view == .life)
+        else {
             return nil
         }
         guard pastePreviewStore.isActive else { return nil }

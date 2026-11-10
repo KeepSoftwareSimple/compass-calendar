@@ -2,7 +2,8 @@ import CompassKit
 
 extension NativeCalendarRootModel {
     public var showsKeyboardPlaceSidebarHint: Bool {
-        CalendarGridSidebarHints.calendarGridModeHintsEligible(view: viewStore.view)
+        CalendarGridSidebarHints.calendarGridModeHintsEligible(
+            isLifeView: viewStore.view == .life)
             && draftStore.status.activity == .keyboardPlace
             && !draftStore.status.isFormOpen
     }

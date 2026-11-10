@@ -8,7 +8,8 @@ struct QuickTimeStatusLine: View {
 
     var body: some View {
         let digits = model.draftStore.quickTimeDigits
-        if CalendarGridSidebarHints.calendarGridModeHintsEligible(view: model.viewStore.view),
+        if CalendarGridSidebarHints.calendarGridModeHintsEligible(
+            isLifeView: model.viewStore.view == .life),
             !digits.isEmpty
         {
             HStack(spacing: 4) {

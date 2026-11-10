@@ -5,7 +5,9 @@ extension NativeCalendarRootModel {
     public var eventJumpSelection: EventJumpSelectionStore { overlayStores.eventJumpSelection }
 
     public var eventJumpStatusText: String? {
-        guard CalendarGridSidebarHints.calendarGridModeHintsEligible(view: viewStore.view) else {
+        guard CalendarGridSidebarHints.calendarGridModeHintsEligible(
+            isLifeView: viewStore.view == .life)
+        else {
             return nil
         }
         guard eventJumpSelection.isActive else { return nil }
