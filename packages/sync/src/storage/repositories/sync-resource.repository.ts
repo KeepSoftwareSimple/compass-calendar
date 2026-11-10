@@ -394,20 +394,6 @@ export class SyncResourceRepository {
     );
   }
 
-  // Drop a staged repair generation that was never activated (noop snapshot).
-  async abandonStagingGeneration(
-    tenantId: TenantId,
-    principalId: PrincipalId,
-    id: string,
-    activeGeneration: number,
-  ): Promise<void> {
-    await this.#patch(tenantId, principalId, id, {
-      importGeneration: activeGeneration,
-      repairPageCursor: null,
-      repairSkipped: 0,
-    });
-  }
-
   // Record that the provider DURABLY rejected reads for this resource (a 4xx
   // retrying cannot fix). The job that hit it is settled and removed rather than
   // left to burn its retry ladder, so this marker is the only evidence left —

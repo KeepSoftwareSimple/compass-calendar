@@ -907,29 +907,6 @@ export class EventRepository {
   // re-imported event's identity upsert bumped it to the new generation.
   // Compass-owned events (no providerEventId) are preserved: they carry local
   // intent the provider result can't speak to. Owner-scoped and idempotent.
-  // Provider-linked rows at `generation` missing from a full provider snapshot.
-  async countProviderLinkedAtGenerationAbsentFromSnapshot(
-    tenantId: TenantId,
-    principalId: PrincipalId,
-    calendarId: EventRecord["calendarId"],
-    generation: number,
-    seenProviderEventIds: ReadonlySet<string>,
-  ): Promise<number> {
-    const excluded = [...seenProviderEventIds] as NonNullable<
-      EventRecord["providerEventId"]
-    >[];
-    return this.collection.countDocuments({
-      tenantId,
-      principalId,
-      calendarId,
-      generation,
-      providerEventId: {
-        $ne: null,
-        ...(excluded.length > 0 ? { $nin: excluded } : {}),
-      },
-    });
-  }
-
   async deleteStaleProviderEventsBelowGeneration(
     tenantId: TenantId,
     principalId: PrincipalId,

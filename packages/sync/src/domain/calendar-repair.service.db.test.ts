@@ -13,7 +13,6 @@ import { pullCalendarChanges } from "@sync/domain/calendar-pull.service";
 import {
   type CalendarRepairDeps,
   repairCalendar,
-  repairCalendarForPull,
 } from "@sync/domain/calendar-repair.service";
 import { ProviderEventReadError } from "@sync/providers/provider-event-reader.port";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -161,137 +160,27 @@ describe("repairCalendar", () => {
       .collection(SYNC_COLLECTIONS.events)
       .countDocuments({ calendarId, generation });
 
-  it("skips generation promotion when every provider version matches the active generation", async () => {
+  it("fullSnapshotOnly pull still repairs through one provider pass like main", async () => {
     const calendar = await seedCalendar();
     const resource = await seedImported(calendar);
-    await seedEvent(calendar, "keep", resource.activeGeneration);
-    const reader = new FakeReader([
-      page([single("keep")], { nextSyncToken: "cursor-1" }),
-    ]);
-
-    const result = await repairCalendar(deps(reader), calendar, now, {
-      skipUnchangedWrites: true,
-    });
-
-    expect(result.status).toBe("repaired");
-    if (result.status !== "repaired") throw new Error("unreachable");
-    expect(result.unchanged).toBe(true);
-    expect(result.generation).toBe(resource.activeGeneration);
-    expect(result.resource.activeGeneration).toBe(resource.activeGeneration);
-    expect(result.resource.importGeneration).toBe(resource.activeGeneration);
-    expect(await eventCountAt(calendar._id, resource.activeGeneration)).toBe(1);
-    expect(await occAtGeneration(calendar._id, resource.activeGeneration)).toBe(
-      1,
+    await seedEvent(calendar, "ms-event", resource.activeGeneration);
+    const reader = Object.assign(
+      new FakeReader([
+        page([single("ms-event")], { nextSyncToken: "ms:delta" }),
+      ]),
+      { fullSnapshotOnly: true, supportsFullHistory: true },
     );
-  });
 
-  const seedMixedActiveGeneration = async (
-    calendar: ProviderCalendarRecord,
-  ) => {
-    const resource = await seedImported(calendar);
-    const generation = resource.activeGeneration;
-    await seedEvent(calendar, "keep", generation);
-    await seedEvent(calendar, "changed", generation);
-    await seedEvent(calendar, "removed", generation);
-    const series = await events.upsertByProviderIdentity({
-      tenantId: calendar.tenantId,
-      principalId: calendar.principalId,
-      origin: "provider",
-      calendarId: calendar._id,
-      clientEventId: null,
-      connectionId: calendar.connectionId,
-      providerEventId: "series-keep" as never,
-      providerVersion: "etag-series-keep" as never,
-      providerUpdatedAt: null,
-      deliveryState: null,
-      providerMetadata: null,
-      content: content("series-keep"),
-      schedule,
-      recurrence: {
-        kind: "seriesMaster",
-        rules: ["RRULE:FREQ=WEEKLY;COUNT=2"],
-      },
-      lifecycleState: "active",
-      generation,
-      confirmedAt: now(),
-    });
-    await occurrences.replaceForEvent(series._id, generation, [
-      {
-        tenantId: calendar.tenantId,
-        principalId: calendar.principalId,
-        eventId: series._id,
-        occurrenceKey: `${series._id}:0`,
-        calendarId: calendar._id,
-        schedule,
-        startAt: new Date("2026-07-14T15:00:00.000Z"),
-        endAt: new Date("2026-07-14T16:00:00.000Z"),
-        busy: true,
-        title: "series-keep",
-        cancelled: false,
-        generation,
-      } as never,
-    ]);
-    return resource;
-  };
+    const result = await pullCalendarChanges(deps(reader), calendar, now);
 
-  const mixedSnapshotReader = () => {
-    const snapshotPage = page(
-      [
-        single("keep"),
-        { ...single("changed"), providerVersion: "etag-changed-v2" },
-        {
-          ...single("series-keep"),
-          recurrence: {
-            kind: "seriesMaster",
-            rules: ["RRULE:FREQ=WEEKLY;COUNT=2"],
-          },
-        },
-      ],
-      { nextSyncToken: "mixed-snapshot:v1" },
+    expect(result.status).toBe("applied");
+    if (result.status !== "applied") throw new Error("expected applied");
+    expect(reader.calls).toHaveLength(1);
+    expect(reader.calls[0]?.cursor).toBeUndefined();
+    expect(result.resource.activeGeneration).toBeGreaterThan(
+      resource.activeGeneration,
     );
-    return Object.assign(new FakeReader([snapshotPage, snapshotPage]), {
-      supportsFullHistory: true,
-      fullSnapshotOnly: true,
-    });
-  };
-
-  const expectMixedSnapshotStoreIntact = async (
-    calendar: ProviderCalendarRecord,
-    generation: number,
-    readerCalls: number,
-  ) => {
-    expect(generation).toBeGreaterThan(0);
-    const keep = await events.findByProviderIdentity(
-      calendar.tenantId,
-      calendar.principalId,
-      {
-        connectionId: calendar.connectionId,
-        calendarId: calendar._id,
-        providerEventId: "keep",
-      },
-    );
-    const changed = await events.findByProviderIdentity(
-      calendar.tenantId,
-      calendar.principalId,
-      {
-        connectionId: calendar.connectionId,
-        calendarId: calendar._id,
-        providerEventId: "changed",
-      },
-    );
-    const series = await events.findByProviderIdentity(
-      calendar.tenantId,
-      calendar.principalId,
-      {
-        connectionId: calendar.connectionId,
-        calendarId: calendar._id,
-        providerEventId: "series-keep",
-      },
-    );
-    expect(keep?.generation).toBe(generation);
-    expect(changed?.generation).toBe(generation);
-    expect(changed?.providerVersion).toBe("etag-changed-v2");
-    expect(series?.generation).toBe(generation);
+    expect(result.resource.syncCursor).toBe("ms:delta");
     expect(
       await events.findByProviderIdentity(
         calendar.tenantId,
@@ -299,61 +188,36 @@ describe("repairCalendar", () => {
         {
           connectionId: calendar.connectionId,
           calendarId: calendar._id,
-          providerEventId: "removed",
+          providerEventId: "ms-event",
         },
       ),
-    ).toBeNull();
-    expect(await occAtGeneration(calendar._id, generation)).toBeGreaterThan(2);
-    expect(readerCalls).toBeGreaterThan(1);
-  };
-
-  it("repairCalendarForPull rewrites every row when one provider event changed", async () => {
-    const calendar = await seedCalendar();
-    await seedMixedActiveGeneration(calendar);
-    const reader = mixedSnapshotReader();
-    const result = await repairCalendarForPull(deps(reader), calendar, now);
-    expect(result.status).toBe("repaired");
-    if (result.status !== "repaired") throw new Error("unreachable");
-    expect(result.unchanged).not.toBe(true);
-    await expectMixedSnapshotStoreIntact(
-      calendar,
-      result.resource.activeGeneration,
-      reader.calls.length,
-    );
+    ).toMatchObject({ generation: result.resource.activeGeneration });
   });
 
-  it("token-unsupported pull rewrites every row when one provider event changed", async () => {
+  it("token-unsupported pull runs full repair without the stored cursor", async () => {
     const calendar = await seedCalendar();
-    const resource = await seedMixedActiveGeneration(calendar);
+    const resource = await seedImported(calendar);
+    await seedEvent(calendar, "holiday", resource.activeGeneration);
     await resources.markSyncTokenUnsupported(
       resource.tenantId,
       resource.principalId,
       resource._id,
       now(),
     );
-    const reader = mixedSnapshotReader();
-    const pull = await pullCalendarChanges(deps(reader), calendar, now);
-    expect(pull.status).toBe("applied");
-    if (pull.status !== "applied") throw new Error("expected applied");
-    await expectMixedSnapshotStoreIntact(
-      calendar,
-      pull.resource.activeGeneration,
-      reader.calls.length,
-    );
-  });
+    const reader = new FakeReader([
+      page([single("holiday")], { nextSyncToken: "holiday:cursor" }),
+    ]);
 
-  it("fullSnapshotOnly pull rewrites every row when one provider event changed", async () => {
-    const calendar = await seedCalendar();
-    await seedMixedActiveGeneration(calendar);
-    const reader = mixedSnapshotReader();
-    const pull = await pullCalendarChanges(deps(reader), calendar, now);
-    expect(pull.status).toBe("applied");
-    if (pull.status !== "applied") throw new Error("expected applied");
-    await expectMixedSnapshotStoreIntact(
-      calendar,
-      pull.resource.activeGeneration,
-      reader.calls.length,
+    const result = await pullCalendarChanges(deps(reader), calendar, now);
+
+    expect(result.status).toBe("applied");
+    if (result.status !== "applied") throw new Error("expected applied");
+    expect(reader.calls).toHaveLength(1);
+    expect(reader.calls[0]?.cursor).toBeUndefined();
+    expect(result.resource.activeGeneration).toBeGreaterThan(
+      resource.activeGeneration,
     );
+    expect(result.resource.syncTokenUnsupportedAt).toEqual(now());
   });
 
   it("rebuilds into a new generation, activates it, and clears the old one", async () => {
@@ -401,13 +265,12 @@ describe("repairCalendar", () => {
       },
       expectedVersion: null,
     });
-    const snapshotPage = page([single("new")], {
-      nextSyncToken: "full-snapshot:v1",
-    });
-    const reader = Object.assign(new FakeReader([snapshotPage, snapshotPage]), {
-      fullSnapshotOnly: true,
-      supportsFullHistory: true,
-    });
+    const reader = Object.assign(
+      new FakeReader([
+        page([single("new")], { nextSyncToken: "full-snapshot:v1" }),
+      ]),
+      { fullSnapshotOnly: true, supportsFullHistory: true },
+    );
     const result = await pullCalendarChanges(
       { ...deps(reader), commands },
       calendar,
@@ -487,13 +350,12 @@ describe("repairCalendar", () => {
         generation: 0,
       } as never,
     ]);
-    const snapshotPage = page([single("fresh")], {
-      nextSyncToken: "full-snapshot:v2",
-    });
-    const reader = Object.assign(new FakeReader([snapshotPage, snapshotPage]), {
-      fullSnapshotOnly: true,
-      supportsFullHistory: true,
-    });
+    const reader = Object.assign(
+      new FakeReader([
+        page([single("fresh")], { nextSyncToken: "full-snapshot:v2" }),
+      ]),
+      { fullSnapshotOnly: true, supportsFullHistory: true },
+    );
 
     const result = await pullCalendarChanges(deps(reader), calendar, now);
 

@@ -647,9 +647,7 @@ async function runSyncJob(
       // An incomplete repair (the pass yielded no durable cursor) left the old
       // generation intact; retry the whole rebuild later rather than settle.
       if (repair.status === "repaired") {
-        if (repair.unchanged !== true) {
-          await appendCalendarInvalidation(deps, calendar, now());
-        }
+        await appendCalendarInvalidation(deps, calendar, now());
         if (needsBootstrapCompletion(resource)) {
           return {
             result: "done",

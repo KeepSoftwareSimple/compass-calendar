@@ -1,4 +1,4 @@
-import { repairCalendarForPull } from "@sync/domain/calendar-repair.service";
+import { repairCalendar } from "@sync/domain/calendar-repair.service";
 import { toColorLabelMap } from "@sync/domain/color-label-map";
 import { listEventPageWithAuthRetry } from "@sync/domain/list-event-page-with-auth-retry";
 import { ProviderPageApplier } from "@sync/domain/provider-page-applier";
@@ -132,11 +132,34 @@ export async function pullCalendarChanges(
   // missed. Any other value did arrive too late to be in the pages below.
   const notifiedAtStart = resource.changeNotifiedAt;
 
-  if (
-    deps.reader.fullSnapshotOnly ||
-    resource.syncTokenUnsupportedAt !== null
-  ) {
-    const snapshot = await repairCalendarForPull(deps, calendar, now);
+  if (deps.reader.fullSnapshotOnly) {
+    const snapshot = await repairCalendar(deps, calendar, now);
+    if (snapshot.status !== "repaired")
+      throw new ProviderEventReadError(
+        "transient",
+        "Calendar snapshot did not complete",
+      );
+    const served = await deps.resources.clearChangeNotifiedIfUnchanged(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      notifiedAtStart,
+    );
+    return {
+      status: "applied",
+      resource: snapshot.resource,
+      changed: snapshot.imported,
+      deleted: snapshot.deleted,
+      skipped: snapshot.skipped,
+      changedDuringPull: !served,
+      pushLatencyMs: notifiedAtStart
+        ? now().getTime() - notifiedAtStart.getTime()
+        : null,
+    };
+  }
+
+  if (resource.syncTokenUnsupportedAt !== null) {
+    const snapshot = await repairCalendar(deps, calendar, now);
     if (snapshot.status !== "repaired")
       throw new ProviderEventReadError(
         "transient",

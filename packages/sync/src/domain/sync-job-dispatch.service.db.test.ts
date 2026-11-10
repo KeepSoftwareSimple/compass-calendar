@@ -644,7 +644,11 @@ describe("dispatchSyncJob", () => {
       .collection(SYNC_COLLECTIONS.invalidations)
       .find({ tenantId: calendar.tenantId, principalId: calendar.principalId })
       .toArray();
-    expect(feed).toHaveLength(0);
+    expect(feed).toHaveLength(1);
+    expect(feed[0]?.invalidation).toMatchObject({
+      kind: "calendar",
+      calendarId: calendar._id,
+    });
   });
 
   it("re-probes incremental tokens after a daily calendar-list pass clears the marker", async () => {

@@ -87,7 +87,6 @@ export class ProviderPageApplier {
   // transaction per event — see event-occurrence.repository.ts's
   // replaceForEvents. Cleared by #flushProjections.
   #pendingProjections: ReprojectBatchEntry[] = [];
-  #physicalWrites = 0;
 
   constructor(
     private readonly events: EventRepository,
@@ -99,9 +98,6 @@ export class ProviderPageApplier {
       accountEmail: string;
       observations: HostGuestRsvpObservationRepository;
     },
-    // When set (repair into a new generation), skip Mongo writes for reads whose
-    // provider fingerprint already matches this active generation.
-    private readonly unchangedBaselineGeneration: number | null = null,
   ) {}
 
   #upsertOptions(base?: {
@@ -125,14 +121,6 @@ export class ProviderPageApplier {
   // exceptions).
   get importedCount(): number {
     return this.#importedIds.size;
-  }
-
-  get physicalWriteCount(): number {
-    return this.#physicalWrites;
-  }
-
-  get seenProviderEventIds(): ReadonlySet<string> {
-    return this.#importedIds;
   }
 
   // A durable checkpoint must never move past members buffered only in memory.
@@ -538,20 +526,6 @@ export class ProviderPageApplier {
       wrote: boolean;
     }[] = [];
     const toWrite: ProviderEvent[] = [];
-    const unchangedBaseline =
-      this.unchangedBaselineGeneration !== null && reads.length > 0
-        ? await this.events.findByProviderIdentities(
-            this.calendar.tenantId,
-            this.calendar.principalId,
-            {
-              connectionId: this.calendar.connectionId,
-              calendarId: this.calendar._id,
-              providerEventIds: reads.map(
-                (read) => read.providerEventId,
-              ) as NonNullable<EventRecord["providerEventId"]>[],
-            },
-          )
-        : new Map<string, EventRecord>();
     for (const read of reads) {
       if (this.#isUnchanged(read)) {
         const record = this.#written.get(read.providerEventId);
@@ -560,20 +534,9 @@ export class ProviderPageApplier {
         }
         this.#importedIds.add(read.providerEventId);
         results.push({ read, record, wrote: false });
-        continue;
+      } else {
+        toWrite.push(read);
       }
-      const baseline = unchangedBaseline.get(read.providerEventId);
-      if (
-        baseline &&
-        baseline.generation === this.unchangedBaselineGeneration &&
-        fingerprintOf(read) === storedFingerprint(baseline)
-      ) {
-        this.#importedIds.add(read.providerEventId);
-        this.#remember(read, baseline);
-        results.push({ read, record: baseline, wrote: false });
-        continue;
-      }
-      toWrite.push(read);
     }
     if (toWrite.length === 0) return results;
     const records = await this.events.upsertManyByProviderIdentity(
@@ -584,7 +547,6 @@ export class ProviderPageApplier {
       const read = toWrite[i];
       const record = records[i];
       if (!read || !record) continue;
-      this.#physicalWrites += 1;
       this.#remember(read, record);
       results.push({ read, record, wrote: true });
     }
@@ -632,10 +594,4 @@ function seriesProviderId(read: ProviderEventRead): string {
 function fingerprintOf(read: ProviderEventRead): string {
   if (read.kind === "cancellation") return `${read.providerVersion}\0`;
   return `${read.providerVersion}\0${read.providerUpdatedAt ?? ""}`;
-}
-
-function storedFingerprint(record: EventRecord): string {
-  const version = record.providerVersion ?? "";
-  const updated = record.providerUpdatedAt?.toISOString() ?? "";
-  return `${version}\0${updated}`;
 }
