@@ -56,6 +56,7 @@ import { editableContent } from "@web/events/grid-event-draft.adapter";
 import {
   mergeReplaceInput,
   optimisticEventFromCreate,
+  resolveRecurringReplaceTarget,
   rsvpEventContent,
   seriesIdOf,
   seriesWriteKey,
@@ -68,6 +69,7 @@ import {
   applyEventProjectionAcrossQueries,
   eventBelongsToEntry,
   findEventInCache,
+  findOccurrenceInCacheByRecurrenceId,
   findSeriesEventsInCache,
   getEventQueryEntries,
   insertEventIntoQueries,
@@ -788,7 +790,19 @@ export function useEventMutations(
       },
       ({ id, input, originalOverride }) => {
         const existing =
-          findEventInCache(queryClient, id, source) ?? originalOverride;
+          originalOverride ??
+          resolveRecurringReplaceTarget(
+            (candidate) => findEventInCache(queryClient, candidate, source),
+            (recurrenceId) =>
+              findOccurrenceInCacheByRecurrenceId(
+                queryClient,
+                recurrenceId,
+                source,
+              ),
+            id,
+            input.scope,
+          ) ??
+          findEventInCache(queryClient, id, source);
         if (!existing) return;
         const edited = mergeReplaceInput(existing, input);
         const original = originalOverride ?? existing;

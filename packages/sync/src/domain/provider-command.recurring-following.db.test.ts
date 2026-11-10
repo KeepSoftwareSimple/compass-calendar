@@ -431,12 +431,33 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
       );
       expect(truncated).not.toBeNull();
 
-      const thirdSplit = await followingCommand(
-        master,
-        "update",
-        "2026-07-28T09:00:00-06:00",
-        "Second split",
-      );
+      const thirdSplitAt = "2026-07-28T09:00:00-06:00";
+      const thirdSplit = (
+        await commands.submit({
+          tenantId: master.tenantId,
+          principalId: master.principalId,
+          idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
+          eventId: master._id,
+          input: {
+            kind: "update",
+            invitation: "none",
+            content: content("Second split"),
+            schedule: {
+              kind: "timed",
+              start: thirdSplitAt,
+              end: "2026-07-28T10:00:00-06:00",
+              timeZone: "America/Denver",
+            },
+            recurrence: {
+              kind: "series",
+              rules: ["RRULE:FREQ=WEEKLY;COUNT=1"],
+            },
+            scope: "thisAndFollowing",
+            recurrenceId: thirdSplitAt,
+          } as unknown as SyncCommandInput,
+          expectedVersion: null,
+        })
+      ).record;
       const writer = new FakeProviderEventWriter();
       writer.fetchEventResult = providerSeries("Split", "etag-3", [
         "RRULE:FREQ=WEEKLY;COUNT=2",
