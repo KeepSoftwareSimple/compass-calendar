@@ -60,7 +60,7 @@ final class EventsStorePendingPresentationColorTests: XCTestCase {
         let input = try replaceInput(scope: .this)
         let apiGate = AsyncTestGate()
         mockAPI.replaceHandler = { _, _ in
-            await apiGate.wait()
+            try await apiGate.waitForTest()
             return try StoreSampleEvents.response(from: edited)
         }
 
@@ -112,7 +112,7 @@ final class EventsStorePendingPresentationColorTests: XCTestCase {
         let input = try replaceInput(scope: .this)
         let apiGate = AsyncTestGate()
         mockAPI.replaceHandler = { _, _ in
-            await apiGate.wait()
+            try await apiGate.waitForTest()
             return try StoreSampleEvents.response(from: edited)
         }
 

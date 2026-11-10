@@ -2,6 +2,8 @@
 # Run `swift test` for native SwiftPM packages under apps/calendar-macos (no XcodeGen).
 set -euo pipefail
 
+export NSUnbufferedIO=YES
+
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$ROOT"
 
@@ -19,20 +21,49 @@ for name in "${default_packages[@]}"; do
   fi
   PACKAGES+=("$name")
 done
-ran=0
 
-for name in "${PACKAGES[@]}"; do
-  dir="apps/calendar-macos/${name}"
-  if [ ! -f "${dir}/Package.swift" ]; then
-    echo "Skip ${name}: no Package.swift yet"
-    continue
-  fi
-  echo "── swift test --package-path ${dir} ──"
-  swift test --package-path "${dir}"
-  ran=$((ran + 1))
-done
-
-if [ "$ran" -eq 0 ]; then
+if [ "${#PACKAGES[@]}" -eq 0 ]; then
   echo "No SwiftPM packages to test under apps/calendar-macos" >&2
   exit 1
 fi
+
+skip_build=0
+if [ "${MACOS_SWIFT_PACKAGES_SKIP_BUILD:-0}" = "1" ]; then
+  skip_build=1
+  echo "swift-packages: skip build (using warmed .build artifacts)"
+fi
+
+run_package_tests() {
+  local name="$1"
+  local dir="apps/calendar-macos/${name}"
+  if [ ! -f "${dir}/Package.swift" ]; then
+    echo "Skip ${name}: no Package.swift yet"
+    return 0
+  fi
+  local -a args=(test --package-path "${dir}")
+  if [ "$skip_build" = "1" ]; then
+    args+=(--skip-build)
+  fi
+  echo "── swift ${args[*]} ──"
+  local start
+  start=$(date +%s)
+  swift "${args[@]}"
+  echo "── ${name} tests finished in $(( $(date +%s) - start ))s ──"
+}
+
+job_start=$(date +%s)
+pids=()
+for name in "${PACKAGES[@]}"; do
+  run_package_tests "$name" &
+  pids+=("$!")
+done
+
+status=0
+for pid in "${pids[@]}"; do
+  if ! wait "$pid"; then
+    status=1
+  fi
+done
+
+echo "swift-packages total wall time: $(( $(date +%s) - job_start ))s"
+exit "$status"

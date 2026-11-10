@@ -9,6 +9,12 @@ describe("macOS CI contract", () => {
     );
   });
 
+  it("warms SwiftPM package cache from macos-build for swift-packages", () => {
+    const workflow = readFileSync(".github/workflows/test-macos.yml", "utf8");
+    expect(workflow).toMatch(/warm-macos-swift-pkg-cache\.sh/);
+    expect(workflow).toMatch(/MACOS_SWIFT_PACKAGES_SKIP_BUILD/);
+  });
+
   it("cancels superseded pull_request runs only", () => {
     const workflow = readFileSync(".github/workflows/test-macos.yml", "utf8");
     expect(workflow).toContain(

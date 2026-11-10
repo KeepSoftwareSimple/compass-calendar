@@ -106,6 +106,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Cache SwiftPM build directories
+        id: swift-pkgs-cache
         uses: actions/cache@v6
         with:
           path: |
@@ -122,6 +123,7 @@ jobs:
           # CompassKit XCTest cases also run in macos-build (xcodebuild
           # -only-testing:CompassKitTests); see test-macos-swift-packages.sh.
           MACOS_SWIFT_PACKAGES_INCLUDE_COMPASSKIT: "0"
+          MACOS_SWIFT_PACKAGES_SKIP_BUILD: ${{ steps.swift-pkgs-cache.outputs.cache-hit == 'true' && '1' || '0' }}
         run: bash .github/scripts/test-macos-swift-packages.sh
 
   macos-build:
@@ -143,6 +145,19 @@ jobs:
       - name: Render app icon
         run: bash ../../.github/scripts/render-macos-icon.sh
 
+      - name: Restore SwiftPM package build cache for swift-packages
+        id: swift-pkgs-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            apps/calendar-macos/CompassKit/.build
+            apps/calendar-macos/CompassData/.build
+            apps/calendar-macos/CompassUI/.build
+          key: ${{ runner.os }}-swift-pkgs-v1-${{ hashFiles('apps/calendar-macos/CompassKit/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassUI/**') }}
+          restore-keys: |
+            ${{ runner.os }}-swift-pkgs-v1-
+            ${{ runner.os }}-swift-pkgs-
+
       - name: Cache SwiftPM and derived data
         uses: actions/cache@v6
         with:
@@ -159,7 +174,24 @@ jobs:
       - name: Build for testing and run CompassKitTests
         run: |
           xcodebuild -version
+          if [ "${{ steps.swift-pkgs-cache.outputs.cache-hit }}" != 'true' ]; then
+            bash ../../.github/scripts/warm-macos-swift-pkg-cache.sh &
+            warm_pid=$!
+          fi
           bash ../../.github/scripts/test-macos-build-for-testing.sh
+          if [ -n "${warm_pid:-}" ]; then
+            wait "$warm_pid"
+          fi
+
+      - name: Save SwiftPM package build cache
+        if: steps.swift-pkgs-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            apps/calendar-macos/CompassKit/.build
+            apps/calendar-macos/CompassData/.build
+            apps/calendar-macos/CompassUI/.build
+          key: ${{ steps.swift-pkgs-cache.outputs.cache-primary-key }}
 
       # Unsigned, ad hoc signed Debug build for manual checks: unzip, then
       # right-click Compass.app → Open. Signed releases are release-macos.yml.

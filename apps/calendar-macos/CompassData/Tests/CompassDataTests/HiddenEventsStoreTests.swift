@@ -23,10 +23,10 @@ final class HiddenEventsStoreTests: XCTestCase {
             _ = hidden
         }
 
-        async let unhide = store.setEventHidden(eventId: eventId, hidden: false)
-        async let rehide = store.setEventHidden(eventId: eventId, hidden: true)
-        recordIfApplied(try await unhide, hidden: false)
-        recordIfApplied(try await rehide, hidden: true)
+        let unhideTask = Task { try await store.setEventHidden(eventId: eventId, hidden: false) }
+        let rehideTask = Task { try await store.setEventHidden(eventId: eventId, hidden: true) }
+        recordIfApplied(try await unhideTask.value, hidden: false)
+        recordIfApplied(try await rehideTask.value, hidden: true)
 
         XCTAssertEqual(undoCount, 1)
     }
@@ -44,10 +44,10 @@ final class HiddenEventsStoreTests: XCTestCase {
         try await store.load()
         let eventId = EventId(rawValue: "evt-race")
 
-        async let unhide = store.setEventHidden(eventId: eventId, hidden: false)
-        async let rehide = store.setEventHidden(eventId: eventId, hidden: true)
-        let first = try await unhide
-        let second = try await rehide
+        let unhideTask = Task { try await store.setEventHidden(eventId: eventId, hidden: false) }
+        let rehideTask = Task { try await store.setEventHidden(eventId: eventId, hidden: true) }
+        let first = try await unhideTask.value
+        let second = try await rehideTask.value
 
         XCTAssertEqual(first, .superseded)
         XCTAssertEqual(second, .applied)
@@ -64,7 +64,7 @@ final class HiddenEventsStoreTests: XCTestCase {
         remote.setHiddenHandler = { input in
             if input.hidden {
                 await hideReached.signal()
-                await putGate.wait()
+                try await putGate.waitForTest()
                 remote.hiddenIds = [input.eventId.rawValue]
                 return remote.hiddenIds
             }
@@ -79,8 +79,8 @@ final class HiddenEventsStoreTests: XCTestCase {
         try await store.load()
         let eventId = EventId(rawValue: "evt-refetch")
 
-        async let hide = store.setEventHidden(eventId: eventId, hidden: true)
-        await hideReached.wait()
+        let hideTask = Task { try await store.setEventHidden(eventId: eventId, hidden: true) }
+        try await hideReached.waitForTest()
         XCTAssertTrue(store.isHidden(eventId))
 
         remote.hiddenIds = []
@@ -88,7 +88,7 @@ final class HiddenEventsStoreTests: XCTestCase {
         XCTAssertTrue(store.isHidden(eventId))
 
         await putGate.resume()
-        let hideResult = try await hide
+        let hideResult = try await hideTask.value
         XCTAssertEqual(hideResult, .applied)
         XCTAssertTrue(store.isHidden(eventId))
     }
@@ -108,7 +108,7 @@ final class HiddenEventsStoreTests: XCTestCase {
                 return remote.hiddenIds
             }
             await unhideReached.signal()
-            await unhideGate.wait()
+            try await unhideGate.waitForTest()
             remote.hiddenIds.removeAll { $0 == input.eventId.rawValue }
             return remote.hiddenIds
         }
@@ -121,12 +121,12 @@ final class HiddenEventsStoreTests: XCTestCase {
         let eventId = EventId(rawValue: "evt-race")
 
         try await store.setEventHidden(eventId: eventId, hidden: true)
-        async let unhide = store.setEventHidden(eventId: eventId, hidden: false)
-        await unhideReached.wait()
-        async let rehide = store.setEventHidden(eventId: eventId, hidden: true)
+        let unhideTask = Task { try await store.setEventHidden(eventId: eventId, hidden: false) }
+        try await unhideReached.waitForTest()
+        let rehideTask = Task { try await store.setEventHidden(eventId: eventId, hidden: true) }
         await unhideGate.resume()
-        let unhideResult = try await unhide
-        let rehideResult = try await rehide
+        let unhideResult = try await unhideTask.value
+        let rehideResult = try await rehideTask.value
 
         XCTAssertEqual(rehideResult, .applied)
         XCTAssertTrue(store.isHidden(eventId))
