@@ -79,6 +79,23 @@ actor AsyncTestGate {
     }
 }
 
+/// One-shot signal that tolerates `signal()` before `wait()`.
+actor AsyncTestSignal {
+    private var signaled = false
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func signal() {
+        signaled = true
+        continuation?.resume()
+        continuation = nil
+    }
+
+    func wait() async {
+        if signaled { return }
+        await withCheckedContinuation { continuation = $0 }
+    }
+}
+
 enum StoreSampleEvents {
     static func timedEvent(id: String, title: String = "Meet") throws -> Event {
         let json = """

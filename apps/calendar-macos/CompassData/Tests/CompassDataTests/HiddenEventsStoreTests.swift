@@ -59,11 +59,11 @@ final class HiddenEventsStoreTests: XCTestCase {
         let repository = HiddenEventRepository(database: database)
         let remote = MockUserAPI()
         let putGate = AsyncTestGate()
-        let hideReachedGate = AsyncTestGate()
+        let hideReached = AsyncTestSignal()
         remote.hiddenIds = []
         remote.setHiddenHandler = { input in
             if input.hidden {
-                await hideReachedGate.resume()
+                await hideReached.signal()
                 await putGate.wait()
                 remote.hiddenIds = [input.eventId.rawValue]
                 return remote.hiddenIds
@@ -80,7 +80,7 @@ final class HiddenEventsStoreTests: XCTestCase {
         let eventId = EventId(rawValue: "evt-refetch")
 
         async let hide = store.setEventHidden(eventId: eventId, hidden: true)
-        await hideReachedGate.wait()
+        await hideReached.wait()
         XCTAssertTrue(store.isHidden(eventId))
 
         remote.hiddenIds = []
