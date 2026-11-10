@@ -21,8 +21,11 @@ state alone.
 ## Verify and ship
 
 1. `bun run verify --strict` locally for everything you can.
-2. Native UI XCTest only on GitHub Macs: dispatch `test-macos.yml` with
-   `strict_verify=true` when product code changes; download logs before ready.
+2. Native UI XCTest only on GitHub Macs: at most one `test-macos.yml`
+   `workflow_dispatch` with `strict_verify=true` per PR after you batch pushes,
+   and only when native product code changed. Do not re-dispatch on a timer or
+   after every commit; the required `macos` check already runs on the PR.
+   Download logs before ready.
 3. Open a draft PR with `Fixes #4783` (or the linked child issue if one exists).
 4. Mark ready and run `gh pr merge --auto` once verify is satisfied.
 
