@@ -78,3 +78,50 @@ test("description links shorten, keep hover copy, and open from shortcuts", asyn
   const savedHtml = await description.innerHTML();
   expect(savedHtml).toContain(linkUrl);
 });
+
+test("description link preview stays inside the sidebar for a long trailing URL", async ({
+  page,
+}) => {
+  await prepareTimedCalendarPage(page);
+
+  const title = createEventTitle("Description link preview");
+  const longUrl =
+    "https://www.esmailcorp.com/news/mr-robot-final-season-premiere";
+
+  await openTimedEventFormWithKeyboard(page);
+  const description = page.getByRole("textbox", { name: "Description" });
+  await description.click();
+  await description.pressSequentially("1. first line\n2. ", { delay: 5 });
+  await description.pressSequentially(`${longUrl}\n`, { delay: 5 });
+  await fillTitleAndSaveEventForm(page, title);
+  await openEventForEditingWithKeyboard(page, title);
+
+  const link = page.getByRole("link", { name: /esmailcorp/i });
+  await link.hover();
+  const hint = page.getByRole("group", { name: "Link shortcut and copy" });
+  await expect(hint).toBeVisible();
+
+  const bounds = await page.evaluate(() => {
+    const sidebar = document.querySelector("aside");
+    const hintGroup = document.querySelector(
+      'fieldset[aria-label="Link shortcut and copy"]',
+    );
+    if (!sidebar || !hintGroup) return null;
+    const panel = sidebar.getBoundingClientRect();
+    const chrome = hintGroup.getBoundingClientRect();
+    return {
+      panelLeft: panel.left,
+      panelRight: panel.right,
+      chromeLeft: chrome.left,
+      chromeRight: chrome.right,
+      portaledOutsideSidebar: !sidebar.contains(hintGroup),
+    };
+  });
+
+  expect(bounds).not.toBeNull();
+  expect(bounds?.portaledOutsideSidebar).toBe(true);
+  expect(bounds?.chromeLeft).toBeGreaterThanOrEqual(bounds!.panelLeft - 1);
+  expect(bounds?.chromeRight).toBeLessThanOrEqual(bounds!.panelRight + 1);
+
+  await expect(hint.locator("span[title]")).toHaveAttribute("title", longUrl);
+});
