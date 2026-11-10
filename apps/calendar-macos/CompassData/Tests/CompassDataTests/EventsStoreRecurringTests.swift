@@ -56,17 +56,17 @@ final class EventsStoreRecurringTests: XCTestCase {
         let seriesId = EventId(rawValue: "664e21f9a6b3f0b1c2d3e4f5")
         let master = try seriesMaster(id: seriesId)
         let first = try occurrence(
-            id: "\(seriesId.rawValue)|2026-07-05T16:00:00.000Z",
+            id: "\(seriesId.rawValue)::2026-07-05T16:00:00.000Z",
             day: 5,
             seriesId: seriesId
         )
         let split = try occurrence(
-            id: "\(seriesId.rawValue)|2026-07-06T16:00:00.000Z",
+            id: "\(seriesId.rawValue)::2026-07-06T16:00:00.000Z",
             day: 6,
             seriesId: seriesId
         )
         let following = try occurrence(
-            id: "\(seriesId.rawValue)|2026-07-07T16:00:00.000Z",
+            id: "\(seriesId.rawValue)::2026-07-07T16:00:00.000Z",
             day: 7,
             seriesId: seriesId
         )
@@ -88,7 +88,7 @@ final class EventsStoreRecurringTests: XCTestCase {
             seriesId: seriesId,
             splitAt: "2026-07-06T16:00:00.000Z"
         )
-        let splitPointId = "\(remainderMasterEventId.rawValue)|2026-07-06T16:00:00.000Z"
+        let splitPointId = "\(remainderMasterEventId.rawValue)::2026-07-06T16:00:00.000Z"
 
         let stored = try repository.fetchAll()
         let ids = Set(stored.map(\.id.rawValue))

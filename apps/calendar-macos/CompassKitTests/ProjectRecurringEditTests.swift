@@ -2,7 +2,7 @@ import CompassKit
 import XCTest
 
 final class ProjectRecurringEditTests: XCTestCase {
-    private let seriesId = EventId(rawValue: "series-master-id")
+    private let seriesId = EventId(rawValue: "664e21f9a6b3f0b1c2d3e4f5")
 
     func testThisAndFollowingSplitRepointsFollowingOccurrenceIds() throws {
         EffectiveTimeZone.identifier = "UTC"
@@ -26,7 +26,7 @@ final class ProjectRecurringEditTests: XCTestCase {
             )
         )
 
-        let followingId = "\(remainderMasterEventId.rawValue)|2026-07-07T16:00:00.000Z"
+        let followingId = "\(remainderMasterEventId.rawValue)::2026-07-07T16:00:00.000Z"
         XCTAssertTrue(projection.upserts.contains(where: { $0.id.rawValue == followingId }))
     }
 
@@ -64,7 +64,7 @@ final class ProjectRecurringEditTests: XCTestCase {
             seriesId: seriesId,
             splitAt: "2026-07-06T16:00:00.000Z"
         )
-        let splitPointId = "\(remainderMasterEventId.rawValue)|2026-07-06T16:00:00.000Z"
+        let splitPointId = "\(remainderMasterEventId.rawValue)::2026-07-06T16:00:00.000Z"
         XCTAssertEqual(
             projection.removeIds,
             Set([events[1].id.rawValue, events[2].id.rawValue])
@@ -120,7 +120,7 @@ final class ProjectRecurringEditTests: XCTestCase {
     }
 
     private func occurrence(day: Int) throws -> Event {
-        let id = "\(seriesId.rawValue)|2026-07-\(String(format: "%02d", day))T16:00:00.000Z"
+        let id = "\(seriesId.rawValue)::2026-07-\(String(format: "%02d", day))T16:00:00.000Z"
         let json = """
         {
           "id": "\(id)",

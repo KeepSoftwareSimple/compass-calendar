@@ -11,6 +11,48 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-10
+
+Swept the 17 merges that landed after the 2026-11-09 sweep (#5189 to #5206).
+Gate step 1 was clean: `bun knip` reports no unused files or exports, `bun lint`
+passes every rule, `bun type-check` passes. One finding, shipped as the macOS
+occurrence-id separator fix (`ProjectRecurringEdit.swift`). Everything below
+was examined and kept.
+
+- **Hand-rolled SHA-256** (`packages/core/src/util/sha256-hex.util.ts`). #5200
+  replaced `node:crypto` in `series-split.ts` with a 95-line SHA-256 so #5204
+  would not pull a crypto polyfill onto the web boot graph. Reimplementing a
+  primitive looks like debt, but the constraint is real (the function is
+  synchronous, used in optimistic client paths, so `crypto.subtle` cannot
+  serve it) and the file is pinned by known-true vectors. Fuzzed against
+  `node:crypto` over 2,415 inputs (block and padding boundaries, multi-byte
+  UTF-8, random): zero mismatches. Keep.
+
+- **`remainderMasterId` mirrored in Swift** (`SeriesSplit.swift` via CryptoKit).
+  Two implementations of one rule, which is normally the strongest debt class,
+  but the duplication is inherent: CompassKit cannot import `@compass/core`.
+  Closed mechanically instead, by pinning the same vector on both sides, so
+  the mirror can no longer drift silently.
+
+- **Residual: the timed fallback in `recurrenceIdString`.** The web normalizes
+  a non-composite id's recurrenceId with `new Date(start).toISOString()`; Swift
+  returns `payload.start.rawValue` as stored, and for an all-day event returns
+  a bare date where the web returns `${start}T00:00:00.000Z`. Reachable only
+  when an occurrence carries no composite id. Normalizing needs a date-parsing
+  decision on the Swift side and changes behavior, so it belongs to a human,
+  not to a sweep.
+
+- **The macOS demo id convention.** `DemoSeedFixture.swift` composes local
+  occurrence ids with `|` while `LocalEventExpansion` and `LocalOccurrenceKey`
+  use `::`. Converting the demo seeder would touch its UI-test launch args and
+  six test files and would change what a demo store holds. That is a contract
+  decision, not debt a sweep may settle: the split projection now reads both
+  formats and only ever mints the canonical one.
+
+- **#5204 and #5205 as a pair.** Two same-day PRs on one split path look like
+  churn, but #5205 extends the repointing to the remainder master rather than
+  reworking #5204. Not a sweep lead.
+
 ## 2026-11-09
 
 Swept 2026-11-02 to 2026-11-09, 50 merges. One finding, shipped as #5187
