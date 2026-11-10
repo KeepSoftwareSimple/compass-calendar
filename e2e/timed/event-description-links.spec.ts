@@ -123,5 +123,68 @@ test("description link preview stays inside the sidebar for a long trailing URL"
   expect(bounds?.chromeLeft).toBeGreaterThanOrEqual(bounds!.panelLeft - 1);
   expect(bounds?.chromeRight).toBeLessThanOrEqual(bounds!.panelRight + 1);
 
-  await expect(hint.locator("span[title]")).toHaveAttribute("title", longUrl);
+  await expect(hint.getByTitle(longUrl)).toHaveAttribute("title", longUrl);
+});
+
+/** Matches web `SIDEBAR_MIN_WIDTH` in sidebar-width.constants.ts */
+const SIDEBAR_MIN_WIDTH_PX = 240;
+
+test("description link preview ellipsizes inside a minimum-width sidebar", async ({
+  page,
+}) => {
+  await page.addInitScript((width) => {
+    localStorage.setItem("compass.sidebar.width", String(width));
+  }, SIDEBAR_MIN_WIDTH_PX);
+  await prepareTimedCalendarPage(page);
+
+  const title = createEventTitle("Description link preview narrow");
+  const longUrl =
+    "https://www.esmailcorp.com/news/mr-robot-final-season-premiere";
+
+  await openTimedEventFormWithKeyboard(page);
+  const description = page.getByRole("textbox", { name: "Description" });
+  await description.click();
+  await description.pressSequentially("3. Obsidian outlines\n4. ", {
+    delay: 5,
+  });
+  await description.pressSequentially(`${longUrl}\n`, { delay: 5 });
+  await fillTitleAndSaveEventForm(page, title);
+  await openEventForEditingWithKeyboard(page, title);
+
+  const sidebar = page.locator("aside");
+  await expect
+    .poll(async () => sidebar.boundingBox())
+    .toMatchObject({ width: SIDEBAR_MIN_WIDTH_PX });
+
+  const link = page.getByRole("link", { name: /esmailcorp/i });
+  await link.hover();
+  const hint = page.getByRole("group", { name: "Link shortcut and copy" });
+  await expect(hint).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const panel = document.querySelector("aside");
+    const hintGroup = document.querySelector(
+      'fieldset[aria-label="Link shortcut and copy"]',
+    );
+    const urlSpan = hintGroup?.querySelector("span[title]");
+    if (!panel || !hintGroup || !urlSpan) return null;
+    const panelRect = panel.getBoundingClientRect();
+    const chromeRect = hintGroup.getBoundingClientRect();
+    const urlEl = urlSpan as HTMLElement;
+    return {
+      panelLeft: panelRect.left,
+      panelRight: panelRect.right,
+      chromeLeft: chromeRect.left,
+      chromeRight: chromeRect.right,
+      urlScrollWidth: urlEl.scrollWidth,
+      urlClientWidth: urlEl.clientWidth,
+      urlTitle: urlSpan.getAttribute("title"),
+    };
+  });
+
+  expect(layout).not.toBeNull();
+  expect(layout?.chromeLeft).toBeGreaterThanOrEqual(layout!.panelLeft - 1);
+  expect(layout?.chromeRight).toBeLessThanOrEqual(layout!.panelRight + 1);
+  expect(layout?.urlTitle).toBe(longUrl);
+  expect(layout!.urlScrollWidth).toBeGreaterThan(layout!.urlClientWidth);
 });

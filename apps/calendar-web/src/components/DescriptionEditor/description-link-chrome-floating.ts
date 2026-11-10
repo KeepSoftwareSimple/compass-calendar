@@ -36,6 +36,7 @@ export const descriptionLinkChromeMiddleware = (
 ): Middleware[] => [
   offset({ mainAxis: CHROME_BELOW_LINK_OFFSET_PX, crossAxis: 0 }),
   size({
+    boundary,
     padding: CHROME_BOUNDARY_PADDING_PX,
     apply({ availableWidth, elements }) {
       const maxWidth = Math.min(
