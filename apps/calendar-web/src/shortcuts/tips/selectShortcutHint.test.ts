@@ -57,6 +57,19 @@ describe("selectShortcutHint", () => {
     ).toBe("life-this-week");
   });
 
+  it("never ranks calendar grid idle tips on Life", () => {
+    const lifeCtx = {
+      ...afterFirstEvent,
+      isLifeView: true,
+      lifeThisWeekEligible: false,
+    };
+    expect(hintFor(lifeCtx).id).toBe("command-palette");
+    expect(hintFor({ ...lifeCtx, lifeThisWeekEligible: true }).id).not.toBe(
+      "page-jump",
+    );
+    expect(hintFor(lifeCtx).id).not.toBe("event-jump");
+  });
+
   it("prefers Life tips over a hidden event form on web Life", () => {
     expect(
       hintFor({

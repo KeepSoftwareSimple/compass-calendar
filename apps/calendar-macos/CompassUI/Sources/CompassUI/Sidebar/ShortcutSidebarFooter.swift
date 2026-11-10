@@ -36,8 +36,12 @@ struct ShortcutSidebarFooter: View {
     @ViewBuilder
     private var idleShortcutTip: some View {
         VStack(alignment: .center, spacing: 2) {
-            if isLifeView, lifeThisWeekEligible {
-                lifeThisWeekHint
+            if isLifeView {
+                if lifeThisWeekEligible {
+                    lifeThisWeekHint
+                } else {
+                    commandPaletteHint
+                }
             } else if let tip = levelsStore.currentTip, tip.shortcutId == "focus-shift-hold" {
                 HStack(spacing: 4) {
                     Text("F shows event and open-time shortcuts")
@@ -81,6 +85,19 @@ struct ShortcutSidebarFooter: View {
                 .font(.rubik(11))
                 .foregroundStyle(theme.textMutedColor)
             ShortcutHintChip(label: "T", celebrate: false)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var commandPaletteHint: some View {
+        HStack(spacing: 4) {
+            ShortcutHintChip(
+                label: KeycapGlyphs.display(["Mod"]),
+                celebrate: false)
+            ShortcutHintChip(label: "K", celebrate: false)
+            Text("opens the command palette")
+                .font(.rubik(11))
+                .foregroundStyle(theme.textMutedColor)
         }
         .frame(maxWidth: .infinity)
     }

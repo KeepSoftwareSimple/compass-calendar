@@ -4,6 +4,22 @@ import XCTest
 
 @MainActor
 final class NativeCalendarRootModelLifeSidebarHintsTests: XCTestCase {
+    private var lifeDefaultsSuite: String!
+    private var lifeDefaults: UserDefaults!
+
+    override func setUp() {
+        super.setUp()
+        lifeDefaultsSuite = "NativeCalendarRootModelLifeSidebarHints.\(UUID().uuidString)"
+        lifeDefaults = UserDefaults(suiteName: lifeDefaultsSuite)!
+    }
+
+    override func tearDown() {
+        UserDefaults(suiteName: lifeDefaultsSuite)?.removePersistentDomain(forName: lifeDefaultsSuite)
+        lifeDefaultsSuite = nil
+        lifeDefaults = nil
+        super.tearDown()
+    }
+
     func testSuspendCalendarGridInteractionClearsKeyboardPlaceDraft() async throws {
         let model = try await makeModel()
         model.createTimedDraft(activity: .keyboardPlace)
@@ -19,6 +35,13 @@ final class NativeCalendarRootModelLifeSidebarHintsTests: XCTestCase {
         XCTAssertFalse(model.showsLifeThisWeekSidebarTip)
         XCTAssertTrue(model.lifeStore.updateBirthDate("1990-01-01"))
         XCTAssertTrue(model.showsLifeThisWeekSidebarTip)
+    }
+
+    func testLifeWithoutBirthDateShowsCommandPaletteIdleTip() async throws {
+        let model = try await makeModel()
+        model.handleShortcut(.navLifeView)
+        XCTAssertFalse(model.showsLifeThisWeekSidebarTip)
+        XCTAssertEqual(model.lifeSidebarIdleTip, .commandPalette)
     }
 
     func testEnteringLifeDropsStaleKeyboardPlaceDraft() async throws {
@@ -37,7 +60,8 @@ final class NativeCalendarRootModelLifeSidebarHintsTests: XCTestCase {
             sessionStore: MemorySessionStore(tokens: nil))
         let model = NativeCalendarRootModel(
             environment: environment,
-            demoPresentation: try DemoSeedFixture.load())
+            demoPresentation: try DemoSeedFixture.load(),
+            lifeStoreDefaults: lifeDefaults)
         await model.start()
         return model
     }
