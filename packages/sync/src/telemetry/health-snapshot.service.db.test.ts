@@ -13,6 +13,7 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
+import { DEFAULT_RENEW_BEFORE_MS } from "@sync/domain/subscription-maintenance.service";
 import {
   type ProviderRegistration,
   ProviderRegistry,
@@ -26,7 +27,6 @@ import {
   computeHealthSnapshotForProvider,
   computeHealthSnapshots,
   emitHealthSnapshot,
-  HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS,
 } from "@sync/telemetry/health-snapshot.service";
 import { beforeEach, describe, expect, it } from "bun:test";
 
@@ -140,7 +140,7 @@ describe("computeHealthSnapshot", () => {
       subscriptionResourceId: "res-1",
       subscriptionToken: "tok-1",
       subscriptionExpiresAt: new Date(
-        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+        NOW.getTime() + DEFAULT_RENEW_BEFORE_MS + 60_000,
       ),
     });
     await resources.advanceCursor(
@@ -375,7 +375,7 @@ describe("computeHealthSnapshot", () => {
       subscriptionResourceId: "res-handshake",
       subscriptionToken: "tok-handshake",
       subscriptionExpiresAt: new Date(
-        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+        NOW.getTime() + DEFAULT_RENEW_BEFORE_MS + 60_000,
       ),
     });
     await resources.markPushReceived(
@@ -406,7 +406,7 @@ describe("computeHealthSnapshot", () => {
       subscriptionResourceId: "res-served",
       subscriptionToken: "tok-served",
       subscriptionExpiresAt: new Date(
-        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+        NOW.getTime() + DEFAULT_RENEW_BEFORE_MS + 60_000,
       ),
     });
 
@@ -462,7 +462,7 @@ describe("computeHealthSnapshot", () => {
       subscriptionResourceId: "res-live",
       subscriptionToken: "tok-live",
       subscriptionExpiresAt: new Date(
-        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+        NOW.getTime() + DEFAULT_RENEW_BEFORE_MS + 60_000,
       ),
     });
     await resources.markChangeNotified(
