@@ -4,7 +4,7 @@ import SwiftUI
 
 struct PointerHintView: View {
     @Environment(\.nativeWebTheme) private var theme
-    let store: PointerHintStore
+    @Bindable var store: PointerHintStore
     let registry: ShortcutRegistry?
 
     var body: some View {

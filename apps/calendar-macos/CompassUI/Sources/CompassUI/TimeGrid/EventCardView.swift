@@ -141,6 +141,7 @@ final class EventCardView: NSView {
 
         let baseFill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? defaultEventFill(for: theme)
         let fill = isPast && !card.isDraft ? EventCardPastFill.color(baseFill) : baseFill
+        applyReadableText(on: fill, theme: theme)
         layer?.backgroundColor = fill.cgColor
         layer?.opacity = card.isHiddenStrip ? 0.6 : 1
         deckEdgeLayer.isHidden = !card.isDeck
@@ -159,8 +160,6 @@ final class EventCardView: NSView {
         } else {
             layer?.shadowOpacity = 0
         }
-        titleField.textColor = contrastText(on: fill, theme: theme)
-        timeField.textColor = titleField.textColor
         accentLayer.backgroundColor = EventCardColorParser.nsColor(hex: card.calendarAccentColorHex)?.cgColor
         accentLayer.isHidden = card.calendarAccentColorHex == nil
 
@@ -431,6 +430,24 @@ private final class FocusedEventAccessibilityAnchorView: NSView {
     }
 }
 
+private extension EventCardView {
+    func applyReadableText(on fill: NSColor, theme: NativeWebTheme) {
+        let text = contrastText(on: fill, theme: theme)
+        titleField.textColor = text
+        timeField.textColor = text
+        timeField.alphaValue = 0.82
+        if let placeholder = titleField.placeholderString, !placeholder.isEmpty {
+            let font = titleField.font ?? CompassFont.nsFont(size: 13)
+            titleField.placeholderAttributedString = NSAttributedString(
+                string: placeholder,
+                attributes: [.foregroundColor: text, .font: font]
+            )
+        } else {
+            titleField.placeholderAttributedString = nil
+        }
+    }
+}
+
 /// Web `EVENT_BASE_COLOR`: the fill for events with no color of their own.
 private func defaultEventFillHex(for theme: NativeWebTheme) -> String {
     switch theme {
@@ -476,6 +493,18 @@ private func relativeLuminance(_ color: NSColor) -> CGFloat {
     return 0.2126 * linear(rgb.redComponent)
         + 0.7152 * linear(rgb.greenComponent)
         + 0.0722 * linear(rgb.blueComponent)
+}
+
+extension EventCardView {
+    /// `@testable` unit tests for draft title/placeholder contrast.
+    var compassTestingTitleTextColor: NSColor? { titleField.textColor }
+    var compassTestingTimeTextColor: NSColor? { timeField.textColor }
+    var compassTestingPlaceholderForeground: NSColor? {
+        guard let placeholder = titleField.placeholderAttributedString, placeholder.length > 0 else {
+            return nil
+        }
+        return placeholder.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? NSColor
+    }
 }
 
 extension EventCardView: NSTextFieldDelegate {

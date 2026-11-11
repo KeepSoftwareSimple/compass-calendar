@@ -181,16 +181,19 @@ extension NativeCalendarRootModel {
         case .navLifeCurrent:
             lifeStore.focusCurrentWeek()
         case .navLifeView:
+            clearEventJumpSelection()
             let previous = viewStore.view
             viewStore.view = .life
             suspendCalendarGridIfEnteringLife(from: previous)
             rebuildPresentation()
         case .navDayView:
+            clearEventJumpSelection()
             viewStore.view = .day
             viewStore.setVisibleDayCount(1)
             rebuildPresentation()
             scheduleRefreshVisibleRange()
         case .navWeekView:
+            clearEventJumpSelection()
             viewStore.view = .week
             rebuildPresentation()
             scheduleRefreshVisibleRange()

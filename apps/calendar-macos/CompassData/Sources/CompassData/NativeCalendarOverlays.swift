@@ -318,6 +318,7 @@ extension NativeCalendarRootModel {
             return
         }
         shortcutsLegendStore.close()
+        pointerHintStore.hide()
         resetPaletteEventSearch()
         commandPaletteStore.open()
         if fromGoToDate {
@@ -330,6 +331,7 @@ extension NativeCalendarRootModel {
             shortcutsLegendStore.close()
         } else {
             commandPaletteStore.close()
+            pointerHintStore.hide()
             shortcutsLegendStore.open()
             recordShortcut(.otherShortcuts)
         }

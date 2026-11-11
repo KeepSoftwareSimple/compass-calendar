@@ -289,6 +289,12 @@ final class NativeGridKeyboardRouter {
         }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
 
+        // Command palette, shortcuts legend, and event menu own Escape before
+        // welcome or grid handlers, even when a lower onboarding layer is still active.
+        if model.overlayKeyboardCaptureActive {
+            return handleOverlayKeyDown(keyEvent)
+        }
+
         if model.isWelcomeModalActive, handleWelcomeKeyDown(keyEvent) {
             return true
         }
@@ -391,9 +397,6 @@ final class NativeGridKeyboardRouter {
             model.overlayKeyboardCaptureActive
             || model.isEventFormVisible
             || isNativeEditableTextInputFocused()
-        if model.overlayKeyboardCaptureActive {
-            return handleOverlayKeyDown(keyEvent)
-        }
 
         if model.isEventFormVisible {
             if handleUITestEventFormTyping(keyEvent) {
@@ -442,7 +445,9 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if keyEvent.modifiers == .shift, case .character(let letter) = keyEvent.key {
+        if keyEvent.modifiers == .shift, case .character(let letter) = keyEvent.key,
+            claimsShiftDayJump(letter)
+        {
             model.handleShiftDayJump(letter: letter)
             return true
         }
@@ -1183,6 +1188,12 @@ final class NativeGridKeyboardRouter {
         default:
             false
         }
+    }
+
+    /// Only shifted M/T/W/R/F/S claim day-jump so Shift+C reaches `create-allday`.
+    private func claimsShiftDayJump(_ letter: Character) -> Bool {
+        if String(letter).lowercased() == "s" { return true }
+        return DayJumpPrefixes.dayPrefix(forShiftedLetter: letter) != nil
     }
 
 }

@@ -10,6 +10,9 @@ final class ClientPolishUITests: XCTestCase {
         window.typeKey("k", modifierFlags: [.command])
         let palette = window.descendants(matching: .any)["compass-native-command-palette"]
         XCTAssertTrue(palette.waitForExistence(timeout: 5))
+        let search = window.textFields["compass-native-command-palette-search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.click()
         let width = palette.frame.width
         window.typeKey(.escape, modifierFlags: [])
         XCTAssertTrue(palette.waitForNonExistence(timeout: 5))

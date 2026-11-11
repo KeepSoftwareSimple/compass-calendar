@@ -12,6 +12,9 @@ public final class PointerHintStore {
     private var shownIntents: Set<PointerClickTarget> = []
     private var sessionCount = 0
     private let sessionCap = 3
+    /// Web `pointer-hint.store` `HINT_VISIBLE_MS` (pulse-driven auto-hide).
+    private let autoHideDelay: Duration = .milliseconds(2500)
+    private var hideTask: Task<Void, Never>?
 
     public init() {}
 
@@ -33,6 +36,7 @@ public final class PointerHintStore {
         self.attempt = attempt
         self.focusedGridEventLabel = target == .eventCard ? focusedGridEventLabel : nil
         isVisible = true
+        scheduleAutoHide()
     }
 
     public func updateFocusedGridEventLabel(_ label: String?) {
@@ -40,7 +44,19 @@ public final class PointerHintStore {
     }
 
     public func hide() {
+        hideTask?.cancel()
+        hideTask = nil
         isVisible = false
         focusedGridEventLabel = nil
+    }
+
+    private func scheduleAutoHide() {
+        hideTask?.cancel()
+        hideTask = Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: self.autoHideDelay)
+            guard !Task.isCancelled else { return }
+            self.hide()
+        }
     }
 }
