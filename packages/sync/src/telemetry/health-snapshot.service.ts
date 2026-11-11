@@ -17,6 +17,7 @@ import {
   type ConnectionId,
   type ProviderKind,
 } from "@core/types/sync/identity.contracts";
+import { DEFAULT_RENEW_BEFORE_MS } from "@sync/domain/subscription-maintenance.service";
 import { type ProviderRegistry } from "@sync/providers/provider-registry";
 import {
   type StructuredServiceIdentity,
@@ -25,9 +26,6 @@ import {
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 
-// Channels expiring within this window count as renewSoon (aligns with the
-// subscription maintenance sweep).
-export const HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS = 24 * 60 * 60_000;
 const FRESHNESS_SLO_MS = 30_000;
 // Cap the in-process freshness sample so a huge deployment stays bounded.
 const FRESHNESS_SAMPLE_LIMIT = 5_000;
@@ -237,9 +235,9 @@ async function summarizeSubscriptions(
     return { ...ZERO_SUBSCRIPTION_COUNTS };
   }
 
-  const renewBefore = new Date(
-    now.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS,
-  );
+  // renewSoon reads the maintenance renew window itself, so the metric counts
+  // exactly the channels the subscription sweep enqueues.
+  const renewBefore = new Date(now.getTime() + DEFAULT_RENEW_BEFORE_MS);
   const collection = db.collection(SYNC_COLLECTIONS.syncResources);
   const eventsFilter = {
     resourceKind: "events" as const,
@@ -309,11 +307,29 @@ async function summarizeFreshness(
       p95Ms: null,
       p99Ms: null,
       percentOver30s: null,
+      syncTokenUnsupported: 0,
+      cursorExpiryStreak: 0,
     };
   }
 
-  const rows = await db
-    .collection(SYNC_COLLECTIONS.syncResources)
+  const collection = db.collection(SYNC_COLLECTIONS.syncResources);
+  const eventsFilter = {
+    resourceKind: "events" as const,
+    connectionId: { $in: connectionIds },
+  };
+  const [syncTokenUnsupported, cursorExpiryStreak] = await Promise.all([
+    collection.countDocuments({
+      ...eventsFilter,
+      syncTokenUnsupportedAt: { $ne: null },
+    }),
+    collection.countDocuments({
+      ...eventsFilter,
+      syncTokenUnsupportedAt: null,
+      cursorExpiredStreak: { $gt: 0 },
+    }),
+  ]);
+
+  const rows = await collection
     .aggregate<{ lastSuccessAt: Date | null }>([
       {
         $match: {
@@ -334,6 +350,8 @@ async function summarizeFreshness(
       p95Ms: null,
       p99Ms: null,
       percentOver30s: null,
+      syncTokenUnsupported,
+      cursorExpiryStreak,
     };
   }
 
@@ -353,6 +371,8 @@ async function summarizeFreshness(
       p95Ms: null,
       p99Ms: null,
       percentOver30s: null,
+      syncTokenUnsupported,
+      cursorExpiryStreak,
     };
   }
 
@@ -363,6 +383,8 @@ async function summarizeFreshness(
     p95Ms: percentile(ages, 0.95),
     p99Ms: percentile(ages, 0.99),
     percentOver30s: Math.round((over30 / ages.length) * 1000) / 10,
+    syncTokenUnsupported,
+    cursorExpiryStreak,
   };
 }
 

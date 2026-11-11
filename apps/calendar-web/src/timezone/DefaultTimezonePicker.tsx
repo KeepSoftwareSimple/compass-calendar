@@ -4,8 +4,8 @@ import {
   usePinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
-import { timeZoneCityName } from "@web/timezone/timezone-catalog";
 import { timezoneDialogActions } from "@web/timezone/timezone-dialog.store";
+import { timeZoneCityName } from "@web/timezone/timezone-iana-label.util";
 
 export function DefaultTimezonePicker() {
   const timeZone = useEffectiveTimeZone();

@@ -3,10 +3,6 @@ import {
   preparePublicBookingPage,
   publicBookingAppUrl,
 } from "./booking-harness";
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
-
-const artifactDir = "/opt/cursor/artifacts/meet-owner-inbox";
 
 async function captureViewport(
   page: import("@playwright/test").Page,
@@ -15,16 +11,12 @@ async function captureViewport(
 ) {
   await page.setViewportSize({ width, height: 900 });
   await page.screenshot({
-    path: join(artifactDir, `${name}-${width}.png`),
+    path: test.info().outputPath(`${name}-${width}.png`),
     fullPage: true,
   });
 }
 
 test.describe("meet page owner inbox", () => {
-  test.beforeAll(() => {
-    mkdirSync(artifactDir, { recursive: true });
-  });
-
   test("guest view hides the owner inbox", async ({ page }) => {
     await preparePublicBookingPage(page, { ownerUpcomingMode: "unauthorized" });
     await page.goto(publicBookingAppUrl("/meet/tylerdane"), {
@@ -33,7 +25,7 @@ test.describe("meet page owner inbox", () => {
     await expect(
       page.getByRole("heading", { name: "Meet with Tyler Dane" }),
     ).toBeVisible();
-    expect(
+    await expect(
       page.getByRole("heading", { name: "Your upcoming bookings" }),
     ).toHaveCount(0);
     await captureViewport(page, "guest-view", 1280);

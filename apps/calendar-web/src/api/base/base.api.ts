@@ -1,3 +1,5 @@
+import { Status } from "@core/errors/status.codes";
+import { readAuthenticated } from "@web/auth/compass/session/auth-session.store";
 import {
   type ApiAdapter,
   type ApiMethodConfig,
@@ -23,6 +25,7 @@ const request = async <T>(
   body?: unknown,
   config: ApiMethodConfig = {},
 ): Promise<ApiResponse<T>> => {
+  const authenticatedAtStart = readAuthenticated();
   const requestConfig = {
     body,
     headers: config.headers,
@@ -73,6 +76,14 @@ const request = async <T>(
       throw error;
     }
     if (isApiError(error)) {
+      // A guest request can finish after sign-up. Its 401 must not sign out
+      // the newly authenticated session.
+      if (
+        error.response?.status === Status.UNAUTHORIZED &&
+        !authenticatedAtStart &&
+        readAuthenticated()
+      )
+        throw error;
       return handleErrorResponse(error, {
         onGoogleRevoked: BaseApi.defaults.onGoogleRevoked,
       });

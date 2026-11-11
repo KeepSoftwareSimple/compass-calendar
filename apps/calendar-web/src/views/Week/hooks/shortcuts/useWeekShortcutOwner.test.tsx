@@ -44,6 +44,10 @@ import {
   initialEventClipboardState,
   useEventClipboardStore,
 } from "@web/events/stores/event-clipboard.store";
+import {
+  initialEventPastePreviewState,
+  useEventPastePreviewStore,
+} from "@web/events/stores/event-paste-preview.store";
 import { initialViewState, useViewStore } from "@web/events/stores/view.store";
 import {
   getWeekInteractionTargetAttributes,
@@ -596,7 +600,89 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     expect(state.gridDraft).toBeNull();
   });
 
-  it("copies a focused event with Mod+C and pastes a duplicate at the original time with Mod+V", () => {
+  it("does not open the form when Enter is pressed during paste placement", () => {
+    const button = addCalendarTarget();
+    button.focus();
+    renderShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("Enter");
+
+    expect(useDraftStore.getState().status?.activity).toBe("pastePlace");
+    expect(useDraftStore.getState().status?.isFormOpen).toBe(false);
+  });
+
+  it("enters paste placement with a form-closed outline when copying a focused event", () => {
+    const button = addCalendarTarget();
+    button.focus();
+    renderShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    expect(useEventClipboardStore.getState().event?.id).toBe(editableEvent.id);
+    expect(useEventPastePreviewStore.getState().isActive).toBe(true);
+    expect(useEventJumpStore.getState().isActive).toBe(false);
+    const { gridDraft, status } = useDraftStore.getState();
+    expect(status?.activity).toBe("pastePlace");
+    expect(status?.isFormOpen).toBe(false);
+    expect(gridDraft?.values.title).toBe("Editable event");
+    expect(dayjs(gridDraft!.values.schedule.start).format()).toBe(
+      dayjs("2026-05-20T10:00:00.000Z").format(),
+    );
+  });
+
+  it("cancels paste preview on Escape without clearing the in-app clipboard", () => {
+    const button = addCalendarTarget();
+    button.focus();
+    renderShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("Escape");
+
+    expect(useEventPastePreviewStore.getState()).toEqual(
+      initialEventPastePreviewState,
+    );
+    expect(useEventClipboardStore.getState().event?.id).toBe(editableEvent.id);
+  });
+
+  it("pastes onto the arrow-moved day while paste placement is active", () => {
+    const button = addCalendarTarget();
+    button.focus();
+    const { queryClient } = renderShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("ArrowLeft");
+
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const created = queryClient
+      .getMutationCache()
+      .getAll()
+      .find((mutation) => mutation.options.mutationKey?.[2] === "create");
+    const { input } = created!.state.variables as {
+      input: {
+        schedule: { kind: "timed"; start: string };
+      };
+    };
+    expect(input.schedule.start).toMatch(/^2026-05-19T10:00:00/);
+  });
+
+  it("copies a focused event with Mod+C and pastes a duplicate at the placement outline with Mod+V", () => {
     const button = addCalendarTarget();
     button.focus();
     const { queryClient } = renderShortcuts();
@@ -622,6 +708,10 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     };
     expect(input.calendarId).toBe(editableEvent.calendarId);
     expect(input.content.title).toBe("Editable event");
+    const { input: scheduleInput } = created!.state.variables as {
+      input: { schedule: { start: string } };
+    };
+    expect(scheduleInput.schedule.start).toMatch(/^2026-05-20T10:00:00/);
     expect(useDraftStore.getState().gridDraft).toBeNull();
   });
 
@@ -1860,6 +1950,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyDownInit: { ctrlKey: true },
       keyUpInit: { ctrlKey: true },
     });
+    pressKey("Escape");
     button.blur();
     act(() => {
       pressKey("R", shiftKey);
@@ -1897,6 +1988,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyDownInit: { ctrlKey: true },
       keyUpInit: { ctrlKey: true },
     });
+    pressKey("Escape");
     button.blur();
     pressKey("v", {
       keyDownInit: { ctrlKey: true },
@@ -1922,6 +2014,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyDownInit: { ctrlKey: true },
       keyUpInit: { ctrlKey: true },
     });
+    pressKey("Escape");
     button.blur();
     act(() => {
       pressKey("R", shiftKey);

@@ -19,27 +19,30 @@ export const NOW_TIME_LABEL_COLLISION_MARGIN_PX = 2;
  */
 export const MIN_TIMED_HOUR_SLOT_HEIGHT_PX = 30;
 
+function minutesCoveredByPx(px: number, hourSlotHeightPx: number): number {
+  return (px / hourSlotHeightPx) * 60;
+}
+
 function nowTimeLabelOverlapsHourLine(
   nowGridMinutes: number,
   hourSlotMinutes: number,
   hourSlotHeightPx: number,
 ): boolean {
-  const deltaMinutes = nowGridMinutes - hourSlotMinutes;
-  const beforeMinutes =
-    ((NOW_TIME_GUTTER_LABEL_HEIGHT_PX / 2 +
-      NOW_TIME_LABEL_COLLISION_MARGIN_PX) /
-      hourSlotHeightPx) *
-    60;
-  const afterMinutes =
-    ((NOW_TIME_GUTTER_LABEL_HEIGHT_PX / 2 +
+  const halfLabel = NOW_TIME_GUTTER_LABEL_HEIGHT_PX / 2;
+  const beforeMinutes = minutesCoveredByPx(
+    halfLabel + NOW_TIME_LABEL_COLLISION_MARGIN_PX,
+    hourSlotHeightPx,
+  );
+  const afterMinutes = minutesCoveredByPx(
+    halfLabel +
       HOUR_GUTTER_LABEL_HEIGHT_PX +
-      NOW_TIME_LABEL_COLLISION_MARGIN_PX) /
-      hourSlotHeightPx) *
-    60;
-  if (deltaMinutes >= 0) {
-    return deltaMinutes < afterMinutes;
-  }
-  return -deltaMinutes < beforeMinutes;
+      NOW_TIME_LABEL_COLLISION_MARGIN_PX,
+    hourSlotHeightPx,
+  );
+  const deltaMinutes = nowGridMinutes - hourSlotMinutes;
+  return deltaMinutes >= 0
+    ? deltaMinutes < afterMinutes
+    : -deltaMinutes < beforeMinutes;
 }
 
 /** Day gutter and day-view labels (`7:37 AM`). */
@@ -90,14 +93,10 @@ export function hourLabelIndexOverlappingNow(
 export function nowTimeLabelPlacement(
   visibleDates: ReadonlyArray<{ date: Dayjs }>,
 ): "gutter" | "column-edge" {
-  if (visibleDates.length <= 1) {
-    return "gutter";
-  }
-  const firstDay = visibleDates[0]?.date.format("YYYY-MM-DD");
-  const allSameDay = visibleDates.every(
-    ({ date }) => date.format("YYYY-MM-DD") === firstDay,
+  const days = new Set(
+    visibleDates.map(({ date }) => date.format("YYYY-MM-DD")),
   );
-  return allSameDay ? "gutter" : "column-edge";
+  return days.size <= 1 ? "gutter" : "column-edge";
 }
 
 /** Layout-stable width for the compact week pill (`12:59` + padding). */

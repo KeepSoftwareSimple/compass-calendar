@@ -49,6 +49,22 @@ describe("reflection schedule", () => {
     expect(upcoming?.start).toBe("2026-11-02T07:00:00.000Z");
     expect(upcoming?.end).toBe("2026-11-09T07:00:00.000Z");
   });
+  it.each(["2026-11-07", "2026-11-01", "2027-01-01"])(
+    "keeps daily trial windows disjoint on %s",
+    (date) => {
+      const [recent, upcoming] = reflectionWindows(
+        date,
+        "America/Denver",
+        "daily",
+      );
+      expect(recent!.end).toBe(upcoming!.start);
+      expect(recent!.endDate).toBe(upcoming!.startDate);
+      expect(upcoming!.startDate).toBe(date);
+      expect(
+        new Date(upcoming!.end).getTime() - new Date(upcoming!.start).getTime(),
+      ).toBeGreaterThanOrEqual(7 * 86_400_000);
+    },
+  );
   it("includes a historical week crossing a month/year boundary and clamps leap days", () => {
     const january = historicalMemoryWindow(
       "2026-01-04",

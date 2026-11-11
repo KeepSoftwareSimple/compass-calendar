@@ -24,6 +24,18 @@ export type ResourceBootstrapState = z.infer<
   typeof ResourceBootstrapStateSchema
 >;
 
+// `historyCoverageVersion` marks the archive as certified: one complete
+// full-history pass finished with nothing skipped. 0 (or absent) means
+// uncertified. Writers set it through `recordHistoryCoverage`; readers ask
+// `hasCertifiedHistoryCoverage` rather than comparing the number themselves.
+export const CERTIFIED_HISTORY_COVERAGE_VERSION = 1;
+
+export function hasCertifiedHistoryCoverage(resource: {
+  historyCoverageVersion?: number;
+}): boolean {
+  return resource.historyCoverageVersion === CERTIFIED_HISTORY_COVERAGE_VERSION;
+}
+
 // Persistence record for `sync_resources` — one independently synchronized
 // provider resource with its cursors, import generation, timing, and push
 // subscription. A calendar-list resource has no calendarId (there is one per
@@ -165,6 +177,13 @@ export const SyncResourceRecordSchema = z.strictObject({
   // watchUnsupportedAt above.
   cursorExpiredStreak: z.number().int().nonnegative().default(0),
   cursorExpiredBackoffUntil: z.date().nullable().default(null),
+  // Set when incremental sync tokens never survive after repair (Google derived
+  // holiday calendars 410 a freshly issued token within minutes). While set,
+  // pulls use a scheduled full snapshot instead of the stored cursor; the daily
+  // calendar-list pass clears it for a re-probe. A successful cursored pull
+  // also clears it. Defaults tolerate rows written before the field — REQUIRED,
+  // see watchUnsupportedAt above.
+  syncTokenUnsupportedAt: z.date().nullable().default(null),
   // Mirrored from provider_calendars.active so stale-resource finders can
   // skip inactive calendars at selection time instead of enqueueing a pull
   // that dispatch then drops. Discovery stamps this when a calendar is

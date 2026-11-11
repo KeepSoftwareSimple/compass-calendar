@@ -46,6 +46,30 @@ final class DesktopDeepLinkTests: XCTestCase {
         XCTAssertNil(DesktopDeepLinkParser.navigationPath(for: url))
     }
 
+    func testBillingCheckoutRejectsRepeatedQueryParameters() {
+        for query in [
+            "outcome=success&outcome=cancel&session_id=cs_test",
+            "outcome=success&session_id=cs_one&session_id=cs_two",
+            "outcome=success&session_id=cs_test&extra=one&extra=two",
+        ] {
+            let url = "compass://billing/checkout?\(query)"
+            XCTAssertNil(DesktopDeepLinkParser.parseBillingCheckout(from: url))
+            XCTAssertNil(DesktopDeepLinkParser.recognizedURLString(url))
+        }
+    }
+
+    func testBillingCheckoutRequiresTheExactRoute() {
+        for route in [
+            "compass://billing/checkout-extra",
+            "compass://billing/checkout/nested",
+            "compass://billing/checkout.example.com",
+            "https://billing/checkout",
+        ] {
+            XCTAssertNil(DesktopDeepLinkParser.parseBillingCheckout(
+                from: "\(route)?outcome=success&session_id=cs_test"))
+        }
+    }
+
     func testColdStartQueuesUntilConsumerReady() {
         var inbox = DeepLinkInbox()
         XCTAssertEqual(

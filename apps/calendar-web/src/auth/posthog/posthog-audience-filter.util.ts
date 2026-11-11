@@ -4,7 +4,10 @@ import {
   isInternalOrTestHostname,
   isNonHumanUserAgent,
 } from "@core/analytics/posthog-audience.util";
-import { isSyntheticAccountEmail } from "@core/analytics/synthetic-account.util";
+import {
+  isSyntheticAccountEmail,
+  POSTHOG_IS_SYNTHETIC_PROPERTY,
+} from "@core/analytics/synthetic-account.util";
 
 export const POSTHOG_INTERNAL_OR_TEST_USER_PROPERTY =
   "$internal_or_test_user" as const;
@@ -39,7 +42,7 @@ export function filterPosthogAudience(
 }
 
 function isSyntheticTaggedEvent(event: CaptureResult): boolean {
-  return event.properties?.["is_synthetic"] === true;
+  return event.properties?.[POSTHOG_IS_SYNTHETIC_PROPERTY] === true;
 }
 
 export function shouldRegisterInternalOrTestUserFromBrowser(): boolean {

@@ -1122,33 +1122,27 @@ describe("useEventMutations", () => {
         context.queryClient.getQueryData<NormalizedEventQueryData>(
           calendarKey,
         )!;
-      const thursdayCards = cached.ids.filter((id) => {
-        const item = cached.entities[id];
-        return (
-          item.recurrence.kind !== "series" &&
-          item.schedule.kind === "timed" &&
-          String(item.schedule.start).includes("2026-07-04")
-        );
-      });
-      expect(thursdayCards).toHaveLength(1);
-      const thuSchedule = cached.entities[thursdayCards[0]!]!.schedule;
-      expect(thuSchedule.kind === "timed" ? thuSchedule.start : null).toBe(
-        DateTimeSchema.parse("2026-07-04T08:30:00.000Z"),
+      const scheduleOnDay = (day: string) => {
+        const id = cached.ids.find((candidate) => {
+          const item = cached.entities[candidate];
+          return (
+            item?.schedule.kind === "timed" &&
+            String(item.schedule.start).includes(day)
+          );
+        });
+        if (!id) throw new Error(`missing cached event on ${day}`);
+        const schedule = cached.entities[id]!.schedule;
+        return schedule.kind === "timed" ? schedule.start : "";
+      };
+      expect(new Date(scheduleOnDay("2026-07-04")).toISOString()).toBe(
+        "2026-07-04T08:30:00.000Z",
       );
-      expect(
-        new Date(
-          cached.entities[fri.id]!.schedule.kind === "timed"
-            ? cached.entities[fri.id]!.schedule.start
-            : 0,
-        ).toISOString(),
-      ).toBe("2026-07-05T08:30:00.000Z");
-      expect(
-        new Date(
-          cached.entities[sat.id]!.schedule.kind === "timed"
-            ? cached.entities[sat.id]!.schedule.start
-            : 0,
-        ).toISOString(),
-      ).toBe("2026-07-06T08:30:00.000Z");
+      expect(new Date(scheduleOnDay("2026-07-05")).toISOString()).toBe(
+        "2026-07-05T08:30:00.000Z",
+      );
+      expect(new Date(scheduleOnDay("2026-07-06")).toISOString()).toBe(
+        "2026-07-06T08:30:00.000Z",
+      );
     });
 
     await waitFor(() =>
@@ -2203,6 +2197,102 @@ describe("useEventMutations", () => {
       expect(onOptimisticApplied).toHaveBeenCalledTimes(1);
     });
     expect(colorAtCallback).toBe("coral");
+
+    context.pending.resolve();
+  });
+
+  test.each(["this", "thisAndFollowing", "all"] as const)(
+    "keeps provider colorHex on pending recurring time replace (scope %s)",
+    async (scope) => {
+      const context = setup();
+      const seriesId = EventIdSchema.parse("bbbbbbbbbbbbbbbbbbbbbbbb");
+      const original = event({
+        id: EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa"),
+        content: {
+          kind: "details",
+          title: "Devotion",
+          description: "",
+          colorHex: "#E67C73",
+        },
+        recurrence: { kind: "occurrence", seriesId },
+        schedule: timedSchedule(
+          "2026-07-02T12:15:00.000Z",
+          "2026-07-02T13:15:00.000Z",
+        ),
+      });
+      context.queryClient.setQueryData(calendarKey, normalized(original));
+
+      act(() =>
+        context.hook.result.current.mutations.replace(
+          replacePayload(original.id, {
+            content: {
+              kind: "details",
+              title: "Devotion",
+              description: "",
+              location: "",
+              color: null,
+            },
+            schedule: timedSchedule(
+              "2026-07-02T13:15:00.000Z",
+              "2026-07-02T14:15:00.000Z",
+            ),
+            recurrence: { kind: "preserve" },
+            scope,
+          }),
+        ),
+      );
+
+      const content = () =>
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+          ?.entities[original.id].content;
+
+      await waitFor(() => {
+        expect(content()).toMatchObject({
+          kind: "details",
+          colorHex: "#E67C73",
+        });
+      });
+      expect(context.hook.result.current.hasPending).toBe(true);
+
+      context.pending.resolve();
+    },
+  );
+
+  test("clears slot color on pending replace when user explicitly sends color null", async () => {
+    const context = setup();
+    const original = event({
+      content: {
+        kind: "details",
+        title: "Devotion",
+        description: "",
+        color: "blue",
+      },
+    });
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.mutations.replace(
+        replacePayload(original.id, {
+          content: {
+            kind: "details",
+            title: "Devotion",
+            description: "",
+            location: "",
+            color: null,
+          },
+        }),
+      ),
+    );
+
+    await waitFor(() => {
+      const content =
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+          ?.entities[original.id].content;
+      expect(content).toMatchObject({ kind: "details" });
+      expect(content).not.toHaveProperty("color");
+      expect(content).not.toHaveProperty("colorHex");
+    });
+    expect(context.hook.result.current.hasPending).toBe(true);
 
     context.pending.resolve();
   });

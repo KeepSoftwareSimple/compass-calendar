@@ -17,6 +17,9 @@ export const Collections = {
     : "bookingReservation",
   BOOKING_RATE_LIMIT: IS_DEV ? "_dev.bookingRateLimit" : "bookingRateLimit",
   BOOKING_OPERATION: IS_DEV ? "_dev.bookingOperation" : "bookingOperation",
+  HOST_GUEST_RSVP_NOTICE_STATE: IS_DEV
+    ? "_dev.hostGuestRsvpNoticeState"
+    : "hostGuestRsvpNoticeState",
   EMAIL_SEND: IS_DEV ? "_dev.emailSend" : "emailSend",
   EMAIL_EVENT: IS_DEV ? "_dev.emailEvent" : "emailEvent",
   HIDDEN_EVENT: IS_DEV ? "_dev.hiddenEvent" : "hiddenEvent",

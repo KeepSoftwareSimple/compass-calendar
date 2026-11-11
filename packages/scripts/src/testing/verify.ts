@@ -86,11 +86,19 @@ export type Verdict = "PASS" | "INCOMPLETE" | "FAIL";
 const MACOS_CI_ONLY_REASON =
   "Swift/AppKit builds run in CI only (test-macos.yml); no Xcode on this machine";
 const MACOS_PACKAGES_CI_ONLY_REASON =
-  "swift test on CompassKit and CompassData runs in CI only (test-macos.yml swift-packages job); no Xcode on this machine";
+  "swift test on CompassData and CompassUI runs in CI only (test-macos.yml swift-packages; CompassKit duplicates macos-build); no Xcode on this machine";
 const MACOS_PACKAGE_CHECKS: Array<{ id: string; cmd: string[] }> = [
   { id: "test:macos:packages", cmd: ["bun", "run", "test:macos:packages"] },
   { id: "test:macos", cmd: ["bun", "run", "test:macos"] },
 ];
+const MACOS_UI_SHARDED_CI_REASON =
+  "CompassUITests run in parallel macos-ui-shard CI jobs (test-macos.yml)";
+
+function macosUiTestsShardedInCi(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env["CI_MACOS_UI_SHARDED"] === "1";
+}
 const FAST_TIER_REASON =
   "no *.db.test.ts and no /storage/ or /repositories/ paths";
 
@@ -285,6 +293,7 @@ export function planVerify(input: {
   const files = input.files ?? [];
   const ciOnly: PlannedSkip[] = [];
   const checks: PlannedCheck[] = [];
+  const skips: PlannedSkip[] = [];
   for (const pkg of packages) {
     if (pkg === "macos") {
       if (!input.xcodeAvailable) {
@@ -295,6 +304,13 @@ export function planVerify(input: {
         continue;
       }
       for (const macosCheck of MACOS_PACKAGE_CHECKS) {
+        if (macosCheck.id === "test:macos" && macosUiTestsShardedInCi()) {
+          ciOnly.push({
+            id: macosCheck.id,
+            reason: MACOS_UI_SHARDED_CI_REASON,
+          });
+          continue;
+        }
         checks.push({ id: macosCheck.id, cmd: macosCheck.cmd });
       }
       continue;
@@ -306,7 +322,6 @@ export function planVerify(input: {
   checks.push({ id: "lint", cmd: ["bun", "run", "lint"] });
   checks.push({ id: "knip", cmd: ["bun", "run", "knip"] });
 
-  const skips: PlannedSkip[] = [];
   const playwrightSelected = packages.includes("web");
 
   if (playwrightSelected) {

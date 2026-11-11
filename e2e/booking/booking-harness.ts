@@ -1276,6 +1276,18 @@ export async function prepareSignedInBookingSettingsPage(
     const url = new URL(request.url());
     const path = url.pathname;
 
+    if (path.endsWith("/api/user/profile")) {
+      return route.fulfill(
+        jsonResponse({
+          userId: "000000000000000000000002",
+          email: HOST_ACCOUNT_EMAIL,
+          name: "Host User",
+          firstName: "Host",
+          lastName: "User",
+        }),
+      );
+    }
+
     if (path.endsWith("/api/calendars")) {
       const calendars = options.noWritableCalendars
         ? [readOnlyGoogleCalendar]
@@ -1589,6 +1601,7 @@ export const dispatchClick = async (
   locator: import("@playwright/test").Locator,
 ) => {
   await locator.waitFor({ state: "attached", timeout: 10000 });
+  await expect(locator).toBeEnabled();
   await locator.evaluate((el) => {
     (el as HTMLElement).click();
   });
@@ -1604,6 +1617,7 @@ export const dispatchFill = async (
   value: string,
 ) => {
   await locator.waitFor({ state: "attached", timeout: 10000 });
+  await expect(locator).toBeEditable();
   await locator.evaluate((el, nextValue) => {
     const proto =
       el instanceof HTMLTextAreaElement
@@ -1640,16 +1654,8 @@ export const releaseSettingsMod = async (page: Page) => {
   await page.keyboard.up("ControlOrMeta");
 };
 
-const MEETING_NAV_CHIPS = ["1", "3"] as const;
-const REMOVED_MEETING_SECTION_CHIPS = [
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "U",
-] as const;
+const MEETING_NAV_CHIPS = ["1", "3", "4"] as const;
+const REMOVED_MEETING_SECTION_CHIPS = ["5", "6", "7", "8", "9", "U"] as const;
 
 /** Assert hold-Mod chips are only sidebar digits and the save bar Enter. */
 export const expectMeetingShortcutChips = async (settingsDialog: Locator) => {

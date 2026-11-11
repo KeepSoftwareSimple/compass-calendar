@@ -124,10 +124,10 @@ jobs:
       - name: Lint workflows
         run: |
           docker run --rm -v "${GITHUB_WORKSPACE}:/repo" -w /repo \
-            rhysd/actionlint:1.7.7 -color \
+            rhysd/actionlint:1.7.12 -color \
             -ignore 'unexpected key "queue" for "concurrency" section'
           # `queue:` is a real concurrency key (_deploy-environment.yml) that
-          # this actionlint release does not know yet; drop the ignore on upgrade.
+          # 1.7.12 still does not know; `macos-26-intel` is known since 1.7.12.
 
       # self-host/*.test.ts (the runtime server and the compose/deploy
       # contracts) is matched by no test:<package> scan root, so from the day

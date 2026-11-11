@@ -15,6 +15,7 @@ import {
 } from "@backend/email/reflection-context";
 import { reflectionEligible } from "@backend/email/reflection-enrollment";
 import { reflectionExpiresAt } from "@backend/email/reflection-schedule";
+import { prepareWelcomeReviewEmail } from "@backend/email/welcome-review.content";
 import hiddenEventService from "@backend/user/services/hidden-event.service";
 import { createHash } from "node:crypto";
 
@@ -26,6 +27,7 @@ export const hiddenEventsDigest = (ids: string[]) =>
 export async function dispatchReflection(
   row: EmailSendRecord,
   provider: EmailProvider,
+  options: { onboarding?: boolean } = {},
 ) {
   if (!(await emailSendRepository.isQueued(row._id))) return;
   const edition = row.reflection;
@@ -41,14 +43,17 @@ export async function dispatchReflection(
     void emailAnalytics.capture({
       event: "email_skipped",
       userId: row.userId.toHexString(),
-      properties: { sequence: "reflection", reason },
+      properties: { sequence: row.sequence, reason },
     });
   };
   if (!edition) {
     await cancel("Missing reflection edition");
     return;
   }
-  if (new Date() >= reflectionExpiresAt(edition.date, edition.timeZone)) {
+  if (
+    !options.onboarding &&
+    new Date() >= reflectionExpiresAt(edition.date, edition.timeZone)
+  ) {
     await cancel("Reflection edition expired");
     return;
   }
@@ -87,7 +92,9 @@ export async function dispatchReflection(
         await hiddenEventService.listHiddenEventIds(row.userId),
       );
       const prepared = {
-        ...(await prepareReflection(row, user, unsubscribe.httpsUrl)),
+        ...(options.onboarding
+          ? await prepareWelcomeReviewEmail(row, user, unsubscribe)
+          : await prepareReflection(row, user, unsubscribe.httpsUrl)),
         hiddenDigest,
       };
       await mongoService.emailSend.updateOne(
@@ -109,7 +116,8 @@ export async function dispatchReflection(
       !prepared ||
       !fresh ||
       !reflectionEligible(fresh, edition.trial) ||
-      new Date() >= reflectionExpiresAt(edition.date, edition.timeZone)
+      (!options.onboarding &&
+        new Date() >= reflectionExpiresAt(edition.date, edition.timeZone))
     ) {
       await cancel("Reflection no longer eligible");
       return;
@@ -133,6 +141,19 @@ export async function dispatchReflection(
       return;
     }
     if (!(await emailSendRepository.isQueued(row._id))) return;
+    const lifeImage = prepared.pdfBase64
+      ? {
+          content: prepared.pdfBase64,
+          ext: "pdf",
+          type: "application/pdf",
+        }
+      : prepared.pngBase64
+        ? {
+            content: prepared.pngBase64,
+            ext: "png",
+            type: "image/png",
+          }
+        : null;
     const result = await provider.send({
       idempotencyKey: row._id,
       to: recipient,
@@ -144,13 +165,13 @@ export async function dispatchReflection(
         "List-Unsubscribe": unsubscribe.listUnsubscribeHeader,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
-      ...(prepared.pngBase64
+      ...(lifeImage
         ? {
             attachments: [
               {
-                filename: `compass-life-in-weeks-${edition.date}.png`,
-                content: prepared.pngBase64,
-                contentType: "image/png",
+                filename: `compass-life-in-weeks-${edition.date}.${lifeImage.ext}`,
+                content: lifeImage.content,
+                contentType: lifeImage.type,
               },
             ],
           }
@@ -168,7 +189,7 @@ export async function dispatchReflection(
       event: "email_sent",
       userId: row.userId.toHexString(),
       properties: {
-        sequence: "reflection",
+        sequence: row.sequence,
         cadence: edition.cadence,
         trial: edition.trial,
       },
@@ -184,7 +205,7 @@ export async function dispatchReflection(
       void emailAnalytics.capture({
         event: "email_failed",
         userId: row.userId.toHexString(),
-        properties: { sequence: "reflection" },
+        properties: { sequence: row.sequence },
       });
   }
 }

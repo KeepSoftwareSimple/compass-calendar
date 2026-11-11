@@ -147,6 +147,8 @@ final class KeyboardEngineTests: XCTestCase {
 
     func testTextInputGatingTable() {
         XCTAssertFalse(TextInputShortcutGating.shouldDispatch(KeyEvent(character: "c")))
+        XCTAssertFalse(TextInputShortcutGating.shouldDispatch(KeyEvent(character: "c", modifiers: .command)))
+        XCTAssertFalse(TextInputShortcutGating.shouldDispatch(KeyEvent(character: "v", modifiers: .command)))
         XCTAssertTrue(TextInputShortcutGating.shouldDispatch(KeyEvent(character: "z", modifiers: .command)))
         XCTAssertTrue(TextInputShortcutGating.shouldDispatch(KeyEvent(named: .escape)))
         XCTAssertTrue(TextInputShortcutGating.shouldDispatch(KeyEvent(named: .enter)))

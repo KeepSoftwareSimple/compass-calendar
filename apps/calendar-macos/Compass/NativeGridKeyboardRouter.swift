@@ -1,6 +1,7 @@
 import AppKit
 import CompassData
 import CompassKit
+import CompassUI
 
 @MainActor
 final class NativeGridKeyboardRouter {
@@ -73,6 +74,7 @@ final class NativeGridKeyboardRouter {
             .otherSidebar,
             .focusSidebar,
             .focusEvent,
+            .focusShiftHold,
             .focusNotice,
             .otherSubscribe,
         ]
@@ -386,7 +388,9 @@ final class NativeGridKeyboardRouter {
         }
 
         dispatcher.isTextInputFocused =
-            model.overlayKeyboardCaptureActive || model.isEventFormVisible
+            model.overlayKeyboardCaptureActive
+            || model.isEventFormVisible
+            || isNativeEditableTextInputFocused()
         if model.overlayKeyboardCaptureActive {
             return handleOverlayKeyDown(keyEvent)
         }
@@ -443,6 +447,11 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
+        if keyEvent.modifiers.isEmpty, keyEvent.key == .named(.escape), model.pastePreviewStore.isActive {
+            model.endEventPastePreview()
+            return true
+        }
+
         if keyEvent.modifiers.isEmpty, keyEvent.key == .named(.escape), model.eventJumpSelection.isActive {
             model.clearEventJumpSelection()
             return true
@@ -452,11 +461,11 @@ final class NativeGridKeyboardRouter {
         syncEditSequenceFieldGating()
         if let id = dispatcher.dispatch(keyEvent) {
             model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
-            performShortcut(id)
+            let handled = performShortcut(id)
             if viewSwitchIds.contains(id) {
                 return false
             }
-            return true
+            return handled
         }
         model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
 
@@ -570,7 +579,9 @@ final class NativeGridKeyboardRouter {
             return true
         }
         if keyEvent.modifiers == [.command], keyEvent.key == .named(.enter) {
-            Task { await model.saveDraft() }
+            if model.draftStore.status.activity != .pastePlace {
+                Task { await model.saveDraft() }
+            }
             return true
         }
 
@@ -604,6 +615,10 @@ final class NativeGridKeyboardRouter {
                 model.formFieldDigitHintsVisible = false
                 return true
             }
+        }
+
+        if handleDescriptionLinkDigitKeys(keyEvent) {
+            return true
         }
 
         // RSVP radio-style controls own arrows and activation before grid shortcuts.
@@ -645,8 +660,10 @@ final class NativeGridKeyboardRouter {
             return true
         }
         if let shortcut {
-            performShortcut(shortcut)
-            return true
+            if shortcut == .focusShiftHold, keyEvent.modifiers.isEmpty {
+                return false
+            }
+            return performShortcut(shortcut)
         }
 
         return false
@@ -701,6 +718,39 @@ final class NativeGridKeyboardRouter {
             return false
         }
         return textView.accessibilityIdentifier() != "compass-event-form-description"
+    }
+
+    /// Bare `1…9` opens document-order description links only while hint overlay is active
+    /// and no text field, color picker, or Mod+digit form jump owns the key.
+    private func handleDescriptionLinkDigitKeys(_ keyEvent: KeyEvent) -> Bool {
+        guard shouldBareDigitOpenDescriptionLink(keyEvent) else { return false }
+        guard case .character(let char) = keyEvent.key,
+              let digit = Int(String(char))
+        else { return false }
+        return DescriptionLinkKeyboard.openNumberedLinkIfHintsActive(digit: digit) != nil
+    }
+
+    private func shouldBareDigitOpenDescriptionLink(_ keyEvent: KeyEvent) -> Bool {
+        guard model.isEventFormVisible,
+              DescriptionLinkKeyboard.linkDigitHintsActiveInKeyWindow(),
+              keyEvent.modifiers.isEmpty,
+              case .character(let char) = keyEvent.key,
+              char.isNumber
+        else { return false }
+        guard !isDescriptionFormEditorFocused() else { return false }
+        guard !isEditableNonDescriptionTextInputFocused() else { return false }
+        guard !model.formFieldDigitHintsVisible else { return false }
+        switch model.eventFormFocusedField {
+        case .title, .location, .description, .conference, .color:
+            return false
+        default:
+            return true
+        }
+    }
+
+    private func isNativeEditableTextInputFocused() -> Bool {
+        guard let textView = NSApp.keyWindow?.firstResponder as? NSTextView else { return false }
+        return textView.isEditable
     }
 
     private func matchesBinding(_ keyEvent: KeyEvent, id: ShortcutId) -> Bool {
@@ -760,6 +810,9 @@ final class NativeGridKeyboardRouter {
         }
 
         if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty {
+            if model.viewStore.view == .life {
+                return false
+            }
             if !model.draftStore.quickTimeDigits.isEmpty {
                 model.commitQuickTimeIfBuffered()
                 return true
@@ -767,6 +820,9 @@ final class NativeGridKeyboardRouter {
             if model.draftStore.gridDraft != nil {
                 if model.draftStore.status.isFormOpen {
                     return false
+                }
+                if model.draftStore.status.activity == .pastePlace {
+                    return true
                 }
                 if model.draftStore.status.activity == .keyboardPlace {
                     model.saveKeyboardPlacedDraftNow()
@@ -785,8 +841,15 @@ final class NativeGridKeyboardRouter {
         }
 
         if keyEvent.key == .named(.escape), keyEvent.modifiers.isEmpty {
+            if model.viewStore.view == .life {
+                return false
+            }
             if !model.draftStore.quickTimeDigits.isEmpty {
                 model.draftStore.setQuickTimeDigits("")
+                return true
+            }
+            if model.draftStore.status.activity == .pastePlace {
+                model.endEventPastePreview()
                 return true
             }
             if model.draftStore.gridDraft != nil {
@@ -938,52 +1001,73 @@ final class NativeGridKeyboardRouter {
         return false
     }
 
-    private func performShortcut(_ id: ShortcutId) {
+    @discardableResult
+    private func performShortcut(_ id: ShortcutId) -> Bool {
         switch id {
         case .navUpNext:
             model.openUpNextEvent()
+            return true
         case .navJoinMeeting:
             model.joinUpNextMeeting()
+            return true
         case .editCycleEdge:
             model.handleShiftTabCycleEdge()
+            return true
         case .otherPalette:
             model.toggleCommandPalette()
+            return true
         case .otherShortcuts:
             model.toggleShortcutsLegend()
+            return true
         case .navGoToDate:
             model.toggleCommandPalette(fromGoToDate: true)
+            return true
         case .createTimed, .createAllday:
             model.handleShortcut(id)
+            return true
         case .editOpen:
             if model.draftStore.gridDraft != nil {
+                if model.draftStore.status.activity == .pastePlace {
+                    return true
+                }
                 if !model.draftStore.status.isFormOpen {
                     model.openEventFormForCurrentDraft()
                 }
             } else if model.focusStore.focusedEventId != nil {
                 model.openKeyboardEditForFocusedEvent()
             }
+            return true
         case .createPlaceDiscard:
             model.requestDiscardDraft()
+            return true
         case .editDelete:
             model.deleteFocusedEvent()
+            return true
         case .editDuplicate:
             Task { await model.duplicateFocusedOrFormEvent() }
+            return true
         case .editCopy:
-            model.copyFocusedEvent()
+            return model.copyFocusedEvent()
         case .editPaste:
-            model.pasteCopiedEvent()
+            return model.pasteCopiedEvent()
         case .editMenu:
             model.openEventMenu()
+            return true
         case .editHide:
             model.toggleFocusedEventHidden()
+            return true
         case .otherUndo:
             performUndo()
+            return true
         case .otherRedo:
             model.redoLastChange()
+            return true
         case .editSave:
             Task { await model.saveDraft() }
+            return true
         default:
             model.handleShortcut(id)
+            return true
         }
     }
 

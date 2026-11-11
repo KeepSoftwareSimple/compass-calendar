@@ -126,4 +126,13 @@ describe("booking indexes", () => {
     expect(names).toContain("booking_operation_create_cancel_unique");
     expect(names).not.toContain("booking_operation_reservation_kind_unique");
   });
+
+  it("creates a unique userId index for host guest RSVP notice state", async () => {
+    const indexes = await mongoService.hostGuestRsvpNoticeState.indexes();
+    const index = indexes.find(
+      (entry) => entry.name === "host_guest_rsvp_notice_user_id_unique",
+    );
+    expect(index?.unique).toBe(true);
+    expect(index?.key).toEqual({ userId: 1 });
+  });
 });

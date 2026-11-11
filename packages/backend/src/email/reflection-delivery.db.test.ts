@@ -9,7 +9,10 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
 import emailUnsubscribeController from "@backend/email/controllers/email.unsubscribe.controller";
+import { EmailDispatchService } from "@backend/email/email-dispatch.service";
 import { EmailSendRecordSchema } from "@backend/email/email-send.record";
+import { emailSendRepository } from "@backend/email/email-send.repository";
+import * as emailClient from "@backend/email/providers/email.client";
 import { dispatchReflection } from "@backend/email/reflection-dispatch";
 import { enqueueDueReflections } from "@backend/email/reflection-enrollment";
 import { createUnsubscribeToken } from "@backend/email/unsubscribe-token";
@@ -118,7 +121,214 @@ describe("private reflection delivery", () => {
     ).toBe("2026-11-02T17:30:00.000Z");
   });
 
-  it("sends a named PNG attachment, clears personal preparation data, and does not resend", async () => {
+  const onboardingRow = () =>
+    EmailSendRecordSchema.parse({
+      _id: `${userId.toHexString()}:weekly-review`,
+      userId,
+      sequence: "welcome",
+      stepKey: "weekly-review",
+      status: "queued",
+      sendAt: now,
+      nextAttemptAt: now,
+      attemptCount: 0,
+      lastError: null,
+      providerMessageId: null,
+      sentAt: null,
+      deliveredAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+  it("retries the onboarding review with frozen content across date and calendar changes", async () => {
+    const row = onboardingRow();
+    await mongoService.emailSend.insertOne(row);
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    let attempts = 0;
+    const send = mock(async (_input: unknown) => {
+      if (++attempts === 1) throw new Error("ambiguous delivery");
+      return { messageId: "onboarding-retry" };
+    });
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    const service = new EmailDispatchService();
+    await service.dispatchDue();
+    expect(
+      (await mongoService.emailSend.findOne({ _id: row._id }))?.reflection
+        ?.prepared,
+    ).toBeDefined();
+    setSystemTime(new Date(now.getTime() + 86_400_000));
+    const read = spyOn(
+      getSyncServiceClient(),
+      "readReflection",
+    ).mockRejectedValue(new Error("history changed"));
+    read.mockClear();
+    await service.dispatchDue();
+    expect(read).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1]![0]).toEqual(send.mock.calls[0]![0]);
+    const sent = await mongoService.emailSend.findOne({ _id: row._id });
+    expect(sent?.status).toBe("sent");
+    expect(sent?.reflection?.prepared).toBeUndefined();
+  });
+
+  it("clears a pending onboarding snapshot when reviews are paused", async () => {
+    const row = onboardingRow();
+    await mongoService.emailSend.insertOne(row);
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send: mock(async () => {
+        throw new Error("ambiguous delivery");
+      }),
+      verifyWebhook: () => [],
+    });
+    await new EmailDispatchService().dispatchDue();
+    expect(
+      (await mongoService.emailSend.findOne({ _id: row._id }))?.reflection
+        ?.prepared,
+    ).toBeDefined();
+    const token = createUnsubscribeToken(
+      userId.toHexString(),
+      CONFIG.EMAIL_UNSUBSCRIBE_SECRET!,
+    );
+    const res = {
+      status: mock(() => res),
+      type: mock(() => res),
+      send: mock(() => {}),
+    };
+    await emailUnsubscribeController.confirmUnsubscribe(
+      { body: { token, scope: "reflection" } } as Request,
+      res as unknown as Response,
+    );
+    const canceled = await mongoService.emailSend.findOne({ _id: row._id });
+    expect(canceled?.status).toBe("canceled");
+    expect(canceled?.reflection?.prepared).toBeUndefined();
+  });
+
+  it("delivers the final onboarding review with an introduction and the user's calendar content", async () => {
+    const row = EmailSendRecordSchema.parse({
+      _id: `${userId.toHexString()}:weekly-review`,
+      userId,
+      sequence: "welcome",
+      stepKey: "weekly-review",
+      status: "queued",
+      sendAt: now,
+      nextAttemptAt: now,
+      attemptCount: 0,
+      lastError: null,
+      providerMessageId: null,
+      sentAt: null,
+      deliveredAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await mongoService.emailSend.insertOne(row);
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const send = mock(async (_input: unknown) => ({
+      messageId: "onboarding-review",
+    }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    await new EmailDispatchService().dispatchDue();
+    expect(send).toHaveBeenCalledTimes(1);
+    const content = send.mock.calls[0]![0] as unknown as {
+      subject: string;
+      html: string;
+      text: string;
+      attachments: unknown[];
+    };
+    expect(content.subject).toBe("Your weekly review (5/5)");
+    expect(content.text).toContain("Sunday at 10:30 a.m.");
+    expect(content.text).toContain("Settings > Notifications");
+    expect(content.text).toContain("Your past week, Oct 25-31");
+    expect(content.text).toContain("Next week, Nov 1-7");
+    expect(content.attachments).toHaveLength(1);
+    expect(
+      (await mongoService.emailSend.findOne({ _id: row._id }))?.status,
+    ).toBe("sent");
+  });
+
+  it("automatically enrolls the new onboarding recipient before their first review", async () => {
+    await mongoService.user.updateOne(
+      { _id: userId },
+      { $unset: { reflectionPreferences: "" } },
+    );
+    const row = EmailSendRecordSchema.parse({
+      _id: `${userId.toHexString()}:weekly-review`,
+      userId,
+      sequence: "welcome",
+      stepKey: "weekly-review",
+      status: "queued",
+      sendAt: now,
+      nextAttemptAt: now,
+      attemptCount: 0,
+      lastError: null,
+      providerMessageId: null,
+      sentAt: null,
+      deliveredAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await mongoService.emailSend.insertOne(row);
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const send = mock(async (_input: unknown) => ({
+      messageId: "automatic-review",
+    }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    await new EmailDispatchService().dispatchDue();
+    expect(send).toHaveBeenCalledTimes(1);
+    const saved = await mongoService.user.findOne({ _id: userId });
+    expect(saved?.reflectionPreferences?.enabled).toBe(true);
+    expect(saved?.reflectionNextSendAt?.toISOString()).toBe(
+      "2026-11-08T10:30:00.000Z",
+    );
+    expect((send.mock.calls[0]![0] as { text: string }).text).toContain(
+      "Your past week",
+    );
+  });
+
+  it("does not send the onboarding review after a user pauses reviews", async () => {
+    await mongoService.user.updateOne(
+      { _id: userId },
+      { $set: { "reflectionPreferences.enabled": false } },
+    );
+    const row = EmailSendRecordSchema.parse({
+      _id: `${userId.toHexString()}:weekly-review`,
+      userId,
+      sequence: "welcome",
+      stepKey: "weekly-review",
+      status: "queued",
+      sendAt: now,
+      nextAttemptAt: now,
+      attemptCount: 0,
+      lastError: null,
+      providerMessageId: null,
+      sentAt: null,
+      deliveredAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await mongoService.emailSend.insertOne(row);
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const send = mock(async () => ({ messageId: "unexpected" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    await new EmailDispatchService().dispatchDue();
+    expect(send).not.toHaveBeenCalled();
+    expect(
+      (await mongoService.emailSend.findOne({ _id: row._id }))?.status,
+    ).toBe("skipped");
+  });
+
+  it("sends a named PDF attachment, clears personal preparation data, and does not resend", async () => {
     await enqueueDueReflections(now);
     const row = EmailSendRecordSchema.parse(
       await mongoService.emailSend.findOne({ userId }),
@@ -130,8 +340,12 @@ describe("private reflection delivery", () => {
     const payload = send.mock.calls[0]?.[0];
     expect(payload?.to).toBe("trial@example.com");
     expect(payload?.attachments?.[0]?.filename).toBe(
-      "compass-life-in-weeks-2026-11-01.png",
+      "compass-life-in-weeks-2026-11-01.pdf",
     );
+    expect(payload?.attachments?.[0]?.contentType).toBe("application/pdf");
+    expect(payload?.attachments?.[0]?.contentId).toBeUndefined();
+    expect(payload?.html).not.toContain("<img");
+    expect(payload?.html).not.toContain("cid:");
     expect(payload?.personal).toBe(true);
     expect(payload?.text).toContain("/week/2026-11-01");
     const sent = await mongoService.emailSend.findOne({ _id: row._id });

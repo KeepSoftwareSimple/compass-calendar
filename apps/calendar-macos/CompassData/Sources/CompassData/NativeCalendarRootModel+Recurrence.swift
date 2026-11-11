@@ -54,7 +54,10 @@ extension NativeCalendarRootModel {
     }
 
     public func requestSaveDraft() async {
-        guard let draft = draftStore.gridDraft, !isEventFormReadOnly(for: draft) else { return }
+        guard let draft = draftStore.gridDraft,
+            draftStore.status.activity != .pastePlace,
+            !isEventFormReadOnly(for: draft)
+        else { return }
         let baseline = baselineEvent(for: draft)
         let resolvedSeriesMaster = baseline.flatMap { seriesMaster(for: $0) }
         let decision = GridEventDraftRecurrence.resolveSaveDecision(
@@ -107,8 +110,15 @@ extension NativeCalendarRootModel {
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
             else { return }
             recordCreateUndo(for: optimistic)
-            await persistDraftOptimistic(savedId: optimistic.id.rawValue) {
-                try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
+            await persistDraftOptimistic(savedId: optimistic.id.rawValue) { [weak self] in
+                guard let self else { return }
+                try await self.eventsStore.createOptimistic(
+                    input: input,
+                    optimisticEvent: optimistic,
+                    onOptimisticCacheUpdated: { [weak self] events in
+                        self?.presentOptimisticCache(events)
+                    }
+                )
             }
         case .edit:
             guard let eventId = draft.persistedEventId,
@@ -130,11 +140,15 @@ extension NativeCalendarRootModel {
                     undoStore.record(.unrecorded)
                 }
             }
-            await persistDraftOptimistic(savedId: eventId.rawValue) {
-                try await eventsStore.replaceOptimistic(
+            await persistDraftOptimistic(savedId: eventId.rawValue) { [weak self] in
+                guard let self else { return }
+                try await self.eventsStore.replaceOptimistic(
                     id: eventId,
                     input: input,
-                    optimisticEvent: optimistic
+                    optimisticEvent: optimistic,
+                    onOptimisticCacheUpdated: { [weak self] events in
+                        self?.presentOptimisticCache(events)
+                    }
                 )
             }
         }

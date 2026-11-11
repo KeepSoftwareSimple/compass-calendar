@@ -119,6 +119,16 @@ describe("reflection historical reads", () => {
     ]);
     expect(new Set(events.map((event) => event.id)).size).toBe(5);
     expect(
+      events
+        .filter((event) => event.title === "Archived event 5003")
+        .every((event) => event.routine),
+    ).toBe(true);
+    expect(
+      events
+        .filter((event) => !event.recurring)
+        .every((event) => !event.routine),
+    ).toBe(true);
+    expect(
       await db.collection(SYNC_COLLECTIONS.eventOccurrences).countDocuments(),
     ).toBe(0);
     // Expired series remain candidates until recurrence projection can prove
@@ -315,6 +325,16 @@ describe("reflection historical reads", () => {
           rules: ["RRULE:FREQ=WEEKLY;COUNT=3"],
         },
       },
+      ...["MONTHLY", "YEARLY"].map(
+        (frequency): ProviderEvent => ({
+          ...singleEvent(frequency, `${frequency} occasion`),
+          schedule,
+          recurrence: {
+            kind: "seriesMaster",
+            rules: [`RRULE:FREQ=${frequency};COUNT=3`],
+          },
+        }),
+      ),
       {
         ...singleEvent("moved", "Walk with a friend"),
         schedule: {
@@ -369,6 +389,16 @@ describe("reflection historical reads", () => {
     const read = await readReflectionPage(db, calendar, input);
     expect(read.historyComplete).toBe(true);
     expect(read.oldestYear).toBe(2018);
+    for (const frequency of ["MONTHLY", "YEARLY"]) {
+      expect(
+        read.events.find((event) => event.title === `${frequency} occasion`)
+          ?.routine,
+      ).toBe(false);
+    }
+    expect(
+      read.events.find((event) => event.title === "Walk with a friend")
+        ?.routine,
+    ).toBe(true);
     expect(
       read.events.find((event) => event.title === "A memorable trip"),
     ).toBeDefined();
@@ -393,6 +423,76 @@ describe("reflection historical reads", () => {
       input,
     );
     expect(other.events).toEqual([]);
+  });
+
+  it("keeps certified active history available during a non-destructive refresh", async () => {
+    const db = storage.db();
+    const calendar = await seedProviderCalendar(
+      new ProviderCalendarRepository(db),
+    );
+    const resources = new SyncResourceRepository(db);
+    const record: ProviderEvent = {
+      ...singleEvent("archive"),
+      schedule: { kind: "allDay", start: "2018-11-01", end: "2018-11-02" },
+    };
+    const imported = await importCalendarEvents(
+      {
+        events: new EventRepository(db),
+        occurrences: new EventOccurrenceRepository(db, storage.client()),
+        resources,
+        custody: fakeTokenSource,
+        reader: {
+          supportsFullHistory: true,
+          listEventPage: async (input) =>
+            input.window
+              ? pageOf([])
+              : pageOf([record], { nextSyncToken: "complete-archive" }),
+        },
+      },
+      calendar,
+      () => new Date("2026-11-05T00:00:00Z"),
+    );
+    await resources.setBootstrapState(
+      calendar.tenantId,
+      calendar.principalId,
+      imported.resource._id,
+      "ready",
+    );
+    const input = ReflectionReadRequestSchema.parse({
+      calendarIds: [calendar._id],
+      selfEmails: [],
+      windows: [
+        {
+          key: "archive",
+          start: "2018-11-01T00:00:00Z",
+          end: "2018-11-02T00:00:00Z",
+          startDate: "2018-11-01",
+          endDate: "2018-11-02",
+        },
+      ],
+    });
+    const before = await readReflectionPage(db, calendar, input);
+    expect(before.historyComplete).toBe(true);
+    expect(before.events).toHaveLength(1);
+    const staging = await resources.startNewGeneration(
+      calendar.tenantId,
+      calendar.principalId,
+      imported.resource._id,
+    );
+    expect(staging).toBeGreaterThan(imported.resource.activeGeneration);
+    const during = await readReflectionPage(db, calendar, input);
+    expect(during.events).toEqual(before.events);
+    expect(during.historyComplete).toBe(true);
+    // A verified skipped-read failure still invalidates the certificate.
+    await resources.recordHistoryCoverage(
+      imported.resource,
+      1,
+      true,
+      new Date(),
+    );
+    expect(
+      (await readReflectionPage(db, calendar, input)).historyComplete,
+    ).toBe(false);
   });
 
   it("does not treat a legacy cursor as proof of historical coverage", async () => {

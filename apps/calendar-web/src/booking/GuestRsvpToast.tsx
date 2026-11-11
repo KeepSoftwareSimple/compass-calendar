@@ -1,5 +1,9 @@
 import { createElement } from "react";
 import { type Id } from "react-toastify";
+import {
+  type BookingGuestRsvpClaimReply,
+  type BookingGuestRsvpClaimResponse,
+} from "@core/types/booking.contracts";
 import { type AttendeeResponseStatus } from "@core/types/event-attendance.contracts";
 import {
   rememberPendingGuestRsvp,
@@ -28,6 +32,7 @@ export type GuestRsvpReplyNotice = {
 export type GuestRsvpToastPayload = {
   count: number;
   latest: GuestRsvpReplyNotice;
+  whileYouWereAway: boolean;
 };
 
 export function guestRsvpActionPhrase(status: AttendeeResponseStatus): string {
@@ -43,32 +48,53 @@ export function guestRsvpActionPhrase(status: AttendeeResponseStatus): string {
   }
 }
 
+function meetingWhenPhrase(slotStart: string, timeZone: string): string {
+  return `meeting ${formatHostMeetingWhen(slotStart, timeZone)}`;
+}
+
+function latestReplySentence(
+  latest: GuestRsvpReplyNotice,
+  timeZone: string,
+): string {
+  const when = meetingWhenPhrase(latest.slotStart, timeZone);
+  const action = guestRsvpActionPhrase(latest.status);
+  return `${latest.guestName} ${action} (${when})`;
+}
+
 export function guestRsvpToastCopy(
   count: number,
   latest: GuestRsvpReplyNotice | null,
   timeZone: string,
+  whileYouWereAway: boolean,
 ): string {
   if (!latest || count < 1) {
     return "";
   }
-  const when = formatHostMeetingWhen(latest.slotStart, timeZone);
-  const action = guestRsvpActionPhrase(latest.status);
+  const latestSentence = latestReplySentence(latest, timeZone);
   if (count === 1) {
-    return `${latest.guestName} ${action}: ${when}`;
+    if (whileYouWereAway) {
+      return `While you were away: ${latestSentence}`;
+    }
+    return latestSentence;
   }
-  return `${count} guests replied. Latest: ${latest.guestName} ${action}, ${when}`;
+  const pluralLead = whileYouWereAway
+    ? `${count} guest replies while you were away.`
+    : `${count} guests replied since you last looked.`;
+  return `${pluralLead} Latest: ${latestSentence}`;
 }
 
 interface GuestRsvpToastProps {
   toastId: Id;
   count: number;
   latest: GuestRsvpReplyNotice;
+  whileYouWereAway: boolean;
 }
 
 export function GuestRsvpToast({
   toastId,
   count,
   latest,
+  whileYouWereAway,
 }: GuestRsvpToastProps) {
   const timeZone = useEffectiveTimeZone();
 
@@ -79,26 +105,47 @@ export function GuestRsvpToast({
   return (
     <ToastNotice>
       <p className="text-sm text-text">
-        {guestRsvpToastCopy(count, latest, timeZone)}
+        {guestRsvpToastCopy(count, latest, timeZone, whileYouWereAway)}
       </p>
       <ToastActionButton onClick={handleShow}>Show</ToastActionButton>
     </ToastNotice>
   );
 }
 
-export function showGuestRsvpToast(
-  replies: readonly GuestRsvpReplyNotice[],
+function claimToPayload(
+  claim: BookingGuestRsvpClaimResponse,
+): GuestRsvpToastPayload | null {
+  if (claim.count < 1 || !claim.latest) {
+    return null;
+  }
+  return {
+    count: claim.count,
+    latest: claimReplyToNotice(claim.latest),
+    whileYouWereAway: claim.whileYouWereAway,
+  };
+}
+
+function claimReplyToNotice(
+  reply: BookingGuestRsvpClaimReply,
+): GuestRsvpReplyNotice {
+  return {
+    guestName: reply.guestName,
+    status: reply.status,
+    slotStart: reply.slotStart,
+  };
+}
+
+export function showGuestRsvpToastFromClaim(
+  claim: BookingGuestRsvpClaimResponse,
 ): void {
-  if (replies.length === 0) {
+  const payload = claimToPayload(claim);
+  if (!payload) {
     return;
   }
-  const latest = replies[replies.length - 1]!;
-  const payload: GuestRsvpToastPayload = { count: replies.length, latest };
   if (shouldDeferAttentionToasts()) {
     rememberPendingGuestRsvp(payload);
     return;
   }
-
   mountGuestRsvpToast(payload);
 }
 
@@ -116,6 +163,7 @@ function mountGuestRsvpToast(payload: GuestRsvpToastPayload): void {
       toastId: GUEST_RSVP_TOAST_ID,
       count: payload.count,
       latest: payload.latest,
+      whileYouWereAway: payload.whileYouWereAway,
     }),
     {
       ...getToastDefaultOptions(),

@@ -9,13 +9,14 @@ import {
 import { describe, expect, it } from "bun:test";
 
 describe("welcome sequence Resend templates", () => {
-  it("maps every welcome step to a template alias", () => {
+  it("maps hosted steps to aliases and uses inline rendering for the review", () => {
     // Driven off WELCOME_SEQUENCE, not a copy of it: a step added to the drip
     // without an alias or content has to fail here, not in production.
     expect(WELCOME_SEQUENCE.length).toBeGreaterThan(0);
+    expect(getWelcomeStepTemplateAlias("weekly-review")).toBeUndefined();
     for (const step of WELCOME_SEQUENCE) {
       expect(getWelcomeStepTemplateAlias(step.key)).toBe(
-        WELCOME_STEP_TEMPLATE_ALIAS[step.key],
+        WELCOME_STEP_TEMPLATE_ALIAS[step.key] ?? undefined,
       );
       expect(getWelcomeStepCtaBaseHref(step.key)).toBeTruthy();
     }

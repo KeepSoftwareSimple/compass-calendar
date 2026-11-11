@@ -13,7 +13,6 @@ public enum DesktopDeepLinkParser {
         try! NSRegularExpression(pattern: "^compass://day/(\\d{4}-\\d{2}-\\d{2})/?$")
     }()
     private static let eventPrefix = "compass://event/"
-    private static let billingCheckoutPrefix = "compass://billing/checkout"
 
     /// Returns the full URL string when the link is recognized; otherwise `nil` (ignore).
     public static func recognizedURLString(_ url: URL) -> String? {
@@ -54,13 +53,17 @@ public enum DesktopDeepLinkParser {
     }
 
     public static func parseBillingCheckout(from urlString: String) -> BillingCheckoutDeepLink? {
-        guard urlString.hasPrefix(billingCheckoutPrefix) else { return nil }
-        guard let components = URLComponents(string: urlString) else { return nil }
-        let query = Dictionary<String, String>(
-            uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item -> (String, String)? in
-                guard let value = item.value else { return nil }
-                return (item.name, value)
-            })
+        guard let components = URLComponents(string: urlString),
+            components.scheme == scheme, components.host == "billing",
+            components.path == "/checkout"
+        else { return nil }
+        var query: [String: String] = [:]
+        for item in components.queryItems ?? [] {
+            guard let value = item.value else { continue }
+            // External URLs can repeat keys. Reject ambiguous callbacks rather
+            // than trapping in Dictionary(uniqueKeysWithValues:).
+            guard query.updateValue(value, forKey: item.name) == nil else { return nil }
+        }
         guard let outcome = query["outcome"], let sessionId = query["session_id"], !sessionId.isEmpty else {
             return nil
         }

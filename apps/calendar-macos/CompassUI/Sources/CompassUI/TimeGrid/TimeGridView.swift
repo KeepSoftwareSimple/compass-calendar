@@ -1,4 +1,5 @@
 import AppKit
+import CompassData
 import CompassKit
 
 @MainActor
@@ -725,11 +726,13 @@ public final class TimeGridView: NSView {
 
             let isFocused = state.focusedEventId == card.eventId
             let isSidebarEditing = state.sidebarEditingEventId == card.eventId
+            let focusedEdge = isFocused ? state.focusedEdge : nil
             view.apply(
                 card: card,
                 theme: theme,
                 isFocused: isFocused,
                 isSidebarEditing: isSidebarEditing,
+                focusedEdge: focusedEdge,
                 isUnsettled: state.unsettledEventIds.contains(card.eventId),
                 isPast: EventCardPastFill.isPast(card, state: state),
                 timeLabel: EventCardTimeLabel.text(for: card, state: state)
@@ -769,6 +772,11 @@ public final class TimeGridView: NSView {
     }
 
     private func syncFocusedEventAccessibilityProxy(snapshot: GridLayoutSnapshot) {
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            focusedEventAccessibilityProxy.isHidden = true
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            return
+        }
         guard let focusedId = state.focusedEventId,
             let card = snapshot.cards.first(where: { $0.eventId == focusedId })
                 .map({ displayCard($0, snapshot: snapshot) })
@@ -792,10 +800,14 @@ public final class TimeGridView: NSView {
         focusedEventAccessibilityProxy.isHidden = false
         focusedEventAccessibilityProxy.sync(label: card.label, frameInParent: frameInGrid)
 
-        if let window {
-            NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
-            NSAccessibility.post(element: window, notification: .layoutChanged)
-        }
+        guard TimeGridFocusedAccessibilityNotifications.shouldPostLayoutChangedAfterProxySync(
+            meetingLinkWideViewport: UITestLaunchPolicy.meetingLinkWideViewport,
+            proxyIsHidden: focusedEventAccessibilityProxy.isHidden,
+            hasWindow: window != nil
+        ), let window
+        else { return }
+        NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
+        NSAccessibility.post(element: window, notification: .layoutChanged)
     }
 
     private func updateNowLine() {

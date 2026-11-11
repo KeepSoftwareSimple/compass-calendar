@@ -14,14 +14,8 @@ describe("HourLabelColumn", () => {
       />,
     );
 
-    expect(screen.getByText("10 AM")).toHaveAttribute(
-      "data-hour-label-hidden",
-      "true",
-    );
-    expect(screen.getByText("10 AM")).toHaveStyle({ opacity: "0" });
-    expect(screen.getByText("9 AM")).not.toHaveAttribute(
-      "data-hour-label-hidden",
-    );
+    expect(screen.getByText("10 AM")).toHaveClass("opacity-0");
+    expect(screen.getByText("9 AM")).not.toHaveClass("opacity-0");
   });
 
   it("sizes each slot as one visible hour without flex-shrinking the stack", () => {

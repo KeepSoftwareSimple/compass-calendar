@@ -9,6 +9,7 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  CERTIFIED_HISTORY_COVERAGE_VERSION,
   type ResourceBootstrapState,
   SyncResourceReadSchema,
   type SyncResourceRecord,
@@ -149,6 +150,14 @@ interface SubscriptionInput {
 // cursor holds mid-batch progress so an interrupted pull resumes rather than
 // restarts.
 export class SyncResourceRepository {
+  private readonly collection: Collection<SyncResourceRecord>;
+
+  constructor(db: Db) {
+    this.collection = db.collection<SyncResourceRecord>(
+      SYNC_COLLECTIONS.syncResources,
+    );
+  }
+
   async recordHistoryCoverage(
     resource: SyncResourceRecord,
     skipped: number,
@@ -156,17 +165,11 @@ export class SyncResourceRepository {
     now: Date,
   ) {
     await this.#patch(resource.tenantId, resource.principalId, resource._id, {
-      historyCoverageVersion: complete && skipped === 0 ? 1 : 0,
+      historyCoverageVersion:
+        complete && skipped === 0 ? CERTIFIED_HISTORY_COVERAGE_VERSION : 0,
       historySkipped: skipped,
       historyCheckedAt: now,
     });
-  }
-  private readonly collection: Collection<SyncResourceRecord>;
-
-  constructor(db: Db) {
-    this.collection = db.collection<SyncResourceRecord>(
-      SYNC_COLLECTIONS.syncResources,
-    );
   }
 
   // Owner-scoped single-document $set; every simple mutator below is one of
@@ -345,6 +348,50 @@ export class SyncResourceRepository {
       cursorExpiredStreak: 0,
       cursorExpiredBackoffUntil: null,
     });
+  }
+
+  // Record that incremental sync tokens for this calendar never survive. Clears
+  // cursor-expiry backoff because full snapshots replace the hot repair loop.
+  async markSyncTokenUnsupported(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    id: string,
+    at: Date,
+  ): Promise<void> {
+    await this.#patch(tenantId, principalId, id, {
+      syncTokenUnsupportedAt: at,
+      cursorExpiredStreak: 0,
+      cursorExpiredBackoffUntil: null,
+    });
+  }
+
+  async clearSyncTokenUnsupported(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    id: string,
+  ): Promise<void> {
+    await this.#patch(tenantId, principalId, id, {
+      syncTokenUnsupportedAt: null,
+    });
+  }
+
+  // Give every sync-token-unsupported resource on a connection one token re-probe
+  // per interval (see clearWatchUnsupportedByConnection).
+  async clearSyncTokenUnsupportedByConnection(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    connectionId: ConnectionId,
+    olderThan: Date,
+  ): Promise<void> {
+    await this.collection.updateMany(
+      {
+        tenantId,
+        principalId,
+        connectionId,
+        syncTokenUnsupportedAt: { $ne: null, $lt: olderThan },
+      },
+      { $set: { syncTokenUnsupportedAt: null, updatedAt: new Date() } },
+    );
   }
 
   // Record that the provider DURABLY rejected reads for this resource (a 4xx

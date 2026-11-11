@@ -30,6 +30,23 @@ final class UITestLaunchPolicyTests: XCTestCase {
             UITestLaunchPolicy.attachesAccessibilityProbes(arguments: ["Compass", "-COMPASS_UI_TEST"]))
     }
 
+    func testMeetingLinkWideViewportLaunchFlag() {
+        XCTAssertFalse(UITestLaunchPolicy.meetingLinkWideViewport(arguments: ["Compass"]))
+        XCTAssertTrue(
+            UITestLaunchPolicy.meetingLinkWideViewport(
+                arguments: ["Compass", "-COMPASS_UI_TEST_MEETING_LINK_WIDE_VIEWPORT"]))
+    }
+
+    func testWideViewportKeepsSwiftUIAccessibilityButSkipsMirroredAppKitProbes() {
+        let wideArgs = [
+            "Compass",
+            "-COMPASS_UI_TEST",
+            "-COMPASS_UI_TEST_MEETING_LINK_WIDE_VIEWPORT",
+        ]
+        XCTAssertTrue(UITestLaunchPolicy.attachesAccessibilityProbes(arguments: wideArgs))
+        XCTAssertFalse(UITestLaunchPolicy.attachesMirroredAccessibilityProbes(arguments: wideArgs))
+    }
+
     func testUITestAndParityLaunchesDoNotCaptureProductAnalytics() {
         XCTAssertTrue(UITestLaunchPolicy.capturesProductAnalytics(arguments: ["/Applications/Compass.app"]))
         XCTAssertFalse(

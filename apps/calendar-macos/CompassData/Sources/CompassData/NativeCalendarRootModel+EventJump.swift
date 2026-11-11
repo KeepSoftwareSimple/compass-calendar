@@ -5,6 +5,11 @@ extension NativeCalendarRootModel {
     public var eventJumpSelection: EventJumpSelectionStore { overlayStores.eventJumpSelection }
 
     public var eventJumpStatusText: String? {
+        guard CalendarGridSidebarHints.calendarGridModeHintsEligible(
+            isLifeView: viewStore.view == .life)
+        else {
+            return nil
+        }
         guard eventJumpSelection.isActive else { return nil }
         if eventJumpSelection.modeActive,
             eventJumpSelection.activeDayKeys.isEmpty,
@@ -259,7 +264,7 @@ extension NativeCalendarRootModel {
     }
 
     func buildQuickTimeSlotHints() -> [QuickTimeSlotHint] {
-        guard eventJumpSelection.modeActive else { return [] }
+        guard eventJumpSelection.modeActive, !pastePreviewStore.isActive else { return [] }
         let focusedDay = QuickTime.quickTimeFocusedColumnDay(
             activeDayKeys: eventJumpSelection.activeDayKeys)
         let targetDay = QuickTime.quickTimeTargetDay(

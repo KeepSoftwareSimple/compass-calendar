@@ -14,9 +14,16 @@ import {
   EventReadSchema,
   type EventRecord,
 } from "@sync/storage/contracts/event.contracts";
+import { hasCertifiedHistoryCoverage } from "@sync/storage/contracts/sync-resource.contracts";
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
+
+/**
+ * Records per page. Small enough that one page stays well inside the caller's
+ * deadline; the caller pages until `nextCursor` is null.
+ */
+const PAGE_SIZE = 25;
 
 // Read canonical history in small pages; never widen the interactive horizon.
 export async function readReflectionPage(
@@ -46,12 +53,13 @@ export async function readReflectionPage(
   const relevant = calendars.filter((calendar) =>
     calendarIds.includes(calendar._id),
   );
+  // A staged refresh retains the already certified active archive. Coverage
+  // changes only when a completed pass records its actual skipped-read result.
   const historyComplete = relevant.every((calendar) =>
     resources.some(
       (resource) =>
         resource.calendarId === calendar._id &&
-        resource.historyCoverageVersion === 1 &&
-        resource.activeGeneration === resource.importGeneration &&
+        hasCertifiedHistoryCoverage(resource) &&
         resource.bootstrapState === "ready",
     ),
   );
@@ -119,17 +127,18 @@ export async function readReflectionPage(
           })
           .hint("reflection_principal_kind_start")
           .sort({ _id: 1 })
-          .limit(25)
+          .limit(PAGE_SIZE)
           .toArray(),
       ),
     );
-    // Both disjoint streams share the same exclusive cursor. Their first 25
-    // contain the union's first 25. UTF-8 comparison matches Mongo's ID order.
+    // Both disjoint streams share the same exclusive cursor, so their first
+    // PAGE_SIZE rows each contain the union's first PAGE_SIZE. UTF-8
+    // comparison matches Mongo's ID order.
     rows.push(
       ...pages
         .flat()
         .sort((a, b) => Buffer.compare(Buffer.from(a._id), Buffer.from(b._id)))
-        .slice(0, 25),
+        .slice(0, PAGE_SIZE),
     );
   }
   const records = rows.map((row) => EventReadSchema.parse(row));
@@ -141,6 +150,18 @@ export async function readReflectionPage(
     records
       .filter((record) => record.recurrence.kind === "seriesMaster")
       .map((record) => record._id),
+  );
+  const masters = await new EventRepository(db).findByIds(
+    scope.tenantId,
+    scope.principalId,
+    records.flatMap((record) =>
+      record.recurrence.kind === "exception"
+        ? [record.recurrence.seriesId]
+        : [],
+    ),
+  );
+  const recurrenceById = new Map(
+    masters.map((master) => [master._id, master.recurrence]),
   );
   const selfEmails = new Set(
     input.selfEmails.map((email) => email.toLowerCase()),
@@ -196,6 +217,11 @@ export async function readReflectionPage(
           title: event.customizations?.title ?? event.content.title,
           schedule: occurrence.schedule,
           recurring: event.recurrence.kind !== "single",
+          routine: isRoutineRecurrence(
+            event.recurrence.kind === "exception"
+              ? recurrenceById.get(event.recurrence.seriesId)
+              : event.recurrence,
+          ),
           uid:
             event.providerMetadata?.["icalUid"] ??
             event.providerMetadata?.["uid"] ??
@@ -208,9 +234,24 @@ export async function readReflectionPage(
   const last = records.at(-1);
   return {
     events,
-    nextCursor: records.length === 25 && last ? last._id : null,
+    nextCursor: records.length === PAGE_SIZE && last ? last._id : null,
     oldestYear: oldest ? Number(oldest.schedule.start.slice(0, 4)) : null,
     historyComplete,
     truncated,
   };
+}
+
+function isRoutineRecurrence(
+  recurrence: EventRecord["recurrence"] | undefined,
+) {
+  // Missing series metadata is treated conservatively for an exception.
+  if (!recurrence) return true;
+  return (
+    recurrence.kind === "seriesMaster" &&
+    recurrence.rules.some((rule) =>
+      /(?:^|[;:])FREQ=(?:SECONDLY|MINUTELY|HOURLY|DAILY|WEEKLY)(?:;|$)/i.test(
+        rule,
+      ),
+    )
+  );
 }

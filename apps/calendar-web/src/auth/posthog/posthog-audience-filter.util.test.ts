@@ -1,3 +1,4 @@
+import { POSTHOG_IS_SYNTHETIC_PROPERTY } from "@core/analytics/synthetic-account.util";
 import {
   filterPosthogAudience,
   POSTHOG_INTERNAL_OR_TEST_USER_PROPERTY,
@@ -38,13 +39,13 @@ describe("filterPosthogAudience", () => {
       expect(
         filterPosthogAudience({
           event: "checkout_opened",
-          properties: { is_synthetic: true },
+          properties: { [POSTHOG_IS_SYNTHETIC_PROPERTY]: true },
         } as never),
       ).not.toBeNull();
       expect(
         filterPosthogAudience({
           event: "checkout_opened",
-          properties: { is_synthetic: "true" },
+          properties: { [POSTHOG_IS_SYNTHETIC_PROPERTY]: "true" },
         } as never),
       ).toBeNull();
       expect(

@@ -181,7 +181,9 @@ extension NativeCalendarRootModel {
         case .navLifeCurrent:
             lifeStore.focusCurrentWeek()
         case .navLifeView:
+            let previous = viewStore.view
             viewStore.view = .life
+            suspendCalendarGridIfEnteringLife(from: previous)
             rebuildPresentation()
         case .navDayView:
             viewStore.view = .day
@@ -436,6 +438,7 @@ extension NativeCalendarRootModel {
     }
 
     func focusEvent(eventId: String) {
+        clearMonthPickerFocus()
         let type: ViewInteractionEventType =
             focusLayoutCards.first(where: { $0.eventId == eventId })?.isAllDay == true
                 ? .allDay
@@ -501,6 +504,7 @@ extension NativeCalendarRootModel {
             scenario: scenario,
             trackWidth: timeGridState.trackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
+            focusedEdge: focusStore.edge,
             sidebarEditingEventId: sidebarEditingGridEventId(),
             eventJumpHints: eventJumpHintLabels,
             quickTimeSlotHints: quickTimeSlotHintLabels,

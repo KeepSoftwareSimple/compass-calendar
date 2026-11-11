@@ -49,7 +49,9 @@ extension NativeCalendarRootModel {
     }
 
     public func openEventFormForCurrentDraft() {
-        guard draftStore.gridDraft != nil else { return }
+        guard draftStore.gridDraft != nil,
+            draftStore.status.activity != .pastePlace
+        else { return }
         draftStore.setFormOpen(true)
         eventFormFocusedField = .title
         rebuildPresentation()

@@ -1,4 +1,5 @@
 import AppKit
+import CompassData
 
 /// Window accessibility values for XCUITest (grid focus, deep links).
 enum NativeAccessibilityProbes {
@@ -9,12 +10,16 @@ enum NativeAccessibilityProbes {
 
     @MainActor
     static func publishDeepLinkNavigationPath(_ path: String?, on window: NSWindow?) {
-        window?.setAccessibilityLabel(path)
+        guard let window else { return }
+        window.setAccessibilityLabel(path)
+        NSAccessibility.post(element: window, notification: .valueChanged)
     }
 
     @MainActor
     static func prepareNativeRootWindowForXCUITest(_ window: NSWindow?) {
         window?.setAccessibilityIdentifier("Compass")
+        // Wide viewport keeps geometry payload on the window value mirror.
+        guard !UITestLaunchPolicy.meetingLinkWideViewport else { return }
         window?.setAccessibilityValue("")
     }
 
@@ -30,6 +35,8 @@ enum NativeAccessibilityProbes {
     static func publishNativeGridFocusedEventTitle(_ title: String?, on window: NSWindow?) {
         guard let window else { return }
         window.setAccessibilityIdentifier("Compass")
+        // Wide viewport XCTest keeps geometry on the window value mirror.
+        guard !UITestLaunchPolicy.meetingLinkWideViewport else { return }
         if let title, !title.isEmpty {
             window.setAccessibilityValue(title)
         } else {

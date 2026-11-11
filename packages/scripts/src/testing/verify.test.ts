@@ -257,6 +257,32 @@ describe("planVerify macos", () => {
       "test:macos",
     ]);
   });
+
+  it("lists CompassUITests as CI-only when macos-ui-shard jobs run them", () => {
+    const previous = process.env.CI_MACOS_UI_SHARDED;
+    process.env.CI_MACOS_UI_SHARDED = "1";
+    try {
+      const plan = planVerify({
+        packages: ["macos"],
+        playwrightChromiumAvailable: false,
+        xcodeAvailable: true,
+      });
+      expect(plan.checks.map((check) => check.id)).toEqual([
+        "test:macos:packages",
+        "type-check",
+        "lint",
+        "knip",
+      ]);
+      expect(plan.skips).toEqual([]);
+      expect(plan.ciOnly.map((note) => note.id)).toEqual(["test:macos"]);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.CI_MACOS_UI_SHARDED;
+      } else {
+        process.env.CI_MACOS_UI_SHARDED = previous;
+      }
+    }
+  });
 });
 
 describe("selectPackageTestCheck", () => {

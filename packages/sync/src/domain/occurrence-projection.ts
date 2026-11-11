@@ -200,7 +200,7 @@ function dateListInstants(
 // The RRULE's UNTIL as a real instant (a date-only UNTIL is inclusive through
 // its end of day), or null when unbounded or COUNT-bounded. Used only to
 // window RDATEs; rule expansion re-frames UNTIL via floatingRules instead.
-function ruleUntilMs(rules: readonly string[]): number | null {
+export function ruleUntilMs(rules: readonly string[]): number | null {
   const rule = rules.find(isRRuleLine);
   const match = rule ? /UNTIL=(\d{8})(T\d{6})?Z?/i.exec(rule) : null;
   if (!match) return null;
@@ -272,6 +272,16 @@ function localizeInstant(floating: Date, schedule: EventSchedule): Date {
 // replacing) UNTIL. The UNTIL is a real-UTC instant, exactly as a provider
 // emits it — floatingRules re-frames it on expansion — so a thisAndFollowing
 // split truncates the master to just the occurrences before the split point.
+// The instant a truncated series' remainder begins: one second after the
+// master's inclusive UNTIL bound from truncateRulesBefore.
+export function splitInstantAfterTruncation(
+  rules: readonly string[],
+): Date | null {
+  const untilMs = ruleUntilMs(rules);
+  if (untilMs === null) return null;
+  return new Date(untilMs + 1000);
+}
+
 export function truncateRulesBefore(
   rules: readonly string[],
   instant: Date,
