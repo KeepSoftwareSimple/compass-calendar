@@ -2,7 +2,7 @@ export const APPLE_CREDENTIAL_INVALID_MESSAGE =
   "That email or app-specific password was not accepted";
 
 export const APPLE_CREDENTIAL_RATE_LIMIT_MESSAGE =
-  "Too many attempts. Try again in 15 minutes.";
+  "Too many attempts. Try again in 15 min.";
 
 export const APPLE_CREDENTIAL_PRIVACY_NOTE =
   "An app-specific password gives Compass access to your whole iCloud account. Compass uses it only for Calendar and stores it encrypted. You can revoke it any time at appleid.apple.com.";

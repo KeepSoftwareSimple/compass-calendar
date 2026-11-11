@@ -32,7 +32,7 @@ enum UpNextFormatting {
         let minutes = Int((start.timeIntervalSince(now) / 60).rounded())
         if minutes <= 0 { return "Starts now" }
         if minutes < 60 {
-            return "Starts in \(minutes) minute\(minutes == 1 ? "" : "s")"
+            return "Starts in \(minutes) min"
         }
         let hours = Int((Double(minutes) / 60.0).rounded())
         return "Starts in \(hours) hour\(hours == 1 ? "" : "s")"
@@ -43,7 +43,7 @@ enum UpNextFormatting {
             let minutesRemaining = Int((end.timeIntervalSince(now) / 60).rounded())
             if minutesRemaining <= 0 { return "Ending now" }
             if minutesRemaining < 60 {
-                return "Ends in \(minutesRemaining) minute\(minutesRemaining == 1 ? "" : "s")"
+                return "Ends in \(minutesRemaining) min"
             }
             let hours = Int((Double(minutesRemaining) / 60.0).rounded())
             return "Ends in \(hours) hour\(hours == 1 ? "" : "s")"

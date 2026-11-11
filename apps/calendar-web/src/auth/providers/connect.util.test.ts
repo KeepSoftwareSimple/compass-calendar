@@ -26,10 +26,10 @@ describe("formatLastSyncedLabel", () => {
       "Updated just now",
     );
     expect(formatLastSyncedLabel("2026-07-24T11:59:00.000Z", nowMs)).toBe(
-      "Updated 1 minute ago",
+      "Updated 1 min ago",
     );
     expect(formatLastSyncedLabel("2026-07-24T11:45:00.000Z", nowMs)).toBe(
-      "Updated 15 minutes ago",
+      "Updated 15 min ago",
     );
     expect(formatLastSyncedLabel("2026-07-24T10:00:00.000Z", nowMs)).toBe(
       "Updated 2 hours ago",
@@ -41,7 +41,7 @@ describe("formatLastSyncedLabel", () => {
 
   it("formats the mid-sentence Last updated clause", () => {
     expect(formatLastUpdatedClause("2026-07-24T11:45:00.000Z", nowMs)).toBe(
-      "Last updated 15 minutes ago",
+      "Last updated 15 min ago",
     );
   });
 });
@@ -129,7 +129,7 @@ describe("getGoogleSyncStatus", () => {
       ),
     ).toEqual({
       variant: "syncing",
-      text: "Syncing in the background… Last updated 15 minutes ago. This usually finishes on its own.",
+      text: "Syncing in the background… Last updated 15 min ago. This usually finishes on its own.",
     });
   });
 
@@ -240,7 +240,7 @@ describe("getGoogleSyncStatus", () => {
       ),
     ).toEqual({
       variant: "warning",
-      text: "Calendar updates are taking longer than usual. Last updated 15 minutes ago. Try Refresh, or reconnect if this continues.",
+      text: "Calendar updates are taking longer than usual. Last updated 15 min ago. Try Refresh, or reconnect if this continues.",
     });
   });
 
@@ -262,7 +262,7 @@ describe("getGoogleSyncStatus", () => {
       ),
     ).toEqual({
       variant: "warning",
-      text: "Couldn't update your calendar. Last updated 15 minutes ago. Try Refresh, or reconnect if this continues.",
+      text: "Couldn't update your calendar. Last updated 15 min ago. Try Refresh, or reconnect if this continues.",
     });
   });
 
@@ -285,7 +285,7 @@ describe("getGoogleSyncStatus", () => {
       ),
     ).toEqual({
       variant: "error",
-      text: "We couldn't update your calendar. Last updated 15 minutes ago. Reconnect, or email tyler@switchback.tech for help.",
+      text: "We couldn't update your calendar. Last updated 15 min ago. Reconnect, or email tyler@switchback.tech for help.",
     });
   });
 });
