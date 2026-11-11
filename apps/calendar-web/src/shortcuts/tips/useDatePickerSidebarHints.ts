@@ -20,6 +20,11 @@ function popGridHintPair(baseId: GridDatePickerHintId) {
   datePickerHintActions.pop(captionHintId(baseId));
 }
 
+function popGridHintPair(baseId: GridDatePickerHintId) {
+  datePickerHintActions.pop(baseId);
+  datePickerHintActions.pop(captionHintId(baseId));
+}
+
 /**
  * Grid popover date fields (Life birth, event form): sidebar shows the active
  * keyboard contract for typing vs grid vs caption subviews.
