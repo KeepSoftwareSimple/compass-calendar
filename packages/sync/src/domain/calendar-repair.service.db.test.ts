@@ -204,15 +204,16 @@ describe("repairCalendar", () => {
       resource._id,
       now(),
     );
-    const reader = new FakeReader([
-      page([single("holiday")], { nextSyncToken: "holiday:cursor" }),
-    ]);
+    const pages = [
+      page([single("fresh-holiday")], { nextSyncToken: "holiday:cursor" }),
+      page([single("fresh-holiday")], { nextSyncToken: "holiday:cursor" }),
+    ];
+    const reader = new FakeReader(pages);
 
     const result = await pullCalendarChanges(deps(reader), calendar, now);
 
     expect(result.status).toBe("applied");
     if (result.status !== "applied") throw new Error("expected applied");
-    expect(reader.calls).toHaveLength(1);
     expect(reader.calls[0]?.cursor).toBeUndefined();
     expect(result.resource.activeGeneration).toBeGreaterThan(
       resource.activeGeneration,

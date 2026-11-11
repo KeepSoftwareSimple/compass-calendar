@@ -571,13 +571,18 @@ export class ProviderPageApplier {
 
   #isUnchanged(read: ProviderEventRead): boolean {
     const previous = this.#writtenFingerprints.get(read.providerEventId);
-    return previous !== undefined && previous === fingerprintOf(read);
+    return (
+      previous !== undefined && previous === providerEventFingerprint(read)
+    );
   }
 
   #remember(read: ProviderEventRead, record: EventRecord): void {
     this.#importedIds.add(read.providerEventId);
     this.#written.set(read.providerEventId, record);
-    this.#writtenFingerprints.set(read.providerEventId, fingerprintOf(read));
+    this.#writtenFingerprints.set(
+      read.providerEventId,
+      providerEventFingerprint(read),
+    );
   }
 }
 
@@ -591,7 +596,7 @@ function seriesProviderId(read: ProviderEventRead): string {
   return "";
 }
 
-function fingerprintOf(read: ProviderEventRead): string {
+export function providerEventFingerprint(read: ProviderEventRead): string {
   if (read.kind === "cancellation") return `${read.providerVersion}\0`;
   return `${read.providerVersion}\0${read.providerUpdatedAt ?? ""}`;
 }

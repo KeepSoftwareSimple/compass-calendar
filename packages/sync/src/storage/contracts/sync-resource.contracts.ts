@@ -179,11 +179,16 @@ export const SyncResourceRecordSchema = z.strictObject({
   cursorExpiredBackoffUntil: z.date().nullable().default(null),
   // Set when incremental sync tokens never survive after repair (Google derived
   // holiday calendars 410 a freshly issued token within minutes). While set,
-  // pulls use a scheduled full snapshot instead of the stored cursor; the daily
-  // calendar-list pass clears it for a re-probe. A successful cursored pull
-  // also clears it. Defaults tolerate rows written before the field — REQUIRED,
-  // see watchUnsupportedAt above.
+  // pulls use full snapshots on lastFullSnapshotAt spacing instead of the stored
+  // cursor; the daily calendar-list pass clears it for a re-probe. A successful
+  // cursored pull also clears it. Defaults tolerate rows written before the
+  // field — REQUIRED, see watchUnsupportedAt above.
   syncTokenUnsupportedAt: z.date().nullable().default(null),
+  // When the last authoritative full snapshot completed for this resource.
+  // Token-unsupported calendars space pulls on this clock instead of
+  // cursorExpiredBackoffUntil (cleared on entry). Defaults tolerate rows written
+  // before the field — REQUIRED, see watchUnsupportedAt above.
+  lastFullSnapshotAt: z.date().nullable().default(null),
   // Mirrored from provider_calendars.active so stale-resource finders can
   // skip inactive calendars at selection time instead of enqueueing a pull
   // that dispatch then drops. Discovery stamps this when a calendar is

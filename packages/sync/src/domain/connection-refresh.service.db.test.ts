@@ -285,6 +285,65 @@ describe("refreshPrincipalCalendars (db)", () => {
     ).toBe(1);
   });
 
+  it("foreground refresh skips a token-unsupported calendar inside the snapshot interval", async () => {
+    const { resources, jobs, calendars, connections } = deps();
+    const calendar = await seedProviderCalendar(calendars);
+    const resource = await resources.ensure({
+      tenantId: calendar.tenantId,
+      principalId: calendar.principalId,
+      connectionId: calendar.connectionId,
+      resourceKind: "events",
+      calendarId: calendar._id,
+    });
+    await resources.setBootstrapState(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      "ready",
+    );
+    await resources.advanceCursor(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+      "cursor-0",
+      now(),
+    );
+    await resources.markSyncTokenUnsupported(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
+    await resources.markFullSnapshotCompleted(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
+    await resources.markAttempt(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      new Date("2026-08-10T11:59:00.000Z"),
+    );
+
+    const tally = await refreshStalePrincipalCalendars(
+      { resources, jobs, connections },
+      calendar.tenantId,
+      calendar.principalId,
+      new Date("2026-08-10T11:59:30.000Z"),
+      now,
+    );
+
+    expect(tally).toMatchObject({ resources: 0, created: 0, boosted: 0 });
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.jobs)
+        .findOne({ coalescingKey: `incrementalPull:${resource._id}` }),
+    ).toBeNull();
+  });
+
   it("foreground refresh enqueues exactly one job when one calendar is inactive", async () => {
     const { resources, jobs, calendars, connections } = deps();
     const connection = await connections.upsertByProviderAccount({

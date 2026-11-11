@@ -7,6 +7,7 @@ import {
   type ProviderKind,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { SYNC_TOKEN_UNSUPPORTED_FULL_SNAPSHOT_INTERVAL_MS } from "@sync/domain/sync-token-unsupported";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
   CERTIFIED_HISTORY_COVERAGE_VERSION,
@@ -58,10 +59,24 @@ export interface ListStaleEventsOptions {
 // hold-off lapses the resource is eligible again; it was not attempted in the
 // meantime, so it sorts to the front of the next sweep.
 function notHeldOffFilter(now: Date): Record<string, unknown> {
+  const snapshotDueBefore = new Date(
+    now.getTime() - SYNC_TOKEN_UNSUPPORTED_FULL_SNAPSHOT_INTERVAL_MS,
+  );
   return {
-    $or: [
-      { cursorExpiredBackoffUntil: null },
-      { cursorExpiredBackoffUntil: { $lte: now } },
+    $and: [
+      {
+        $or: [
+          { cursorExpiredBackoffUntil: null },
+          { cursorExpiredBackoffUntil: { $lte: now } },
+        ],
+      },
+      {
+        $or: [
+          { syncTokenUnsupportedAt: null },
+          { lastFullSnapshotAt: null },
+          { lastFullSnapshotAt: { $lte: snapshotDueBefore } },
+        ],
+      },
     ],
   };
 }
@@ -272,6 +287,16 @@ export class SyncResourceRepository {
     at: Date,
   ): Promise<void> {
     await this.#patch(tenantId, principalId, id, { lastFullListAt: at });
+  }
+
+  // Stamp the full-snapshot clock token-unsupported calendars use for spacing.
+  async markFullSnapshotCompleted(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    id: string,
+    at: Date,
+  ): Promise<void> {
+    await this.#patch(tenantId, principalId, id, { lastFullSnapshotAt: at });
   }
 
   // Save mid-batch page progress without moving the incremental cursor.

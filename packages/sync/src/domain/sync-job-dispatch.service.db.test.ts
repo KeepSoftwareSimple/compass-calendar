@@ -639,16 +639,13 @@ describe("dispatchSyncJob", () => {
     );
     expect(stored?.syncTokenUnsupportedAt).toEqual(now());
     expect(stored?.cursorExpiredStreak).toBe(0);
+    expect(stored?.lastFullSnapshotAt).toEqual(now());
     const feed = await storage
       .db()
       .collection(SYNC_COLLECTIONS.invalidations)
       .find({ tenantId: calendar.tenantId, principalId: calendar.principalId })
       .toArray();
-    expect(feed).toHaveLength(1);
-    expect(feed[0]?.invalidation).toMatchObject({
-      kind: "calendar",
-      calendarId: calendar._id,
-    });
+    expect(feed).toHaveLength(0);
   });
 
   it("re-probes incremental tokens after a daily calendar-list pass clears the marker", async () => {
@@ -684,6 +681,133 @@ describe("dispatchSyncJob", () => {
     );
     expect(stored?.syncTokenUnsupportedAt).toBeNull();
     expect(stored?.syncCursor).toBe("cursor-healed");
+  });
+
+  it("drops a token-unsupported pull inside the full-snapshot interval", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedResource(calendar, "cursor-0");
+    await resources.markSyncTokenUnsupported(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
+    await resources.markFullSnapshotCompleted(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
+    const reader = new FakeReader([
+      page([single("holiday")], { nextSyncToken: "cursor-full" }),
+    ]);
+    const outcome = await dispatchSyncJob(
+      deps(reader),
+      jobFor(resource, "incrementalPull"),
+      now,
+    );
+    expect(outcome.result).toBe("drop");
+    expect(reader.calls).toHaveLength(0);
+  });
+
+  it("runs a token-unsupported full snapshot after the interval lapses", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedResource(calendar, "cursor-0");
+    const markedAt = new Date(now().getTime() - 7 * 60 * 60_000);
+    await resources.markSyncTokenUnsupported(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      markedAt,
+    );
+    await resources.markFullSnapshotCompleted(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      markedAt,
+    );
+    const holidayPage = page([single("holiday")], {
+      nextSyncToken: "cursor-full",
+    });
+    const reader = new FakeReader([holidayPage, holidayPage]);
+    const outcome = await dispatchSyncJob(
+      deps(reader),
+      jobFor(resource, "incrementalPull"),
+      now,
+    );
+    expect(outcome.result).toBe("done");
+    expect(reader.calls[0]?.cursor).toBeUndefined();
+    const stored = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(stored?.lastFullSnapshotAt).toEqual(now());
+  });
+
+  it("does not invalidate when a token-unsupported snapshot is unchanged", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedResource(calendar, "cursor-0");
+    await events.upsertByProviderIdentity({
+      tenantId: calendar.tenantId,
+      principalId: calendar.principalId,
+      origin: "provider",
+      calendarId: calendar._id,
+      clientEventId: null,
+      connectionId: calendar.connectionId,
+      providerEventId: "holiday" as never,
+      providerVersion: "etag-holiday" as never,
+      providerUpdatedAt: null,
+      providerMetadata: null,
+      deliveryState: null,
+      content: {
+        title: "holiday",
+        description: "",
+        location: null,
+        organizer: null,
+        attendees: [],
+        conference: null,
+      },
+      schedule: single("holiday").schedule,
+      recurrence: { kind: "single" },
+      lifecycleState: "active",
+      generation: 0,
+      confirmedAt: now(),
+    });
+    const beforeGeneration = resource.activeGeneration;
+    await resources.markSyncTokenUnsupported(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      new Date(now().getTime() - 7 * 60 * 60_000),
+    );
+    await resources.markFullSnapshotCompleted(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      new Date(now().getTime() - 7 * 60 * 60_000),
+    );
+    const reader = new FakeReader([
+      page([single("holiday")], { nextSyncToken: "cursor-full" }),
+    ]);
+    const outcome = await dispatchSyncJob(
+      deps(reader),
+      jobFor(resource, "incrementalPull"),
+      now,
+    );
+    expect(outcome.result).toBe("done");
+    const stored = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(stored?.activeGeneration).toBe(beforeGeneration);
+    const feed = await storage
+      .db()
+      .collection(SYNC_COLLECTIONS.invalidations)
+      .find({ tenantId: calendar.tenantId, principalId: calendar.principalId })
+      .toArray();
+    expect(feed).toHaveLength(0);
   });
 
   it("settles a pull inside the hold-off without touching the provider", async () => {

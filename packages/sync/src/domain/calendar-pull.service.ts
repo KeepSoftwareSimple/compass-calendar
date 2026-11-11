@@ -1,3 +1,4 @@
+import { probeFullSnapshotUnchanged } from "@sync/domain/calendar-full-snapshot.service";
 import { repairCalendar } from "@sync/domain/calendar-repair.service";
 import { toColorLabelMap } from "@sync/domain/color-label-map";
 import { listEventPageWithAuthRetry } from "@sync/domain/list-event-page-with-auth-retry";
@@ -159,12 +160,62 @@ export async function pullCalendarChanges(
   }
 
   if (resource.syncTokenUnsupportedAt !== null) {
+    const completedAt = now();
+    const unchanged = await probeFullSnapshotUnchanged(
+      deps,
+      calendar,
+      resource,
+    );
+    if (unchanged.unchanged) {
+      await deps.resources.advanceCursor(
+        resource.tenantId,
+        resource.principalId,
+        resource._id,
+        unchanged.syncCursor,
+        completedAt,
+      );
+      await deps.resources.markFullSnapshotCompleted(
+        resource.tenantId,
+        resource.principalId,
+        resource._id,
+        completedAt,
+      );
+      const updated =
+        (await deps.resources.findById(
+          resource.tenantId,
+          resource.principalId,
+          resource._id,
+        )) ?? resource;
+      const served = await deps.resources.clearChangeNotifiedIfUnchanged(
+        resource.tenantId,
+        resource.principalId,
+        resource._id,
+        notifiedAtStart,
+      );
+      return {
+        status: "applied",
+        resource: updated,
+        changed: 0,
+        deleted: 0,
+        skipped: 0,
+        changedDuringPull: !served,
+        pushLatencyMs: notifiedAtStart
+          ? now().getTime() - notifiedAtStart.getTime()
+          : null,
+      };
+    }
     const snapshot = await repairCalendar(deps, calendar, now);
     if (snapshot.status !== "repaired")
       throw new ProviderEventReadError(
         "transient",
         "Calendar snapshot did not complete",
       );
+    await deps.resources.markFullSnapshotCompleted(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
     const served = await deps.resources.clearChangeNotifiedIfUnchanged(
       resource.tenantId,
       resource.principalId,
