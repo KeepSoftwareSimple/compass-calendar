@@ -596,7 +596,18 @@ function seriesProviderId(read: ProviderEventRead): string {
   return "";
 }
 
+export function normalizeProviderUpdatedAtForFingerprint(
+  value: Date | string | null | undefined,
+): string {
+  if (value == null || value === "") return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString();
+}
+
 export function providerEventFingerprint(read: ProviderEventRead): string {
   if (read.kind === "cancellation") return `${read.providerVersion}\0`;
-  return `${read.providerVersion}\0${read.providerUpdatedAt ?? ""}`;
+  return `${read.providerVersion}\0${normalizeProviderUpdatedAtForFingerprint(
+    read.providerUpdatedAt,
+  )}`;
 }

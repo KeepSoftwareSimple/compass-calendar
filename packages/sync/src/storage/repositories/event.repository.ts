@@ -22,6 +22,7 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
+import { normalizeProviderUpdatedAtForFingerprint } from "@sync/domain/provider-page-applier";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
   EventReadSchema,
@@ -122,12 +123,11 @@ export class EventRepository {
         | null
         | undefined;
       if (!providerEventId) continue;
-      const updatedAt = row["providerUpdatedAt"];
       fingerprints.set(
         providerEventId,
-        `${(row["providerVersion"] as string | null | undefined) ?? ""}\0${
-          updatedAt instanceof Date ? updatedAt.toISOString() : ""
-        }`,
+        `${(row["providerVersion"] as string | null | undefined) ?? ""}\0${normalizeProviderUpdatedAtForFingerprint(
+          row["providerUpdatedAt"] as Date | string | null | undefined,
+        )}`,
       );
     }
     return fingerprints;
