@@ -18,11 +18,16 @@ final class LifeBirthDatePickerTests: XCTestCase {
         let picker = app.descendants(matching: .any)["compass-life-birth-date-picker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
         picker.buttons["Choose month and year"].click()
-        XCTAssertTrue(picker.staticTexts["Select year"].waitForExistence(timeout: 3))
-        // The year page is a 12-year grid; step back until 1990 is on it.
-        for _ in 0 ..< 4 where !picker.buttons["1990"].exists {
+        XCTAssertTrue(picker.buttons["Previous years"].waitForExistence(timeout: 5))
+        let yearCaption = picker.staticTexts["Years 2021 to 2040"]
+        XCTAssertTrue(yearCaption.waitForExistence(timeout: 5))
+        XCTAssertTrue(picker.buttons["2021"].exists)
+        XCTAssertTrue(picker.buttons["2040"].exists)
+        // Twenty-year react-aligned pages; step back until 1990 is on it.
+        for _ in 0 ..< 6 where !picker.buttons["1990"].exists {
             picker.buttons["Previous years"].click()
         }
+        XCTAssertTrue(picker.buttons["1990"].waitForExistence(timeout: 3))
         picker.buttons["1990"].click()
         XCTAssertTrue(picker.staticTexts["Select month, 1990"].waitForExistence(timeout: 3))
         picker.buttons["Jun"].click()
@@ -32,6 +37,28 @@ final class LifeBirthDatePickerTests: XCTestCase {
 
         XCTAssertFalse(picker.waitForExistence(timeout: 2))
         XCTAssertEqual(birth.value as? String, "Jun 15, 1990")
+        XCTAssertTrue(
+            app.descendants(matching: .any)["compass-life-birth-date-focused"].waitForExistence(timeout: 3))
+    }
+
+    @MainActor
+    func testBirthDatePickerEscapeRestoresBirthFieldFocus() {
+        let app = XCUIApplication.compassUITest()
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
+        app.launch()
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        window.typeKey("l", modifierFlags: [])
+        let birth = window.textFields["Date of birth"]
+        XCTAssertTrue(birth.waitForExistence(timeout: 10))
+        birth.click()
+        window.buttons["Open calendar"].click()
+        let picker = app.descendants(matching: .any)["compass-life-birth-date-picker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        birth.typeKey(.escape, modifierFlags: [])
+        XCTAssertFalse(picker.waitForExistence(timeout: 2))
+        XCTAssertTrue(
+            app.descendants(matching: .any)["compass-life-birth-date-focused"].waitForExistence(timeout: 3))
     }
 
     @MainActor
