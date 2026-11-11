@@ -21,7 +21,7 @@ describe("formatDocumentTitle", () => {
         isCurrentEvent: false,
         viewLabel: "Wed Aug 6",
       }),
-    ).toBe(`In 12 min: Standup - ${DOCUMENT_TITLE_BRAND}`);
+    ).toBe(`In 12m: Standup - ${DOCUMENT_TITLE_BRAND}`);
   });
 
   it("shows Now for an ongoing event", () => {
@@ -77,7 +77,7 @@ describe("formatDocumentTitle", () => {
         isCurrentEvent: false,
         viewLabel: "Wed Aug 6",
       }),
-    ).toBe(`In 5 min: Event - ${DOCUMENT_TITLE_BRAND}`);
+    ).toBe(`In 5m: Event - ${DOCUMENT_TITLE_BRAND}`);
   });
 });
 

@@ -120,7 +120,7 @@ describe("useDocumentTitle", () => {
 
     renderHook(() => useDocumentTitle());
 
-    expect(document.title).toBe(`In 12 min: Standup - ${DOCUMENT_TITLE_BRAND}`);
+    expect(document.title).toBe(`In 12m: Standup - ${DOCUMENT_TITLE_BRAND}`);
   });
 
   it("restores the default title on unmount", () => {
