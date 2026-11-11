@@ -656,7 +656,7 @@ describe("self-host helper", () => {
       "rolling-backend.drain-probe-failure.test.sh",
     );
     chmodSync(scriptPath, 0o755);
-    const proc = Bun.spawn(["bash", scriptPath], {
+    const proc = Bun.spawn(["sh", scriptPath], {
       cwd: repoRoot,
       stderr: "pipe",
       stdout: "pipe",
