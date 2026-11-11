@@ -1,4 +1,4 @@
-import { type Db } from "mongodb";
+import { type Db, type Filter } from "mongodb";
 import { type DateTime } from "@core/types/domain-primitives";
 import {
   type PrincipalId,
@@ -14,9 +14,16 @@ import {
   EventReadSchema,
   type EventRecord,
 } from "@sync/storage/contracts/event.contracts";
+import { hasCertifiedHistoryCoverage } from "@sync/storage/contracts/sync-resource.contracts";
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
+
+/**
+ * Records per page. Small enough that one page stays well inside the caller's
+ * deadline; the caller pages until `nextCursor` is null.
+ */
+const PAGE_SIZE = 25;
 
 // Read canonical history in small pages; never widen the interactive horizon.
 export async function readReflectionPage(
@@ -27,20 +34,18 @@ export async function readReflectionPage(
   const calendars = await new ProviderCalendarRepository(db).listByPrincipal(
     scope.tenantId,
     scope.principalId,
-    { activeOnly: true },
   );
-  const active = new Set(calendars.map((calendar) => String(calendar._id)));
+  const active = new Set(
+    calendars
+      .filter((calendar) => calendar.active)
+      .map((calendar) => String(calendar._id)),
+  );
+  const knownProvider = new Set(
+    calendars.map((calendar) => String(calendar._id)),
+  );
   const resources = await new SyncResourceRepository(db).listEventsByPrincipal(
     scope.tenantId,
     scope.principalId,
-  );
-  const knownProvider = new Set(
-    (
-      await new ProviderCalendarRepository(db).listByPrincipal(
-        scope.tenantId,
-        scope.principalId,
-      )
-    ).map((calendar) => String(calendar._id)),
   );
   const calendarIds = input.calendarIds.filter(
     (id) => !knownProvider.has(id) || active.has(id),
@@ -48,12 +53,13 @@ export async function readReflectionPage(
   const relevant = calendars.filter((calendar) =>
     calendarIds.includes(calendar._id),
   );
+  // A staged refresh retains the already certified active archive. Coverage
+  // changes only when a completed pass records its actual skipped-read result.
   const historyComplete = relevant.every((calendar) =>
     resources.some(
       (resource) =>
         resource.calendarId === calendar._id &&
-        resource.historyCoverageVersion === 1 &&
-        resource.activeGeneration === resource.importGeneration &&
+        hasCertifiedHistoryCoverage(resource) &&
         resource.bootstrapState === "ready",
     ),
   );
@@ -69,18 +75,72 @@ export async function readReflectionPage(
     .sort({ "schedule.start": 1 })
     .limit(1)
     .next();
-  const rows = input.windows.length
-    ? await collection
-        .find({
-          ...filter,
-          ...(input.cursor
-            ? { _id: { $gt: input.cursor as EventRecord["_id"] } }
-            : {}),
-        })
-        .sort({ _id: 1 })
-        .limit(25)
-        .toArray()
-    : [];
+  // Canonical history can contain decades of unrelated single events. Keep
+  // masters for historical recurrence expansion, but only read single/exception
+  // schedules that could overlap a requested window. Two days of padding keep
+  // these string date comparisons conservative across all-day dates and offsets;
+  // projectOccurrences remains the exact overlap authority.
+  const bounds = input.windows.map((window) => ({
+    start: new Date(
+      Math.min(Date.parse(window.startDate), Date.parse(window.start)) -
+        2 * 86_400_000,
+    )
+      .toISOString()
+      .slice(0, 10),
+    end: new Date(
+      Math.max(Date.parse(window.endDate), Date.parse(window.end)) +
+        2 * 86_400_000,
+    )
+      .toISOString()
+      .slice(0, 10),
+  }));
+  const latestEnd = bounds
+    .map((bound) => bound.end)
+    .sort()
+    .at(-1);
+  const rows: EventRecord[] = [];
+  if (latestEnd) {
+    // Separate masters from scheduled facts so each query can bound the
+    // kind/start index. One union with a page-index hint scans the whole
+    // archive for sparse years; unhinted unions spend the deadline planning.
+    const candidates: Filter<EventRecord>[] = [
+      {
+        "recurrence.kind": "seriesMaster",
+        "schedule.start": { $lt: latestEnd },
+      },
+      {
+        "recurrence.kind": { $in: ["single", "exception"] },
+        $or: bounds.map((bound) => ({
+          "schedule.start": { $gte: bound.start, $lt: bound.end },
+        })),
+      },
+    ];
+    const pages = await Promise.all(
+      candidates.map((candidate) =>
+        collection
+          .find({
+            ...filter,
+            ...candidate,
+            ...(input.cursor
+              ? { _id: { $gt: input.cursor as EventRecord["_id"] } }
+              : {}),
+          })
+          .hint("reflection_principal_kind_start")
+          .sort({ _id: 1 })
+          .limit(PAGE_SIZE)
+          .toArray(),
+      ),
+    );
+    // Both disjoint streams share the same exclusive cursor, so their first
+    // PAGE_SIZE rows each contain the union's first PAGE_SIZE. UTF-8
+    // comparison matches Mongo's ID order.
+    rows.push(
+      ...pages
+        .flat()
+        .sort((a, b) => Buffer.compare(Buffer.from(a._id), Buffer.from(b._id)))
+        .slice(0, PAGE_SIZE),
+    );
+  }
   const records = rows.map((row) => EventReadSchema.parse(row));
   const exceptions = await new EventRepository(
     db,
@@ -90,6 +150,18 @@ export async function readReflectionPage(
     records
       .filter((record) => record.recurrence.kind === "seriesMaster")
       .map((record) => record._id),
+  );
+  const masters = await new EventRepository(db).findByIds(
+    scope.tenantId,
+    scope.principalId,
+    records.flatMap((record) =>
+      record.recurrence.kind === "exception"
+        ? [record.recurrence.seriesId]
+        : [],
+    ),
+  );
+  const recurrenceById = new Map(
+    masters.map((master) => [master._id, master.recurrence]),
   );
   const selfEmails = new Set(
     input.selfEmails.map((email) => email.toLowerCase()),
@@ -145,6 +217,11 @@ export async function readReflectionPage(
           title: event.customizations?.title ?? event.content.title,
           schedule: occurrence.schedule,
           recurring: event.recurrence.kind !== "single",
+          routine: isRoutineRecurrence(
+            event.recurrence.kind === "exception"
+              ? recurrenceById.get(event.recurrence.seriesId)
+              : event.recurrence,
+          ),
           uid:
             event.providerMetadata?.["icalUid"] ??
             event.providerMetadata?.["uid"] ??
@@ -157,9 +234,24 @@ export async function readReflectionPage(
   const last = records.at(-1);
   return {
     events,
-    nextCursor: records.length === 25 && last ? last._id : null,
+    nextCursor: records.length === PAGE_SIZE && last ? last._id : null,
     oldestYear: oldest ? Number(oldest.schedule.start.slice(0, 4)) : null,
     historyComplete,
     truncated,
   };
+}
+
+function isRoutineRecurrence(
+  recurrence: EventRecord["recurrence"] | undefined,
+) {
+  // Missing series metadata is treated conservatively for an exception.
+  if (!recurrence) return true;
+  return (
+    recurrence.kind === "seriesMaster" &&
+    recurrence.rules.some((rule) =>
+      /(?:^|[;:])FREQ=(?:SECONDLY|MINUTELY|HOURLY|DAILY|WEEKLY)(?:;|$)/i.test(
+        rule,
+      ),
+    )
+  );
 }

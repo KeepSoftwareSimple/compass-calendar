@@ -94,6 +94,7 @@ const adminPageGetLimiter = adminLimiter("booking:admin-get", 60);
 const adminPageStatusGetLimiter = adminLimiter("booking:admin-status", 60);
 const adminPagePutLimiter = adminLimiter("booking:admin-put", 20);
 const adminNewMeetingsClaimLimiter = adminLimiter("booking:admin-claim", 20);
+const adminGuestRsvpClaimLimiter = adminLimiter("booking:guest-rsvp-claim", 20);
 const adminOwnerUpcomingLimiter = adminLimiter("booking:owner-upcoming", 60);
 const adminOwnerCancelLimiter = adminLimiter("booking:owner-cancel", 20);
 
@@ -114,6 +115,14 @@ export class BookingRoutes extends CommonRoutesConfig {
       .route(`/api/booking/page/new-meetings/claim`)
       .all(verifySession())
       .post(adminNewMeetingsClaimLimiter, bookingController.claimNewMeetings);
+
+    this.app
+      .route(`/api/booking/page/guest-rsvp-replies/claim`)
+      .all(verifySession())
+      .post(
+        adminGuestRsvpClaimLimiter,
+        bookingController.claimGuestRsvpReplies,
+      );
 
     this.app
       .route(`/api/booking/page/status`)

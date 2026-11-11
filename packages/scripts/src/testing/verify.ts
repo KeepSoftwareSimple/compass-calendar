@@ -1,5 +1,8 @@
+import { BASELINE_CHECKS, runBaseline } from "./verify-baseline";
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 /**
  * Local required-check subset for AI coding loops.
@@ -17,6 +20,12 @@ import { existsSync } from "node:fs";
  * the app and CompassUI) where Xcode is installed; elsewhere, Linux included,
  * the summary names both as CI-only (test-macos.yml) and the verdict is
  * unaffected.
+ *
+ * When test:web, test:a11y, or test:e2e fails, the failing files are rerun
+ * on the branch and on origin/main in a temporary git worktree (see
+ * verify-baseline.ts). A check whose failures are all PRE-EXISTING (fail on
+ * main too) or FLAKY (pass on the rerun) no longer fails the verdict; only
+ * NEW failures do. The summary lists each group for the PR body.
  *
  * The last line is always machine-readable: `VERDICT: PASS`, `VERDICT:
  * INCOMPLETE` (every selected check passed but a Playwright check was
@@ -77,11 +86,19 @@ export type Verdict = "PASS" | "INCOMPLETE" | "FAIL";
 const MACOS_CI_ONLY_REASON =
   "Swift/AppKit builds run in CI only (test-macos.yml); no Xcode on this machine";
 const MACOS_PACKAGES_CI_ONLY_REASON =
-  "swift test on CompassKit and CompassData runs in CI only (test-macos.yml swift-packages job); no Xcode on this machine";
+  "swift test on CompassData and CompassUI runs in CI only (test-macos.yml swift-packages; CompassKit duplicates macos-build); no Xcode on this machine";
 const MACOS_PACKAGE_CHECKS: Array<{ id: string; cmd: string[] }> = [
   { id: "test:macos:packages", cmd: ["bun", "run", "test:macos:packages"] },
   { id: "test:macos", cmd: ["bun", "run", "test:macos"] },
 ];
+const MACOS_UI_SHARDED_CI_REASON =
+  "CompassUITests run in parallel macos-ui-shard CI jobs (test-macos.yml)";
+
+function macosUiTestsShardedInCi(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env["CI_MACOS_UI_SHARDED"] === "1";
+}
 const FAST_TIER_REASON =
   "no *.db.test.ts and no /storage/ or /repositories/ paths";
 
@@ -91,6 +108,9 @@ export type GitCommands = {
   mergeBase(a: string, b: string): string | null;
   diffNameOnly(args: string[]): string[];
   untrackedNames(): string[];
+  /** Check out `ref` detached in a new temporary directory; returns it. */
+  addWorktree(ref: string): string;
+  removeWorktree(dir: string): void;
 };
 
 export type SpawnResult = {
@@ -104,6 +124,7 @@ export type SpawnFn = (
   options?: {
     env?: Record<string, string | undefined>;
     stdio?: "inherit" | "pipe";
+    cwd?: string;
   },
 ) => SpawnResult | Promise<SpawnResult>;
 
@@ -272,6 +293,7 @@ export function planVerify(input: {
   const files = input.files ?? [];
   const ciOnly: PlannedSkip[] = [];
   const checks: PlannedCheck[] = [];
+  const skips: PlannedSkip[] = [];
   for (const pkg of packages) {
     if (pkg === "macos") {
       if (!input.xcodeAvailable) {
@@ -282,6 +304,13 @@ export function planVerify(input: {
         continue;
       }
       for (const macosCheck of MACOS_PACKAGE_CHECKS) {
+        if (macosCheck.id === "test:macos" && macosUiTestsShardedInCi()) {
+          ciOnly.push({
+            id: macosCheck.id,
+            reason: MACOS_UI_SHARDED_CI_REASON,
+          });
+          continue;
+        }
         checks.push({ id: macosCheck.id, cmd: macosCheck.cmd });
       }
       continue;
@@ -293,7 +322,6 @@ export function planVerify(input: {
   checks.push({ id: "lint", cmd: ["bun", "run", "lint"] });
   checks.push({ id: "knip", cmd: ["bun", "run", "knip"] });
 
-  const skips: PlannedSkip[] = [];
   const playwrightSelected = packages.includes("web");
 
   if (playwrightSelected) {
@@ -380,6 +408,23 @@ function defaultGit(): GitCommands {
         execGit(["ls-files", "--others", "--exclude-standard"]),
       );
     },
+    addWorktree(ref: string): string {
+      const dir = mkdtempSync(join(tmpdir(), "compass-verify-baseline-"));
+      try {
+        execGit(["worktree", "add", "--detach", dir, ref]);
+      } catch (error) {
+        rmSync(dir, { recursive: true, force: true });
+        throw error;
+      }
+      return dir;
+    },
+    removeWorktree(dir: string): void {
+      try {
+        execGit(["worktree", "remove", "--force", dir]);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
   };
 }
 
@@ -387,10 +432,11 @@ function defaultSpawn(): SpawnFn {
   return (cmd, options) => {
     const inherit = options?.stdio === "inherit";
     const env = options?.env ?? { ...process.env };
+    const cwd = options?.cwd ?? process.cwd();
     if (inherit) {
       const result = Bun.spawnSync({
         cmd,
-        cwd: process.cwd(),
+        cwd,
         env,
         stderr: "inherit",
         stdin: "inherit",
@@ -405,7 +451,7 @@ function defaultSpawn(): SpawnFn {
     // Concurrent checks need overlapping processes; spawnSync would serialize.
     const proc = Bun.spawn({
       cmd,
-      cwd: process.cwd(),
+      cwd,
       env,
       stderr: "pipe",
       stdin: "ignore",
@@ -562,6 +608,7 @@ export async function runVerify(
   }
 
   const failed: string[] = [];
+  const failedOutput = new Map<string, string>();
   const skips = [...plan.skips];
   const executed: string[] = [];
 
@@ -573,6 +620,7 @@ export async function runVerify(
         return;
       }
       failed.push(check.id);
+      failedOutput.set(check.id, combinedSpawnOutput(result));
       return;
     }
     executed.push(check.id);
@@ -594,10 +642,10 @@ export async function runVerify(
     const result = await Promise.resolve(
       spawn(check.cmd, {
         env: spawnEnvFor(check.id),
-        stdio: isPlaywrightCheck(check.id) ? "pipe" : "inherit",
+        stdio: capturesOutput(check.id) ? "pipe" : "inherit",
       }),
     );
-    if (isPlaywrightCheck(check.id)) {
+    if (capturesOutput(check.id)) {
       if (result.stdout) process.stdout.write(result.stdout);
       if (result.stderr) process.stderr.write(result.stderr);
     }
@@ -623,6 +671,37 @@ export async function runVerify(
     }
   }
 
+  const baselineCandidates = failed.filter((id) => id in BASELINE_CHECKS);
+  let baselineReport: string[] = [];
+  if (baselineCandidates.length > 0 && collected.mergeBase) {
+    const outcome = await runBaseline(
+      {
+        run: async (checkId, cmd, cwd) => {
+          const result = await Promise.resolve(
+            spawn(cmd, { env: spawnEnvFor(checkId), stdio: "pipe", cwd }),
+          );
+          return {
+            exitCode: result.exitCode,
+            output: combinedSpawnOutput(result),
+          };
+        },
+        addWorktree: (ref) => git.addWorktree(ref),
+        removeWorktree: (dir) => git.removeWorktree(dir),
+        log: (message) => log.log(message),
+      },
+      collected.mergeBase.ref,
+      baselineCandidates.map((checkId) => ({
+        checkId,
+        output: failedOutput.get(checkId) ?? "",
+      })),
+    );
+    baselineReport = outcome.report;
+    for (const id of outcome.cleared) {
+      failed.splice(failed.indexOf(id), 1);
+      executed.push(`${id} (baseline: no new failures)`);
+    }
+  }
+
   const ciParityComplete = skips.length === 0;
 
   log.log("\nSummary");
@@ -641,6 +720,10 @@ export async function runVerify(
     log.log(
       `Checks CI-only: ${plan.ciOnly.map((note) => `${note.id} (${note.reason})`).join("; ")}`,
     );
+  }
+
+  if (baselineReport.length > 0) {
+    log.log(`\n${baselineReport.join("\n")}`);
   }
 
   if (failed.length > 0) {
@@ -679,6 +762,11 @@ function splitLines(output: string): string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+/** Checks whose output verify reads: Playwright and baseline candidates. */
+function capturesOutput(checkId: string): boolean {
+  return isPlaywrightCheck(checkId) || checkId in BASELINE_CHECKS;
 }
 
 function spawnEnvFor(checkId: string): Record<string, string | undefined> {

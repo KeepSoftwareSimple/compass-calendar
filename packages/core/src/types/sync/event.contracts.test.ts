@@ -14,6 +14,8 @@ import {
 import {
   EventInstanceListQuerySchema,
   EventInstanceListResponseSchema,
+  NullableProviderEventVersionReadSchema,
+  nullableProviderEventVersionFromBoundary,
   SyncEventCalendarIdSchema,
   SyncEventInstanceSchema,
   SyncEventOwnershipSchema,
@@ -27,6 +29,35 @@ import {
 } from "@core/types/sync/identity.contracts";
 
 const objectId = () => faker.database.mongodbObjectId();
+
+describe("nullableProviderEventVersionFromBoundary", () => {
+  it("maps empty and whitespace-only strings to null", () => {
+    expect(nullableProviderEventVersionFromBoundary("")).toBeNull();
+    expect(nullableProviderEventVersionFromBoundary("   ")).toBeNull();
+    expect(nullableProviderEventVersionFromBoundary(null)).toBeNull();
+    expect(nullableProviderEventVersionFromBoundary(undefined)).toBeNull();
+  });
+
+  it("trims and keeps non-empty versions", () => {
+    expect(nullableProviderEventVersionFromBoundary("  etag-1  ")).toBe(
+      "etag-1",
+    );
+  });
+});
+
+describe("NullableProviderEventVersionReadSchema", () => {
+  it("maps empty and whitespace-only strings to null", () => {
+    expect(NullableProviderEventVersionReadSchema.parse("")).toBeNull();
+    expect(NullableProviderEventVersionReadSchema.parse("   ")).toBeNull();
+    expect(NullableProviderEventVersionReadSchema.parse(null)).toBeNull();
+  });
+
+  it("trims and keeps non-empty versions", () => {
+    expect(NullableProviderEventVersionReadSchema.parse("  etag-1  ")).toBe(
+      "etag-1",
+    );
+  });
+});
 
 const timedSchedule = {
   kind: "timed",

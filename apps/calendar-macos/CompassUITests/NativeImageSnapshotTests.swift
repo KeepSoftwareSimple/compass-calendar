@@ -36,6 +36,11 @@ final class NativeImageSnapshotTests: XCTestCase {
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         window.typeKey("l", modifierFlags: [])
+        let intro = window.descendants(matching: .any)["compass-native-life-view-intro-modal"]
+        if intro.waitForExistence(timeout: 2) {
+            window.typeKey(.return, modifierFlags: [])
+            XCTAssertTrue(intro.waitForNonExistence(timeout: 8))
+        }
         XCTAssertTrue(window.descendants(matching: .any)["compass-native-life-grid"].waitForExistence(timeout: 8))
         XCTAssertTrue(window.textFields["Date of birth"].exists)
         XCTAssertTrue(window.textFields["Age of Death"].exists)

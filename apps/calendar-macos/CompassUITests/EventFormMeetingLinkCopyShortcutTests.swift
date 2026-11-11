@@ -28,8 +28,8 @@ final class EventFormMeetingLinkCopyShortcutTests: XCTestCase {
         let namedConference = form.links["Google Meet"]
         XCTAssertTrue(namedConference.exists, "The meeting URL must expose its visible provider label as a link")
         let viewport = form.scrollViews.firstMatch.frame
+        XCTAssertGreaterThan(namedConference.frame.width, 0)
         XCTAssertGreaterThan(namedConference.frame.height, 0)
-        XCTAssertTrue(viewport.contains(namedConference.frame), "The meeting link must remain inside the form viewport")
 
         let copyByIdentifier = form.buttons["compass-event-form-meeting-link-copy"]
         let copyByLabel = form.buttons["copy meeting link"]
@@ -38,7 +38,21 @@ final class EventFormMeetingLinkCopyShortcutTests: XCTestCase {
 
         XCTAssertTrue(copyByLabel.exists)
         XCTAssertGreaterThan(copyByLabel.frame.height, 0)
-        XCTAssertTrue(viewport.contains(copyByLabel.frame), "The copy action must remain visible beside the link")
+        let keycaps = form.descendants(matching: .any)["compass-event-form-meeting-link-copy-keycaps"]
+        XCTAssertTrue(keycaps.waitForExistence(timeout: 4), "Mod+Shift+L hint chips must be visible to UI tests")
+        let lKeycap = form.descendants(matching: .any)["compass-event-form-meeting-link-keycap-l"]
+        XCTAssertTrue(lKeycap.exists, "The taught L keycap must mirror web l-icon")
+        for (label, element) in [
+            ("Meeting link", namedConference),
+            ("Copy control", copyByLabel),
+            ("Shortcut keycaps", keycaps),
+            ("L keycap", lKeycap),
+        ] {
+            MeetingLinkViewportXCUITestSupport.assertFullyVisibleInScrollViewport(
+                element, viewport: viewport, label: label)
+            MeetingLinkViewportXCUITestSupport.assertFullyVisibleInWindow(element, window: window, label: label)
+        }
+
         let evidence = XCTAttachment(screenshot: window.screenshot())
         evidence.name = "Meeting link label, copy action and visible shortcut hints"
         evidence.lifetime = .keepAlways

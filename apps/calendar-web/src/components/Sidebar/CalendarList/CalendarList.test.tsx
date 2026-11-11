@@ -261,6 +261,32 @@ describe("CalendarList", () => {
     ).toBeInTheDocument();
   });
 
+  it("uses the Compass row instead of the anonymous trial row when signed in without a profile email", () => {
+    const local = makeCalendar({
+      name: "Compass",
+      provider: "local",
+      isPrimary: true,
+    });
+    const work = makeCalendar({
+      name: "Work",
+      accountEmail: "tyler@switchback.tech",
+    });
+
+    mockUserEmail = undefined;
+    renderCalendarList([work, local], {
+      authenticated: true,
+      connections: [makeConnection("tyler@switchback.tech")],
+    });
+
+    expect(screen.getByText("Compass")).toBeInTheDocument();
+    expect(screen.queryByText("On this device only")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Start your free trial to save this calendar",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the Compass calendar's real name when signed in but not connected", () => {
     // Signed-in users who haven't connected Google yet see an email heading
     // with a single local Compass row. The row shows the calendar's real name

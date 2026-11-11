@@ -2,7 +2,33 @@ import CompassKit
 import XCTest
 
 final class ProjectRecurringEditTests: XCTestCase {
-    private let seriesId = EventId(rawValue: "series-master-id")
+    private let seriesId = EventId(rawValue: "664e21f9a6b3f0b1c2d3e4f5")
+
+    func testThisAndFollowingSplitRepointsFollowingOccurrenceIds() throws {
+        EffectiveTimeZone.identifier = "UTC"
+        let master = try seriesBase()
+        let events = try [occurrence(day: 5), occurrence(day: 6), occurrence(day: 7)]
+        let original = events[1]
+        let edited = copyEvent(
+            original,
+            content: .details(.init(description: "", kind: "details", title: "Split"))
+        )
+        let splitAt = "2026-07-06T16:00:00.000Z"
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(seriesId: seriesId, splitAt: splitAt)
+
+        let projection = ProjectRecurringEdit.projectRecurringEdit(
+            .init(
+                scope: .thisAndFollowing,
+                edited: edited,
+                original: original,
+                seriesEvents: events,
+                seriesMaster: master
+            )
+        )
+
+        let followingId = "\(remainderMasterEventId.rawValue)::2026-07-07T16:00:00.000Z"
+        XCTAssertTrue(projection.upserts.contains(where: { $0.id.rawValue == followingId }))
+    }
 
     func testThisAndFollowingSplitRemovesStaleOccurrenceIds() throws {
         EffectiveTimeZone.identifier = "UTC"
@@ -34,9 +60,18 @@ final class ProjectRecurringEditTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(projection.removeIds, Set([events[1].id.rawValue, events[2].id.rawValue]))
+        let remainderMasterEventId = SeriesSplit.remainderMasterId(
+            seriesId: seriesId,
+            splitAt: "2026-07-06T16:00:00.000Z"
+        )
+        let splitPointId = "\(remainderMasterEventId.rawValue)::2026-07-06T16:00:00.000Z"
+        XCTAssertEqual(
+            projection.removeIds,
+            Set([events[1].id.rawValue, events[2].id.rawValue])
+        )
         XCTAssertEqual(projection.upserts[0].id, seriesId)
-        XCTAssertEqual(projection.upserts[1].id, edited.id)
+        XCTAssertEqual(projection.upserts[1].id, remainderMasterEventId)
+        XCTAssertTrue(projection.upserts.contains { $0.id.rawValue == splitPointId })
         if case .series = projection.upserts[1].recurrence {
             // expected remainder master
         } else {
@@ -46,6 +81,7 @@ final class ProjectRecurringEditTests: XCTestCase {
         var cache = [master] + events
         cache = applyProjection(to: cache, projection: projection)
         let slotCount = cache.filter { event in
+            guard case .occurrence = event.recurrence else { return false }
             guard case .timed(let payload) = event.schedule else { return false }
             return payload.start.rawValue.hasPrefix("2026-07-06T16:00:00")
         }.count
@@ -84,7 +120,7 @@ final class ProjectRecurringEditTests: XCTestCase {
     }
 
     private func occurrence(day: Int) throws -> Event {
-        let id = "\(seriesId.rawValue)|2026-07-\(String(format: "%02d", day))T16:00:00.000Z"
+        let id = "\(seriesId.rawValue)::2026-07-\(String(format: "%02d", day))T16:00:00.000Z"
         let json = """
         {
           "id": "\(id)",

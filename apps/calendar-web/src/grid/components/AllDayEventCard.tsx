@@ -11,8 +11,9 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
   eventCardFill,
-  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+  gridEventSidebarEditingBoxShadow,
   joinGridEventBoxShadow,
+  resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
 import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
 import {
@@ -39,7 +40,9 @@ export interface AllDayEventCardProps {
   isHidden?: boolean;
   isPlaceholder: boolean;
   isSelected?: boolean;
+  onBlur?: () => void;
   onEventKeyDown?: (event: GridEvent) => void;
+  onFocus?: () => void;
   onMouseEnter?: (e: MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: (e: MouseEvent<HTMLDivElement>) => void;
   position: EventPosition;
@@ -55,7 +58,9 @@ const AllDayEventCardBase = (
     isHidden = false,
     isPlaceholder,
     isSelected = false,
+    onBlur,
     onEventKeyDown,
+    onFocus,
     onMouseEnter,
     onMouseLeave,
     position,
@@ -87,9 +92,14 @@ const AllDayEventCardBase = (
   // fill/darken tweak can't quietly drop the title below 4.5:1.
   const titleColor = theme.getContrastText(fill.fillStops);
 
+  const focusIndicatorColor = resolveEventFocusIndicatorColor(
+    focusColor,
+    fill.fillStops,
+  );
   const { focusedEdge, focusColorCss, edgeFocusShadow } = useGridEventEdgeFocus(
     event._id,
     focusColor,
+    fill.fillStops,
     "horizontal",
   );
 
@@ -122,7 +132,7 @@ const AllDayEventCardBase = (
       })}
       style={gridEventCardStyle({
         boxShadow: joinGridEventBoxShadow(
-          isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+          isSelected && gridEventSidebarEditingBoxShadow(focusIndicatorColor),
           edgeFocusShadow,
         ),
         fill,
@@ -132,6 +142,8 @@ const AllDayEventCardBase = (
         isPlaceholder,
         position,
       })}
+      onBlur={onBlur}
+      onFocus={onFocus}
       onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -155,7 +167,7 @@ const AllDayEventCardBase = (
           </span>
         </div>
       )}
-      {showRepeatIcon && <EventRepeatIcon baseColor={fill.bgColor} />}
+      {showRepeatIcon && <EventRepeatIcon contentColor={titleColor} />}
     </div>
   );
 };

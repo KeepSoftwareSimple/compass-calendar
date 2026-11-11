@@ -11,7 +11,10 @@ import {
   editGridEventDraft,
 } from "@web/events/grid-event-draft.adapter";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
-import { GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW } from "@web/grid/components/calendar-accent.util";
+import {
+  gridEventSidebarEditingBoxShadow,
+  resolveEventFocusIndicatorColor,
+} from "@web/grid/components/calendar-accent.util";
 import { type TimedDeckLayout } from "@web/grid/layout/timed-deck.layout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import { GridDraft } from "./GridDraft";
@@ -219,7 +222,9 @@ describe("GridDraft", () => {
     const card = screen.getByRole("button", { name: /Timed event: Planning/ });
     expect(card.style.getPropertyValue("--event-bg")).toBe("#c4b5fd");
     expect(card.style.boxShadow).toContain(
-      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+      gridEventSidebarEditingBoxShadow(
+        resolveEventFocusIndicatorColor(null, "#c4b5fd"),
+      ),
     );
   });
 
@@ -235,5 +240,20 @@ describe("GridDraft", () => {
     await user.keyboard("{Enter}");
 
     expect(useDraftStore.getState().status?.isFormOpen).toBe(true);
+  });
+
+  it("does not open the form when Enter is pressed on a pastePlace draft", async () => {
+    const draft = createDraft();
+    draftActions.startGridDraft({ activity: "pastePlace", draft });
+    expect(useDraftStore.getState().status?.isFormOpen).toBe(false);
+
+    renderGridDraft({ draft });
+    const user = userEvent.setup();
+    const card = screen.getByRole("button", { name: /Timed event: Planning/ });
+    card.focus();
+    await user.keyboard("{Enter}");
+
+    expect(useDraftStore.getState().status?.isFormOpen).toBe(false);
+    expect(useDraftStore.getState().status?.activity).toBe("pastePlace");
   });
 });

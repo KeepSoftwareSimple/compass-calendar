@@ -131,6 +131,17 @@ describe("useMinuteTick", () => {
     expect(result.current.toISOString()).toBe("2026-02-05T00:04:00.000Z");
   });
 
+  it("catches up when the page is shown after sleep or bfcache", () => {
+    const { result } = renderHook(() => useMinuteTick());
+
+    setSystemTime(new Date("2026-02-05T00:04:00.000Z"));
+    act(() => {
+      window.dispatchEvent(new Event("pageshow"));
+    });
+
+    expect(result.current.toISOString()).toBe("2026-02-05T00:04:00.000Z");
+  });
+
   it("stops ticking after unmount", () => {
     const { unmount } = renderHook(() => useMinuteTick());
 

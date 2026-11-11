@@ -1,7 +1,11 @@
 import { encodePopupReminderMinutes } from "@core/notifications/google-popup-reminders.util";
 import { type DateTime, type EventId } from "@core/types/domain-primitives";
-import { type SyncEventRecurrence } from "@core/types/sync/event.contracts";
+import {
+  nullableProviderEventVersionFromBoundary,
+  type SyncEventRecurrence,
+} from "@core/types/sync/event.contracts";
 import { type ProviderEventId } from "@core/types/sync/identity.contracts";
+import { recordHostGuestRsvpObservations } from "@sync/domain/host-guest-rsvp-observation-recorder";
 import { occurrenceScheduleAt } from "@sync/domain/occurrence-projection";
 import { providerManagedMetadataEntry } from "@sync/domain/provider-managed-metadata";
 import {
@@ -18,8 +22,10 @@ import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-ca
 import {
   type EventRepository,
   type ProviderEventUpsert,
+  type UpsertByProviderIdentityOptions,
 } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
+import { type HostGuestRsvpObservationRepository } from "@sync/storage/repositories/host-guest-rsvp-observation.repository";
 
 // The stored provider-fact bag for an imported read, null when empty. Busy is
 // the overwhelming default, so only a free ("transparent") event records its
@@ -75,6 +81,7 @@ export class ProviderPageApplier {
   #masters = new Map<string, EventRecord>();
   // Series members read before their master, awaiting it.
   #pending: ProviderEventRead[] = [];
+  #deletedProviderIds = new Set<string>();
   // Occurrence reprojections accumulated across the page (singles, masters,
   // exceptions), written in one batched transaction per flush instead of one
   // transaction per event — see event-occurrence.repository.ts's
@@ -87,7 +94,28 @@ export class ProviderPageApplier {
     private readonly calendar: ProviderCalendarRecord,
     private readonly generation: number,
     private readonly now: () => Date,
+    private readonly hostGuestRsvpObservation?: {
+      accountEmail: string;
+      observations: HostGuestRsvpObservationRepository;
+    },
   ) {}
+
+  #upsertOptions(base?: {
+    preserveIcalUidWhenAbsent?: true;
+  }): UpsertByProviderIdentityOptions {
+    const options: UpsertByProviderIdentityOptions = { ...base };
+    const ctx = this.hostGuestRsvpObservation;
+    if (ctx) {
+      options.recordHostGuestRsvpReplies = (pairs) =>
+        recordHostGuestRsvpObservations(
+          ctx.observations,
+          ctx.accountEmail,
+          pairs,
+          this.now(),
+        );
+    }
+    return options;
+  }
 
   // Distinct events written so far (masters, singles, override and cancelled
   // exceptions).
@@ -114,7 +142,15 @@ export class ProviderPageApplier {
     const singleReads: ProviderEvent[] = [];
     const memberReads: ProviderEventRead[] = [];
 
-    for (const read of reads) {
+    // A later full-pass read supersedes the windowed pass, including when an
+    // active orphan was cancelled in between. Never resurrect that older read.
+    const latest = new Map(reads.map((read) => [read.providerEventId, read]));
+    this.#pending = this.#pending.filter(
+      (read) => !latest.has(read.providerEventId),
+    );
+    for (const read of latest.values()) {
+      if (read.kind === "event")
+        this.#deletedProviderIds.delete(read.providerEventId);
       if (read.kind === "event" && read.recurrence.kind === "seriesMaster") {
         masterReads.push(read);
       } else if (read.kind === "event" && read.recurrence.kind === "single") {
@@ -123,6 +159,7 @@ export class ProviderPageApplier {
         memberReads.push(read);
       } else if (read.kind === "cancellation") {
         standaloneCancellations.push(read);
+        this.#deletedProviderIds.add(read.providerEventId);
       }
     }
 
@@ -177,11 +214,12 @@ export class ProviderPageApplier {
 
   // Final pass: link any still-buffered member to a now-available master,
   // project the masters that gained one, and return how many members never
-  // linked (a provider anomaly — an instant with no master in any page).
+  // linked. Complete snapshots retain active orphans as factual one-offs; a
+  // missing cancellation parent remains a gap unless its deletion was observed.
   // Unresolved series cancellations are also returned so pull can fall back
   // to standalone deletion by the full provider id — a rare standalone whose
   // Google id looks like an instance must not be stranded as an orphan.
-  async finish(): Promise<{
+  async finish(options: { fullSnapshot?: boolean } = {}): Promise<{
     orphans: number;
     leftoverCancellations: ProviderEventCancellation[];
   }> {
@@ -191,7 +229,53 @@ export class ProviderPageApplier {
     const leftoverCancellations = this.#pending.filter(
       (read): read is ProviderEventCancellation => read.kind === "cancellation",
     );
-    const orphans = this.#pending.length;
+    // A complete snapshot can contain active exceptions whose parent is no
+    // longer accessible. Keep their own factual content/schedule as single
+    // events, retaining provider identity and original linkage for recovery.
+    // Incremental pages cannot establish absence, so they retain gap accounting.
+    if (options.fullSnapshot) {
+      const active = [
+        ...new Map(
+          this.#pending
+            .filter((read): read is ProviderEvent => read.kind === "event")
+            .map((read) => [read.providerEventId, read]),
+        ).values(),
+      ];
+      const records = await this.events.upsertManyByProviderIdentity(
+        active.map((read) => {
+          if (read.recurrence.kind !== "instance") {
+            throw new Error("orphan instance expected");
+          }
+          return {
+            ...this.#eventUpsert(read, { kind: "single" }),
+            providerMetadata: {
+              ...providerMetadataFor(read),
+              orphanSeriesProviderId: read.recurrence.seriesProviderId,
+              orphanRecurrenceId: read.recurrence.recurrenceId,
+            },
+          };
+        }),
+        this.#upsertOptions({ preserveIcalUidWhenAbsent: true }),
+      );
+      for (const [index, read] of active.entries()) {
+        const record = records[index];
+        if (!record)
+          throw new Error("orphan instance upsert returned no event");
+        this.#remember(read, record);
+        this.#pendingProjections.push({ event: record });
+      }
+      await this.#flushProjections();
+    }
+    const orphans = this.#pending.filter((read) => {
+      if (!options.fullSnapshot) return true;
+      if (read.kind === "event") return false;
+      // A cancelled child of an explicitly deleted parent has no active
+      // content to import. Unknown parents remain an unexplained coverage gap.
+      return (
+        !read.series ||
+        !this.#deletedProviderIds.has(read.series.seriesProviderId)
+      );
+    }).length;
     this.#pending = [];
     return { orphans, leftoverCancellations };
   }
@@ -303,7 +387,7 @@ export class ProviderPageApplier {
     if (group.length === 0) return;
     const records = await this.events.upsertManyByProviderIdentity(
       group.map((entry) => entry.input),
-      options,
+      this.#upsertOptions(options),
     );
     for (let i = 0; i < group.length; i += 1) {
       const entry = group[i];
@@ -361,9 +445,9 @@ export class ProviderPageApplier {
       providerEventId: read.providerEventId as NonNullable<
         EventRecord["providerEventId"]
       >,
-      providerVersion: read.providerVersion as NonNullable<
-        EventRecord["providerVersion"]
-      >,
+      providerVersion: nullableProviderEventVersionFromBoundary(
+        read.providerVersion,
+      ),
       // Imported provider events carry no Compass delivery intent.
       deliveryState: null,
       lifecycleState: "active" as const,
@@ -457,7 +541,7 @@ export class ProviderPageApplier {
     if (toWrite.length === 0) return results;
     const records = await this.events.upsertManyByProviderIdentity(
       toWrite.map((read) => this.#eventUpsert(read, recurrenceFor(read))),
-      options,
+      this.#upsertOptions(options),
     );
     for (let i = 0; i < toWrite.length; i += 1) {
       const read = toWrite[i];

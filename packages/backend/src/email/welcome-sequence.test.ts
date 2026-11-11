@@ -45,6 +45,14 @@ describe("welcome sequence scheduling", () => {
     ]);
   });
 
+  it("finishes onboarding with a review on day 5", () => {
+    const review = findWelcomeStep("weekly-review");
+    expect(review?.delayDays).toBe(5);
+    expect(computeSendAt(signedUpAt, review!, "real").toISOString()).toBe(
+      "2026-01-06T12:00:00.000Z",
+    );
+  });
+
   it("spaces fast profile sendAt values by minutes", () => {
     const welcome = computeSendAt(signedUpAt, WELCOME_SEQUENCE[0]!, "fast");
     const shortcuts = computeSendAt(signedUpAt, WELCOME_SEQUENCE[1]!, "fast");

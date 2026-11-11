@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { sidebarDatePickerHintEligible } from "@core/shortcuts/sidebar-hint-surface";
 import dayjs from "@core/util/date/dayjs";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import {
@@ -16,6 +17,7 @@ import {
   selectJumpableDayPrefixes,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { useDatePickerHintStore } from "@web/shortcuts/tips/date-picker-hint.store";
 import {
   selectEventFormFocusInside,
   useEventFormFocusStore,
@@ -25,6 +27,8 @@ import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personali
 import { useShortcutHintProgress } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useIsTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
+import { isLifeThisWeekFocusEligible } from "@web/views/Life/life-this-week-focus";
+import { useLifePreferences } from "@web/views/Life/useLifePreferences";
 
 /** Re-rank this often so a tip that nothing else disturbs still gives way.
  * Impressions are only recorded when the rendered tip changes, so without a
@@ -45,12 +49,25 @@ export function useShortcutHintContext() {
   const eventFocused = useIsAnyCalendarEventFocused();
   const pathname = window.location.pathname;
   const isLifeView = isLifePathname(pathname);
+  const lifeSettings = useLifePreferences();
+  const lifeThisWeekEligible =
+    !lifeSettings.isLoading &&
+    isLifeThisWeekFocusEligible(lifeSettings.preferences);
   const isWeekView =
     pathname === ROOT_ROUTES.WEEK ||
     pathname.startsWith(`${ROOT_ROUTES.WEEK}/`);
   const progress = useShortcutHintProgress();
   const tipsMuted = useIsTipsMuted();
   const jumpableDayPrefixes = useEventJumpStore(selectJumpableDayPrefixes);
+  const datePickerStack = useDatePickerHintStore((s) => s.stack);
+  const datePickerHintOccupiesSidebar = useMemo(
+    () =>
+      sidebarDatePickerHintEligible(
+        pathname,
+        datePickerStack.map((entry) => entry.id),
+      ),
+    [pathname, datePickerStack],
+  );
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -73,11 +90,17 @@ export function useShortcutHintContext() {
     };
   }, []);
 
+  if (datePickerHintOccupiesSidebar) {
+    return null;
+  }
+
   return selectShortcutHint(
     {
       isFormOpen,
+      isEventFormVisibleInSidebar: !isLifeView,
       formFocusInside,
       isLifeView,
+      lifeThisWeekEligible,
       isWeekView,
       eventFocused,
       firstEventDone: firstEventDone || isCelebrating,

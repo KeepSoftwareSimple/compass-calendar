@@ -123,6 +123,15 @@ describe("EventRepository", () => {
     expect(await db.collection("events").countDocuments()).toBe(1);
   });
 
+  it("stores an empty providerVersion as null on upsert", async () => {
+    const stored = await repo.upsertByProviderIdentity(
+      linkedUpsert({ providerVersion: "" as ProviderEventVersion }),
+    );
+    expect(stored.providerVersion).toBeNull();
+    const raw = await db.collection("events").findOne({ _id: stored._id });
+    expect(raw?.["providerVersion"]).toBeNull();
+  });
+
   it("preserves iCalUID atomically when a sparse upsert omits it", async () => {
     const identity = {
       connectionId: objectId() as ConnectionId,

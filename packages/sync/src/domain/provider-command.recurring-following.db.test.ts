@@ -402,6 +402,82 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
 
       expect(result.outcome.state).toBe("pending");
     });
+
+    it("resolves the remainder master for a stale thisAndFollowing split (truncated series id)", async () => {
+      const { tenantId, principalId, calendar, master } = await seedMaster();
+      const firstSplitWriter = new FakeProviderEventWriter();
+      firstSplitWriter.fetchEventResult = providerSeries(
+        "Old",
+        "etag-1",
+        weekly3,
+      );
+      firstSplitWriter.createResult = {
+        providerEventId: "g-remainder-1" as ProviderEventId,
+        providerVersion: "etag-2",
+      };
+      const firstSplit = await followingCommand(master, "update");
+      await executeProviderSeriesFollowingUpdate(
+        deps(firstSplitWriter),
+        firstSplit,
+        master,
+        calendar,
+        now,
+      );
+
+      const truncated = await events.findById(
+        tenantId,
+        principalId,
+        master._id,
+      );
+      expect(truncated).not.toBeNull();
+
+      const thirdSplitAt = "2026-07-28T09:00:00-06:00";
+      const thirdSplit = (
+        await commands.submit({
+          tenantId: master.tenantId,
+          principalId: master.principalId,
+          idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
+          eventId: master._id,
+          input: {
+            kind: "update",
+            invitation: "none",
+            content: content("Second split"),
+            schedule: {
+              kind: "timed",
+              start: thirdSplitAt,
+              end: "2026-07-28T10:00:00-06:00",
+              timeZone: "America/Denver",
+            },
+            recurrence: {
+              kind: "series",
+              rules: ["RRULE:FREQ=WEEKLY;COUNT=1"],
+            },
+            scope: "thisAndFollowing",
+            recurrenceId: thirdSplitAt,
+          } as unknown as SyncCommandInput,
+          expectedVersion: null,
+        })
+      ).record;
+      const writer = new FakeProviderEventWriter();
+      writer.fetchEventResult = providerSeries("Split", "etag-3", [
+        "RRULE:FREQ=WEEKLY;COUNT=2",
+      ]);
+      writer.createResult = {
+        providerEventId: "g-remainder-2" as ProviderEventId,
+        providerVersion: "etag-4",
+      };
+
+      const result = await executeProviderSeriesFollowingUpdate(
+        deps(writer),
+        thirdSplit,
+        truncated!,
+        calendar,
+        now,
+      );
+
+      expect(result.outcome.state).toBe("confirmed");
+      expect(writer.createCalls).toHaveLength(1);
+    });
   });
 });
 

@@ -97,7 +97,6 @@ export async function enqueueDueReflections(now = new Date()) {
   // Do not retain personal payloads on terminal rows beyond their useful window.
   await mongoService.emailSend.updateMany(
     {
-      sequence: "reflection",
       status: { $ne: "queued" },
       "reflection.prepared": { $exists: true },
       updatedAt: { $lt: new Date(now.getTime() - 7 * 86_400_000) },

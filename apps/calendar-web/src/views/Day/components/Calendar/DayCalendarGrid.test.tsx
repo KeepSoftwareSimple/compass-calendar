@@ -529,7 +529,7 @@ describe("DayCalendarGrid", () => {
     );
   });
 
-  it("keeps a focused Day deck card in its fan-out stack", () => {
+  it("raises a focused Day deck card above overlap partners for a full focus ring", () => {
     setDayEvents([
       createTimedEvent({
         _id: "back",
@@ -553,7 +553,7 @@ describe("DayCalendarGrid", () => {
     expect(initialBackZIndex).toBeLessThan(ZIndex.MAX);
 
     act(() => back.focus());
-    expect(Number(back.style.zIndex)).toBe(initialBackZIndex);
+    expect(Number(back.style.zIndex)).toBe(ZIndex.MAX);
 
     act(() => back.blur());
     expect(Number(back.style.zIndex)).toBe(initialBackZIndex);
@@ -627,6 +627,39 @@ describe("DayCalendarGrid", () => {
       expect(getIsFormOpen()).toBe(true);
     });
     expect(useDraftStore.getState().status?.activity).toBe("keyboardPlace");
+  });
+
+  it("does not open the form when Enter is pressed on a pastePlace draft", async () => {
+    const source = createTimedEvent({
+      _id: "paste-source",
+      endDate: "2026-05-20T10:00:00.000",
+      startDate: "2026-05-20T09:00:00.000",
+      title: "Paste source",
+    });
+    setDayEvents([source]);
+    const placement = createGridEventDraft(
+      timedGridSchedule(
+        new Date("2026-05-20T11:00:00.000Z"),
+        new Date("2026-05-20T12:00:00.000Z"),
+      ),
+    );
+    placement.values.title = "Paste source";
+    draftActions.startGridDraft({ activity: "pastePlace", draft: placement });
+    expect(getIsFormOpen()).toBe(false);
+
+    const { user } = renderDayCalendarGrid();
+    const draftId = getGridDraftId(getGridDraft()!);
+    const card = screen.getByRole("button", {
+      name: /timed event: paste source, 11 am - 12 pm/i,
+    });
+    expect(card.getAttribute("data-day-interaction-event-id")).toBe(
+      draftId ?? null,
+    );
+    card.focus();
+    await user.keyboard("{Enter}");
+
+    expect(getIsFormOpen()).toBe(false);
+    expect(useDraftStore.getState().status?.activity).toBe("pastePlace");
   });
 
   it("opens the shared event action menu from a Day timed event right-click", async () => {

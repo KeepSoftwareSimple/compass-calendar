@@ -11,6 +11,10 @@ import {
 
 export type ShortcutHintContext = {
   isFormOpen: boolean;
+  /**
+   * Event form is mounted in the sidebar. Web Life keeps drafts but hides the form.
+   */
+  isEventFormVisibleInSidebar?: boolean;
   /** Keyboard focus is inside the open event form (footer owns tips). */
   formFocusInside?: boolean;
   isLifeView: boolean;
@@ -21,6 +25,8 @@ export type ShortcutHintContext = {
   jumpableDayPrefixes?: readonly string[];
   /** 0=Sunday … 6=Saturday, used to teach the week forward from today. */
   todayWeekday?: number;
+  /** False when Life has no birth date, so T does not jump to this week. */
+  lifeThisWeekEligible?: boolean;
 };
 
 const IDLE_POOL = [
@@ -117,17 +123,24 @@ export function selectShortcutHint(
     return { ...weekDayFocusHint(dayPrefix), reasonCode: winner.reasonCode };
   };
 
-  if (ctx.isFormOpen && ctx.formFocusInside) {
+  const eventFormShown =
+    ctx.isFormOpen && (ctx.isEventFormVisibleInSidebar ?? true);
+
+  if (eventFormShown && ctx.formFocusInside) {
     return null;
   }
-  if (ctx.isFormOpen && !ctx.firstEventDone) {
+  if (eventFormShown && !ctx.firstEventDone) {
     return ranked("first-event-save");
   }
-  if (ctx.isFormOpen) {
+  if (eventFormShown) {
     return pick(FORM_POOL);
   }
   if (ctx.isLifeView) {
-    return pick(LIFE_POOL);
+    const pool =
+      ctx.lifeThisWeekEligible === false
+        ? (["command-palette"] as const)
+        : LIFE_POOL;
+    return pick(pool);
   }
   if (ctx.eventFocused) {
     return pick(withWeekDayFocus(FOCUSED_POOL, showWeekDay));

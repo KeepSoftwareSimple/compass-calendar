@@ -118,9 +118,11 @@ extension NativeCalendarRootModel {
     }
 
     public func openUpNextEvent() {
-        guard !suppressBottomNotices else { return }
-        guard let upNext = upNextState.snapshot.upNext else { return }
+        guard !suppressBottomNotices, draftStore.gridDraft == nil,
+              let upNext = upNextState.snapshot.upNext
+        else { return }
         focusEventDeepLink(eventId: upNext.id)
+        openKeyboardEditForFocusedEvent()
     }
 
     public func joinUpNextMeeting() {
@@ -155,10 +157,21 @@ extension NativeCalendarRootModel {
         else {
             return
         }
-        if case .timed(let payload) = event.schedule,
-           let start = CompassDateParsing.parseInEffectiveTimeZone(payload.start.rawValue)
-        {
-            goToDate(start)
+        let start: Date?
+        switch event.schedule {
+        case .timed(let payload):
+            start = CompassDateParsing.parseInEffectiveTimeZone(payload.start.rawValue)
+        case .allDay(let payload):
+            start = CompassDateParsing.calendarDateInEffectiveTimeZone(payload.start)
         }
+        guard let start else { return }
+        // The sideband can load today's event while the grid shows another
+        // range. Keep the source available to the grid and form's save baseline.
+        if !loadedEvents.contains(where: { $0.id == event.id }) {
+            loadedEvents.append(event)
+        }
+        if viewStore.view == .life { viewStore.view = .week }
+        goToDate(start)
+        focusEvent(eventId: eventId)
     }
 }

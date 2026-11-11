@@ -46,6 +46,7 @@ public final class NativeCalendarRootModel {
     public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?
     public var onRecurrenceScopeAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onStatusToastAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onCommandPaletteStatusAnnouncementChanged: ((String) -> Void)?
     public var onShortcutsLegendAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onEventJumpChipsAccessibilityProbeChanged: (([EventJumpChipHint]) -> Void)?
     /// Web `view-select` page jump opens the view dropdown, like clicking it.
@@ -143,6 +144,7 @@ public final class NativeCalendarRootModel {
     private var didApplyDemoFixtureScroll = false
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
+    private var deferredWideViewportEventFormOpen = false
     var eventFormTitleProbeVisible = false
     var keyboardCreateSettleGeneration = 0
     var quickAddPanelSession: QuickAddPanelSession?
@@ -186,7 +188,8 @@ public final class NativeCalendarRootModel {
         environment: NativeCalendarEnvironment,
         demoPresentation: DemoSeedFixture? = nil,
         overlayStores: OverlayStores = OverlayStores(),
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        lifeStoreDefaults: UserDefaults = .standard
     ) {
         self.environment = environment
         self.demoPresentation = demoPresentation
@@ -209,7 +212,9 @@ public final class NativeCalendarRootModel {
         billingStore = environment.billingStore
         bookingStore = environment.bookingStore
         levelsStore = environment.levelsStore
-        lifeStore = LifeStore(today: { demoPresentation?.referenceNow ?? now() })
+        lifeStore = LifeStore(
+            defaults: lifeStoreDefaults,
+            today: { demoPresentation?.referenceNow ?? now() })
         lifeViewIntroStore = LifeViewIntroStore(
             userAPI: UserAPI(client: environment.apiClient),
             analytics: environment.productAnalytics)
@@ -263,8 +268,22 @@ public final class NativeCalendarRootModel {
         overlayStores.statusToast.onVisibilityChanged = { [weak self] visible in
             self?.onStatusToastAccessibilityProbeChanged?(visible)
         }
+        overlayStores.palette.onAnnouncementChanged = { [weak self] announcement in
+            self?.onCommandPaletteStatusAnnouncementChanged?(announcement)
+        }
         overlayStores.legend.onOpenChanged = { [weak self] open in
             self?.onShortcutsLegendAccessibilityProbeChanged?(open)
+        }
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            NotificationCenter.default.addObserver(
+                forName: WideViewportLaunchCoordination.stableGeometryPublishedNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.openDeferredWideViewportEventFormIfNeeded()
+                }
+            }
         }
         if UITestLaunchPolicy.isParityCapture {
             applyParityCapturePresentationIfNeeded()
@@ -793,6 +812,7 @@ public final class NativeCalendarRootModel {
             scenario: scenario,
             trackWidth: contentTrackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
+            focusedEdge: focusStore.edge,
             sidebarEditingEventId: sidebarEditingGridEventId(),
             eventJumpHints: eventJumpHintLabels,
             quickTimeSlotHints: quickTimeSlotHintLabels,
@@ -827,6 +847,7 @@ public final class NativeCalendarRootModel {
             didApplyDemoFixtureScroll = true
         }
         applyInitialUIFocusIfNeeded()
+        tryOpenUITestFocusedEventFormIfNeeded()
         gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
             resolveGridFocusLabel(eventId: focusedId.rawValue, cards: snapshot.cards)
         }
@@ -843,27 +864,43 @@ public final class NativeCalendarRootModel {
         didApplyInitialUIFocus = true
         focusGridEvent(eventId: eventId)
         publishGridFocusAccessibilityProbe(eventId: eventId)
-        scheduleUITestFocusedEventFormOpenIfNeeded()
+        tryOpenUITestFocusedEventFormIfNeeded()
     }
 
-    private func scheduleUITestFocusedEventFormOpenIfNeeded() {
+    private func openDeferredWideViewportEventFormIfNeeded() {
+        guard deferredWideViewportEventFormOpen else { return }
+        deferredWideViewportEventFormOpen = false
+        _ = tryOpenUITestFocusedEventFormIfNeeded()
+    }
+
+    @discardableResult
+    private func tryOpenUITestFocusedEventFormIfNeeded() -> Bool {
         guard !didApplyUITestFocusedEventForm,
             UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus,
             focusStore.focusedEventId != nil
-        else { return }
+        else { return false }
+        if UITestLaunchPolicy.meetingLinkWideViewport,
+            !WideViewportLaunchCoordination.stableGeometryPublished
+        {
+            deferredWideViewportEventFormOpen = true
+            WideViewportUITestTrace.record("defer_event_form_until_stable_geometry")
+            return false
+        }
+        openKeyboardEditForFocusedEvent()
+        guard draftStore.gridDraft != nil else { return false }
         didApplyUITestFocusedEventForm = true
-        Task { @MainActor in
-            openKeyboardEditForFocusedEvent()
-            openEventFormForCurrentDraft()
-            if let title = UITestLaunchPolicy.presetEventFormTitle {
-                updateDraftFromForm(title: title)
-                onEventFormTitleAccessibilityProbeTitleSync?(title)
-            }
-            publishEventFormTitleAccessibilityProbe()
-            if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+        openEventFormForCurrentDraft()
+        if let title = UITestLaunchPolicy.presetEventFormTitle {
+            updateDraftFromForm(title: title)
+            onEventFormTitleAccessibilityProbeTitleSync?(title)
+        }
+        publishEventFormTitleAccessibilityProbe()
+        if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+            Task { @MainActor in
                 await saveDraftWithInvitationGate()
             }
         }
+        return true
     }
 
     func currentGridCards() -> [GridLayoutCardSnapshot] {

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { civilHourSlotCount } from "@core/util/date/civil-day";
+import dayjs from "@core/util/date/dayjs";
 import { useMinuteTick } from "@web/common/hooks/useMinuteTick";
 import { type CSSVariables } from "@web/common/styles/css.types";
 import {
@@ -12,15 +13,35 @@ import {
   gridMarginLeftFor,
   TIMED_VISIBLE_HOURS,
 } from "@web/grid/grid.constants";
+import { CalendarNowTimeLabel } from "@web/grid/now-cue/CalendarNowTimeLabel";
+import {
+  formatNowLineTimeLabel,
+  hourLabelIndexOverlappingNow,
+  nowLineGridMinutes,
+  nowLineTopPercent,
+} from "@web/grid/now-cue/now-line-time.util";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { mappedHourLabels } from "@web/timezone/mapped-hour-labels";
 import { useTimeTravelZone } from "@web/timezone/time-travel.store";
 
-export function CalendarTimeColumn({ at }: { at: Date }) {
+export function CalendarTimeColumn({
+  at,
+  showNowTimeLabel = false,
+}: {
+  at: Date;
+  showNowTimeLabel?: boolean;
+}) {
   const effectiveTimeZone = useEffectiveTimeZone();
   const timeTravelZone = useTimeTravelZone();
   const marginLeft = gridMarginLeftFor(timeTravelZone !== null);
-  const currentHour = useMinuteTick().tz(effectiveTimeZone).hour();
+  const now = useMinuteTick();
+  const currentHour = now.tz(effectiveTimeZone).hour();
+  const nowGridMinutes = nowLineGridMinutes(now, effectiveTimeZone);
+  const hiddenHourIndex = showNowTimeLabel
+    ? hourLabelIndexOverlappingNow(nowGridMinutes, dayjs(at), effectiveTimeZone)
+    : null;
+  const nowTopPercent = nowLineTopPercent(now, effectiveTimeZone);
+  const nowTimeLabel = formatNowLineTimeLabel(now, effectiveTimeZone);
   const slotCount = useMemo(
     () => civilHourSlotCount(at, effectiveTimeZone),
     [at, effectiveTimeZone],
@@ -51,11 +72,24 @@ export function CalendarTimeColumn({ at }: { at: Date }) {
           width={GRID_TIME_COLUMN_WIDTH}
         />
       ) : null}
-      <HourLabelColumn
-        colors={colors}
-        labels={primaryLabels}
-        width={GRID_TIME_COLUMN_WIDTH}
-      />
+      <div
+        className="relative h-full"
+        style={{ width: GRID_TIME_COLUMN_WIDTH }}
+      >
+        <HourLabelColumn
+          colors={colors}
+          hiddenHourIndex={hiddenHourIndex}
+          labels={primaryLabels}
+          width={GRID_TIME_COLUMN_WIDTH}
+        />
+        {showNowTimeLabel ? (
+          <CalendarNowTimeLabel
+            label={nowTimeLabel}
+            topPercent={nowTopPercent}
+            variant="gutter"
+          />
+        ) : null}
+      </div>
     </div>
   );
 }

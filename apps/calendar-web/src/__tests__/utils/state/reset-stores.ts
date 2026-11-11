@@ -27,6 +27,7 @@ import { resetNewMeetingsNoticeForTests } from "@web/booking/useNewMeetingsNotic
 import { resetCalendarVisibilityStoreForTests } from "@web/calendars/calendar-visibility.store";
 import { resetCollapsedAccountsStoreForTests } from "@web/calendars/collapsed-accounts.store";
 import { resetDefaultCalendarStoreForTests } from "@web/calendars/default-calendar.store";
+import { resetPendingShellToastForTests } from "@web/common/utils/toast/pending-shell-toast";
 import { bottomNoticeStackGateActions } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.store";
 import { resetRecentCommandsStoreForTests } from "@web/components/CommandPalette/recent-commands.store";
 import { resetConnectCalendarPromptStoreForTests } from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
@@ -52,6 +53,10 @@ import {
   initialEventClipboardState,
   useEventClipboardStore,
 } from "@web/events/stores/event-clipboard.store";
+import {
+  initialEventPastePreviewState,
+  useEventPastePreviewStore,
+} from "@web/events/stores/event-paste-preview.store";
 import {
   initialUndoHistoryState,
   useUndoHistoryStore,
@@ -83,6 +88,7 @@ import {
   initialEventJumpState,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { resetDatePickerHintStoreForTests } from "@web/shortcuts/tips/date-picker-hint.store";
 import { resetEventFormFocusStoreForTests } from "@web/shortcuts/tips/event-form-focus.store";
 import { resetHintShortcutCelebrationTimerForTests } from "@web/shortcuts/tips/hint-shortcut-celebration.store";
 import { resetShortcutUsageProfileStoreForTests } from "@web/shortcuts/tips/shortcut-personalization.storage";
@@ -108,6 +114,7 @@ const storeResets: StoreReset[] = [
   () => useDraftStore.setState(initialDraftState, true),
   () => useEventFormCmdStore.setState(initialEventFormCmdState, true),
   () => useEventClipboardStore.setState(initialEventClipboardState, true),
+  () => useEventPastePreviewStore.setState(initialEventPastePreviewState, true),
   () => useUndoHistoryStore.setState(initialUndoHistoryState, true),
   recurrenceScopeOpportunityActions.reset,
   resetEventRepositorySourceForTests,
@@ -116,6 +123,7 @@ const storeResets: StoreReset[] = [
   // before this runs; this just resyncs the module-singleton store to match.
   resetConnectAppleStoreForTests,
   resetMissingPermissionsStoreForTests,
+  resetPendingShellToastForTests,
   resetCalendarVisibilityStoreForTests,
   resetDefaultCalendarStoreForTests,
   resetEffectiveTimeZoneStoreForTests,
@@ -150,6 +158,7 @@ const storeResets: StoreReset[] = [
   () => useCardUpdateStore.setState(initialCardUpdateState, true),
   resetShortcutHintProgressStoreForTests,
   resetHintShortcutCelebrationTimerForTests,
+  resetDatePickerHintStoreForTests,
   resetVisibleShortcutHintStoreForTests,
   resetShortcutTipsMutedStoreForTests,
   resetEventFormFocusStoreForTests,

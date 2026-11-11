@@ -1,11 +1,14 @@
+import cn from "classnames";
 import { TIMED_HOUR_SLOT_HEIGHT_CLASS } from "@web/grid/grid.constants";
 
 export function HourLabelColumn({
   colors,
+  hiddenHourIndex = null,
   labels,
   width,
 }: {
   colors?: string[];
+  hiddenHourIndex?: number | null;
   labels: string[];
   width: number;
 }) {
@@ -22,7 +25,14 @@ export function HourLabelColumn({
           key={`hour-${hour + 1}`}
           style={colors ? { color: colors[hour] } : undefined}
         >
-          <span className="block text-center text-[10px]">{label}</span>
+          <span
+            className={cn(
+              "block text-center text-[10px] transition-opacity duration-150",
+              hiddenHourIndex === hour && "opacity-0",
+            )}
+          >
+            {label}
+          </span>
         </div>
       ))}
     </div>

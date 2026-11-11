@@ -138,6 +138,30 @@ final class DescriptionEditorTests: XCTestCase {
         XCTAssertEqual(html, "<p><a href=\"https://example.com/path\">https://example.com/path</a></p>")
     }
 
+    func testOpenDescriptionLinkAtCaretOpensURLUnderSelection() {
+        let editor = DescriptionTextView()
+        let text = NSMutableAttributedString(string: "First Second")
+        let string = text.string as NSString
+        text.addAttribute(.link, value: URL(string: "https://example.com/first")!, range: string.range(of: "First"))
+        text.addAttribute(.link, value: URL(string: "https://example.com/second")!, range: string.range(of: "Second"))
+        editor.textStorage?.setAttributedString(text)
+        editor.setSelectedRange(string.range(of: "Second"))
+        var opened: [String] = []
+        XCTAssertTrue(editor.openDescriptionLinkAtCaret { url in opened.append(url.absoluteString) })
+        XCTAssertEqual(opened, ["https://example.com/second"])
+    }
+
+    func testBlurredDescriptionShowsLinkDigitHintOverlay() throws {
+        let html = "<p><a href=\"https://example.com/path\">https://example.com/path</a></p>"
+        let (_, window, _) = try DescriptionLinkHintKeyWindowFixture.makeBlurredDescriptionLinkHints(
+            html: html,
+            resetKey: "event",
+            frame: NSRect(x: 0, y: 0, width: 400, height: 120)
+        )
+        defer { DescriptionLinkHintKeyWindowFixture.resetDigitHintLookupWindow() }
+        window.close()
+    }
+
     func testOpenDescriptionLinkUsesDocumentOrder() {
         let editor = DescriptionTextView()
         editor.textStorage?.setAttributedString(

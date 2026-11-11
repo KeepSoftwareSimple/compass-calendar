@@ -18,6 +18,7 @@ import { type BookingOperationRecord } from "@backend/booking/booking-operation.
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
 import { type BookingRateLimitRecord } from "@backend/booking/booking-rate-limit.record";
 import { type BookingReservationRecord } from "@backend/booking/booking-reservation.record";
+import { type HostGuestRsvpNoticeStateRecord } from "@backend/booking/host-guest-rsvp-notice.record";
 import { type CalendarRecord } from "@backend/calendar/calendar.record";
 import { Collections } from "@backend/common/constants/collections";
 import { CONFIG } from "@backend/common/constants/config.constants";
@@ -37,6 +38,7 @@ interface InternalClient {
   bookingRateLimit: Collection<BookingRateLimitRecord>;
   bookingReservation: Collection<BookingReservationRecord>;
   bookingOperation: Collection<BookingOperationRecord>;
+  hostGuestRsvpNoticeState: Collection<HostGuestRsvpNoticeStateRecord>;
   emailSend: Collection<EmailSendRecord>;
   emailEvent: Collection<EmailEventRecord>;
   calendar: Collection<CalendarRecord>;
@@ -84,6 +86,10 @@ class MongoService {
 
   get bookingOperation(): InternalClient["bookingOperation"] {
     return this.#accessInternalCollectionProps("bookingOperation");
+  }
+
+  get hostGuestRsvpNoticeState(): InternalClient["hostGuestRsvpNoticeState"] {
+    return this.#accessInternalCollectionProps("hostGuestRsvpNoticeState");
   }
 
   get emailSend(): InternalClient["emailSend"] {
@@ -158,6 +164,9 @@ class MongoService {
       ),
       bookingOperation: db.collection<BookingOperationRecord>(
         Collections.BOOKING_OPERATION,
+      ),
+      hostGuestRsvpNoticeState: db.collection<HostGuestRsvpNoticeStateRecord>(
+        Collections.HOST_GUEST_RSVP_NOTICE_STATE,
       ),
       emailSend: db.collection<EmailSendRecord>(Collections.EMAIL_SEND),
       emailEvent: db.collection<EmailEventRecord>(Collections.EMAIL_EVENT),

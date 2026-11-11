@@ -31,6 +31,7 @@ import { CommandRepository } from "@sync/storage/repositories/command.repository
 import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
+import { ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
 const objectId = () => faker.database.mongodbObjectId();
@@ -85,6 +86,7 @@ describe("pullCalendarChanges", () => {
     occurrences,
     resources,
     commands,
+    connections: new ProviderConnectionRepository(storage.db()),
     reader,
     custody: tokenSource,
   });

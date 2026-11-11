@@ -1,4 +1,5 @@
 import CompassData
+import CompassKit
 import SwiftUI
 
 /// Web `QuickTimeIndicator`: echoes half-typed grid quick-time digits.
@@ -8,7 +9,10 @@ struct QuickTimeStatusLine: View {
 
     var body: some View {
         let digits = model.draftStore.quickTimeDigits
-        if !digits.isEmpty {
+        if CalendarGridSidebarHints.calendarGridModeHintsEligible(
+            isLifeView: model.viewStore.view == .life),
+            !digits.isEmpty
+        {
             HStack(spacing: 4) {
                 Text("New event at")
                     .font(.rubik(11))

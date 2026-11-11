@@ -1,6 +1,6 @@
 import { getTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
-import { timeZoneCityName } from "@web/timezone/timezone-catalog";
+import { timeZoneCityName } from "@web/timezone/timezone-iana-label.util";
 
 export function eventFormScheduleTimeZoneHintText(
   eventTimeZone: string,

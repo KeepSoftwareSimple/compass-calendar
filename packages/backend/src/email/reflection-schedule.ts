@@ -51,23 +51,17 @@ export function reflectionWindows(
     cadence === "daily"
       ? cutoff.subtract(7, "day").format("YYYY-MM-DD")
       : cutoff.subtract((cutoff.day() + 6) % 7, "day").format("YYYY-MM-DD");
-  const start = dayjs.tz(
-    `${startDate} ${cadence === "daily" ? "10:30" : "00:00"}`,
+  const start = dayjs.tz(`${startDate} 00:00`, timeZone);
+  const upcomingStart = dayjs.tz(
+    `${cutoff.add(cadence === "daily" ? 0 : 1, "day").format("YYYY-MM-DD")} 00:00`,
     timeZone,
   );
-  const upcomingStart =
-    cadence === "daily"
-      ? cutoff
-      : dayjs.tz(
-          `${cutoff.add(1, "day").format("YYYY-MM-DD")} 00:00`,
-          timeZone,
-        );
   const upcomingEnd = dayjs.tz(
-    `${upcomingStart.add(7, "day").format("YYYY-MM-DD")} ${cadence === "daily" ? "10:30" : "00:00"}`,
+    `${upcomingStart.add(7, "day").format("YYYY-MM-DD")} 00:00`,
     timeZone,
   );
   return [
-    window("recent", start, cutoff),
+    window("recent", start, cadence === "daily" ? upcomingStart : cutoff),
     window("upcoming", upcomingStart, upcomingEnd),
   ];
 }

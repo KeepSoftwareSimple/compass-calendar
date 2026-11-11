@@ -136,7 +136,12 @@ describe("SyncJobWorker", () => {
   });
 
   const worker = (reader: FakeReader) =>
-    new SyncJobWorker(deps(reader), OWNER, { now });
+    new SyncJobWorker(deps(reader), OWNER, {
+      now,
+      // Real setInterval heartbeats from a prior test can fire after the job
+      // settles and race the next case on the shared in-memory mongod.
+      scheduleHeartbeat: () => () => {},
+    });
 
   // A worker that records every drop reason, so a test can assert the drop path
   // was taken (and why) rather than only that the job row vanished.
@@ -450,6 +455,26 @@ describe("SyncJobWorker", () => {
       new FakeReader([pageOf([], { nextSyncToken: "cursor-1" })]),
     ).runOnce();
 
+    const afterFirst = await connections.findById(
+      connection.tenantId,
+      connection.principalId,
+      connection._id,
+    );
+    expect(afterFirst?.state).toBe("healthy");
+    expect(
+      await jobs.countOutstandingByConnection(
+        connection.tenantId,
+        connection.principalId,
+        connection._id,
+      ),
+    ).toBe(0);
+    const watched = await resources.findById(
+      connection.tenantId,
+      connection.principalId,
+      eventsResource._id,
+    );
+    expect(watched?.subscriptionId).toBe("channel-1");
+
     const later = new Date("2026-07-10T00:01:00.000Z");
     await enqueue(eventsResource, "incrementalPull");
     await new SyncJobWorker(
@@ -467,15 +492,18 @@ describe("SyncJobWorker", () => {
     // Event-only progress cannot advance lastSyncedAt past a stale calendar-list pass.
     expect(after?.lastSyncedAt).toEqual(now());
 
-    const feed = await storage
-      .db()
-      .collection(SYNC_COLLECTIONS.invalidations)
-      .find({ principalId: connection.principalId })
-      .toArray();
-    const kinds = feed.map(
-      (row) => (row["invalidation"] as { kind?: string }).kind,
+    const feed = await invalidations.listAfter(
+      connection.tenantId,
+      connection.principalId,
+      null,
+      20,
     );
-    expect(kinds).toEqual(["connection"]);
+    const connectionInvalidations = feed.filter(
+      (row) =>
+        row.invalidation.kind === "connection" &&
+        row.invalidation.connectionId === connection._id,
+    );
+    expect(connectionInvalidations).toHaveLength(1);
   });
 
   it("hands an expired-cursor pull off by enqueuing a repair and completing the pull", async () => {

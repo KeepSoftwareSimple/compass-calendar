@@ -5,8 +5,15 @@ import {
   useId,
   useState,
 } from "react";
+import { useStableLoadingVisible } from "@web/common/hooks/useStableLoadingVisible";
+import { InlineSpinner } from "@web/components/InlineSpinner/InlineSpinner";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
-import { usePlaceSuggestions } from "@web/views/Forms/EventForm/LocationField/usePlaceSuggestions";
+import { GoogleMapsAttribution } from "@web/views/Forms/EventForm/LocationField/GoogleMapsAttribution";
+import { LocationSuggestionRow } from "@web/views/Forms/EventForm/LocationField/LocationSuggestionRow";
+import {
+  PLACE_SUGGESTION_MIN_LENGTH,
+  usePlaceSuggestions,
+} from "@web/views/Forms/EventForm/LocationField/usePlaceSuggestions";
 
 interface LocationFieldProps {
   id: string;
@@ -44,9 +51,29 @@ export function LocationField({
   const listId = useId();
   const [isListOpen, setIsListOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const suggestions = usePlaceSuggestions(isListOpen ? value : "", apiKey);
-  const isExpanded = isListOpen && suggestions.length > 0;
-  useFloatingLayer(`locationField:${listId}`, isExpanded);
+  const trimmedValue = value.trim();
+  const queryMeetsMin = trimmedValue.length >= PLACE_SUGGESTION_MIN_LENGTH;
+  const { suggestions, isSearching, isError, isFetched } = usePlaceSuggestions(
+    isListOpen ? value : "",
+    apiKey,
+  );
+  const showLoadingRow = useStableLoadingVisible(isSearching);
+  const showSuggestions = suggestions.length > 0;
+  const showEmpty =
+    queryMeetsMin &&
+    isFetched &&
+    !isSearching &&
+    !isError &&
+    suggestions.length === 0;
+  const showError = queryMeetsMin && isError && !isSearching;
+  const showPanel =
+    isListOpen &&
+    queryMeetsMin &&
+    (showLoadingRow || showSuggestions || showEmpty || showError);
+  const listHasOptions = showSuggestions;
+  const isExpanded = showPanel;
+
+  useFloatingLayer(`locationField:${listId}`, showPanel);
 
   const closeList = () => {
     setIsListOpen(false);
@@ -71,20 +98,29 @@ export function LocationField({
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     onKeyDown?.(event);
-    if (!isExpanded) return;
+    if (!showPanel) return;
 
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      const delta = event.key === "ArrowDown" ? 1 : -1;
-      setActiveIndex((index) =>
-        Math.min(suggestions.length - 1, Math.max(0, index + delta)),
-      );
-    } else if (event.key === "Enter" || event.key === "Escape") {
+    if (listHasOptions) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        setActiveIndex((index) =>
+          Math.min(suggestions.length - 1, Math.max(0, index + delta)),
+        );
+      } else if (event.key === "Enter" || event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        const active = suggestions[activeIndex];
+        if (event.key === "Enter" && active !== undefined) pick(active);
+        else closeList();
+      }
+      return;
+    }
+
+    if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
-      const active = suggestions[activeIndex];
-      if (event.key === "Enter" && active !== undefined) pick(active);
-      else closeList();
+      closeList();
     }
   };
 
@@ -118,7 +154,7 @@ export function LocationField({
         aria-controls={listId}
         aria-expanded={isExpanded}
         aria-activedescendant={
-          isExpanded && activeIndex >= 0
+          listHasOptions && activeIndex >= 0
             ? `${listId}-${activeIndex}`
             : undefined
         }
@@ -127,35 +163,50 @@ export function LocationField({
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
       />
-      {isExpanded && (
+      {showPanel && (
         <div className="absolute top-full right-0 left-0 z-10 mt-1 overflow-hidden rounded-md border border-border bg-surface-raised shadow-lg">
           <div aria-label="Location suggestions" id={listId} role="listbox">
-            {suggestions.map((suggestion, index) => (
-              <button
-                aria-selected={index === activeIndex}
-                className={classNames(
-                  "flex w-full px-3 py-2 text-left text-sm text-text hover:bg-surface-overlay",
-                  index === activeIndex && "bg-surface-overlay",
-                )}
-                id={`${listId}-${index}`}
-                key={suggestion}
-                // mousedown, not click: keeps focus in the input so blur
-                // does not close the list before the pick lands.
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  pick(suggestion);
-                }}
-                role="option"
-                tabIndex={-1}
-                type="button"
-              >
-                {suggestion}
-              </button>
-            ))}
+            {showLoadingRow && !showSuggestions && (
+              <LocationSuggestionRow className="gap-2 text-text-muted">
+                <InlineSpinner ring="subtle" size="sm" />
+                <span>Searching…</span>
+              </LocationSuggestionRow>
+            )}
+            {showSuggestions &&
+              suggestions.map((suggestion, index) => (
+                <button
+                  aria-selected={index === activeIndex}
+                  className={classNames(
+                    "flex min-h-10 w-full px-3 py-2 text-left text-sm text-text hover:bg-surface-overlay",
+                    index === activeIndex && "bg-surface-overlay",
+                  )}
+                  id={`${listId}-${index}`}
+                  key={suggestion}
+                  // mousedown, not click: keeps focus in the input so blur
+                  // does not close the list before the pick lands.
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    pick(suggestion);
+                  }}
+                  role="option"
+                  tabIndex={-1}
+                  type="button"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            {showEmpty && (
+              <LocationSuggestionRow className="text-text-muted">
+                No places found
+              </LocationSuggestionRow>
+            )}
+            {showError && (
+              <LocationSuggestionRow className="text-text-muted">
+                Could not load suggestions
+              </LocationSuggestionRow>
+            )}
           </div>
-          <p className="border-border border-t px-3 py-1 text-right text-text-muted text-xs">
-            Powered by Google
-          </p>
+          <GoogleMapsAttribution />
         </div>
       )}
     </div>

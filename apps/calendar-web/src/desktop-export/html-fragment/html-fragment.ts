@@ -304,6 +304,24 @@ export const roundTripDescriptionHtml = (value: string): string => {
   return serializeHtmlFragmentDocument(document);
 };
 
+const stripHtmlTagsForPlainText = (value: string): string =>
+  replaceUntilStable(value, /<[^>]+>/g, "");
+
+function replaceUntilStable(
+  input: string,
+  pattern: RegExp,
+  replacement: string,
+): string {
+  let current = input;
+  for (;;) {
+    const next = current.replace(pattern, replacement);
+    if (next === current) {
+      return current;
+    }
+    current = next;
+  }
+}
+
 export const plainTextFromDocument = (
   document: HtmlFragmentDocument,
 ): string => {
@@ -320,7 +338,7 @@ export const plainTextFromDocument = (
                 case "br":
                   return "\n";
                 default:
-                  return serializeInline(inline).replace(/<[^>]+>/g, "");
+                  return stripHtmlTagsForPlainText(serializeInline(inline));
               }
             })
             .join(""),
@@ -337,7 +355,7 @@ export const plainTextFromDocument = (
         }
         break;
       case "verbatim":
-        parts.push(block.html.replace(/<[^>]+>/g, " "));
+        parts.push(replaceUntilStable(block.html, /<[^>]+>/g, " "));
         break;
     }
   }

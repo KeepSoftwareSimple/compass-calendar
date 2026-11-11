@@ -16,7 +16,6 @@ import { NumberInput } from "@web/components/NumberInput/NumberInput";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { LifeBirthDateField } from "@web/views/Life/LifeBirthDateField";
-import { ReflectionPreferencesControl } from "@web/views/Life/ReflectionPreferencesControl";
 import { LifeQuote } from "./LifeQuote";
 import { type LifePreferences } from "./life-preferences.storage";
 
@@ -91,7 +90,6 @@ export function LifeSidebarContent({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto px-5 pb-5 text-sm">
-      <ReflectionPreferencesControl />
       <section
         aria-label="Life variation"
         className="flex flex-col gap-2 text-text-muted"

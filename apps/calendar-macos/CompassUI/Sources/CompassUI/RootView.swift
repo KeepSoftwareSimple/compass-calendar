@@ -66,10 +66,15 @@ public struct RootView: View {
             titleBarChrome
                 .frame(maxWidth: .infinity, alignment: .leading)
             pointerHintLayer
-            GridFocusAccessibilityOverlay(focusedLabel: model.gridFocusAccessibilityLabel)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(.top, MacTitleBarChromeMetrics.mainContentTopInset + 8)
-                .padding(.leading, contentLeadingInset + 8)
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityHidden(true)
+                .allowsHitTesting(false)
+                .overlay(alignment: .topLeading) {
+                    GridFocusAccessibilityOverlay(focusedLabel: model.gridFocusAccessibilityLabel)
+                        .padding(.top, MacTitleBarChromeMetrics.mainContentTopInset + 8)
+                        .padding(.leading, contentLeadingInset + 8)
+                }
         }
     }
 
@@ -272,15 +277,25 @@ public struct RootView: View {
             QuickTimeStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 2)
-            EventJumpStatusLine(model: model)
+            EventPastePreviewStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 2)
+            KeyboardPlaceStatusLine(model: model)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 2)
+            if !model.pastePreviewStore.isActive {
+                EventJumpStatusLine(model: model)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 2)
+            }
             SidebarSyncStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 4)
             ShortcutSidebarFooter(
                 levelsStore: model.levelsStore,
                 isEventFormVisible: model.isEventFormVisible,
+                isLifeView: model.viewStore.view == .life,
+                lifeThisWeekEligible: model.lifeStore.hasBirthDate,
                 suppressTips: model.eventJumpStatusText != nil || model.focusStore.pageJumpHintsVisible,
                 suppressForQuickTime: !model.draftStore.quickTimeDigits.isEmpty)
                 .padding(.horizontal, 16)

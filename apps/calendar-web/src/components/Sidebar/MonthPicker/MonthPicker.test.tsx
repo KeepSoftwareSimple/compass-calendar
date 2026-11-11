@@ -18,10 +18,12 @@ import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import * as Track from "@web/auth/posthog/track";
 import { MonthPicker } from "@web/components/Sidebar/MonthPicker/MonthPicker";
 import { rememberSidebarPickerReturnFocus } from "@web/components/Sidebar/util/sidebarFocus.util";
+import { CALENDAR_VIEW_INTERACTION_ID_ATTRIBUTES } from "@web/grid/interaction/view-event-registry";
 import {
   pageJumpHintActions,
   usePageJumpHintStore,
 } from "@web/shortcuts/page-jump/page-jump.store";
+import { getPartsPlainText } from "@web/shortcuts/tips/shortcut-tips.data";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { MONTH_PICKER_IN_VIEW_CLASS } from "./monthPickerDayClassName";
 import {
@@ -288,36 +290,65 @@ describe("MonthPicker", () => {
     expect(tabStop).toHaveFocus();
   });
 
-  it("teaches the focus key first, then arrow icons, then Enter", async () => {
+  it("publishes month navigation shortcuts to the shared hint store", async () => {
     const user = userEvent.setup({ skipHover: true });
     renderPicker(<MonthPicker onSelectDate={mock()} {...pickerProps} />);
-    const picker = screen.getByRole("group", { name: "Date navigation" });
-    expect(picker).toHaveTextContent("I focuses the picker");
-    expect(picker).not.toHaveTextContent("Arrows");
-    expect(picker).not.toHaveTextContent("move by week");
-    expect(picker).not.toHaveTextContent("opens it");
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+
+    await waitFor(() => {
+      expect(useDatePickerHintStore.getState().stack).toEqual([]);
+    });
 
     act(() => getTabStopDay()?.focus());
-    expect(picker).toHaveTextContent("move by week");
-    expect(picker).toHaveTextContent("returns to the grid");
-    expect(picker).not.toHaveTextContent("focuses the picker");
-    expect(picker).not.toHaveTextContent("Arrows");
-    expect(picker.querySelector("[data-testid='arrowup-icon']")).not.toBeNull();
-    expect(
-      picker.querySelector("[data-testid='arrowdown-icon']"),
-    ).not.toBeNull();
-    expect(picker).not.toHaveTextContent("opens it");
 
+    await waitFor(() => {
+      const top = useDatePickerHintStore.getState().stack.at(-1);
+      expect(top?.id).toBe("date-picker-sidebar-month");
+      const plain = getPartsPlainText(top!.parts);
+      expect(plain).toMatch(/move/i);
+      expect(plain).toMatch(/Enter/i);
+      expect(plain).toMatch(/U/i);
+    });
+
+    act(() => getTabStopDay()?.focus());
     await user.keyboard("{ArrowDown}");
-    expect(picker).toHaveTextContent("Enter");
-    expect(picker).toHaveTextContent("opens it");
-    const enterKeycap = [
-      ...picker.querySelectorAll("[aria-hidden='true']"),
-    ].find((node) => node.textContent === "Enter");
-    expect(enterKeycap?.className).toContain("c-keycap");
+
+    await waitFor(() => {
+      const top = useDatePickerHintStore.getState().stack.at(-1);
+      expect(top?.id).toBe("date-picker-sidebar-month");
+    });
   });
 
-  it("names the day unit once the picker is focused", () => {
+  it("drops month picker hints when focus moves to a grid event", async () => {
+    renderPicker(<MonthPicker onSelectDate={mock()} {...pickerProps} />);
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+
+    act(() => getTabStopDay()?.focus());
+    await waitFor(() => {
+      expect(
+        useDatePickerHintStore
+          .getState()
+          .stack.some((s) => s.id === "date-picker-sidebar-month"),
+      ).toBe(true);
+    });
+
+    const gridEvent = document.createElement("div");
+    gridEvent.setAttribute(CALENDAR_VIEW_INTERACTION_ID_ATTRIBUTES[0], "evt-1");
+    gridEvent.tabIndex = 0;
+    document.body.append(gridEvent);
+    act(() => gridEvent.focus());
+
+    await waitFor(() => {
+      expect(useDatePickerHintStore.getState().stack).toEqual([]);
+    });
+    gridEvent.remove();
+  });
+
+  it("uses day stepping for a single-day window and keeps sidebar hints registered", async () => {
     renderPicker(
       <MonthPicker
         onSelectDate={mock()}
@@ -327,11 +358,26 @@ describe("MonthPicker", () => {
       />,
     );
     const picker = screen.getByRole("group", { name: "Date navigation" });
-    expect(picker).toHaveTextContent("I focuses the picker");
+    expect(picker).toHaveAttribute("data-picker-unit", "day");
 
-    act(() => getTabStopDay()?.focus());
-    expect(picker).toHaveTextContent("move by day");
-    expect(picker).not.toHaveTextContent("opens it");
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
+    );
+    await waitFor(() => {
+      expect(useDatePickerHintStore.getState().stack).toEqual([]);
+    });
+
+    const tabStop = getTabStopDay();
+    act(() => tabStop?.focus());
+
+    await waitFor(() => {
+      expect(
+        useDatePickerHintStore
+          .getState()
+          .stack.some((s) => s.id === "date-picker-sidebar-month"),
+      ).toBe(true);
+    });
+    expect(tabStop).toHaveFocus();
   });
 
   it("highlights the visible Sun-Sat window, not adjacent days", () => {

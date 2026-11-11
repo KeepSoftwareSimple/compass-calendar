@@ -4,6 +4,7 @@ import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { lazy, type PropsWithChildren, Suspense } from "react";
 import { queryClient as defaultQueryClient } from "@web/api/query-client";
 import { SessionProvider } from "@web/auth/compass/session/SessionProvider";
+import { UserProvider } from "@web/auth/compass/user/context/UserProvider";
 import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
 import { PostHogProvider } from "@web/auth/posthog/posthog-react";
 import { UpgradeConfirmationProvider } from "@web/billing/UpgradeConfirmation/UpgradeConfirmationProvider";
@@ -50,25 +51,27 @@ export const CompassRequiredProviders = ({
   <QueryClientProvider client={queryClient}>
     <HotkeysProvider>
       <SessionProvider>
-        <AppVersionCheckProvider>
-          <GoogleOAuthProvider
-            clientId={ENV_WEB.GOOGLE_CLIENT_ID || "google-not-configured"}
-          >
-            <IconProvider>
-              <LogoutConfirmationProvider>
-                <DeleteAccountConfirmationProvider>
-                  <UpgradeConfirmationProvider>
-                    <CalendarTimeZoneHintSync />
-                    {children}
-                    <SettingsModalHost />
-                    <TimezoneDialogHost />
-                    <AboutModalHost />
-                  </UpgradeConfirmationProvider>
-                </DeleteAccountConfirmationProvider>
-              </LogoutConfirmationProvider>
-            </IconProvider>
-          </GoogleOAuthProvider>
-        </AppVersionCheckProvider>
+        <UserProvider>
+          <AppVersionCheckProvider>
+            <GoogleOAuthProvider
+              clientId={ENV_WEB.GOOGLE_CLIENT_ID || "google-not-configured"}
+            >
+              <IconProvider>
+                <LogoutConfirmationProvider>
+                  <DeleteAccountConfirmationProvider>
+                    <UpgradeConfirmationProvider>
+                      <CalendarTimeZoneHintSync />
+                      {children}
+                      <SettingsModalHost />
+                      <TimezoneDialogHost />
+                      <AboutModalHost />
+                    </UpgradeConfirmationProvider>
+                  </DeleteAccountConfirmationProvider>
+                </LogoutConfirmationProvider>
+              </IconProvider>
+            </GoogleOAuthProvider>
+          </AppVersionCheckProvider>
+        </UserProvider>
       </SessionProvider>
     </HotkeysProvider>
     {IS_DEV && (

@@ -18,6 +18,17 @@ public enum UITestLaunchPolicy {
         arguments.contains(uiTestLaunchArgument)
     }
 
+    /// AppKit probe mirrors on the `NSHostingView` container break Intel wide viewport XCTest.
+    /// Wide launches still set `-COMPASS_UI_TEST` for fixtures and SwiftUI accessibility IDs.
+    public static var attachesMirroredAccessibilityProbes: Bool {
+        attachesMirroredAccessibilityProbes(arguments: ProcessInfo.processInfo.arguments)
+    }
+
+    public static func attachesMirroredAccessibilityProbes(arguments: [String]) -> Bool {
+        attachesAccessibilityProbes(arguments: arguments)
+            && !meetingLinkWideViewport(arguments: arguments)
+    }
+
     /// Fixture interaction tests must not prompt for or post real system notifications.
     public static var allowsSystemNotifications: Bool {
         allowsSystemNotifications(arguments: ProcessInfo.processInfo.arguments)
@@ -145,5 +156,14 @@ public enum UITestLaunchPolicy {
     /// Appends a recurring occurrence row to the demo seed for recurrence-scope XCUITest.
     public static var appendDemoOccurrenceForUITest: Bool {
         ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_APPEND_DEMO_OCCURRENCE")
+    }
+
+    /// Web `event-form-meeting-link-keycaps` viewport resize (1440×960 content).
+    public static var meetingLinkWideViewport: Bool {
+        meetingLinkWideViewport(arguments: ProcessInfo.processInfo.arguments)
+    }
+
+    public static func meetingLinkWideViewport(arguments: [String]) -> Bool {
+        arguments.contains("-COMPASS_UI_TEST_MEETING_LINK_WIDE_VIEWPORT")
     }
 }

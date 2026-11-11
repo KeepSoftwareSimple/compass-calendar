@@ -36,6 +36,8 @@ function gitStub(options: {
       return diffs[key] ?? [];
     },
     untrackedNames: () => options.untracked ?? [],
+    addWorktree: () => "/tmp/main-worktree",
+    removeWorktree: () => {},
   };
 }
 
@@ -254,6 +256,32 @@ describe("planVerify macos", () => {
       "test:macos:packages",
       "test:macos",
     ]);
+  });
+
+  it("lists CompassUITests as CI-only when macos-ui-shard jobs run them", () => {
+    const previous = process.env.CI_MACOS_UI_SHARDED;
+    process.env.CI_MACOS_UI_SHARDED = "1";
+    try {
+      const plan = planVerify({
+        packages: ["macos"],
+        playwrightChromiumAvailable: false,
+        xcodeAvailable: true,
+      });
+      expect(plan.checks.map((check) => check.id)).toEqual([
+        "test:macos:packages",
+        "type-check",
+        "lint",
+        "knip",
+      ]);
+      expect(plan.skips).toEqual([]);
+      expect(plan.ciOnly.map((note) => note.id)).toEqual(["test:macos"]);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.CI_MACOS_UI_SHARDED;
+      } else {
+        process.env.CI_MACOS_UI_SHARDED = previous;
+      }
+    }
   });
 });
 
@@ -506,6 +534,71 @@ describe("runVerify", () => {
     expect(commands[0]).toEqual(["bun", "run", "test:macos:packages"]);
     expect(commands[1]).toEqual(["bun", "run", "test:macos"]);
     expect(logs.lines.join("\n")).not.toContain("CI-only");
+  });
+
+  describe("baseline against origin/main", () => {
+    const e2eFailure = [
+      "  1 failed",
+      "    [chromium-desktop] › e2e/calendars/broken.spec.ts:12:3 › renders ──",
+      "  40 passed (1.0m)",
+    ].join("\n");
+
+    function e2eSpawn(mainFails: boolean): {
+      spawn: SpawnFn;
+      commands: string[];
+    } {
+      const commands: string[] = [];
+      const spawn: SpawnFn = (cmd, options) => {
+        commands.push(`${options?.cwd ?? "."}: ${cmd.join(" ")}`);
+        const isE2e =
+          cmd.join(" ") === "bun run test:e2e" || cmd[1] === "playwright";
+        const fails = isE2e && (options?.cwd ? mainFails : true);
+        return fails
+          ? { exitCode: 1, stdout: e2eFailure, stderr: "" }
+          : { exitCode: 0, stdout: "", stderr: "" };
+      };
+      return { spawn, commands };
+    }
+
+    it("passes a docs-only branch under --strict when e2e also fails on main", async () => {
+      const { spawn, commands } = e2eSpawn(true);
+      const logs = captureLogs();
+      const exitCode = await runVerify(["web", "--strict"], {
+        git: gitStub({ diffs: { "abc123...HEAD": ["docs/README.md"] } }),
+        spawn,
+        log: logs.log,
+        chromiumAvailable: () => true,
+      });
+
+      expect(exitCode).toBe(0);
+      expect(commands).toContain(
+        "/tmp/main-worktree: bunx playwright test e2e/calendars/broken.spec.ts",
+      );
+      const output = logs.lines.join("\n");
+      expect(output).toContain("PRE-EXISTING, fails on main too (1):");
+      expect(output).toContain(
+        "- test:e2e: [chromium-desktop] › e2e/calendars/broken.spec.ts › renders",
+      );
+      expect(logs.lines.at(-1)).toBe("VERDICT: PASS");
+    });
+
+    it("fails when the e2e failure passes on main", async () => {
+      const { spawn } = e2eSpawn(false);
+      const logs = captureLogs();
+      const exitCode = await runVerify(["web"], {
+        git: gitStub({ diffs: { "abc123...HEAD": ["docs/README.md"] } }),
+        spawn,
+        log: logs.log,
+        chromiumAvailable: () => true,
+      });
+
+      expect(exitCode).toBe(1);
+      expect(logs.lines.join("\n")).toContain(
+        "NEW, fails only on this branch (1):",
+      );
+      expect(logs.errors.join("\n")).toContain("Failed: test:e2e");
+      expect(logs.lines.at(-1)).toBe("VERDICT: FAIL");
+    });
   });
 
   it("starts Playwright only after independent checks finish", async () => {

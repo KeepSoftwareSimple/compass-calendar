@@ -1,9 +1,10 @@
-import { type ForwardedRef, forwardRef, memo } from "react";
+import { type ForwardedRef, forwardRef, memo, useState } from "react";
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
+import { withGridEventKeyboardFocusZIndex } from "@web/grid/components/grid-event-focus-z-index";
 import { applyHiddenEventStripWidth } from "@web/grid/grid.constants";
 import { getAllDayEventPosition } from "@web/grid/layout/event.position";
 import {
@@ -54,9 +55,15 @@ const GridAllDayEventBase = (
     visibleDates,
   });
   const displayPosition = applyHiddenEventStripWidth(position, isHidden);
-  const positionWithDraftStack = isActiveDraft
-    ? { ...displayPosition, zIndex: ZIndex.MAX }
-    : displayPosition;
+  const stackZIndex = isActiveDraft ? ZIndex.MAX : displayPosition.zIndex;
+  const [isFocused, setIsFocused] = useState(false);
+  const positionWithStack = {
+    ...displayPosition,
+    zIndex: withGridEventKeyboardFocusZIndex(
+      stackZIndex ?? ZIndex.LAYER_1,
+      isFocused && !isActiveDraft,
+    ),
+  };
 
   return (
     <AllDayEventCard
@@ -68,8 +75,10 @@ const GridAllDayEventBase = (
       isHidden={isHidden}
       isPlaceholder={isPlaceholder}
       isSelected={isSelected || isActiveDraft}
+      onBlur={() => setIsFocused(false)}
       onEventKeyDown={onEventKeyDown}
-      position={positionWithDraftStack}
+      onFocus={() => setIsFocused(true)}
+      position={positionWithStack}
       ref={ref}
     />
   );

@@ -3,6 +3,7 @@ import { EventIdSchema } from "@core/types/domain-primitives";
 import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   ClientEventIdSchema,
+  NullableProviderEventVersionReadSchema,
   ProviderDeliveryStateSchema,
   ProviderEventVersionSchema,
   SyncEventCalendarIdSchema,
@@ -73,6 +74,11 @@ export type EventRecord = z.infer<typeof EventRecordSchema>;
 // in-memory record and left untouched in Mongo. Writes stay strict. Nested
 // customizations is stripped on its own because Zod's unknown-key policy is
 // per object.
-export const EventReadSchema = EventRecordSchema.extend({
-  customizations: EventCustomizationsSchema.strip().nullable().optional(),
-}).strip();
+export const EventReadSchema = EventRecordSchema.omit({
+  providerVersion: true,
+})
+  .extend({
+    providerVersion: NullableProviderEventVersionReadSchema,
+    customizations: EventCustomizationsSchema.strip().nullable().optional(),
+  })
+  .strip();

@@ -15,6 +15,7 @@ import {
   EventIdSchema,
 } from "@core/types/domain-primitives";
 import { AttendeeResponseStatusSchema } from "@core/types/event-attendance.contracts";
+import { nullableProviderEventVersionFromBoundary } from "@core/types/sync/event.contracts";
 import {
   ConnectionIdSchema,
   type PrincipalId,
@@ -82,11 +83,19 @@ export type ProviderEventUpsert = Omit<
   providerEventId: NonNullable<EventRecord["providerEventId"]>;
 };
 
+export type HostGuestRsvpObservationRecorder = (
+  pairs: ReadonlyArray<{
+    before: EventRecord | undefined;
+    after: EventRecord;
+  }>,
+) => Promise<void>;
+
 export type UpsertByProviderIdentityOptions = {
   // When true, an incoming providerMetadata that omits iCalUID keeps any
   // existing iCalUID on the row. Cancelled exceptions pass false so they can
   // still clear the bag to null.
   preserveIcalUidWhenAbsent?: boolean;
+  recordHostGuestRsvpReplies?: HostGuestRsvpObservationRecorder;
 };
 
 export class EventRepository {
@@ -213,7 +222,7 @@ export class EventRepository {
 
     await this.#bulkWriteUnordered(ops);
 
-    return planned.map(
+    const written = planned.map(
       ({ input, existing: current, insertId, providerMetadata }) =>
         EventReadSchema.parse({
           ...current,
@@ -228,6 +237,17 @@ export class EventRepository {
           updatedAt: now,
         }),
     );
+
+    if (options?.recordHostGuestRsvpReplies) {
+      await options.recordHostGuestRsvpReplies(
+        planned.map((entry, index) => ({
+          before: entry.existing,
+          after: written[index]!,
+        })),
+      );
+    }
+
+    return written;
   }
 
   // Stamp provider identity onto a series-keyed exception that lacks it (or
@@ -1044,6 +1064,9 @@ function upsertSetFields(
   } = input;
   const set: Record<string, unknown> = {
     ...fields,
+    providerVersion: nullableProviderEventVersionFromBoundary(
+      input.providerVersion,
+    ),
     providerMetadata,
     updatedAt: now,
   };

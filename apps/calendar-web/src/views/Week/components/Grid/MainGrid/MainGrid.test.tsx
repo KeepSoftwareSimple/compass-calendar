@@ -534,7 +534,7 @@ describe("saved Week event ownership", () => {
     expect(Number(solo.style.zIndex)).toBe(ZIndex.LAYER_1);
   });
 
-  it("keeps a focused deck card in its fan-out stack", () => {
+  it("raises a focused deck card above overlap partners for a full focus ring", () => {
     seedGrid([
       createSavedEvent({
         _id: "back",
@@ -564,10 +564,53 @@ describe("saved Week event ownership", () => {
     expect(initialBackZIndex).toBeLessThan(ZIndex.MAX);
 
     fireEvent.focus(back);
-    expect(Number(back.style.zIndex)).toBe(initialBackZIndex);
+    expect(Number(back.style.zIndex)).toBe(ZIndex.MAX);
 
     fireEvent.blur(back);
     expect(Number(back.style.zIndex)).toBe(initialBackZIndex);
+  });
+
+  it("raises a focused sequential timed event above the next event in the column", () => {
+    seedGrid([
+      createSavedEvent({
+        _id: "earlier",
+        endDate: "2024-01-15T13:45:00.000Z",
+        startDate: "2024-01-15T12:45:00.000Z",
+        title: "Earlier block",
+      }),
+      createSavedEvent({
+        _id: "later",
+        endDate: "2024-01-15T14:30:00.000Z",
+        startDate: "2024-01-15T14:00:00.000Z",
+        title: "Later block",
+      }),
+    ]);
+
+    render(
+      <Provider>
+        <MainGridEvents
+          measurements={measurements}
+          weekProps={createWeekProps()}
+        />
+      </Provider>,
+    );
+
+    const earlier = screen.getByRole("button", { name: /earlier block/i });
+    const later = screen.getByRole("button", { name: /later block/i });
+    const initialEarlierZIndex = Number(earlier.style.zIndex);
+
+    expect(initialEarlierZIndex).toBeLessThanOrEqual(
+      Number(later.style.zIndex),
+    );
+
+    fireEvent.focus(earlier);
+    expect(Number(earlier.style.zIndex)).toBe(ZIndex.MAX);
+    expect(Number(earlier.style.zIndex)).toBeGreaterThan(
+      Number(later.style.zIndex),
+    );
+
+    fireEvent.blur(earlier);
+    expect(Number(earlier.style.zIndex)).toBe(initialEarlierZIndex);
   });
 
   it("renders a hidden overlap as a strip so the neighbour keeps solo width", () => {

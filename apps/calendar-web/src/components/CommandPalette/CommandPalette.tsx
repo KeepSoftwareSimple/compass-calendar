@@ -63,6 +63,7 @@ import {
   recordRecentCommand,
   useRecentCommandIds,
 } from "@web/components/CommandPalette/recent-commands.store";
+import { InlineSpinner } from "@web/components/InlineSpinner/InlineSpinner";
 import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
@@ -385,7 +386,11 @@ const CommandPaletteContent = ({
                 {showSearchStatus ? (
                   <div className="mb-1">
                     <div className={SECTION_HEADING_CLASS_NAME}>Events</div>
-                    <div className="px-3 py-2 text-text-muted">
+                    <div
+                      aria-busy="true"
+                      className="flex min-h-[2.5rem] items-center gap-2 px-3 py-2 text-text-muted"
+                    >
+                      <InlineSpinner label="Searching events" />
                       {searchingText}
                     </div>
                   </div>

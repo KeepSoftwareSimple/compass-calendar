@@ -10,6 +10,7 @@ import {
   type TimeZone,
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
+import { AttendeeResponseStatusSchema } from "@core/types/event-attendance.contracts";
 import { CalendarFreshnessIssueReasonSchema } from "@core/types/sync/availability.contracts";
 import { ConnectionStateSchema } from "@core/types/sync/connection.contracts";
 import { ProviderKindSchema } from "@core/types/sync/identity.contracts";
@@ -739,4 +740,24 @@ export const BookingNewMeetingsClaimResponseSchema = z.strictObject({
 });
 export type BookingNewMeetingsClaimResponse = z.infer<
   typeof BookingNewMeetingsClaimResponseSchema
+>;
+
+export const BookingGuestRsvpClaimReplySchema = z.strictObject({
+  id: ObjectIdStringSchema,
+  guestName: z.string().trim().min(1).max(256),
+  status: AttendeeResponseStatusSchema,
+  slotStart: DateTimeSchema,
+  firstObservedAt: DateTimeSchema,
+});
+export type BookingGuestRsvpClaimReply = z.infer<
+  typeof BookingGuestRsvpClaimReplySchema
+>;
+
+export const BookingGuestRsvpClaimResponseSchema = z.strictObject({
+  count: z.number().int().nonnegative(),
+  latest: BookingGuestRsvpClaimReplySchema.nullable(),
+  whileYouWereAway: z.boolean(),
+});
+export type BookingGuestRsvpClaimResponse = z.infer<
+  typeof BookingGuestRsvpClaimResponseSchema
 >;

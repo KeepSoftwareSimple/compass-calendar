@@ -1,5 +1,6 @@
 import { type Request, type Response } from "express";
 import {
+  InitializeReflectionPreferencesSchema,
   ReflectionCalendarVisibilitySchema,
   ReflectionPreferencesSchema,
 } from "@core/types/life-preferences.contracts";
@@ -9,6 +10,7 @@ import mongoService from "@backend/common/services/mongo.service";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import { reflectionCalendarContext } from "@backend/email/reflection-context";
 import { isReflectionTrialUser } from "@backend/email/reflection-enrollment";
+import { initializeReflectionPreferences } from "@backend/email/reflection-initialization";
 
 const available = (id: string) =>
   !!CONFIG.EMAIL_PROVIDER &&
@@ -22,15 +24,15 @@ export async function getReflectionPreferences(req: Request, res: Response) {
     res.status(404).json({ message: "User not found" });
     return;
   }
-  const preferences = user.reflectionPreferences
-    ? ReflectionPreferencesSchema.parse({
+  const saved = user.reflectionPreferences
+    ? ReflectionPreferencesSchema.safeParse({
         enabled: user.reflectionPreferences.enabled,
         timeZone: user.reflectionPreferences.timeZone,
         excludedCalendarIds: user.reflectionPreferences.excludedCalendarIds,
       })
     : null;
   res.json({
-    preferences,
+    preferences: saved?.success ? saved.data : null,
     available: available(id.toHexString()),
     trial: isReflectionTrialUser(id.toHexString()),
   });
@@ -99,11 +101,7 @@ export async function putReflectionPreferences(req: Request, res: Response) {
       },
     },
   );
-  await emailSendRepository.cancelQueuedForUserBySequence(id, "reflection");
-  await mongoService.emailSend.updateMany(
-    { userId: id, sequence: "reflection", status: "canceled" },
-    { $unset: { "reflection.prepared": "" } },
-  );
+  await emailSendRepository.cancelQueuedReflection(id, !input.data.enabled);
   res.json({
     preferences: input.data,
     available: available(id.toHexString()),
@@ -131,5 +129,18 @@ export async function patchReflectionCalendarVisibility(
     await mongoService.user.updateOne(filter, {
       $addToSet: { "reflectionPreferences.excludedCalendarIds": calendarId },
     });
+  res.status(204).end();
+}
+
+export async function initializeReflections(req: Request, res: Response) {
+  const input = InitializeReflectionPreferencesSchema.safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ message: "Choose valid reflection settings" });
+    return;
+  }
+  await initializeReflectionPreferences(
+    zObjectId.parse(req.session?.getUserId()),
+    input.data,
+  );
   res.status(204).end();
 }

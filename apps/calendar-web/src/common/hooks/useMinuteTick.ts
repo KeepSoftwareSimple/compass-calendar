@@ -39,12 +39,14 @@ export function useMinuteTick(): Dayjs {
     timeoutId = setTimeout(tick, msUntilNextMinute());
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", catchUp);
+    window.addEventListener("pageshow", catchUp);
 
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", catchUp);
+      window.removeEventListener("pageshow", catchUp);
     };
   }, []);
 

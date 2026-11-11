@@ -4,6 +4,7 @@ import { HttpResponse, http } from "msw";
 import { act, useState } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { renderWithStore } from "@web/__tests__/render-with-store";
+import { STABLE_LOADING_SHOW_DELAY_MS } from "@web/common/hooks/useStableLoadingVisible";
 import { LocationField } from "@web/views/Forms/EventForm/LocationField/LocationField";
 import { PLACES_AUTOCOMPLETE_URL } from "@web/views/Forms/EventForm/LocationField/places.client";
 import { PLACE_SUGGESTION_DEBOUNCE_MS } from "@web/views/Forms/EventForm/LocationField/usePlaceSuggestions";
@@ -27,6 +28,17 @@ const settleDebounce = () =>
       ),
   );
 
+const waitForLoadingRow = () =>
+  act(
+    () =>
+      new Promise((resolve) =>
+        setTimeout(
+          resolve,
+          PLACE_SUGGESTION_DEBOUNCE_MS + STABLE_LOADING_SHOW_DELAY_MS + 100,
+        ),
+      ),
+  );
+
 const usePlacesResponse = (respond: () => Response) => {
   server.use(
     http.post(PLACES_AUTOCOMPLETE_URL, async ({ request }) => {
@@ -46,6 +58,8 @@ const placesOk = () =>
       placePrediction: { text: { text } },
     })),
   });
+
+const placesEmpty = () => HttpResponse.json({ suggestions: [] });
 
 function Harness({
   apiKey = "test-key",
@@ -86,8 +100,46 @@ describe("LocationField", () => {
     expect(
       await screen.findByRole("option", { name: SUGGESTIONS[0] }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Powered by Google")).toBeInTheDocument();
+    expect(screen.getByText("Google Maps")).toBeInTheDocument();
     expect(requests.at(-1)).toEqual({ input: "1600 amph", apiKey: "test-key" });
+  });
+
+  it("shows a loading row while suggestions are pending", async () => {
+    let resolveSearch: () => void = () => {};
+    server.use(
+      http.post(PLACES_AUTOCOMPLETE_URL, async () => {
+        return new Promise((resolve) => {
+          resolveSearch = () => resolve(placesOk());
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithStore(<Harness />);
+
+    await user.type(screen.getByRole("combobox", { name: "Location" }), "160");
+    await waitForLoadingRow();
+
+    expect(screen.getByText("Searching…")).toBeInTheDocument();
+    expect(screen.getByText("Google Maps")).toBeInTheDocument();
+
+    await act(async () => {
+      resolveSearch();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(
+      await screen.findByRole("option", { name: SUGGESTIONS[0] }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Searching…")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state when Places returns no matches", async () => {
+    usePlacesResponse(placesEmpty);
+    const user = userEvent.setup();
+    renderWithStore(<Harness />);
+
+    await user.type(screen.getByRole("combobox", { name: "Location" }), "zzz");
+    expect(await screen.findByText("No places found")).toBeInTheDocument();
   });
 
   it("fills the field with a clicked suggestion and closes the list", async () => {
@@ -114,7 +166,7 @@ describe("LocationField", () => {
     const input = screen.getByRole("combobox", { name: "Location" });
 
     await user.type(input, "1600 amph");
-    await screen.findByRole("listbox", { name: "Location suggestions" });
+    await screen.findByRole("option", { name: SUGGESTIONS[0] });
     onParentKeyDown.mockClear();
     await user.keyboard("{ArrowDown}{Enter}");
 
@@ -170,7 +222,7 @@ describe("LocationField", () => {
     expect(requests).toHaveLength(0);
   });
 
-  it("keeps free typing working when Places fails", async () => {
+  it("shows a calm error state and keeps free typing when Places fails", async () => {
     usePlacesResponse(() => new HttpResponse(null, { status: 500 }));
     const user = userEvent.setup();
     renderWithStore(<Harness />);
@@ -178,9 +230,17 @@ describe("LocationField", () => {
 
     await user.type(input, "1600 amph");
     await waitFor(() => expect(requests.length).toBeGreaterThan(0));
+    expect(
+      await screen.findByText("Could not load suggestions"),
+    ).toBeInTheDocument();
+
     await user.type(input, "itheatre");
 
     expect(input).toHaveValue("1600 amphitheatre");
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText("Could not load suggestions"),
+      ).toBeInTheDocument();
+    });
   });
 });

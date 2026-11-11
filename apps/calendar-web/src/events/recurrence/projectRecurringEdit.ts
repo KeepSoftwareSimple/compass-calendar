@@ -1,6 +1,7 @@
 import { GCAL_MAX_RECURRENCES } from "@core/constants/core.constants";
 import {
   DateOnlySchema,
+  type DateTime,
   DateTimeSchema,
   type EventId,
 } from "@core/types/domain-primitives";
@@ -9,9 +10,11 @@ import { type RecurrenceScope } from "@core/types/event-command.contracts";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { getCompassEventDateFormat } from "@core/util/event/event.util";
 import {
+  composeOccurrenceId,
   composeOccurrenceIdFromSchedule,
   decodeOccurrenceId,
 } from "@core/util/occurrence-id";
+import { remainderMasterId } from "@core/util/series-split";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import {
   stripRuleBounds,
@@ -144,11 +147,41 @@ const isAtOrAfter = (event: Event, cutoff: Event["schedule"]) => {
   return !dayjs(event.schedule.start).isBefore(cutoff.start);
 };
 
+const recurrenceIdForOccurrence = (event: Event): DateTime | null => {
+  const parts = decodeOccurrenceId(event.id);
+  if (parts) return parts.recurrenceId as DateTime;
+  if (event.schedule.kind === "allDay") {
+    return `${event.schedule.start}T00:00:00.000Z` as DateTime;
+  }
+  return DateTimeSchema.parse(new Date(event.schedule.start).toISOString());
+};
+
+const withRemainderOccurrenceId = (
+  event: Event,
+  remainderMasterEventId: EventId,
+  remainderSeriesId: EventId,
+): Event => {
+  const recurrenceId = recurrenceIdForOccurrence(event);
+  if (!recurrenceId) return event;
+  return {
+    ...event,
+    id: composeOccurrenceId({
+      eventId: remainderMasterEventId,
+      recurrenceId,
+    }) as EventId,
+    recurrence: {
+      kind: "occurrence" as const,
+      seriesId: remainderSeriesId,
+    },
+  };
+};
+
 const patchAffectedOccurrences = (
   affected: readonly Event[],
   edited: Event,
   original: Event,
   remainderSeriesId?: EventId,
+  remainderMasterEventId?: EventId,
 ): Event[] =>
   affected.map((event) => {
     const patched = seriesPatch(event, edited);
@@ -161,10 +194,18 @@ const patchAffectedOccurrences = (
           },
         }
       : patched;
-    if (event.id === edited.id) {
-      return { ...withSeries, schedule: edited.schedule };
+    const shifted =
+      event.id === edited.id
+        ? { ...withSeries, schedule: edited.schedule }
+        : shiftEvent(withSeries, original, edited);
+    if (remainderSeriesId && remainderMasterEventId) {
+      return withRemainderOccurrenceId(
+        shifted,
+        remainderMasterEventId,
+        remainderSeriesId,
+      );
     }
-    return shiftEvent(withSeries, original, edited);
+    return shifted;
   });
 
 export function projectRecurringEdit({
@@ -236,14 +277,21 @@ export function projectRecurringEdit({
     });
   }
 
-  const remainderSeriesId = edited.id;
+  const splitRecurrenceId =
+    recurrenceIdForOccurrence(original) ??
+    (DateTimeSchema.parse(new Date(splitInstant).toISOString()) as DateTime);
+  const remainderMasterEventId = remainderMasterId(
+    seriesMaster.id,
+    splitRecurrenceId,
+  );
+  const remainderSeriesId = remainderMasterEventId;
   const remainderRules =
     edited.recurrence.kind === "series"
       ? edited.recurrence.rules
       : stripRuleBounds(seriesMaster.recurrence.rules);
   const remainderMaster: Event = {
     ...edited,
-    id: remainderSeriesId,
+    id: remainderMasterEventId,
     recurrence: { kind: "series", rules: remainderRules },
   };
   const truncatedMaster: Event = {
@@ -264,7 +312,13 @@ export function projectRecurringEdit({
   const upserts = [
     truncatedMaster,
     remainderMaster,
-    ...patchAffectedOccurrences(affected, edited, original, remainderSeriesId),
+    ...patchAffectedOccurrences(
+      affected,
+      edited,
+      original,
+      remainderSeriesId,
+      remainderMasterEventId,
+    ),
   ];
 
   return { removeIds, upserts };

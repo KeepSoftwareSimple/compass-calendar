@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { getPartsPlainText } from "@web/shortcuts/tips/shortcut-tips.data";
 import { EventFormDateField } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/EventFormDateField";
 import { formatEventFormDateLabel } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/eventFormDateField.util";
 import { describe, expect, it, mock } from "bun:test";
@@ -295,7 +296,7 @@ describe("EventFormDateField", () => {
     expect(screen.getByRole("button", { name: "After" })).toHaveFocus();
   });
 
-  it("shows an in-field ArrowDown keycap while the input is focused", () => {
+  it("does not overlay shortcut keycaps on the closed date input", () => {
     render(<Harness />);
 
     const input = screen.getByTitle("Pick Start Date");
@@ -303,12 +304,10 @@ describe("EventFormDateField", () => {
       input.focus();
     });
 
-    const hint = screen.getByTestId("event-form-control-hint");
-    expect(hint.querySelector(".c-keycap")).toBeTruthy();
-    expect(hint.className).toMatch(/right-1\.5/);
+    expect(screen.queryByTestId("event-form-control-hint")).toBeNull();
   });
 
-  it("shows calendar navigation keycaps in the popover header when open", () => {
+  it("registers grid shortcut hints when the calendar is open but focus is not on the input", async () => {
     render(
       <EventFormDateField
         isOpen
@@ -321,15 +320,30 @@ describe("EventFormDateField", () => {
       />,
     );
 
-    expect(screen.getByTestId("event-form-calendar-hint")).toBeInTheDocument();
     expect(
       screen.queryByTestId("event-form-control-hint"),
     ).not.toBeInTheDocument();
-    const hintRow = screen.getByTestId("event-form-calendar-hint");
-    expect(hintRow.className).toMatch(/flex-wrap/);
-    expect(hintRow.closest(".react-datepicker__header")?.children.length).toBe(
-      2,
+
+    const input = screen.getByTitle("Pick Start Date");
+    act(() => {
+      input.focus();
+      input.blur();
+    });
+
+    const { useDatePickerHintStore } = await import(
+      "@web/shortcuts/tips/date-picker-hint.store"
     );
+    await waitFor(() => {
+      const top = useDatePickerHintStore.getState().stack.at(-1);
+      expect(top?.id).toBe("date-picker-event-form");
+      const plain = getPartsPlainText(top!.parts);
+      expect(plain).toMatch(/move date/i);
+      expect(plain).not.toContain("PageDown");
+      expect(getPartsPlainText(top!.secondaryParts ?? [])).toContain(
+        "PageDown",
+      );
+      expect(plain).not.toMatch(/open start date/i);
+    });
   });
 
   it("moves focus into the grid on ArrowDown and steps by day and week", async () => {

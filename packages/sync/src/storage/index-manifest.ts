@@ -71,6 +71,17 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
   ],
   [SYNC_COLLECTIONS.events]: [
     {
+      name: "reflection_principal_kind_start",
+      key: {
+        tenantId: 1,
+        principalId: 1,
+        calendarId: 1,
+        lifecycleState: 1,
+        "recurrence.kind": 1,
+        "schedule.start": 1,
+      },
+    },
+    {
       name: "reflection_principal_page",
       key: {
         tenantId: 1,
@@ -303,6 +314,27 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
     // TTL: content-free markers expire 30 days after deletion.
     {
       name: "ttl_expiry",
+      key: { expiresAt: 1 },
+      options: { expireAfterSeconds: 0 },
+    },
+  ],
+  [SYNC_COLLECTIONS.hostGuestRsvpObservations]: [
+    {
+      name: "principal_notice_cursor",
+      key: { principalId: 1, firstObservedAt: 1, _id: 1 },
+    },
+    {
+      name: "guest_reply_identity",
+      key: {
+        principalId: 1,
+        eventId: 1,
+        guestEmailLower: 1,
+        responseStatus: 1,
+      },
+      options: { unique: true },
+    },
+    {
+      name: "ttl_expires_at",
       key: { expiresAt: 1 },
       options: { expireAfterSeconds: 0 },
     },

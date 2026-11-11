@@ -11,6 +11,11 @@ import { BaseApi } from "@web/api/base/base.api";
 export const USER_METADATA_REQUEST_TIMEOUT_MS = 30_000;
 
 const UserApi = {
+  async initializeReflectionPreferences(
+    input: Omit<ReflectionPreferences, "enabled">,
+  ) {
+    await BaseApi.post("/user/reflection-preferences", input);
+  },
   async getReflectionPreferences() {
     return ReflectionPreferencesResponseSchema.parse(
       (await BaseApi.get("/user/reflection-preferences")).data,

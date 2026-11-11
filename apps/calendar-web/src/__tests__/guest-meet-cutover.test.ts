@@ -1,7 +1,21 @@
 import { isGuestMeetStaticPath } from "../../guest-meet-static-path";
 import { describe, expect, it } from "bun:test";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
+
+function rgListJsMatches(dir: string, pattern: string): string[] {
+  const proc = Bun.spawnSync({
+    cmd: ["rg", "-l", "--glob", "*.js", pattern, dir],
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode === 2) {
+    throw new Error(proc.stderr.toString().trim() || "rg failed");
+  }
+  const out = proc.stdout.toString().trim();
+  if (!out) return [];
+  return out.split("\n");
+}
 
 const WEB_SRC = path.resolve(import.meta.dir, "..");
 const BUILD_OUTDIR = path.resolve(import.meta.dir, "../../../../build/web");
@@ -18,10 +32,6 @@ const GUEST_UI_NEEDLES = [
   "usePublicBookingFlow",
   "Meet with Tyler Dane",
 ];
-
-function boundedNeedle(needle: string): RegExp {
-  return new RegExp(`(?<![A-Za-z0-9_$])${needle}(?![A-Za-z0-9_$])`);
-}
 
 function listModulesRecursively(dir: string): string[] {
   const names: string[] = [];
@@ -71,12 +81,14 @@ describe("calendar-web production bundle", () => {
       return;
     }
 
-    const combined = files
-      .map((name) => readFileSync(path.join(BUILD_OUTDIR, name), "utf8"))
-      .join("\n");
-
-    for (const needle of GUEST_UI_NEEDLES) {
-      expect(boundedNeedle(needle).test(combined)).toBe(false);
-    }
+    // Thousands of tiny hashed chunks: one ripgrep pass over the outdir (bounded
+    // word matches) stays under the default test timeout; per-file reads do not.
+    const alt = GUEST_UI_NEEDLES.map((n) =>
+      n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    ).join("|");
+    const rgPattern = String.raw`\b(?:${alt})\b`;
+    const matches = rgListJsMatches(BUILD_OUTDIR, rgPattern);
+    const violations = matches.map((p) => path.basename(p));
+    expect(violations).toEqual([]);
   });
 });

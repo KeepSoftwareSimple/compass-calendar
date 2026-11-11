@@ -8,6 +8,7 @@ import {
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
+import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
   afterAll,
   afterEach,
@@ -64,6 +65,86 @@ describe("reflection preferences", () => {
   afterEach(() => {
     Object.assign(CONFIG, original);
     mock.restore();
+  });
+
+  it("automatically enables new onboarding reviews in the app timezone and preserves a later pause", async () => {
+    CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
+    const { user } = await UtilDriver.setupTestUser();
+    const sendAt = new Date("2026-11-07T15:00:00Z");
+    await emailSendRepository.insertMany([
+      {
+        _id: `${user._id}:weekly-review`,
+        userId: user._id,
+        sequence: "welcome",
+        stepKey: "weekly-review",
+        status: "queued",
+        sendAt,
+        nextAttemptAt: sendAt,
+      },
+    ]);
+    const initialize = () =>
+      driver
+        .getServer()
+        .post(path)
+        .set("Cookie", cookie(user._id.toString()))
+        .send({
+          timeZone: "America/Denver",
+          excludedCalendarIds: ["hidden-calendar"],
+        });
+    await initialize().expect(204);
+    let saved = await mongoService.user.findOne({ _id: user._id });
+    expect(saved?.reflectionPreferences).toEqual({
+      enabled: true,
+      timeZone: "America/Denver",
+      excludedCalendarIds: ["hidden-calendar"],
+    });
+    expect(saved?.reflectionNextSendAt?.toISOString()).toBe(
+      "2026-11-08T17:30:00.000Z",
+    );
+    await driver
+      .getServer()
+      .put(path)
+      .set("Cookie", cookie(user._id.toString()))
+      .send({ ...settings, enabled: false })
+      .expect(200);
+    await initialize().expect(204);
+    saved = await mongoService.user.findOne({ _id: user._id });
+    expect(saved?.reflectionPreferences?.enabled).toBe(false);
+    expect(saved?.emailPreferences?.reflectionDisabledAt).toBeInstanceOf(Date);
+  });
+
+  it("does not automatically enroll an existing account outside the onboarding cohort", async () => {
+    CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
+    const { user } = await UtilDriver.setupTestUser();
+    await driver
+      .getServer()
+      .post(path)
+      .set("Cookie", cookie(user._id.toString()))
+      .send({ timeZone: "America/Denver", excludedCalendarIds: [] })
+      .expect(204);
+    expect(
+      (await mongoService.user.findOne({ _id: user._id }))
+        ?.reflectionPreferences,
+    ).toBeUndefined();
+  });
+
+  it("shows legacy unsubscribe-only preferences as off instead of rejecting missing timezone data", async () => {
+    const { user } = await UtilDriver.setupTestUser();
+    await mongoService.user.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          "reflectionPreferences.enabled": false,
+          "emailPreferences.reflectionDisabledAt": new Date(),
+        },
+      },
+    );
+    const response = await driver
+      .getServer()
+      .get(path)
+      .set("Cookie", cookie(user._id.toString()))
+      .expect(200);
+    expect(response.body.preferences).toBeNull();
   });
 
   it("gates enrollment by trial binding and complete history before public rollout", async () => {

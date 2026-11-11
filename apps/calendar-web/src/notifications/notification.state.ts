@@ -11,7 +11,7 @@ import {
 } from "@web/notifications/notification.port";
 
 /** Where a toggle came from for analytics. */
-export type NotificationToggleSource = "palette";
+export type NotificationToggleSource = "palette" | "settings";
 
 export const SAMPLE_NOTIFICATION_TITLE = "Compass notifications are on";
 export const SAMPLE_NOTIFICATION_BODY =
