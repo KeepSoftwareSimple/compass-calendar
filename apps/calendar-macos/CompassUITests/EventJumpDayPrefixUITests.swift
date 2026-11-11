@@ -1,6 +1,25 @@
 import XCTest
 
 final class EventJumpDayPrefixUITests: XCTestCase {
+    /// Types a chip label, including ⇧w… hints that require Shift+W on macOS.
+    private func typeEventJumpChipLabel(_ label: String, in window: XCUIElement) {
+        if label.hasPrefix("⇧") {
+            let remainder = String(label.dropFirst())
+            guard let first = remainder.first else {
+                XCTFail("Expected characters after ⇧ in \(label)")
+                return
+            }
+            window.typeKey(String(first), modifierFlags: .shift)
+            for character in remainder.dropFirst() {
+                window.typeKey(String(character), modifierFlags: [])
+            }
+            return
+        }
+        XCTAssertEqual(label, label.lowercased())
+        for character in label {
+            window.typeKey(String(character), modifierFlags: [])
+        }
+    }
     @MainActor
     func testLowercaseDayPrefixChipFocusesEvent() {
         let app = XCUIApplication.compassUITest()
@@ -24,10 +43,7 @@ final class EventJumpDayPrefixUITests: XCTestCase {
         XCTAssertGreaterThan(chipLabels.count, 0)
         let label = firstChip.label
         XCTAssertFalse(label.isEmpty)
-        XCTAssertEqual(label, label.lowercased())
-        for character in label {
-            window.typeKey(String(character), modifierFlags: [])
-        }
+        typeEventJumpChipLabel(label, in: window)
         let probe = window.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(probe.waitForExistence(timeout: 8))
         let evidence = XCTAttachment(screenshot: window.screenshot())

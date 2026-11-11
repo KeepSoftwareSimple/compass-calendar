@@ -3,11 +3,11 @@ import CompassKit
 import XCTest
 @testable import CompassUI
 
-/// Web `DayLabels`: while Mod is held the weekday name becomes a ⇧su / ⇧m
-/// keycap, and event-jump mode shows the bare lowercase prefix.
+/// Web `DayLabels`: Mod-hold shows ⇧su / ⇧m on every column. Event-jump mode
+/// shows bare lowercase except macOS view collisions (`w` → week view): Wed is ⇧w.
 @MainActor
 final class TimeGridDayJumpPrefixTests: XCTestCase {
-    private let dayKeys = ["2026-05-17", "2026-05-18"]
+    private let dayKeys = ["2026-05-17", "2026-05-20"]
 
     func testWeekHeadersShowWeekdayNamesByDefault() {
         let view = render(showDayJumpPrefixes: false)
@@ -17,16 +17,19 @@ final class TimeGridDayJumpPrefixTests: XCTestCase {
     func testWeekHeadersShowShiftPrefixedChipsWhileModIsHeld() {
         let view = render(showDayJumpPrefixes: true)
         let sunday = headerTexts(in: view, dayKey: "2026-05-17")
-        let monday = headerTexts(in: view, dayKey: "2026-05-18")
+        let wednesday = headerTexts(in: view, dayKey: "2026-05-20")
         XCTAssertTrue(sunday.contains("⇧su"), "Sunday header texts: \(sunday)")
-        XCTAssertTrue(monday.contains("⇧m"), "Monday header texts: \(monday)")
+        XCTAssertTrue(wednesday.contains("⇧w"), "Wednesday header texts: \(wednesday)")
         XCTAssertFalse(sunday.contains("Sun"), "Sunday header texts: \(sunday)")
     }
 
-    func testEventJumpModeShowsBarePrefixes() {
+    func testEventJumpModeShowsBarePrefixesExceptWednesday() {
         let view = render(showDayJumpPrefixes: true, dayJumpUseShiftPrefix: false)
         let sunday = headerTexts(in: view, dayKey: "2026-05-17")
+        let wednesday = headerTexts(in: view, dayKey: "2026-05-20")
         XCTAssertTrue(sunday.contains("su"), "Sunday header texts: \(sunday)")
+        XCTAssertFalse(sunday.contains("⇧"), "Sunday header texts: \(sunday)")
+        XCTAssertTrue(wednesday.contains("⇧w"), "Wednesday header texts: \(wednesday)")
     }
 
     private func render(showDayJumpPrefixes: Bool, dayJumpUseShiftPrefix: Bool = true) -> TimeGridView {
