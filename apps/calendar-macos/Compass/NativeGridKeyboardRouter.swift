@@ -442,7 +442,9 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if keyEvent.modifiers == .shift, case .character(let letter) = keyEvent.key {
+        if keyEvent.modifiers == .shift, case .character(let letter) = keyEvent.key,
+            claimsShiftDayJump(letter)
+        {
             model.handleShiftDayJump(letter: letter)
             return true
         }
@@ -1183,6 +1185,12 @@ final class NativeGridKeyboardRouter {
         default:
             false
         }
+    }
+
+    /// Only shifted M/T/W/R/F/S claim day-jump so Shift+C reaches `create-allday`.
+    private func claimsShiftDayJump(_ letter: Character) -> Bool {
+        if String(letter).lowercased() == "s" { return true }
+        return DayJumpPrefixes.dayPrefix(forShiftedLetter: letter) != nil
     }
 
 }
