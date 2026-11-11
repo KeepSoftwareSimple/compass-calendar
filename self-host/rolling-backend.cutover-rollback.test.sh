@@ -105,16 +105,10 @@ COMPASS_CUTOVER_STABLE_TIMEOUT_SEC=2
 export COMPASS_CUTOVER_STABLE_CHECKS COMPASS_CUTOVER_STABLE_TIMEOUT_SEC
 
 write_upstream_for_slot() {
-  primary=$1
-  standby=$([ "$primary" = "a" ] && printf b || printf a)
+  slot=$1
   umask 077
-  cat >"$UPSTREAM_FILE" <<EOF
-upstream compass_backend {
-  server backend-${primary}:3000 max_fails=0;
-  server backend-${standby}:3000 down max_fails=0;
-}
-EOF
-  if [ "$primary" = "a" ] && [ "$(read_backend_active_slot)" = "b" ]; then
+  printf 'set $backend_upstream backend-%s:3000;\n' "$slot" >"$UPSTREAM_FILE"
+  if [ "$slot" = "a" ] && [ "$(read_backend_active_slot)" = "b" ]; then
     UNSTABLE_AFTER_SWITCH=1
   fi
 }
@@ -127,7 +121,7 @@ if [ "$UNSTABLE_AFTER_SWITCH" -ne 1 ]; then
   fail "expected upstream switch to inactive slot a before rollback"
 fi
 
-if ! grep -q 'server backend-b:3000 max_fails=0;' "$UPSTREAM_FILE"; then
+if ! grep -q 'backend-b:3000' "$UPSTREAM_FILE"; then
   fail "rollback should restore upstream to active slot b"
 fi
 

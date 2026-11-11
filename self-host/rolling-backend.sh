@@ -26,15 +26,9 @@ inactive_backend_slot() {
 }
 
 write_upstream_for_slot() {
-  primary=$1
-  standby=$(inactive_backend_slot "$primary") || return 1
+  slot=$1
   umask 077
-  cat >"$UPSTREAM_FILE" <<EOF
-upstream compass_backend {
-  server backend-${primary}:3000 max_fails=0;
-  server backend-${standby}:3000 down max_fails=0;
-}
-EOF
+  printf 'set $backend_upstream backend-%s:3000;\n' "$slot" >"$UPSTREAM_FILE"
 }
 
 backend_slot_running() {
@@ -65,6 +59,8 @@ backend_slot_established_connections() {
   compose exec -T "backend-$slot" bun -e "
 const fs = require('fs');
 const PORT_HEX = '0BB8';
+// Loopback rem_address in /proc/net/tcp (127.0.0.1), excluding container healthchecks.
+const LOOPBACK_REM = new Set(['0100007F', '00000000000000000000000000000000']);
 let count = 0;
 for (const file of ['/proc/net/tcp', '/proc/net/tcp6']) {
   try {
@@ -73,28 +69,34 @@ for (const file of ['/proc/net/tcp', '/proc/net/tcp6']) {
       if (!line.trim()) continue;
       const parts = line.trim().split(/\s+/);
       const local = parts[1];
+      const remote = parts[2];
       const state = parts[3];
       if (state !== '01') continue;
       const portHex = local.split(':')[1]?.toUpperCase();
-      if (portHex === PORT_HEX) count++;
+      if (portHex !== PORT_HEX) continue;
+      const remHost = remote.split(':')[0]?.toUpperCase();
+      if (LOOPBACK_REM.has(remHost)) continue;
+      count++;
     }
   } catch {}
 }
 process.stdout.write(String(count));
-" 2>/dev/null || printf '0'
+"
 }
 
 wait_for_backend_slot_drain() {
   slot=$1
-  idle_need=${COMPASS_BACKEND_DRAIN_IDLE_SEC:-3}
-  max_sec=${COMPASS_BACKEND_DRAIN_TIMEOUT_SEC:-300}
+  idle_need=${COMPASS_BACKEND_DRAIN_IDLE_SEC:-2}
+  max_sec=${COMPASS_BACKEND_DRAIN_TIMEOUT_SEC:-30}
   elapsed=0
   idle=0
-  conns=0
+  conns=""
   while [ "$elapsed" -lt "$max_sec" ]; do
-    conns=$(backend_slot_established_connections "$slot" | tr -cd '0-9')
-    conns=${conns:-0}
-    if [ "$conns" -eq 0 ]; then
+    if ! conns=$(backend_slot_established_connections "$slot" 2>/dev/null | tr -cd '0-9'); then
+      conns=""
+      idle=0
+      cutover_log "backend-${slot} drain: connection probe failed"
+    elif [ "${conns:-0}" -eq 0 ]; then
       idle=$((idle + 1))
       if [ "$idle" -ge "$idle_need" ]; then
         cutover_log "backend-${slot} drained (${elapsed}s)"
@@ -102,13 +104,13 @@ wait_for_backend_slot_drain() {
       fi
     else
       idle=0
-      cutover_log "backend-${slot} drain: ${conns} established connection(s)"
+      cutover_log "backend-${slot} drain: ${conns:-?} established connection(s)"
     fi
     sleep 1
     elapsed=$((elapsed + 1))
   done
-  cutover_log "backend-${slot} drain timeout after ${max_sec}s (${conns} connection(s) remain)"
-  return 1
+  cutover_log "backend-${slot} drain timeout after ${max_sec}s, proceeding with stop"
+  return 0
 }
 
 recreate_api_proxy() {
@@ -347,14 +349,11 @@ rolling_backend_update() {
     return 1
   fi
 
+  printf '%s\n' "$inactive" >"$ACTIVE_SLOT_FILE"
   cutover_log "waiting for in-flight requests on backend-${active} to finish"
-  if ! wait_for_backend_slot_drain "$active"; then
-    dump_service_diagnostics "backend-$active" api-proxy
-    return 1
-  fi
+  wait_for_backend_slot_drain "$active"
   cutover_log "drain complete, stopping backend-${active}"
   compose stop -t 60 "backend-$active" || return 1
-  printf '%s\n' "$inactive" > "$ACTIVE_SLOT_FILE"
   cutover_log "cutover complete active_slot=${inactive} (was ${active})"
   return 0
 }

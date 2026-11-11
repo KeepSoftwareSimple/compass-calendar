@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cutover must not recreate the serving backend and must drain before stop.
+# Cutover must not recreate the serving backend; slot file updates before drain/stop.
 set -euo pipefail
 
 ROOT=$(CDPATH= cd "$(dirname "$0")" && pwd)
@@ -66,6 +66,9 @@ compose() {
       if [ "$DRAIN_BEFORE_STOP" -ne 1 ]; then
         fail "must drain backend slot before compose stop"
       fi
+      if [ "$(read_backend_active_slot)" != "b" ]; then
+        fail "active slot file must be b before stopping old slot"
+      fi
       return 0
       ;;
     *)
@@ -110,14 +113,16 @@ backend_slot_established_connections() {
 . "$INSTALL_DIR/rolling-backend.sh"
 
 wait_for_backend_slot_drain() {
+  if [ "$(read_backend_active_slot)" != "b" ]; then
+    fail "active slot file must be updated before drain"
+  fi
   DRAIN_BEFORE_STOP=1
   return 0
 }
 
 COMPASS_CUTOVER_STABLE_CHECKS=1
 COMPASS_CUTOVER_STABLE_TIMEOUT_SEC=2
-COMPASS_BACKEND_DRAIN_IDLE_SEC=1
-export COMPASS_CUTOVER_STABLE_CHECKS COMPASS_CUTOVER_STABLE_TIMEOUT_SEC COMPASS_BACKEND_DRAIN_IDLE_SEC
+export COMPASS_CUTOVER_STABLE_CHECKS COMPASS_CUTOVER_STABLE_TIMEOUT_SEC
 
 if ! rolling_backend_update; then
   fail "rolling_backend_update should succeed"
@@ -127,12 +132,8 @@ if [ "$NO_RECREATE_PROXY" -ne 1 ]; then
   fail "expected api-proxy up without recreate at cutover start"
 fi
 
-if ! grep -q 'server backend-b:3000 max_fails=0;' "$UPSTREAM_FILE"; then
-  fail "cutover should point primary upstream at slot b"
-fi
-
-if ! grep -q 'server backend-a:3000 down max_fails=0;' "$UPSTREAM_FILE"; then
-  fail "cutover should mark previous active slot down in upstream"
+if ! grep -q 'set $backend_upstream backend-b:3000' "$UPSTREAM_FILE"; then
+  fail "cutover should point variable upstream at slot b"
 fi
 
 if [ "$STOPPED_SLOT" != "backend-a" ]; then
