@@ -104,13 +104,14 @@ final class EventJumpDayPrefixUITests: XCTestCase {
         window.typeKey("w", modifierFlags: .shift)
         let status = window.descendants(matching: .any)["compass-native-event-jump-status"]
         XCTAssertTrue(status.waitForExistence(timeout: 6))
+        let statusText = (status.value as? String) ?? status.label
         XCTAssertTrue(
-            status.value as? String == "Wednesday selected" || status.label.contains("Wednesday"),
-            "Expected Shift+W to select Wednesday, got: \(status.debugDescription)")
+            statusText.localizedCaseInsensitiveContains("Wednesday"),
+            "Expected Shift+W to select Wednesday, got: \(statusText)")
     }
 
     @MainActor
-    func testShiftWednesdayEventJumpChipW1TypesShiftWSequence() {
+    func testShiftWednesdayEventJumpChipW3FocusesExercise() {
         let app = XCUIApplication.compassUITest()
         app.launchArguments += [
             "-COMPASS_FIXTURE", "demo",
