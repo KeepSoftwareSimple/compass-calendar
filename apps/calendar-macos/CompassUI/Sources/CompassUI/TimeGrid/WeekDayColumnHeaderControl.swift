@@ -71,7 +71,10 @@ final class WeekDayColumnHeaderControl: NSView {
         if showDayJumpPrefixes {
             let weekday = civil.component(.weekday, from: date)
             let prefix = DayJumpPrefixes.prefix(forWeekday: weekday - 1)
-            chipLabel.stringValue = dayJumpUseShiftPrefix ? "⇧\(prefix)" : prefix
+            chipLabel.stringValue = DayJumpPrefixes.columnJumpChipLabel(
+                prefix: prefix,
+                eventJumpModeActive: !dayJumpUseShiftPrefix
+            )
             chipLabel.isHidden = false
             chipLabel.textColor = palette.text
             chipLabel.layer?.backgroundColor = palette.surfacePanel.cgColor

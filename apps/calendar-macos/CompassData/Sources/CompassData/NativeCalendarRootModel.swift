@@ -956,7 +956,7 @@ public final class NativeCalendarRootModel {
             guard let frame = frameByEventId[assignment.eventId] else { return nil }
             return EventJumpChipHint(
                 eventId: assignment.eventId,
-                label: assignment.hint,
+                label: DayJumpPrefixes.eventJumpChipLabel(hint: assignment.hint),
                 frame: frame,
                 isAllDay: allDayByEventId[assignment.eventId] ?? false
             )
