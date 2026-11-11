@@ -158,6 +158,32 @@ export async function pullCalendarChanges(
     };
   }
 
+  if (resource.syncTokenUnsupportedAt !== null) {
+    const snapshot = await repairCalendar(deps, calendar, now);
+    if (snapshot.status !== "repaired")
+      throw new ProviderEventReadError(
+        "transient",
+        "Calendar snapshot did not complete",
+      );
+    const served = await deps.resources.clearChangeNotifiedIfUnchanged(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      notifiedAtStart,
+    );
+    return {
+      status: "applied",
+      resource: snapshot.resource,
+      changed: snapshot.imported,
+      deleted: snapshot.deleted,
+      skipped: snapshot.skipped,
+      changedDuringPull: !served,
+      pushLatencyMs: notifiedAtStart
+        ? now().getTime() - notifiedAtStart.getTime()
+        : null,
+    };
+  }
+
   let accessToken = await deps.custody.getValidAccessToken(
     calendar.connectionId,
   );

@@ -43,6 +43,13 @@ class HostGuestRsvpNoticeService {
       return emptyClaim();
     }
 
+    if (
+      state.noticedObservationId &&
+      new MongoObjectId(summary.latest.id).equals(state.noticedObservationId)
+    ) {
+      return emptyClaim();
+    }
+
     const stamped = await hostGuestRsvpNoticeRepository.stampNoticedAt(
       userId,
       {

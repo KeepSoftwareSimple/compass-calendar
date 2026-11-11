@@ -40,6 +40,8 @@ const sample = (): SyncHealthSnapshot => ({
     p95Ms: 20_000,
     p99Ms: 40_000,
     percentOver30s: 11.1,
+    syncTokenUnsupported: 2,
+    cursorExpiryStreak: 1,
   },
   computedAt: "2026-07-25T02:00:00.000Z" as DateTime,
   computeMs: 42,

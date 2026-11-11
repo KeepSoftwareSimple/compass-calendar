@@ -160,6 +160,66 @@ describe("repairCalendar", () => {
       .collection(SYNC_COLLECTIONS.events)
       .countDocuments({ calendarId, generation });
 
+  it("fullSnapshotOnly pull still repairs through one provider pass like main", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedImported(calendar);
+    await seedEvent(calendar, "ms-event", resource.activeGeneration);
+    const reader = Object.assign(
+      new FakeReader([
+        page([single("ms-event")], { nextSyncToken: "ms:delta" }),
+      ]),
+      { fullSnapshotOnly: true, supportsFullHistory: true },
+    );
+
+    const result = await pullCalendarChanges(deps(reader), calendar, now);
+
+    expect(result.status).toBe("applied");
+    if (result.status !== "applied") throw new Error("expected applied");
+    expect(reader.calls).toHaveLength(1);
+    expect(reader.calls[0]?.cursor).toBeUndefined();
+    expect(result.resource.activeGeneration).toBeGreaterThan(
+      resource.activeGeneration,
+    );
+    expect(result.resource.syncCursor).toBe("ms:delta");
+    expect(
+      await events.findByProviderIdentity(
+        calendar.tenantId,
+        calendar.principalId,
+        {
+          connectionId: calendar.connectionId,
+          calendarId: calendar._id,
+          providerEventId: "ms-event",
+        },
+      ),
+    ).toMatchObject({ generation: result.resource.activeGeneration });
+  });
+
+  it("token-unsupported pull runs full repair without the stored cursor", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedImported(calendar);
+    await seedEvent(calendar, "holiday", resource.activeGeneration);
+    await resources.markSyncTokenUnsupported(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
+    const reader = new FakeReader([
+      page([single("holiday")], { nextSyncToken: "holiday:cursor" }),
+    ]);
+
+    const result = await pullCalendarChanges(deps(reader), calendar, now);
+
+    expect(result.status).toBe("applied");
+    if (result.status !== "applied") throw new Error("expected applied");
+    expect(reader.calls).toHaveLength(1);
+    expect(reader.calls[0]?.cursor).toBeUndefined();
+    expect(result.resource.activeGeneration).toBeGreaterThan(
+      resource.activeGeneration,
+    );
+    expect(result.resource.syncTokenUnsupportedAt).toEqual(now());
+  });
+
   it("rebuilds into a new generation, activates it, and clears the old one", async () => {
     const calendar = await seedCalendar();
     await seedImported(calendar);

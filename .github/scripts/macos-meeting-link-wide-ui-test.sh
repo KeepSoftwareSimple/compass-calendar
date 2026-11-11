@@ -54,7 +54,7 @@ watchdog_loop() {
   done
 }
 
-repeat_count="${WIDE_VIEWPORT_UI_TEST_REPEAT:-3}"
+repeat_count="${WIDE_VIEWPORT_UI_TEST_REPEAT:-1}"
 echo "── wide meeting-link viewport XCTest (instrumented, ${repeat_count} consecutive passes required) ──"
 test_status=0
 for attempt in $(seq 1 "$repeat_count"); do

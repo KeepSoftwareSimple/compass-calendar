@@ -17,6 +17,7 @@ import {
   maintainSubscription,
   type SubscriptionMaintenanceDeps,
 } from "@sync/domain/subscription-maintenance.service";
+import { SYNC_TOKEN_UNSUPPORTED_ENTER_STREAK } from "@sync/domain/sync-token-unsupported";
 import {
   type ProviderAdapters,
   ProviderNotConfiguredError,
@@ -462,6 +463,7 @@ async function runSyncJob(
   if (
     job.kind === "incrementalPull" &&
     !executionDeps.reader.fullSnapshotOnly &&
+    resource.syncTokenUnsupportedAt === null &&
     resource.cursorExpiredBackoffUntil !== null &&
     resource.cursorExpiredBackoffUntil > now()
   ) {
@@ -523,6 +525,16 @@ async function runSyncJob(
             resource._id,
           );
         }
+        if (
+          resource.syncTokenUnsupportedAt === null &&
+          pull.resource.syncTokenUnsupportedAt === null
+        ) {
+          await deps.resources.clearSyncTokenUnsupported(
+            resource.tenantId,
+            resource.principalId,
+            resource._id,
+          );
+        }
         // Idle applied pulls still advance the cursor; they must not wake the
         // SPA. A user-visible connection transition (importing -> healthy) is a
         // separate `connection` invalidation from refreshConnectionStateAfterJob.
@@ -569,6 +581,21 @@ async function runSyncJob(
       // never survives settles into a slow full-rebuild cadence instead of
       // re-running the whole lap every ~45s.
       const streak = pull.resource.cursorExpiredStreak + 1;
+      if (
+        resource.syncTokenUnsupportedAt === null &&
+        streak >= SYNC_TOKEN_UNSUPPORTED_ENTER_STREAK
+      ) {
+        await deps.resources.markSyncTokenUnsupported(
+          resource.tenantId,
+          resource.principalId,
+          resource._id,
+          now(),
+        );
+        deps.log?.info?.(
+          `Sync resource ${resource._id} (calendar ${calendar._id}): sync token unsupported after ${streak} consecutive expiries; using scheduled full snapshots`,
+        );
+        return { result: "done" };
+      }
       const holdOffMs = cursorExpiryHoldOffMs(streak);
       await deps.resources.recordCursorExpiry(
         resource.tenantId,
