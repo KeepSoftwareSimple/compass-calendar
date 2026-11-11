@@ -768,6 +768,55 @@ describe("SyncResourceRepository", () => {
         ).map((r) => r._id),
       ).toEqual([held.resource._id]);
     });
+
+    it("listStaleEventsByPrincipal skips a token-unsupported resource inside the snapshot interval", async () => {
+      const tenantId = objectId() as TenantId;
+      const principalId = objectId() as PrincipalId;
+      const connectionId = objectId() as ConnectionId;
+      const resource = await repo.ensure(
+        upsert({
+          tenantId,
+          principalId,
+          connectionId,
+          resourceKind: "events",
+          calendarId: objectId() as never,
+        }),
+      );
+      await repo.setBootstrapState(
+        tenantId,
+        principalId,
+        resource._id,
+        "ready",
+      );
+      await repo.markSyncTokenUnsupported(
+        tenantId,
+        principalId,
+        resource._id,
+        now,
+      );
+      await repo.markFullSnapshotCompleted(
+        tenantId,
+        principalId,
+        resource._id,
+        now,
+      );
+      await repo.markAttempt(
+        tenantId,
+        principalId,
+        resource._id,
+        new Date("2026-08-10T11:59:00.000Z"),
+      );
+
+      expect(
+        await repo.listStaleEventsByPrincipal(
+          tenantId,
+          principalId,
+          staleBefore,
+          200,
+          now,
+        ),
+      ).toEqual([]);
+    });
   });
 
   describe("listStaleCalendarLists durable discovery failure", () => {

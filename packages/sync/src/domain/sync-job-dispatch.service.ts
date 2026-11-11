@@ -17,7 +17,11 @@ import {
   maintainSubscription,
   type SubscriptionMaintenanceDeps,
 } from "@sync/domain/subscription-maintenance.service";
-import { SYNC_TOKEN_UNSUPPORTED_ENTER_STREAK } from "@sync/domain/sync-token-unsupported";
+import {
+  isSyncTokenUnsupportedSnapshotDue,
+  SYNC_TOKEN_UNSUPPORTED_ENTER_STREAK,
+  SYNC_TOKEN_UNSUPPORTED_FULL_SNAPSHOT_INTERVAL_MS,
+} from "@sync/domain/sync-token-unsupported";
 import {
   type ProviderAdapters,
   ProviderNotConfiguredError,
@@ -476,6 +480,26 @@ async function runSyncJob(
     return {
       result: "drop",
       reason: `calendar ${calendar._id} cursor keeps expiring; holding off pulls until ${resource.cursorExpiredBackoffUntil.toISOString()}`,
+    };
+  }
+
+  if (
+    job.kind === "incrementalPull" &&
+    resource.syncTokenUnsupportedAt !== null &&
+    !isSyncTokenUnsupportedSnapshotDue(resource, now())
+  ) {
+    await deps.resources.markAttempt(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
+    return {
+      result: "drop",
+      reason: `calendar ${calendar._id} sync token unsupported; holding off full snapshots until ${new Date(
+        (resource.lastFullSnapshotAt ?? now()).getTime() +
+          SYNC_TOKEN_UNSUPPORTED_FULL_SNAPSHOT_INTERVAL_MS,
+      ).toISOString()}`,
     };
   }
 
