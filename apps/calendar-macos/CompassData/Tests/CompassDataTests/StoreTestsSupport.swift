@@ -66,11 +66,25 @@ final class MockUserAPI: HiddenEventsRemoteClient, @unchecked Sendable {
     }
 }
 
+struct AsyncTestCoordinationTimeout: Error {}
+
 actor AsyncTestGate {
     private var continuation: CheckedContinuation<Void, Never>?
 
     func wait() async {
         await withCheckedContinuation { continuation = $0 }
+    }
+
+    func waitForTest(timeout seconds: Double = 10) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { await self.wait() }
+            group.addTask {
+                try await Task.sleep(for: .seconds(seconds))
+                throw AsyncTestCoordinationTimeout()
+            }
+            _ = try await group.next()
+            group.cancelAll()
+        }
     }
 
     func resume() {
@@ -93,6 +107,19 @@ actor AsyncTestSignal {
     func wait() async {
         if signaled { return }
         await withCheckedContinuation { continuation = $0 }
+    }
+
+    func waitForTest(timeout seconds: Double = 10) async throws {
+        if signaled { return }
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { await self.wait() }
+            group.addTask {
+                try await Task.sleep(for: .seconds(seconds))
+                throw AsyncTestCoordinationTimeout()
+            }
+            _ = try await group.next()
+            group.cancelAll()
+        }
     }
 }
 
