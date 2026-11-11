@@ -629,6 +629,67 @@ describe("self-host helper", () => {
     expect(stderr).toBe("");
   });
 
+  it("passes the cutover drain timeout script check", async () => {
+    const scriptPath = join(
+      import.meta.dir,
+      "rolling-backend.drain-timeout.test.sh",
+    );
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok cutover-drain-timeout-script-check");
+    expect(stderr).toContain("drain timeout");
+  }, 20000);
+
+  it("passes the cutover drain probe failure script check", async () => {
+    const scriptPath = join(
+      import.meta.dir,
+      "rolling-backend.drain-probe-failure.test.sh",
+    );
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok cutover-drain-probe-failure-script-check");
+  }, 20000);
+
+  it("passes the cutover drain order script check", async () => {
+    const scriptPath = join(
+      import.meta.dir,
+      "rolling-backend.drain-order.test.sh",
+    );
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok cutover-drain-order-script-check");
+    expect(stderr).toContain("cutover complete active_slot=b");
+  }, 15000);
+
   it("passes the cutover rollback script check", async () => {
     const scriptPath = join(
       import.meta.dir,
@@ -965,6 +1026,10 @@ describe("staging deploy workflow", () => {
     expect(rolling).toContain("--force-recreate --no-deps api-proxy");
     expect(rolling).toContain("wait_for_proxy_health_stable");
     expect(rolling).toContain("reload_api_proxy_for_cutover");
+    expect(rolling).toContain("ensure_serving_slot_unchanged");
+    expect(rolling).toContain("wait_for_backend_slot_drain");
+    expect(rolling).toContain("COMPASS_BACKEND_DRAIN_TIMEOUT_SEC:-30");
+    expect(rolling).toContain("--no-recreate api-proxy");
     expect(rolling).toContain("compass-backend-cutover:");
     expect(rolling).toContain("stopping backend-");
     expect(rolling).toContain("cutover complete active_slot=");

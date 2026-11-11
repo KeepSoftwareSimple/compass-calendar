@@ -87,6 +87,14 @@ migrate_from_legacy_backend() {
 # shellcheck source=rolling-backend.sh
 . "$INSTALL_DIR/rolling-backend.sh"
 
+wait_for_backend_slot_drain() {
+  return 0
+}
+
+backend_slot_running() {
+  return 0
+}
+
 fail() {
   printf 'assertion failed: %s\n' "$*" >&2
   exit 1
@@ -99,7 +107,7 @@ export COMPASS_CUTOVER_STABLE_CHECKS COMPASS_CUTOVER_STABLE_TIMEOUT_SEC
 write_upstream_for_slot() {
   slot=$1
   umask 077
-  printf 'set $backend_upstream backend-%s:3000;\n' "$slot" > "$UPSTREAM_FILE"
+  printf 'set $backend_upstream backend-%s:3000;\n' "$slot" >"$UPSTREAM_FILE"
   if [ "$slot" = "a" ] && [ "$(read_backend_active_slot)" = "b" ]; then
     UNSTABLE_AFTER_SWITCH=1
   fi
