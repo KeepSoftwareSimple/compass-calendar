@@ -52,7 +52,12 @@ export type SubscriptionMaintenanceOutcome =
 // subscriptionExpiresAt, re-watching on a cadence is what bounds how long such
 // a channel can stay silently dead. Raising the provider TTL without raising
 // this, or vice versa, changes that window — keep the two in step.
-const DEFAULT_RENEW_BEFORE_MS = 24 * 60 * 60 * 1000;
+//
+// Exported because the renew window is not private to this operation: the
+// subscription sweep selects the channels to enqueue with it, and the health
+// snapshot counts renewSoon with it. All three must agree on what "near
+// expiry" means, so they read one constant instead of restating 24h.
+export const DEFAULT_RENEW_BEFORE_MS = 24 * 60 * 60 * 1000;
 
 // Cooldown between re-watches driven only by a missing pushLastReceivedAt
 // stamp on an otherwise healthy channel. Paired with the push-stamp heal

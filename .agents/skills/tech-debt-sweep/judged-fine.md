@@ -11,6 +11,63 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-11
+
+Swept the 9 merges that landed after the 2026-11-10 sweep (#5209 to #5216 plus
+#5177); #5207 was that sweep's own finding and is excluded as its output. Gate
+step 1 was clean: `bun knip` reports no unused files or exports, `bun lint`
+passes every rule, `bun type-check` passes. One finding, shipped as the shared
+subscription renew window (`DEFAULT_RENEW_BEFORE_MS`). Everything below was
+examined and kept.
+
+- **The duplicated observation guard on the RSVP claim path** (#5213).
+  `host-guest-rsvp-notice.service.ts` short-circuits when the latest
+  observation already equals `noticedObservationId`, and
+  `stampNoticedAt` rejects the same pair again in the repository. Two
+  statements of one predicate, which normally reads as debt, but this is
+  deliberate depth on a concurrency path: the repository guard is the
+  authoritative one (it sits in front of the CAS filter), the service one only
+  saves a round trip. They cannot drift into harm, because the authoritative
+  copy is the one that decides. Removing either reopens the double-claim bug
+  #5213 and #5214 were written to close.
+
+- **`SYNC_TOKEN_UNSUPPORTED_RETRY_AFTER_MS` beside
+  `WATCH_UNSUPPORTED_RETRY_AFTER_MS`** (#5212). Both are 24h, and
+  `clearSyncTokenUnsupportedByConnection` is a near-exact parallel of
+  `clearWatchUnsupportedByConnection` with a different field. Shared shape, not
+  shared intent: one is the re-probe cadence for a push channel the provider
+  refuses to open, the other for a calendar whose sync tokens never survive.
+  They can plausibly diverge (a token re-probe is cheaper than a watch call),
+  so folding them into one constant or one generic clear would couple two
+  independently tunable knobs. Both are already imported from
+  `sync-token-unsupported.ts` at their use sites rather than restated as
+  literals, which is the part that would have mattered.
+
+- **#5213 and #5214 as a pair.** Two same-day PRs hardening one claim path look
+  like churn, but #5214 extends #5213's watermark CAS to `modifiedCount` and
+  adds a parallel-stamp stress test rather than reworking it. Not a sweep lead.
+
+- **Three private overflow-clipping predicates in web.**
+  `date-picker-keyboard-dom.util.ts` (per-axis scroll container),
+  `shift-hint-visible-rect.ts` (`isClippingOverflow`, per-axis clip rect) and
+  #5211's new `clipsOverflow` / `descriptionLinkChromeBoundary` (combined
+  overflow, nearest clipping ancestor) each inspect computed overflow. None is
+  a shared export the others re-implement, and the three want different
+  semantics, so there is no owning module being drifted from. Left alone, and
+  noted here: if a fourth copy appears, the right move is to name an owner
+  once, not to fold these three.
+
+- **`AsyncTestGate.waitForTest` / `AsyncTestSignal.waitForTest`** (#5216,
+  `StoreTestsSupport.swift`). Two near-identical timeout wrappers around a
+  throwing task group. A shared generic helper is roughly the size of the
+  repeat it removes, and the file is mid-change: #5215 and #5216 both hardened
+  it inside two days. Swift test support, no production path.
+
+- **#5211's floating link chrome.** `size()` middleware plus an ancestor walk
+  against `@floating-ui` and browser overflow. Load-bearing mess of the
+  `date-picker-keyboard-dom.util.ts` kind: ugly because clipping is ugly.
+  Touch only for a real defect.
+
 ## 2026-11-10
 
 Swept the 17 merges that landed after the 2026-11-09 sweep (#5189 to #5206).
