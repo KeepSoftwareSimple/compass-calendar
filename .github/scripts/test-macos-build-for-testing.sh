@@ -19,5 +19,9 @@ common_args=(
 echo "── xcodebuild build-for-testing (Compass scheme) ──"
 xcodebuild build-for-testing "${common_args[@]}"
 
-echo "── xcodebuild test-without-building (CompassKitTests only) ──"
-xcodebuild test-without-building "${common_args[@]}" -only-testing:CompassKitTests
+if [ "${SKIP_COMPASS_KIT_TESTS:-0}" = 1 ]; then
+  echo "── skipping CompassKitTests (SKIP_COMPASS_KIT_TESTS=1) ──"
+else
+  echo "── xcodebuild test-without-building (CompassKitTests only) ──"
+  xcodebuild test-without-building "${common_args[@]}" -only-testing:CompassKitTests
+fi

@@ -1,4 +1,5 @@
 import AppKit
+import CompassData
 import CompassKit
 
 @MainActor
@@ -771,6 +772,11 @@ public final class TimeGridView: NSView {
     }
 
     private func syncFocusedEventAccessibilityProxy(snapshot: GridLayoutSnapshot) {
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            focusedEventAccessibilityProxy.isHidden = true
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            return
+        }
         guard let focusedId = state.focusedEventId,
             let card = snapshot.cards.first(where: { $0.eventId == focusedId })
                 .map({ displayCard($0, snapshot: snapshot) })
@@ -794,10 +800,14 @@ public final class TimeGridView: NSView {
         focusedEventAccessibilityProxy.isHidden = false
         focusedEventAccessibilityProxy.sync(label: card.label, frameInParent: frameInGrid)
 
-        if let window {
-            NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
-            NSAccessibility.post(element: window, notification: .layoutChanged)
-        }
+        guard TimeGridFocusedAccessibilityNotifications.shouldPostLayoutChangedAfterProxySync(
+            meetingLinkWideViewport: UITestLaunchPolicy.meetingLinkWideViewport,
+            proxyIsHidden: focusedEventAccessibilityProxy.isHidden,
+            hasWindow: window != nil
+        ), let window
+        else { return }
+        NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
+        NSAccessibility.post(element: window, notification: .layoutChanged)
     }
 
     private func updateNowLine() {

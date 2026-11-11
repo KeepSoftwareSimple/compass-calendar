@@ -1,6 +1,13 @@
 {
-  "version": 1,
-  "comment": "Hand-balanced by measured CI class durations (2026-11-04 strict logs). Every CompassUITests *Tests class must appear exactly once.",
+  "version": 2,
+  "comment": "Hand-balanced by measured CI class durations (2026-11-04 strict logs). Every CompassUITests *Tests class must appear in exactly one matrix shard or one standaloneJobs entry (dedicated workflow job).",
+  "standaloneJobs": {
+    "macos-meeting-link-wide": {
+      "workflowJob": "macos-meeting-link-wide",
+      "runScript": ".github/scripts/macos-meeting-link-wide-ui-test.sh",
+      "classes": ["EventFormMeetingLinkWideViewportTests"]
+    }
+  },
   "shards": {
     "1": [
       "NativeLaunchTests",

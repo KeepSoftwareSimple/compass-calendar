@@ -143,6 +143,7 @@ public struct EventFormView: View {
                     }
                 }
             }
+            .frame(maxHeight: .infinity)
             if !isReadOnly {
                 Button {
                     Task { await model.saveDraft() }
@@ -176,7 +177,7 @@ public struct EventFormView: View {
         .padding(.top, 12)
         .padding(.bottom, 10)
         .tint(theme.accentColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("compass-event-form")
         .focusOnAppear($titleFocused)

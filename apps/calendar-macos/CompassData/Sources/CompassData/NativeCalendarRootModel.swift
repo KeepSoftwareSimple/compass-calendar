@@ -144,6 +144,7 @@ public final class NativeCalendarRootModel {
     private var didApplyDemoFixtureScroll = false
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
+    private var deferredWideViewportEventFormOpen = false
     var eventFormTitleProbeVisible = false
     var keyboardCreateSettleGeneration = 0
     var quickAddPanelSession: QuickAddPanelSession?
@@ -272,6 +273,17 @@ public final class NativeCalendarRootModel {
         }
         overlayStores.legend.onOpenChanged = { [weak self] open in
             self?.onShortcutsLegendAccessibilityProbeChanged?(open)
+        }
+        if UITestLaunchPolicy.meetingLinkWideViewport {
+            NotificationCenter.default.addObserver(
+                forName: WideViewportLaunchCoordination.stableGeometryPublishedNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.openDeferredWideViewportEventFormIfNeeded()
+                }
+            }
         }
         if UITestLaunchPolicy.isParityCapture {
             applyParityCapturePresentationIfNeeded()
@@ -855,12 +867,25 @@ public final class NativeCalendarRootModel {
         tryOpenUITestFocusedEventFormIfNeeded()
     }
 
+    private func openDeferredWideViewportEventFormIfNeeded() {
+        guard deferredWideViewportEventFormOpen else { return }
+        deferredWideViewportEventFormOpen = false
+        _ = tryOpenUITestFocusedEventFormIfNeeded()
+    }
+
     @discardableResult
     private func tryOpenUITestFocusedEventFormIfNeeded() -> Bool {
         guard !didApplyUITestFocusedEventForm,
             UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus,
             focusStore.focusedEventId != nil
         else { return false }
+        if UITestLaunchPolicy.meetingLinkWideViewport,
+            !WideViewportLaunchCoordination.stableGeometryPublished
+        {
+            deferredWideViewportEventFormOpen = true
+            WideViewportUITestTrace.record("defer_event_form_until_stable_geometry")
+            return false
+        }
         openKeyboardEditForFocusedEvent()
         guard draftStore.gridDraft != nil else { return false }
         didApplyUITestFocusedEventForm = true

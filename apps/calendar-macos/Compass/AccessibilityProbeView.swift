@@ -40,12 +40,18 @@ class AccessibilityProbeView: NSView {
         guard let window, bounds.width > 0, bounds.height > 0 else {
             return super.accessibilityFrame()
         }
-        return window.convertToScreen(convert(bounds, to: nil))
+        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
+        guard AccessibilityFrameMath.isValidScreenRect(screenFrame) else {
+            return super.accessibilityFrame()
+        }
+        return screenFrame
     }
 
     func syncAccessibilityFrame() {
         guard let window, bounds.width > 0, bounds.height > 0 else { return }
-        setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
+        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
+        guard AccessibilityFrameMath.isValidScreenRect(screenFrame) else { return }
+        setAccessibilityFrame(screenFrame)
     }
 
     /// XCUITest re-reads the tree after a layout change on the probe and on
@@ -64,13 +70,37 @@ class AccessibilityProbeView: NSView {
         to hostView: NSView,
         create: () -> T
     ) -> T? {
-        guard UITestLaunchPolicy.attachesAccessibilityProbes else { return nil }
-        if let existing, existing.superview === hostView {
+        guard UITestLaunchPolicy.attachesMirroredAccessibilityProbes else { return nil }
+        let placement = probePlacementContainer(for: hostView)
+        if let existing, existing.superview === placement.container {
             return existing
         }
         existing?.removeFromSuperview()
         let view = create()
-        hostView.addSubview(view, positioned: .above, relativeTo: nil)
+        placement.container.addSubview(view, positioned: .above, relativeTo: placement.aboveSibling)
         return view
+    }
+
+    /// SwiftUI logs that probe subviews of `NSHostingView` break the hierarchy and
+    /// can produce invalid-geometry layout failures during Intel wide XCTest.
+    private static func probePlacementContainer(for hostView: NSView) -> (container: NSView, aboveSibling: NSView?) {
+        let typeName = String(describing: type(of: hostView))
+        if typeName.contains("HostingView"), let container = hostView.superview {
+            return (container, hostView)
+        }
+        return (hostView, nil)
+    }
+}
+
+enum AccessibilityFrameMath {
+    static func isValidScreenRect(_ rect: NSRect) -> Bool {
+        rect.origin.x.isFinite
+            && rect.origin.y.isFinite
+            && rect.width.isFinite
+            && rect.height.isFinite
+            && rect.width > 0
+            && rect.width <= 16_384
+            && rect.height > 0
+            && rect.height <= 16_384
     }
 }

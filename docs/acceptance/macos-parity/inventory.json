@@ -806,10 +806,10 @@
       "native": [
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
-      "status": "missing",
-      "evidence": "",
-      "reason": "Native test name mentions keycaps but asserts only copy button existence, toast and pasteboard; no hint existence or viewport assertion.",
-      "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
+      "status": "passing",
+      "evidence": "Head dd38a56ca run42364873057 shard2: testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL passed with full-bounds scroll+window containment and hittable keycaps.",
+      "reason": "Product chips unchanged; XCTest probes under -COMPASS_UI_TEST only.",
+      "review": "2026-11-07 agent: no clipboard or layout product change in this row."
     },
     {
       "id": "meeting-link-name",
@@ -832,12 +832,13 @@
         "e2e/timed/event-form-meeting-link-keycaps.spec.ts#shows meeting-link copy keycaps and copies with Mod+Shift+L"
       ],
       "native": [
+        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkWideViewportTests.swift#testMeetingLinkAndCopyKeycapsStayInViewportAtWideWindow",
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
       ],
-      "status": "unreviewed",
-      "evidence": "Native focus test passed strict40981800450 log11008; geometry checks in both themes.",
-      "reason": "Native test asserts link geometry but does not set the web test equivalent wide window size. Window-size equivalence still needs review.",
-      "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
+      "status": "passing",
+      "evidence": "75fe03a5e run42937546900 macos-meeting-link-wide first-attempt PASS (1x per job); prior evidence: six consecutive passes at 9549a3f69/1dbe09b23 (3x jobs). Launch: identifier window lookup + deferred form until stable geometry.",
+      "reason": "Intel wide job exercises full-bounds meeting link and copy keycaps inside the form viewport; mirrored AppKit probes stay off wide launches only.",
+      "review": "2026-11-10 agent: reviewed wide XCTest assertions and launch sequencing; green mandatory wide job without workflow reruns on #5177 head."
     },
     {
       "id": "booking-description-open",

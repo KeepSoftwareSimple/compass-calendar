@@ -15,6 +15,11 @@ final class FocusedGridEventAccessibilityProxy: NSView {
     }
 
     func sync(label: String, frameInParent: NSRect) {
+        guard AccessibilityFrameMath.isValidLayoutRect(frameInParent) else {
+            isHidden = true
+            return
+        }
+        isHidden = false
         frame = frameInParent
         setAccessibilityLabel(label)
         layoutSubtreeIfNeeded()
@@ -39,6 +44,30 @@ final class FocusedGridEventAccessibilityProxy: NSView {
 
     private func syncAccessibilityFrame() {
         guard bounds.width > 1, bounds.height > 1, let window else { return }
-        setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
+        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
+        guard AccessibilityFrameMath.isValidScreenRect(screenFrame) else { return }
+        setAccessibilityFrame(screenFrame)
+    }
+}
+
+enum AccessibilityFrameMath {
+    static func isValidLayoutRect(_ rect: NSRect) -> Bool {
+        rect.origin.x.isFinite
+            && rect.origin.y.isFinite
+            && rect.width.isFinite
+            && rect.height.isFinite
+            && rect.width > 1
+            && rect.height > 1
+    }
+
+    static func isValidScreenRect(_ rect: NSRect) -> Bool {
+        rect.origin.x.isFinite
+            && rect.origin.y.isFinite
+            && rect.width.isFinite
+            && rect.height.isFinite
+            && rect.width > 0
+            && rect.width <= 16_384
+            && rect.height > 0
+            && rect.height <= 16_384
     }
 }
