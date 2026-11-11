@@ -289,6 +289,12 @@ final class NativeGridKeyboardRouter {
         }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
 
+        // Command palette, shortcuts legend, and event menu own Escape before
+        // welcome or grid handlers, even when a lower onboarding layer is still active.
+        if model.overlayKeyboardCaptureActive {
+            return handleOverlayKeyDown(keyEvent)
+        }
+
         if model.isWelcomeModalActive, handleWelcomeKeyDown(keyEvent) {
             return true
         }
@@ -391,9 +397,6 @@ final class NativeGridKeyboardRouter {
             model.overlayKeyboardCaptureActive
             || model.isEventFormVisible
             || isNativeEditableTextInputFocused()
-        if model.overlayKeyboardCaptureActive {
-            return handleOverlayKeyDown(keyEvent)
-        }
 
         if model.isEventFormVisible {
             if handleUITestEventFormTyping(keyEvent) {
