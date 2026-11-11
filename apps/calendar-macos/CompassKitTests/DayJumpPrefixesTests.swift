@@ -24,4 +24,16 @@ final class DayJumpPrefixesTests: XCTestCase {
         XCTAssertEqual(DayJumpPrefixes.eventJumpChipLabel(hint: "w1"), "⇧w1")
         XCTAssertEqual(DayJumpPrefixes.eventJumpChipLabel(hint: "w10"), "⇧w10")
     }
+
+    func testShiftDecoratedPrefixesTrackViewNavigationFallthrough() {
+        XCTAssertEqual(DayJumpPrefixes.shiftDecoratedJumpPrefixes, Set(["w"]))
+        for letter in DayJumpPrefixes.viewNavigationFallthroughLetters {
+            let lowercase = String(letter).lowercased()
+            if let dayPrefix = DayJumpPrefixes.dayPrefix(forShiftedLetter: letter), dayPrefix == lowercase {
+                XCTAssertTrue(
+                    DayJumpPrefixes.shiftDecoratedJumpPrefixes.contains(lowercase),
+                    "Expected \(lowercase) in shift-decorated set")
+            }
+        }
+    }
 }

@@ -2,10 +2,23 @@ import Foundation
 
 /// Weekday day-jump letter prefixes. Mirrors web `DAY_JUMP_PREFIX_BY_WEEKDAY`.
 public enum DayJumpPrefixes {
-    /// Day prefixes whose bare letter is a macOS view shortcut during event jump
-    /// (`w` → week view). Column and chip labels show Shift for those keys; the
-    /// web grid still shows the bare letter because view shortcuts use keyup.
-    public static let shiftDecoratedJumpPrefixes: Set<String> = ["w"]
+    /// Web `VIEW_SHORTCUT_KEYS` letters that fall through jump keydown on macOS
+    /// (`NativeCalendarRootModel.handleEventJumpKeystroke`) so grid routing can
+    /// run `nav-*-view`. Keep in sync with shift-decorated jump chip labels.
+    public static let viewNavigationFallthroughLetters: Set<Character> = ["d", "w", "l"]
+
+    /// Day prefixes whose bare letter is a view-navigation fallthrough during
+    /// event jump (`w` → week view). Column and chip labels show Shift for those
+    /// keys; the web grid still shows the bare letter because view shortcuts use keyup.
+    public static var shiftDecoratedJumpPrefixes: Set<String> {
+        Set(
+            viewNavigationFallthroughLetters.compactMap { letter in
+                guard let prefix = dayPrefix(forShiftedLetter: letter),
+                    prefix == String(letter).lowercased()
+                else { return nil }
+                return prefix
+            })
+    }
 
     public static func prefix(forWeekday sundayBased: Int) -> String {
         switch sundayBased {

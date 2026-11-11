@@ -85,6 +85,18 @@ final class NativeCalendarRootModelEventJumpTests: XCTestCase {
         XCTAssertFalse(model.handleEventJumpKeystroke("l"))
     }
 
+    func testViewNavigationFallthroughMatchesShiftDecoratedDayPrefixes() {
+        for letter in DayJumpPrefixes.viewNavigationFallthroughLetters {
+            let lowercase = String(letter).lowercased()
+            let isShiftDecorated = DayJumpPrefixes.shiftDecoratedJumpPrefixes.contains(lowercase)
+            let matchesSingleLetterDay = DayJumpPrefixes.dayPrefix(forShiftedLetter: letter) == lowercase
+            XCTAssertEqual(
+                isShiftDecorated,
+                matchesSingleLetterDay,
+                "Fallthrough letter \(letter) drifted vs shift-decorated jump hints")
+        }
+    }
+
     func testJumpModeLeavesViewSwitchLettersForGridRouter() async throws {
         let fixture = try DemoSeedFixture.load()
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
