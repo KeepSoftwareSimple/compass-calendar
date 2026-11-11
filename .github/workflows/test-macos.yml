@@ -23,10 +23,6 @@ on:
         description: Run full strict verification on an isolated Mac
         type: boolean
         default: false
-      hidden_events_stress_iterations:
-        description: Repeat HiddenEventsStore superseded test N times (0=skip)
-        type: number
-        default: 0
 
 permissions:
   contents: read
@@ -75,13 +71,6 @@ jobs:
               files=$(gh api "repos/${REPO}/compare/${BASE_SHA}...${HEAD_SHA}" \
                 --jq '.files[].filename') || files="" ;;
             *)
-              if [ "$EVENT" = "workflow_dispatch" ] \
-                && [ "${{ inputs.hidden_events_stress_iterations }}" != "0" ] \
-                && [ "${{ inputs.strict_verify }}" != "true" ]; then
-                echo "Hidden-events stress dispatch; skip full macOS matrix."
-                echo "macos=false" >>"$GITHUB_OUTPUT"
-                exit 0
-              fi
               echo "macos=true" >>"$GITHUB_OUTPUT"
               exit 0 ;;
           esac
@@ -100,21 +89,6 @@ jobs:
             echo "No apps/calendar-macos changes."
             echo "macos=false" >>"$GITHUB_OUTPUT"
           fi
-
-  hidden-events-stress:
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      inputs.hidden_events_stress_iterations > 0
-    runs-on: macos-latest
-    timeout-minutes: 30
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v7
-
-      - name: Stress HiddenEventsStore superseded test
-        run: >-
-          bash .github/scripts/test-hidden-events-store-stress.sh
-          "${{ inputs.hidden_events_stress_iterations }}"
 
   # After macos-build so a compile failure never keeps this job on a second Mac
   # slot. Critical path stays build, then max(shards, swift-packages): shards and
@@ -151,13 +125,6 @@ jobs:
           MACOS_SWIFT_PACKAGES_INCLUDE_COMPASSKIT: "0"
           MACOS_SWIFT_PACKAGES_SKIP_BUILD: ${{ steps.swift-pkgs-cache.outputs.cache-hit == 'true' && '1' || '0' }}
         run: bash .github/scripts/test-macos-swift-packages.sh
-
-      - name: Stress HiddenEventsStore superseded test (50x)
-        if: >-
-          github.event_name == 'pull_request' &&
-          (github.head_ref == 'cursor/hidden-events-superseded-test-8feb' ||
-           github.head_ref == 'cursor/meeting-copy-keycap-8feb')
-        run: bash .github/scripts/test-hidden-events-store-stress.sh 50
 
   macos-build:
     needs: changes
