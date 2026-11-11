@@ -1,6 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Connection probe errors must not count as drained before the drain cap elapses.
-set -euo pipefail
+# Run under plain POSIX sh (rolling-backend.sh is #!/bin/sh without pipefail).
+set -eu
 
 ROOT=$(CDPATH= cd "$(dirname "$0")" && pwd)
 TMP=$(mktemp -d)
