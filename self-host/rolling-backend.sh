@@ -26,9 +26,89 @@ inactive_backend_slot() {
 }
 
 write_upstream_for_slot() {
-  slot=$1
+  primary=$1
+  standby=$(inactive_backend_slot "$primary") || return 1
   umask 077
-  printf 'set $backend_upstream backend-%s:3000;\n' "$slot" > "$UPSTREAM_FILE"
+  cat >"$UPSTREAM_FILE" <<EOF
+upstream compass_backend {
+  server backend-${primary}:3000 max_fails=0;
+  server backend-${standby}:3000 down max_fails=0;
+}
+EOF
+}
+
+backend_slot_running() {
+  slot=$1
+  compose ps --status running --services 2>/dev/null | grep -qx "backend-$slot"
+}
+
+ensure_serving_slot_unchanged() {
+  active=$1
+  if ! backend_slot_running "$active"; then
+    compose up -d "backend-$active" || return 1
+  fi
+  if api_proxy_running; then
+    compose up -d --no-recreate api-proxy >/dev/null 2>&1 || true
+  else
+    up_api_proxy_with_bind_retry || return 1
+  fi
+  sync_api_proxy_after_deploy || return 1
+  if ! wait_for_backend_slot "$active"; then
+    dump_service_diagnostics "backend-$active" api-proxy
+    return 1
+  fi
+  return 0
+}
+
+backend_slot_established_connections() {
+  slot=$1
+  compose exec -T "backend-$slot" bun -e "
+const fs = require('fs');
+const PORT_HEX = '0BB8';
+let count = 0;
+for (const file of ['/proc/net/tcp', '/proc/net/tcp6']) {
+  try {
+    const lines = fs.readFileSync(file, 'utf8').split('\n').slice(1);
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const parts = line.trim().split(/\s+/);
+      const local = parts[1];
+      const state = parts[3];
+      if (state !== '01') continue;
+      const portHex = local.split(':')[1]?.toUpperCase();
+      if (portHex === PORT_HEX) count++;
+    }
+  } catch {}
+}
+process.stdout.write(String(count));
+" 2>/dev/null || printf '0'
+}
+
+wait_for_backend_slot_drain() {
+  slot=$1
+  idle_need=${COMPASS_BACKEND_DRAIN_IDLE_SEC:-3}
+  max_sec=${COMPASS_BACKEND_DRAIN_TIMEOUT_SEC:-300}
+  elapsed=0
+  idle=0
+  conns=0
+  while [ "$elapsed" -lt "$max_sec" ]; do
+    conns=$(backend_slot_established_connections "$slot" | tr -cd '0-9')
+    conns=${conns:-0}
+    if [ "$conns" -eq 0 ]; then
+      idle=$((idle + 1))
+      if [ "$idle" -ge "$idle_need" ]; then
+        cutover_log "backend-${slot} drained (${elapsed}s)"
+        return 0
+      fi
+    else
+      idle=0
+      cutover_log "backend-${slot} drain: ${conns} established connection(s)"
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  cutover_log "backend-${slot} drain timeout after ${max_sec}s (${conns} connection(s) remain)"
+  return 1
 }
 
 recreate_api_proxy() {
@@ -239,10 +319,7 @@ rolling_backend_update() {
   migrate_from_legacy_backend || return 1
 
   write_upstream_for_slot "$active"
-  compose up -d "backend-$active" api-proxy || return 1
-  sync_api_proxy_after_deploy || return 1
-  if ! wait_for_backend_slot "$active"; then
-    dump_service_diagnostics "backend-$active" api-proxy
+  if ! ensure_serving_slot_unchanged "$active"; then
     return 1
   fi
 
@@ -270,6 +347,11 @@ rolling_backend_update() {
     return 1
   fi
 
+  cutover_log "waiting for in-flight requests on backend-${active} to finish"
+  if ! wait_for_backend_slot_drain "$active"; then
+    dump_service_diagnostics "backend-$active" api-proxy
+    return 1
+  fi
   cutover_log "drain complete, stopping backend-${active}"
   compose stop -t 60 "backend-$active" || return 1
   printf '%s\n' "$inactive" > "$ACTIVE_SLOT_FILE"

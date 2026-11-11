@@ -87,6 +87,14 @@ migrate_from_legacy_backend() {
 # shellcheck source=rolling-backend.sh
 . "$INSTALL_DIR/rolling-backend.sh"
 
+wait_for_backend_slot_drain() {
+  return 0
+}
+
+backend_slot_running() {
+  return 0
+}
+
 fail() {
   printf 'assertion failed: %s\n' "$*" >&2
   exit 1
@@ -97,10 +105,16 @@ COMPASS_CUTOVER_STABLE_TIMEOUT_SEC=2
 export COMPASS_CUTOVER_STABLE_CHECKS COMPASS_CUTOVER_STABLE_TIMEOUT_SEC
 
 write_upstream_for_slot() {
-  slot=$1
+  primary=$1
+  standby=$([ "$primary" = "a" ] && printf b || printf a)
   umask 077
-  printf 'set $backend_upstream backend-%s:3000;\n' "$slot" > "$UPSTREAM_FILE"
-  if [ "$slot" = "a" ] && [ "$(read_backend_active_slot)" = "b" ]; then
+  cat >"$UPSTREAM_FILE" <<EOF
+upstream compass_backend {
+  server backend-${primary}:3000 max_fails=0;
+  server backend-${standby}:3000 down max_fails=0;
+}
+EOF
+  if [ "$primary" = "a" ] && [ "$(read_backend_active_slot)" = "b" ]; then
     UNSTABLE_AFTER_SWITCH=1
   fi
 }
@@ -113,7 +127,7 @@ if [ "$UNSTABLE_AFTER_SWITCH" -ne 1 ]; then
   fail "expected upstream switch to inactive slot a before rollback"
 fi
 
-if ! grep -q 'backend-b:3000' "$UPSTREAM_FILE"; then
+if ! grep -q 'server backend-b:3000 max_fails=0;' "$UPSTREAM_FILE"; then
   fail "rollback should restore upstream to active slot b"
 fi
 

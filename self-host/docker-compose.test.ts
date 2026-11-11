@@ -629,6 +629,27 @@ describe("self-host helper", () => {
     expect(stderr).toBe("");
   });
 
+  it("passes the cutover drain order script check", async () => {
+    const scriptPath = join(
+      import.meta.dir,
+      "rolling-backend.drain-order.test.sh",
+    );
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok cutover-drain-order-script-check");
+    expect(stderr).toContain("cutover complete active_slot=b");
+  }, 15000);
+
   it("passes the cutover rollback script check", async () => {
     const scriptPath = join(
       import.meta.dir,
@@ -947,24 +968,29 @@ describe("staging deploy workflow", () => {
     expect(workflow).toContain("always()");
   });
 
-  it("re-resolves api-proxy backend upstream via Docker DNS", () => {
+  it("routes api-proxy through a dual-slot upstream with drain before stop", () => {
     const nginx = readRepoFile("self-host/api-proxy/nginx.conf");
     const upstream = readRepoFile("self-host/api-proxy/active-backend.conf");
     const rolling = readRepoFile("self-host/rolling-backend.sh");
 
-    expect(nginx).toContain("resolver 127.0.0.11");
+    expect(nginx).toContain("include /etc/nginx/conf.d/active-backend.conf");
     expect(nginx).toContain("worker_shutdown_timeout 30s");
     expect(nginx).toContain("proxy_connect_timeout 5s");
     expect(nginx).toContain(
       "proxy_next_upstream error timeout http_502 http_503 http_504",
     );
-    expect(nginx).toContain("proxy_pass http://$backend_upstream");
-    expect(upstream).toContain("set $backend_upstream backend-a:3000");
+    expect(nginx).toContain("proxy_pass http://compass_backend");
+    expect(upstream).toContain("upstream compass_backend");
+    expect(upstream).toContain("server backend-a:3000 max_fails=0;");
+    expect(upstream).toContain("server backend-b:3000 down max_fails=0;");
     expect(rolling).toContain("sync_api_proxy_after_deploy");
     expect(rolling).toContain("nginx -s reload");
     expect(rolling).toContain("--force-recreate --no-deps api-proxy");
     expect(rolling).toContain("wait_for_proxy_health_stable");
     expect(rolling).toContain("reload_api_proxy_for_cutover");
+    expect(rolling).toContain("ensure_serving_slot_unchanged");
+    expect(rolling).toContain("wait_for_backend_slot_drain");
+    expect(rolling).toContain("--no-recreate api-proxy");
     expect(rolling).toContain("compass-backend-cutover:");
     expect(rolling).toContain("stopping backend-");
     expect(rolling).toContain("cutover complete active_slot=");
