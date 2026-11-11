@@ -14,23 +14,8 @@ import {
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import { EventForm } from "@web/views/Forms/EventForm/EventForm";
+import { FORM_CARD_FIELD_INPUT_CLASSNAME } from "@web/views/Forms/EventForm/FormCardIconRow";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-
-function verticalCenter(element: HTMLElement): number {
-  const rect = element.getBoundingClientRect();
-  return rect.top + rect.height / 2;
-}
-
-function textStartX(element: HTMLElement): number {
-  const rect = element.getBoundingClientRect();
-  const style = getComputedStyle(element);
-  return (
-    rect.left +
-    Number.parseFloat(style.paddingLeft) +
-    Number.parseFloat(style.textIndent || "0") +
-    Number.parseFloat(style.marginLeft || "0")
-  );
-}
 
 const makeCalendar = (): Calendar => ({
   id: CalendarIdSchema.parse(createObjectIdString()),
@@ -56,7 +41,7 @@ describe("EventForm logistics icon row alignment", () => {
     HotkeyManager.resetInstance();
   });
 
-  it("lines up guest placeholder with location text and icon centers", () => {
+  it("lines up guest placeholder with location field typography and icon rows", () => {
     const calendar = makeCalendar();
     const draft = createGridEventDraft(
       timedGridSchedule(
@@ -84,107 +69,61 @@ describe("EventForm logistics icon row alignment", () => {
     );
 
     const locationInput = screen.getByRole("textbox", { name: "Location" });
+    expect(locationInput).toHaveClass(
+      ...FORM_CARD_FIELD_INPUT_CLASSNAME.split(" ").filter(Boolean),
+    );
+
     const guestsCombobox = screen.getByRole("combobox", { name: "Guests" });
     const guestRoot = guestsCombobox.closest(".c-attendee-field");
-    expect(guestRoot).toBeTruthy();
-    const placeholder = guestRoot!.querySelector(
-      ".attendee-field__placeholder",
-    );
-    expect(placeholder).toBeTruthy();
+    expect(guestRoot).not.toBeNull();
+    if (guestRoot === null) {
+      throw new Error("expected attendee field root");
+    }
+    const placeholder = guestRoot.querySelector(".attendee-field__placeholder");
+    expect(placeholder).not.toBeNull();
+    if (placeholder === null) {
+      throw new Error("expected guest placeholder node");
+    }
 
-    const placeholderStyle = getComputedStyle(placeholder as HTMLElement);
+    const placeholderStyle = getComputedStyle(placeholder);
     expect(placeholderStyle.marginLeft).toBe("0px");
     expect(placeholderStyle.marginRight).toBe("0px");
     expect(placeholderStyle.paddingLeft).toBe("0px");
     expect(["20px", "1.25rem"]).toContain(placeholderStyle.lineHeight);
 
-    const valueContainer = guestRoot!.querySelector(
+    const valueContainer = guestRoot.querySelector(
       ".attendee-field__value-container",
     );
-    expect(getComputedStyle(valueContainer as HTMLElement).paddingLeft).toBe(
-      "0px",
-    );
+    expect(valueContainer).not.toBeNull();
+    if (valueContainer === null) {
+      throw new Error("expected guest value container node");
+    }
+    expect(getComputedStyle(valueContainer).paddingLeft).toBe("0px");
 
     const iconRows = container.querySelectorAll(".flex.min-h-8.items-start");
     expect(iconRows.length).toBeGreaterThanOrEqual(2);
+
     const locationRow = locationInput.closest(".flex.min-h-8");
     const guestsRow = guestsCombobox.closest(".flex.min-h-8");
-    expect(locationRow).toBeTruthy();
-    expect(guestsRow).toBeTruthy();
+    expect(locationRow).not.toBeNull();
+    expect(guestsRow).not.toBeNull();
+    if (locationRow === null || guestsRow === null) {
+      throw new Error("expected location and guest icon rows");
+    }
 
-    const sharedLeft = 64;
-    const sharedLineCenter = 12;
-    locationInput.getBoundingClientRect = () =>
-      ({
-        left: sharedLeft,
-        top: sharedLineCenter - 10,
-        right: sharedLeft + 200,
-        bottom: sharedLineCenter + 10,
-        width: 200,
-        height: 20,
-        x: sharedLeft,
-        y: sharedLineCenter - 10,
-        toJSON: () => ({}),
-      }) as DOMRect;
-    (placeholder as HTMLElement).getBoundingClientRect = () =>
-      ({
-        left: sharedLeft,
-        top: sharedLineCenter - 10,
-        right: sharedLeft + 80,
-        bottom: sharedLineCenter + 10,
-        width: 80,
-        height: 20,
-        x: sharedLeft,
-        y: sharedLineCenter - 10,
-        toJSON: () => ({}),
-      }) as DOMRect;
+    expect(locationRow).toHaveClass("leading-5");
+    expect(guestsRow).toHaveClass("leading-5");
 
-    const locationIcon = (locationRow as HTMLElement).querySelector(
-      "span.w-4 svg",
-    );
-    const guestsIcon = (guestsRow as HTMLElement).querySelector("span.w-4 svg");
-    expect(locationIcon).toBeTruthy();
-    expect(guestsIcon).toBeTruthy();
-    (locationIcon as SVGElement).getBoundingClientRect = () =>
-      ({
-        left: 40,
-        top: sharedLineCenter - 8,
-        right: 56,
-        bottom: sharedLineCenter + 8,
-        width: 16,
-        height: 16,
-        x: 40,
-        y: sharedLineCenter - 8,
-        toJSON: () => ({}),
-      }) as DOMRect;
-    (guestsIcon as SVGElement).getBoundingClientRect = () =>
-      ({
-        left: 40,
-        top: sharedLineCenter - 8,
-        right: 56,
-        bottom: sharedLineCenter + 8,
-        width: 16,
-        height: 16,
-        x: 40,
-        y: sharedLineCenter - 8,
-        toJSON: () => ({}),
-      }) as DOMRect;
+    const locationIconColumn = locationRow.querySelector("span.w-4");
+    const guestsIconColumn = guestsRow.querySelector("span.w-4");
+    expect(locationIconColumn).not.toBeNull();
+    expect(guestsIconColumn).not.toBeNull();
+    if (locationIconColumn === null || guestsIconColumn === null) {
+      throw new Error("expected logistics icon columns");
+    }
+    expect(locationIconColumn).toHaveClass("h-5", "leading-5");
+    expect(guestsIconColumn).toHaveClass("h-5", "leading-5");
 
-    expect(
-      Math.abs(
-        textStartX(locationInput) - textStartX(placeholder as HTMLElement),
-      ),
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(
-        verticalCenter(locationIcon) -
-          verticalCenter(placeholder as HTMLElement),
-      ),
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(
-        verticalCenter(guestsIcon) - verticalCenter(placeholder as HTMLElement),
-      ),
-    ).toBeLessThanOrEqual(1);
+    expect(guestsRow.querySelector(".min-w-0.flex-1.items-center")).toBeNull();
   });
 });
