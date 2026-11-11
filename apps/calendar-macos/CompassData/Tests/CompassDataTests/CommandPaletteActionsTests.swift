@@ -175,6 +175,18 @@ final class CommandPaletteActionsTests: XCTestCase {
         XCTAssertFalse(model.commandPaletteStore.isOpen)
     }
 
+    func testOpeningCommandPaletteHidesPointerHint() async throws {
+        let model = try await makeModel()
+        model.pointerHintStore.pulse(
+            target: .timedSlot,
+            registry: model.shortcutRegistry,
+            slotClick: GridPointerSlotClickContext(timeKey: "0900", timeLabel: "9:00 AM"))
+        XCTAssertTrue(model.pointerHintStore.isVisible)
+        model.toggleCommandPalette()
+        XCTAssertFalse(model.pointerHintStore.isVisible)
+        XCTAssertTrue(model.commandPaletteStore.isOpen)
+    }
+
     private func makeModel() async throws -> NativeCalendarRootModel {
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true, sessionStore: MemorySessionStore(tokens: nil))
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: try DemoSeedFixture.load())

@@ -92,19 +92,23 @@ wait_for_backend_slot_drain() {
   idle=0
   conns=""
   while [ "$elapsed" -lt "$max_sec" ]; do
-    if ! conns=$(backend_slot_established_connections "$slot" 2>/dev/null | tr -cd '0-9'); then
+    probe_out=""
+    if probe_out=$(backend_slot_established_connections "$slot" 2>/dev/null); then
+      conns=$(printf '%s' "$probe_out" | tr -cd '0-9')
+      if [ "${conns:-0}" -eq 0 ]; then
+        idle=$((idle + 1))
+        if [ "$idle" -ge "$idle_need" ]; then
+          cutover_log "backend-${slot} drained (${elapsed}s)"
+          return 0
+        fi
+      else
+        idle=0
+        cutover_log "backend-${slot} drain: ${conns} established connection(s)"
+      fi
+    else
       conns=""
       idle=0
       cutover_log "backend-${slot} drain: connection probe failed"
-    elif [ "${conns:-0}" -eq 0 ]; then
-      idle=$((idle + 1))
-      if [ "$idle" -ge "$idle_need" ]; then
-        cutover_log "backend-${slot} drained (${elapsed}s)"
-        return 0
-      fi
-    else
-      idle=0
-      cutover_log "backend-${slot} drain: ${conns:-?} established connection(s)"
     fi
     sleep 1
     elapsed=$((elapsed + 1))
