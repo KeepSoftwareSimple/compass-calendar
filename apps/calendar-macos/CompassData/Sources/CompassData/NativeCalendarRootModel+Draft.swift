@@ -112,6 +112,30 @@ extension NativeCalendarRootModel {
 
     private func nudgeDraft(key: String, altKey: Bool) -> Bool {
         guard let draft = draftStore.gridDraft, !isScheduleLocked(for: draft) else { return false }
+
+        if let edge = focusStore.edge,
+           let focusedId = focusStore.focusedEventId,
+           focusedId == draft.clientId || focusedId == draft.sourceEventId
+        {
+            let step = DraftNudge.nudgeStepFromKeyboard(altKey: altKey)
+            guard let result = DraftNudge.nudgeScheduleEdgeByKeyboard(
+                schedule: draft.schedule,
+                edge: edge.scheduleEdge,
+                key: key,
+                step: step
+            ) else {
+                return false
+            }
+            draftStore.setGridSchedule(result.schedule)
+            focusStore.setEdge(
+                eventId: focusedId,
+                edge: EventEdge(result.edge),
+                announcement: focusStore.edgeAnnouncement,
+                isAllDay: focusStore.edgeFocusIsAllDay
+            )
+            return true
+        }
+
         return draftStore.nudgeByKeyboard(
             key: key,
             altKey: altKey,
