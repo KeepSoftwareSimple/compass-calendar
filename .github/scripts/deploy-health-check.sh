@@ -531,17 +531,54 @@ done
 REMOTE
 }
 
+compose_log_fatal_pattern() {
+  printf '%s' 'fatal|panic|uncaught|unhandled|ECONNREFUSED|Database connectivity check failed|failed to start|startup failure'
+}
+
+# Benign noise during compose rollouts (old containers stopping).
+compose_log_benign_pattern() {
+  printf '%s' 'InterruptedAtShutdown|"code"[[:space:]]*:[[:space:]]*11600|interrupted at shutdown'
+}
+
+# Prints fatal log lines after stripping rollout noise; empty output means pass.
+compose_log_fatal_lines() {
+  local logs=${1:-}
+  local fatal benign filtered
+  fatal=$(compose_log_fatal_pattern)
+  benign=$(compose_log_benign_pattern)
+  filtered=$(printf '%s\n' "$logs" | grep -Eiv "$benign" || true)
+  printf '%s\n' "$filtered" | grep -Ei "$fatal" || true
+}
+
+compose_logs_have_fatal_errors() {
+  local logs=${1:-}
+  [ -n "$(compose_log_fatal_lines "$logs")" ]
+}
+
 remote_check_logs() {
-  local prefix
+  local prefix fatal_pattern benign_pattern
   prefix=$(remote_compose_prefix)
+  fatal_pattern=$(compose_log_fatal_pattern)
+  benign_pattern=$(compose_log_benign_pattern)
 
   ssh_remote "bash -se" <<REMOTE
 set -euo pipefail
 prefix="$prefix"
-logs=\$(eval "\$prefix logs --tail=200 --since=15m --no-color")
+fatal_pattern='$fatal_pattern'
+benign_pattern='$benign_pattern'
+since=15m
+mapfile -t running_ids < <(eval "\$prefix ps -q --status running")
+if [ "\${#running_ids[@]}" -gt 0 ]; then
+  latest_started=\$(docker inspect --format '{{.State.StartedAt}}' "\${running_ids[@]}" 2>/dev/null | sort | tail -n 1 || true)
+  if [ -n "\$latest_started" ]; then
+    since="\$latest_started"
+  fi
+fi
+logs=\$(eval "\$prefix logs --tail=200 --since=\$since --no-color")
 printf '%s\n' "\$logs" | tail -n 80
-if printf '%s\n' "\$logs" | grep -Eiq 'fatal|panic|uncaught|unhandled|ECONNREFUSED|Database connectivity check failed|failed to start|startup failure'; then
-  printf '%s\n' "\$logs" | grep -Ein 'fatal|panic|uncaught|unhandled|ECONNREFUSED|Database connectivity check failed|failed to start|startup failure' | tail -n 20 >&2
+filtered=\$(printf '%s\n' "\$logs" | grep -Eiv "\$benign_pattern" || true)
+if printf '%s\n' "\$filtered" | grep -Eiq "\$fatal_pattern"; then
+  printf '%s\n' "\$filtered" | grep -Ein "\$fatal_pattern" | tail -n 20 >&2
   exit 1
 fi
 REMOTE
