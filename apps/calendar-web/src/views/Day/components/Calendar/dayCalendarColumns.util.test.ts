@@ -6,94 +6,15 @@ import {
 import dayjs from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
-import { isEventVisibleOnGrid } from "@web/events/visibility/filter-events-visible-on-grid";
 import {
-  getEffectiveTimeZone,
   resetEffectiveTimeZoneStoreForTests,
   setBrowserTimeZoneForTests,
 } from "@web/timezone/effective-timezone.store";
-import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
-import { isAllDayEventOnDay } from "./dayAllDayRows.util";
 import {
   calendarIdsWithVisibleEventsOnDay,
   getDayViewCalendars,
 } from "./dayCalendarColumns.util";
 import { afterEach, describe, expect, it } from "bun:test";
-
-const CIVIL_DAY_FORMAT = "YYYY-MM-DD";
-
-/** Pre-#5229 civil-day matching (main) kept in tests to prove the UTC-boundary miss. */
-function legacyCalendarIdsWithVisibleEventsOnDay({
-  allDayEvents,
-  dateInView,
-  hiddenEventIds,
-  timedEvents,
-}: {
-  allDayEvents: GridEvent[];
-  dateInView: dayjs.Dayjs;
-  hiddenEventIds: ReadonlySet<string>;
-  timedEvents: GridEvent[];
-}): Set<Calendar["id"]> {
-  const ids = new Set<Calendar["id"]>();
-  const viewZone = getEffectiveTimeZone();
-  const viewDay = inEffectiveTimeZone(dateInView, viewZone).format(
-    CIVIL_DAY_FORMAT,
-  );
-
-  for (const event of timedEvents) {
-    if (
-      !event.calendarId ||
-      !isEventVisibleOnGrid(event, hiddenEventIds) ||
-      event.isAllDay
-    ) {
-      continue;
-    }
-    const eventDay = inEffectiveTimeZone(
-      event.startDate,
-      event.timeZone ?? viewZone,
-    ).format(CIVIL_DAY_FORMAT);
-    if (eventDay !== viewDay) continue;
-    ids.add(event.calendarId);
-  }
-
-  for (const event of allDayEvents) {
-    if (
-      !event.calendarId ||
-      !isEventVisibleOnGrid(event, hiddenEventIds) ||
-      !isAllDayEventOnDay(event, dateInView)
-    ) {
-      continue;
-    }
-    ids.add(event.calendarId);
-  }
-
-  return ids;
-}
-
-function legacyGetDayViewCalendars(input: {
-  allDayEvents: GridEvent[];
-  calendars: Calendar[];
-  dateInView: dayjs.Dayjs;
-  defaultTargetCalendar?: Calendar;
-  hiddenEventIds: ReadonlySet<string>;
-  pinnedCalendarIds?: ReadonlySet<Calendar["id"]>;
-  timedEvents: GridEvent[];
-}): Calendar[] {
-  const ordered = input.calendars.filter((c) => c.isActive && c.isVisible);
-  const eventCalendarIds = legacyCalendarIdsWithVisibleEventsOnDay(input);
-  const withEventsOrPinned = ordered.filter(
-    (calendar) =>
-      eventCalendarIds.has(calendar.id) ||
-      input.pinnedCalendarIds?.has(calendar.id),
-  );
-  if (withEventsOrPinned.length > 0) return withEventsOrPinned;
-  const fallback =
-    input.defaultTargetCalendar ??
-    ordered.find((c) => c.isPrimary) ??
-    ordered[0] ??
-    input.calendars[0];
-  return fallback ? [fallback] : [];
-}
 
 function makeCalendar(overrides: Partial<Calendar>): Calendar {
   return {
@@ -295,7 +216,8 @@ describe("calendarIdsWithVisibleEventsOnDay", () => {
     resetEffectiveTimeZoneStoreForTests();
   });
 
-  const mergeQueueBoundaryFixtures = () => {
+  it("keeps both day columns at the merge-queue UTC boundary (browser UTC, no calendar hint)", () => {
+    setBrowserTimeZoneForTests("UTC");
     const primary = makeCalendar({
       id: "507f1f77bcf86cd799439011" as Calendar["id"],
       name: "Acme",
@@ -305,6 +227,10 @@ describe("calendarIdsWithVisibleEventsOnDay", () => {
       id: "507f1f77bcf86cd799439012" as Calendar["id"],
       name: "Design",
     });
+    const dateInViewBoundary = dayjs.tz(
+      "2026-11-11T17:23:00",
+      "America/Denver",
+    );
     const timed = [
       gridEvent({
         _id: "a",
@@ -321,29 +247,16 @@ describe("calendarIdsWithVisibleEventsOnDay", () => {
         timeZone: "America/Denver",
       }),
     ];
-    /** Nov 11 in Denver at 17:23 (00:23 UTC Nov 12); no calendar TZ hint, browser UTC. */
-    const dateInView = dayjs.tz("2026-11-11T17:23:00", "America/Denver");
-    const input = {
-      allDayEvents: [] as GridEvent[],
-      calendars: [primary, secondary],
-      dateInView,
-      hiddenEventIds: new Set<string>(),
-      timedEvents: timed,
-    };
-    return { primary, secondary, input };
-  };
-
-  it("reproduces merge-queue UTC boundary: legacy civil-day match collapses to primary only", () => {
-    setBrowserTimeZoneForTests("UTC");
-    const { primary, secondary, input } = mergeQueueBoundaryFixtures();
 
     expect(
-      legacyGetDayViewCalendars(input).map((calendar) => calendar.name),
-    ).toEqual(["Acme"]);
-    expect(getDayViewCalendars(input).map((calendar) => calendar.name)).toEqual(
-      ["Acme", "Design"],
-    );
-    expect([primary, secondary].map((c) => c.name)).toEqual(["Acme", "Design"]);
+      getDayViewCalendars({
+        allDayEvents: [],
+        calendars: [primary, secondary],
+        dateInView: dateInViewBoundary,
+        hiddenEventIds: new Set(),
+        timedEvents: timed,
+      }).map((calendar) => calendar.name),
+    ).toEqual(["Acme", "Design"]);
   });
 
   it("returns an empty set when every event is hidden", () => {

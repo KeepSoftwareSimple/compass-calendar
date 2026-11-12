@@ -15,10 +15,6 @@ import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { NumberInput } from "@web/components/NumberInput/NumberInput";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import {
-  selectPageJumpHintsVisible,
-  usePageJumpHintStore,
-} from "@web/shortcuts/page-jump/page-jump.store";
-import {
   pageJumpAttrs,
   pageJumpChipAttrs,
 } from "@web/shortcuts/page-jump/page-jump.targets";
@@ -50,7 +46,6 @@ export function LifeSidebarContent({
   today,
   onPreferencesChange,
 }: LifeSidebarContentProps) {
-  const pageJumpHintsVisible = usePageJumpHintStore(selectPageJumpHintsVisible);
   const [isBirthDatePickerOpen, setIsBirthDatePickerOpen] = useState(false);
   const [lifespanInput, setLifespanInput] = useState(() =>
     String(preferences.lifespan),
@@ -129,9 +124,9 @@ export function LifeSidebarContent({
                 />
               </TooltipWrapper>
             </div>
-            {pageJumpHintsVisible ? (
-              <span aria-hidden className="inline-block w-7 shrink-0" />
-            ) : null}
+            {/* Portaled Mod chips do not affect layout; reserve space so chip 3
+                sits between the arrows and the title without covering the label. */}
+            <span aria-hidden className="inline-block w-7 shrink-0" />
             <h2 className="min-w-0 font-semibold text-text">
               {LIFE_VARIATIONS[preferences.variation].label}
             </h2>
