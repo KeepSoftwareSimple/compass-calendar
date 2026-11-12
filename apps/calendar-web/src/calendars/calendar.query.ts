@@ -16,6 +16,7 @@ import {
   isSentinelCalendarList,
   synthesizeLocalCalendar,
 } from "@web/calendars/local-calendar.sentinel";
+import { syncCalendarTimeZoneHintFromCalendars } from "@web/timezone/calendar-timezone-hint";
 
 export const calendarQueryKeys = {
   all: ["calendars"] as const,
@@ -36,10 +37,14 @@ export function calendarsQueryOptions(authenticated: boolean) {
       // covers the gap before React re-renders after the session store flips,
       // so a still-mounted anonymous observer cannot write the sentinel back.
       if (!authenticated && !readAuthenticated()) {
-        return [synthesizeLocalCalendar(getLocalCalendarSentinelId())];
+        const local = [synthesizeLocalCalendar(getLocalCalendarSentinelId())];
+        syncCalendarTimeZoneHintFromCalendars(local);
+        return local;
       }
 
-      return CalendarApi.list();
+      const calendars = await CalendarApi.list();
+      syncCalendarTimeZoneHintFromCalendars(calendars);
+      return calendars;
     },
     staleTime: 60_000,
   });
@@ -97,6 +102,7 @@ export async function ensureRemoteCalendars(
 
   const calendars = await client.fetchQuery(calendarsQueryOptions(true));
   if (isSentinelCalendarList(calendars)) return undefined;
+  syncCalendarTimeZoneHintFromCalendars(calendars);
   return calendars;
 }
 

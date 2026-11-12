@@ -1,7 +1,39 @@
 import { TimeZoneSchema } from "@core/types/domain-primitives";
+import dayjs from "@core/util/date/dayjs";
 import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.factory";
-import { pickCalendarTimeZoneHint } from "@web/timezone/calendar-timezone-hint";
-import { describe, expect, it } from "bun:test";
+import {
+  pickCalendarTimeZoneHint,
+  syncCalendarTimeZoneHintFromCalendars,
+} from "@web/timezone/calendar-timezone-hint";
+import {
+  getEffectiveTimeZone,
+  resetEffectiveTimeZoneStoreForTests,
+  setBrowserTimeZoneForTests,
+} from "@web/timezone/effective-timezone.store";
+import { afterEach, describe, expect, it, setSystemTime } from "bun:test";
+
+describe("syncCalendarTimeZoneHintFromCalendars", () => {
+  afterEach(() => {
+    resetEffectiveTimeZoneStoreForTests();
+    setSystemTime();
+  });
+
+  it("applies denver today before navigation when the browser is UTC at the merge-queue boundary", () => {
+    setBrowserTimeZoneForTests("UTC");
+    setSystemTime(new Date("2026-11-12T00:23:00.000Z"));
+    syncCalendarTimeZoneHintFromCalendars([
+      createMockCalendar({
+        name: "miscellaneous",
+        timeZone: TimeZoneSchema.parse("America/Denver"),
+        isPrimary: true,
+      }),
+    ]);
+    expect(getEffectiveTimeZone()).toBe("America/Denver");
+    expect(dayjs().tz(getEffectiveTimeZone()).format("YYYY-MM-DD")).toBe(
+      "2026-11-11",
+    );
+  });
+});
 
 describe("pickCalendarTimeZoneHint", () => {
   it("prefers the primary calendar zone", () => {
