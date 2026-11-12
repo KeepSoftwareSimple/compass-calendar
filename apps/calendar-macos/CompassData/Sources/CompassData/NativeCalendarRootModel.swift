@@ -1190,3 +1190,15 @@ public final class NativeCalendarRootModel {
         }
     }
 }
+
+extension NativeCalendarRootModel {
+    /// Tests drive calendar-hint sync without mocking the remote list API.
+    internal func applyCalendarsForPresentationTesting(_ updated: [CompassCalendar]) {
+        calendars = updated
+        rebuildPresentation()
+    }
+
+    internal var testingVisibleRangeRefreshIsScheduled: Bool {
+        refreshTask != nil
+    }
+}
