@@ -1,5 +1,6 @@
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowsClockwise";
 import { CloudArrowUpIcon } from "@phosphor-icons/react/dist/csr/CloudArrowUp";
+import { type ConnectionStateReason } from "@core/types/sync/connection.contracts";
 import {
   type ProviderKind,
   providerDisplayName,
@@ -253,6 +254,64 @@ export const calendarReconnectBannerMessage = (
   const named = accountEmail?.trim();
   if (named) return `${named} needs reconnecting.`;
   return RECONNECT_BANNER_MESSAGE[provider];
+};
+
+const delayedProductLabel = (provider: ProviderKind): string =>
+  provider === "microsoft" ? "Outlook" : providerDisplayName(provider);
+
+/** Week/day banner when Sync reports delayed or soft ATTENTION for one account. */
+export const calendarDelayedBannerMessage = (
+  provider: ProviderKind,
+  options: {
+    accountEmail?: string | null;
+    stateReason?: ConnectionStateReason | string | null;
+  } = {},
+): string => {
+  const account = options.accountEmail?.trim();
+  const product = delayedProductLabel(provider);
+  const prefix = account ? `${account}: ` : "";
+  if (options.stateReason === "providerErrors") {
+    const vendor =
+      provider === "microsoft" ? "Microsoft" : providerDisplayName(provider);
+    return `${prefix}${product} updates are delayed: ${vendor} is slow to respond.`;
+  }
+  return `${prefix}${product} updates are delayed. Compass is still syncing in the background.`;
+};
+
+export const calendarDelayedSidebarMessage = (
+  provider: ProviderKind,
+  options: {
+    accountEmail?: string | null;
+    stateReason?: ConnectionStateReason | string | null;
+  } = {},
+): string => {
+  const product = delayedProductLabel(provider);
+  if (options.stateReason === "providerErrors") {
+    const vendor =
+      provider === "microsoft" ? "Microsoft" : providerDisplayName(provider);
+    return nameAccountInCopy(
+      `${product} delayed: ${vendor} is slow`,
+      options.accountEmail,
+    );
+  }
+  return nameAccountInCopy(
+    `${product} updates are delayed`,
+    options.accountEmail,
+  );
+};
+
+export const calendarDelayedToastMessage = (
+  connection: SyncConnectionSummary,
+): { title: string; body: string } => {
+  const provider = connectionProviderKind(connection);
+  const title = `${delayedProductLabel(provider)} updates are delayed`;
+  const body =
+    connection.stateReason === "providerErrors"
+      ? calendarDelayedBannerMessage(provider, {
+          stateReason: connection.stateReason,
+        })
+      : `${delayedProductLabel(provider)} is taking longer than usual to sync. Compass will keep trying.`;
+  return { title, body };
 };
 
 const delayedSettingsStatus = (
@@ -552,13 +611,13 @@ export const getSidebarSyncStatus = ({
         return null;
       }
       case "delayed": {
-        const text =
-          connectionHealthCopy({
-            state: connection.state,
+        const text = calendarDelayedSidebarMessage(
+          connectionProviderKind(connection),
+          {
+            accountEmail: connection.accountEmail,
             stateReason: connection.stateReason,
-            credentialKind: credentialKindForConnection(connection),
-            surface: "sidebarShort",
-          }) ?? "Calendar updates are delayed";
+          },
+        );
         return { variant: "warning", text };
       }
       case "actionRequired":

@@ -1,7 +1,9 @@
 import { type FC } from "react";
+import { type ConnectionStateReason } from "@core/types/sync/connection.contracts";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import {
   type CalendarConnectionBannerKind,
+  calendarDelayedBannerMessage,
   calendarReconnectBannerMessage,
 } from "@web/auth/providers/connect.util";
 import { MICROSOFT_SELF_HOSTING_DOC_URL } from "@web/auth/providers/connection-health-copy.util";
@@ -20,10 +22,6 @@ const STATIC_COPY: Record<
     message: "Couldn't add your calendar.",
     action: "Retry",
   },
-  delayed: {
-    message: "Calendar updates are delayed.",
-    action: "Refresh",
-  },
 };
 
 interface CalendarConnectionBannerProps {
@@ -31,6 +29,7 @@ interface CalendarConnectionBannerProps {
   onAction: () => void;
   provider?: ProviderKind;
   accountEmail?: string | null;
+  stateReason?: ConnectionStateReason | string | null;
 }
 
 export const CalendarConnectionBanner: FC<CalendarConnectionBannerProps> = ({
@@ -38,6 +37,7 @@ export const CalendarConnectionBanner: FC<CalendarConnectionBannerProps> = ({
   onAction,
   provider = "google",
   accountEmail,
+  stateReason,
 }) => {
   const { message, action } =
     kind === "reconnect"
@@ -50,7 +50,15 @@ export const CalendarConnectionBanner: FC<CalendarConnectionBannerProps> = ({
             message: CONSENT_REQUIRED_COPY,
             action: "Learn more",
           }
-        : STATIC_COPY[kind];
+        : kind === "delayed"
+          ? {
+              message: calendarDelayedBannerMessage(provider, {
+                accountEmail,
+                stateReason,
+              }),
+              action: "Refresh",
+            }
+          : STATIC_COPY[kind];
   const isError =
     kind === "reconnect" ||
     kind === "consentRequired" ||

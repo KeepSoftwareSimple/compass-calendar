@@ -37,7 +37,16 @@ public struct CalendarConnectionBanner: Equatable, Sendable {
         case .importFailed:
             return "Couldn't add your calendar."
         case .delayed:
-            return "Calendar updates are delayed."
+            if connection.provider == .microsoft {
+                if connection.stateReason == "providerErrors" {
+                    return "Outlook updates are delayed: Microsoft is slow to respond."
+                }
+                return "Outlook updates are delayed."
+            }
+            if connection.stateReason == "providerErrors" {
+                return "Google updates are delayed: Google is slow to respond."
+            }
+            return "Google updates are delayed."
         }
     }
 
