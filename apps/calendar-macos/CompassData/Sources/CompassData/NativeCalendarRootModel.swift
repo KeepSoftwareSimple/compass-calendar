@@ -786,6 +786,8 @@ public final class NativeCalendarRootModel {
             headerTitle = "Life"
             return
         }
+        EffectiveTimeZone.calendarTimeZoneHint =
+            CalendarTimeZoneHint.pick(from: visibleCalendars())
         headerTitle = CalendarHeadingLabel.format(start: startOfView, end: endOfView, now: referenceNow)
         let hiddenIds = gridHiddenEventIdStrings
         let demoIds = demoEventIds

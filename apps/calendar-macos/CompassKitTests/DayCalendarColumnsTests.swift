@@ -5,6 +5,7 @@ final class DayCalendarColumnsTests: XCTestCase {
     override func setUp() {
         super.setUp()
         EffectiveTimeZone.identifier = "UTC"
+        EffectiveTimeZone.calendarTimeZoneHint = nil
     }
 
     func testDayViewShowsOnlyCalendarsWithVisibleEvents() {
@@ -80,43 +81,59 @@ final class DayCalendarColumnsTests: XCTestCase {
     }
 
     func testDayViewKeepsBothColumnsAtMergeQueueUTCBoundary() throws {
-        let primary = GridLayoutSnapshotFixtures.parityCalendars[0]
-        let secondary = GridLayoutSnapshotFixtures.parityCalendars[1]
-        let viewDay = try XCTUnwrap(
+        let denverCalendars = GridLayoutSnapshotFixtures.parityCalendars.map { calendar in
+            CompassCalendar(
+                access: calendar.access,
+                accountEmail: calendar.accountEmail,
+                backgroundColor: calendar.backgroundColor,
+                capabilities: calendar.capabilities,
+                conference: calendar.conference,
+                createsGoogleMeet: calendar.createsGoogleMeet,
+                description: calendar.description,
+                foregroundColor: calendar.foregroundColor,
+                id: calendar.id,
+                isActive: calendar.isActive,
+                isPrimary: calendar.isPrimary,
+                isVisible: calendar.isVisible,
+                name: calendar.name,
+                provider: calendar.provider,
+                timeZone: "America/Denver"
+            )
+        }
+        let referenceNow = try XCTUnwrap(
             CompassDateParsing.parseGridDateTime(
-                "2026-11-11T17:23:00",
-                timeZoneIdentifier: "America/Denver"
+                "2026-11-12T00:23:00.000",
+                timeZoneIdentifier: "UTC"
             )
         )
-        let timed = [
-            GridLayoutTimedEventInput(
-                calendarId: primary.id,
-                endDate: "2026-11-11 10:30:00.000",
-                eventId: "boundary-a",
-                startDate: "2026-11-11 09:00:00.000",
-                timeZone: "America/Denver",
-                title: "Morning"
-            ),
-            GridLayoutTimedEventInput(
-                calendarId: secondary.id,
-                endDate: "2026-11-11 14:30:00.000",
-                eventId: "boundary-b",
-                startDate: "2026-11-11 13:00:00.000",
-                timeZone: "America/Denver",
-                title: "Afternoon"
-            ),
-        ]
-
-        let columns = DayCalendarColumns.dayViewCalendars(
-            [primary, secondary],
-            dayKey: "2026-11-11",
-            timedEvents: timed,
-            allDayEvents: [],
-            hiddenEventIds: [],
-            viewDay: viewDay,
-            viewDayTimeZone: "America/Denver"
+        let work = denverCalendars[0]
+        let personal = denverCalendars[1]
+        let scenario = GridLayoutScenario(
+            calendars: denverCalendars,
+            layoutMode: .day,
+            referenceNow: referenceNow,
+            timedEvents: [
+                GridLayoutTimedEventInput(
+                    calendarId: work.id,
+                    endDate: "2026-11-11T10:30:00.000",
+                    eventId: "boundary-a",
+                    startDate: "2026-11-11T09:00:00.000",
+                    timeZone: "America/Denver",
+                    title: "Morning"
+                ),
+                GridLayoutTimedEventInput(
+                    calendarId: personal.id,
+                    endDate: "2026-11-11T14:30:00.000",
+                    eventId: "boundary-b",
+                    startDate: "2026-11-11T13:00:00.000",
+                    timeZone: "America/Denver",
+                    title: "Afternoon"
+                ),
+            ],
+            visibleDateKeys: ["2026-11-12"]
         )
 
+        let columns = scenario.dayViewCalendarsForLayout()
         XCTAssertEqual(columns.map(\.name), ["Work", "Personal"])
     }
 }
