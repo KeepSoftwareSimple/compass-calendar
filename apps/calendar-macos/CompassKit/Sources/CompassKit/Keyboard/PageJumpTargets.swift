@@ -59,6 +59,17 @@ public enum PageJumpTargets {
         withPickDigits([viewSelect] + sidebarDrafts(accounts: accounts))
     }
 
+    /// Life view (web `LIFE_PAGE_JUMP_TARGETS`): view dropdown, current week,
+    /// life variation, then life details.
+    public static func buildLifePageJumpTargets() -> [Resolved] {
+        withPickDigits([
+            viewSelect,
+            Draft(id: "life-grid", label: "Current week"),
+            Draft(id: "life-variation", label: "Life variation"),
+            Draft(id: "life-details", label: "Life details"),
+        ])
+    }
+
     /// Day view (web `buildDayPageJumpTargets`): view dropdown, each displayed
     /// column left to right, then the sidebar map. When columns consume every
     /// physical key, sidebar targets at the end are omitted first.

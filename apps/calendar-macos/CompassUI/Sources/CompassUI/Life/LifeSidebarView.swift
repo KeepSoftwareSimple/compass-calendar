@@ -13,6 +13,7 @@ struct LifeSidebarView: View {
   /// Web `LifeQuote`: one random quote per visit to the sidebar.
   @State private var quote = LifeQuotes.random()
   @FocusState private var focusedField: Field?
+  @FocusState private var variationControlFocused: Bool
   private enum Field { case birthDate, lifespan }
 
   var body: some View {
@@ -22,6 +23,7 @@ struct LifeSidebarView: View {
           HStack(spacing: 4) {
             variationButton(
               "Previous life variation in sidebar", symbol: "chevron.left", direction: -1)
+              .focused($variationControlFocused)
             variationButton("Next life variation in sidebar", symbol: "chevron.right", direction: 1)
             Text(LifeMath.variations[model.lifeStore.preferences.variation]?.label ?? "Average")
               .fontWeight(.semibold).foregroundStyle(theme.textColor)
@@ -30,6 +32,7 @@ struct LifeSidebarView: View {
           Text("This is your life if you live to \(model.lifeStore.preferences.lifespan)")
           Text("Each dot represents one week of your life, and each row represents one year.")
         }
+        .pageJumpChipAnchor(id: "life-variation")
         Text(model.lifeStore.summary)
           .fontWeight(.medium).foregroundStyle(theme.textColor)
           .frame(maxWidth: .infinity).multilineTextAlignment(.center)
@@ -97,6 +100,7 @@ struct LifeSidebarView: View {
               .clipShape(RoundedRectangle(cornerRadius: 4))
           }
         }
+        .pageJumpChipAnchor(id: "life-details")
         .textFieldStyle(.plain)
         .multilineTextAlignment(.center)
         if let error = model.lifeStore.error {
@@ -128,6 +132,18 @@ struct LifeSidebarView: View {
       // Defer so the key that opened the sidebar cannot append into the field.
       DispatchQueue.main.async {
         focusedField = .birthDate
+      }
+    }
+    .onChange(of: model.pendingLifePageJumpFocus) { _, target in
+      guard let target else { return }
+      model.pendingLifePageJumpFocus = nil
+      DispatchQueue.main.async {
+        switch target {
+        case .variation:
+          variationControlFocused = true
+        case .details:
+          focusedField = .birthDate
+        }
       }
     }
     .onChange(of: model.lifeStore.preferences) { _, _ in refreshInputs() }
