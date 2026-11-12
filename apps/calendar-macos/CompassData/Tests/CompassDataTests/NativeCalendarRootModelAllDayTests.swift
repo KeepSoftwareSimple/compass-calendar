@@ -36,12 +36,46 @@ final class NativeCalendarRootModelAllDayTests: XCTestCase {
         EffectiveTimeZone.calendar.date(from: DateComponents(year: 2026, month: 3, day: day))!
     }
 
+    private func denverPrimaryCalendar() -> CompassCalendar {
+        CompassCalendar(
+            access: .owner,
+            accountEmail: "a@example.com",
+            backgroundColor: "#ffffff",
+            capabilities: .init(
+                canInviteAttendees: false,
+                canManage: false,
+                canReadAvailability: true,
+                canReadDetails: true,
+                canWatchEvents: false,
+                canWrite: true,
+                conferenceKinds: []
+            ),
+            conference: nil,
+            createsGoogleMeet: false,
+            description: "",
+            foregroundColor: "#000000",
+            id: "denver-primary",
+            isActive: true,
+            isPrimary: true,
+            isVisible: true,
+            name: "Primary",
+            provider: "google",
+            timeZone: IANATimeZone(rawValue: "America/Denver")
+        )
+    }
+
     private func model(startDay: Int, endDay: Int) throws -> NativeCalendarRootModel {
+        CompassDeviceTimeZone.setIdentifierProviderForTests { "GMT" }
         let model = NativeCalendarRootModel(environment: try NativeCalendarEnvironment(inMemoryDatabase: true))
-        EffectiveTimeZone.identifier = "America/Denver"
+        model.applyCalendarsForPresentationTesting([denverPrimaryCalendar()])
         model.draftStore.startGridDraft(activity: .keyboardPlace, draft: GridEventDraft(
             clientId: .init(rawValue: "all-day"), schedule: .init(start: date(startDay), end: date(endDay), kind: .allDay),
-            calendarId: .init(rawValue: "cal-1")))
+            calendarId: .init(rawValue: "denver-primary")))
         return model
+    }
+
+    override func tearDown() async throws {
+        CompassDeviceTimeZone.resetIdentifierProviderForTests()
+        try await super.tearDown()
     }
 }
