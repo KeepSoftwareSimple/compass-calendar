@@ -454,7 +454,7 @@ describe("JobRepository", () => {
       await repo.scheduleRetry(
         id,
         "owner",
-        future(30_000),
+        past(1000),
         "HTTP 500",
         firstErrorAt,
       );
@@ -466,7 +466,7 @@ describe("JobRepository", () => {
       await repo.scheduleRetry(
         id,
         "owner",
-        future(60_000),
+        past(1000),
         "HTTP 503",
         secondErrorAt,
       );
