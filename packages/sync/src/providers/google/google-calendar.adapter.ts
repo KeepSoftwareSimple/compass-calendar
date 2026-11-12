@@ -21,6 +21,7 @@ import {
   type ProviderCalendarAdapter,
   ProviderCalendarError,
 } from "@sync/providers/provider-calendar.port";
+import { isRetryableProviderNetworkFailure } from "@sync/providers/provider-transient-error.util";
 import { mapWithConcurrency } from "@sync/util/map-with-concurrency";
 
 // One page of a Google calendar-list read, narrowed to the fields discovery
@@ -240,6 +241,7 @@ function mapAccessRole(
 function classifyDiscoveryError(
   error: unknown,
 ): "cursorExpired" | "authExpired" | "transient" | "discoveryFailed" {
+  if (isRetryableProviderNetworkFailure(error)) return "transient";
   const status = googleStatus(error);
   if (status === 410) return "cursorExpired";
   if (status === 401) return "authExpired";

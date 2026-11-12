@@ -17,10 +17,21 @@ type GoogleErrorEntry = {
 // code. Reading it does not touch the request. Undefined means no HTTP
 // response reached us (a network failure), which classifies as transient.
 export function googleStatus(error: unknown): number | undefined {
-  const status =
-    (error as { response?: { status?: number } })?.response?.status ??
-    (error as { code?: number })?.code;
-  return typeof status === "number" ? status : undefined;
+  const responseStatus = (error as { response?: { status?: number } })?.response
+    ?.status;
+  if (typeof responseStatus === "number") return responseStatus;
+  const code = (error as { code?: number }).code;
+  if (typeof code !== "number" || code < 100 || code > 599) return undefined;
+  // Gaxios mirrors HTTP status on `code` for some failures (e.g. when
+  // googleapis puts errors[] on the Error object without `response`). Ignore
+  // non-HTTP numeric codes such as DOMException TIMEOUT_ERR (23).
+  if (
+    (error as { response?: unknown }).response != null ||
+    googleErrorEntriesRaw(error).length > 0
+  ) {
+    return code;
+  }
+  return undefined;
 }
 
 function googleErrorEntriesRaw(error: unknown): unknown[] {

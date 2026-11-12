@@ -27,6 +27,18 @@ describe("isTransientProviderError", () => {
     const error = new ProviderEventReadError("readFailed", "404");
     expect(isTransientProviderError(error)).toBe(false);
   });
+
+  it("returns true when a request timeout sits in the cause chain", () => {
+    const timeout = new DOMException(
+      "The operation timed out.",
+      "TimeoutError",
+    );
+    const wrapped = new Error(
+      "Sync job calendarListSync (job-id) attempt 1 failed: The operation timed out.",
+      { cause: timeout },
+    );
+    expect(isTransientProviderError(wrapped)).toBe(true);
+  });
 });
 
 describe("logSyncJobEngineError", () => {

@@ -604,6 +604,116 @@ describe("SyncJobWorker", () => {
     expect(errorsTerminal).toHaveLength(1);
   });
 
+  it("routes a calendarList request timeout on a retryable attempt to onTransientRetry, not onError", async () => {
+    const connection = await connections.upsertByProviderAccount({
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
+      provider: "google",
+      account: {
+        providerAccountId: "acct-timeout" as ProviderAccountId,
+        email: "timeout@example.com",
+        displayName: "Timeout",
+      },
+      capabilities: ["readEvents", "readBusy", "writeEvents"],
+      state: "importing",
+      stateReason: null,
+    });
+    const job = await jobs.enqueue({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceId: null,
+      commandId: null,
+      kind: "calendarListSync",
+      priority: 0,
+      runAfter: now(),
+      coalescingKey: `calendarListSync:${connection._id}`,
+    });
+    const failingDiscovery: ProviderCalendarAdapter = {
+      discoverCalendars: async () => {
+        throw new DOMException("The operation timed out.", "TimeoutError");
+      },
+    };
+    const errors: { error: Error; job: JobRecord }[] = [];
+    const transientRetries: { error: Error; job: JobRecord }[] = [];
+    const w = new SyncJobWorker(
+      deps(new FakeReader([]), failingDiscovery),
+      OWNER,
+      {
+        now,
+        scheduleHeartbeat: () => () => {},
+        onError: (error, job) => {
+          if (error instanceof Error) errors.push({ error, job });
+        },
+        onTransientRetry: (error, job) => {
+          if (error instanceof Error) transientRetries.push({ error, job });
+        },
+      },
+    );
+
+    await w.runOnce();
+
+    expect(errors).toHaveLength(0);
+    expect(transientRetries).toHaveLength(1);
+    expect(transientRetries[0]?.error.message).toContain(
+      "The operation timed out.",
+    );
+    expect(transientRetries[0]?.error.message).not.toMatch(/HTTP 23/);
+    expect(transientRetries[0]?.job._id).toBe(job._id);
+  });
+
+  it("reports onError when a calendarList timeout exhausts retries", async () => {
+    const connection = await connections.upsertByProviderAccount({
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
+      provider: "google",
+      account: {
+        providerAccountId: "acct-timeout-final" as ProviderAccountId,
+        email: "timeout-final@example.com",
+        displayName: "Timeout Final",
+      },
+      capabilities: ["readEvents", "readBusy", "writeEvents"],
+      state: "importing",
+      stateReason: null,
+    });
+    await jobs.enqueue({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceId: null,
+      commandId: null,
+      kind: "calendarListSync",
+      priority: 0,
+      runAfter: now(),
+      coalescingKey: `calendarListSync:${connection._id}`,
+    });
+    const failingDiscovery: ProviderCalendarAdapter = {
+      discoverCalendars: async () => {
+        throw new DOMException("The operation timed out.", "TimeoutError");
+      },
+    };
+    const errorsTerminal: { error: Error; job: JobRecord }[] = [];
+    const w = new SyncJobWorker(
+      deps(new FakeReader([]), failingDiscovery),
+      OWNER,
+      {
+        now,
+        maxAttempts: 1,
+        scheduleHeartbeat: () => () => {},
+        onError: (error, job) => {
+          if (error instanceof Error) errorsTerminal.push({ error, job });
+        },
+      },
+    );
+
+    await w.runOnce();
+
+    expect(errorsTerminal).toHaveLength(1);
+    expect(errorsTerminal[0]?.error.message).toContain(
+      "The operation timed out.",
+    );
+  });
+
   it("fails a transient job once its retries are exhausted", async () => {
     const calendar = await seedCalendar();
     const resource = await seedResource(calendar, "cursor-0");
