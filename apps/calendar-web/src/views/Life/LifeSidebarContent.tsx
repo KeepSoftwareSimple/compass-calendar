@@ -134,7 +134,7 @@ export function LifeSidebarContent({
               className={
                 pageJumpHintsVisible
                   ? "inline-block w-7 shrink-0"
-                  : "inline-block w-7 shrink-0 invisible"
+                  : "invisible inline-block w-7 shrink-0"
               }
             />
             <h2 className="min-w-0 font-semibold text-text">
