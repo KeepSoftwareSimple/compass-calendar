@@ -11,7 +11,7 @@ extension NativeCalendarRootModel {
         guard let event = focusedEvent(), case .details = event.content else { return false }
         guard !isReadOnly(event: event) else { return false }
         guard !isFocusedSavedEventScheduleLocked(event) else { return false }
-        guard let current = GridEventDraftFromEvent.draftSchedule(from: event) else { return false }
+        guard let current = GridEventDraftFromEvent.editDraft(from: event)?.schedule else { return false }
 
         let step = DraftNudge.nudgeStepFromKeyboard(altKey: altKey)
         let isStartAllowed: (Date) -> Bool = { [weak self] nextStart in
