@@ -52,6 +52,29 @@ describe("pickCalendarTimeZoneHint", () => {
     expect(pickCalendarTimeZoneHint(calendars)).toBe("America/New_York");
   });
 
+  // Shared vector with macOS `CalendarTimeZoneHintTests.swift`. A zone-less
+  // primary must not consume the primary preference.
+  it("prefers a later primary zone over an earlier non-primary zone", () => {
+    const calendars = [
+      createMockCalendar({
+        name: "AcctA primary",
+        timeZone: null,
+        isPrimary: true,
+      }),
+      createMockCalendar({
+        name: "AcctA shared",
+        timeZone: TimeZoneSchema.parse("America/Chicago"),
+        isPrimary: false,
+      }),
+      createMockCalendar({
+        name: "AcctB primary",
+        timeZone: TimeZoneSchema.parse("America/New_York"),
+        isPrimary: true,
+      }),
+    ];
+    expect(pickCalendarTimeZoneHint(calendars)).toBe("America/New_York");
+  });
+
   it("skips UTC when another calendar has a regional zone", () => {
     const calendars = [
       createMockCalendar({
