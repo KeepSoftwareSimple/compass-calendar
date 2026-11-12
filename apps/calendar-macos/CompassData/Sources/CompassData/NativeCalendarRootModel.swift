@@ -74,6 +74,13 @@ public final class NativeCalendarRootModel {
     public internal(set) var monthPickerFocusDate: Date?
     /// Set by `i` in Life view; the sidebar view focuses birth date and clears this.
     public var pendingLifeSidebarFieldFocus = false
+    /// Mod+digit jump into the Life sidebar (`life-variation` / `life-details`).
+    public enum LifePageJumpFocus: String, Sendable {
+        case variation
+        case details
+    }
+
+    public var pendingLifePageJumpFocus: LifePageJumpFocus?
     /// Banner holding keyboard focus after `p`, like the web's `data-notice` focus.
     public internal(set) var focusedNotice: NativeNotice?
     /// Calendar list whose rows take number keys, like the web's focused
@@ -798,6 +805,8 @@ public final class NativeCalendarRootModel {
         syncCalendarTimeZoneHintFromAccountCalendars()
         if viewStore.view == .life {
             headerTitle = "Life"
+            focusStore.setPageJumpTargets(nativePageJumpTargets())
+            publishEventFormTitleAccessibilityProbe()
             return
         }
         headerTitle = CalendarHeadingLabel.format(start: startOfView, end: endOfView, now: referenceNow)
@@ -945,6 +954,8 @@ public final class NativeCalendarRootModel {
         if viewStore.view == .day {
             let displayed = visibleCalendars().map { (id: $0.id, name: $0.name) }
             resolved = PageJumpTargets.buildDayPageJumpTargets(displayedCalendars: displayed, accounts: accounts)
+        } else if viewStore.view == .life {
+            resolved = PageJumpTargets.buildLifePageJumpTargets()
         } else {
             resolved = PageJumpTargets.buildSidebarPageJumpTargets(accounts: accounts)
         }

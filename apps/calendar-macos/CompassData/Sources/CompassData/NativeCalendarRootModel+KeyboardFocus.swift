@@ -358,6 +358,14 @@ extension NativeCalendarRootModel {
         case let id where id.hasPrefix(PageJumpTargets.dayColumnPrefix):
             let calendarId = String(id.dropFirst(PageJumpTargets.dayColumnPrefix.count))
             focusDayColumn(calendarId: calendarId)
+        case "life-grid":
+            lifeStore.focusCurrentWeek()
+        case "life-variation":
+            isSidebarOpen = true
+            pendingLifePageJumpFocus = .variation
+        case "life-details":
+            isSidebarOpen = true
+            pendingLifePageJumpFocus = .details
         default:
             break
         }

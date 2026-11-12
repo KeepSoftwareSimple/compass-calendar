@@ -21,5 +21,6 @@ struct LifeContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(theme.backgroundColor)
             .accessibilityIdentifier("compass-native-content")
+            .pageJumpChipAnchor(id: "life-grid")
     }
 }

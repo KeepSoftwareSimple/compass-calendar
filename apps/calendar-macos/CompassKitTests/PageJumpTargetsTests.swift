@@ -28,6 +28,20 @@ final class PageJumpTargetsTests: XCTestCase {
         XCTAssertEqual(targets.map(\.label), ["View dropdown", "Month picker", "Up next", "Calendar list"])
     }
 
+    /// Web `LIFE_PAGE_JUMP_TARGETS`.
+    func testLifeViewMatchesWebNumbering() {
+        let targets = PageJumpTargets.buildLifePageJumpTargets()
+        XCTAssertEqual(
+            targets.map(\.id),
+            ["view-select", "life-grid", "life-variation", "life-details"]
+        )
+        XCTAssertEqual(targets.map(\.digit), ["1", "2", "3", "4"])
+        XCTAssertEqual(
+            targets.map(\.label),
+            ["View dropdown", "Current week", "Life variation", "Life details"]
+        )
+    }
+
     /// Web: one target per connected account replaces the single list slot.
     func testWeekViewNumbersEachConnectedAccount() {
         let targets = PageJumpTargets.buildSidebarPageJumpTargets(accounts: [
