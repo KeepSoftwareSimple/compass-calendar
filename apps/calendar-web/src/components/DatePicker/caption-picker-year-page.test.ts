@@ -1,5 +1,4 @@
 import {
-  macYearRangeCaption,
   reactDatepickerYearPageBounds,
   shiftYearPageBounds,
   yearRangeCaptionFromBounds,
@@ -32,9 +31,5 @@ describe("caption-picker-year-page", () => {
     const page = reactDatepickerYearPageBounds(1993);
     expect(shiftYearPageBounds(page, -1)).toEqual({ start: 1961, end: 1980 });
     expect(shiftYearPageBounds(page, 1)).toEqual({ start: 2001, end: 2020 });
-  });
-
-  it("keeps mac decade alignment separate", () => {
-    expect(macYearRangeCaption(1993)).toBe("Years 1980 to 1999");
   });
 });

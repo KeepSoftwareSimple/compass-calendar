@@ -1,4 +1,4 @@
-/** Keep in sync with `DatePickerCaption.reactYearsPerPage` on macOS. */
+/** Keep in sync with `DatePickerCaption.yearsPerPage` on macOS. */
 export const CAPTION_YEARS_PER_PAGE = 20;
 
 export type YearPageBounds = { readonly start: number; readonly end: number };
@@ -29,24 +29,4 @@ export const shiftYearPageBounds = (
 export const yearRangeCaptionFromBounds = (bounds: YearPageBounds): string => {
   const { start, end } = bounds;
   return start === end ? `Year ${start}` : `Years ${start} to ${end}`;
-};
-
-/** macOS decade-aligned pages (0, 20, 40, …) for non-react grids. */
-export const macYearPageContaining = (
-  year: number,
-  pageSize = CAPTION_YEARS_PER_PAGE,
-): readonly number[] => {
-  const start = year - (((year % pageSize) + pageSize) % pageSize);
-  return Array.from({ length: pageSize }, (_, index) => start + index);
-};
-
-export const macYearRangeCaption = (
-  anchorYear: number,
-  pageSize = CAPTION_YEARS_PER_PAGE,
-): string => {
-  const page = macYearPageContaining(anchorYear, pageSize);
-  const first = page[0];
-  const last = page[page.length - 1];
-  if (first === undefined || last === undefined) return "Select year";
-  return first === last ? `Year ${first}` : `Years ${first} to ${last}`;
 };
