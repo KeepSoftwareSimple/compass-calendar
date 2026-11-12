@@ -288,6 +288,9 @@ public struct RootView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 2)
             }
+            EdgeFocusStatusLine(model: model)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 2)
             SidebarSyncStatusLine(model: model)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 4)
@@ -296,7 +299,9 @@ public struct RootView: View {
                 isEventFormVisible: model.isEventFormVisible,
                 isLifeView: model.viewStore.view == .life,
                 lifeThisWeekEligible: model.lifeStore.hasBirthDate,
-                suppressTips: model.eventJumpStatusText != nil || model.focusStore.pageJumpHintsVisible,
+                suppressTips: model.eventJumpStatusText != nil
+                    || model.edgeFocusStatusText != nil
+                    || model.focusStore.pageJumpHintsVisible,
                 suppressForQuickTime: !model.draftStore.quickTimeDigits.isEmpty)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
