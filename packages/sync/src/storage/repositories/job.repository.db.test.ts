@@ -445,6 +445,35 @@ describe("JobRepository", () => {
       expect(after?.failureClass).toBe("retryableTransient");
     });
 
+    it("refreshes lastErrorAt on each provider retry", async () => {
+      await repo.enqueue(enqueue({ runAfter: past(1000) }));
+      const job = await repo.claimDueJob("owner", NOW, LEASE_MS);
+      const id = job?._id as NonNullable<typeof job>["_id"];
+      const firstErrorAt = past(20 * 60_000);
+      const secondErrorAt = past(5 * 60_000);
+      await repo.scheduleRetry(
+        id,
+        "owner",
+        future(30_000),
+        "HTTP 500",
+        firstErrorAt,
+      );
+      const pending = await repo.findById(job!.tenantId, job!.principalId, id);
+      expect(pending?.lastErrorAt).toEqual(firstErrorAt);
+
+      const reclaimed = await repo.claimDueJob("owner", NOW, LEASE_MS);
+      expect(reclaimed?._id).toEqual(id);
+      await repo.scheduleRetry(
+        id,
+        "owner",
+        future(60_000),
+        "HTTP 503",
+        secondErrorAt,
+      );
+      const after = await repo.findById(job!.tenantId, job!.principalId, id);
+      expect(after?.lastErrorAt).toEqual(secondErrorAt);
+    });
+
     it("completes a job the owner holds", async () => {
       await repo.enqueue(enqueue({ runAfter: past(1000) }));
       const job = await repo.claimDueJob("owner", NOW, LEASE_MS);
@@ -778,6 +807,42 @@ describe("JobRepository", () => {
         NOW,
       );
       expect(oldest?.runAfter).toEqual(firstErrorAt);
+      expect(oldest?.failureClass).toBe("retryableTransient");
+    });
+
+    it("treats an in-flight claimed job with lastErrorAt as overdue provider-error work", async () => {
+      const connectionId = objectId() as JobEnqueue["connectionId"];
+      const tenantId = objectId() as JobEnqueue["tenantId"];
+      const principalId = objectId() as JobEnqueue["principalId"];
+      const job = await repo.enqueue(
+        enqueue({
+          tenantId,
+          principalId,
+          connectionId,
+          runAfter: past(1000),
+          coalescingKey: "pull:in-flight",
+        }),
+      );
+      const claimed = await repo.claimDueJob("worker", NOW, 60_000);
+      expect(claimed?._id).toEqual(job._id);
+      await db.collection("jobs").updateOne(
+        { _id: claimed!._id },
+        {
+          $set: {
+            failureClass: "retryableTransient",
+            lastError: "HTTP 503",
+            lastErrorAt: past(5 * 60_000),
+          },
+        },
+      );
+
+      const oldest = await repo.findOldestOverdueByConnection(
+        tenantId,
+        principalId,
+        connectionId,
+        NOW,
+      );
+      expect(oldest?.runAfter).toEqual(past(5 * 60_000));
       expect(oldest?.failureClass).toBe("retryableTransient");
     });
 
