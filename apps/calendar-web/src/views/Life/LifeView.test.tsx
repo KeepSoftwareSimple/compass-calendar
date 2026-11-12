@@ -13,6 +13,7 @@ import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { viewActions } from "@web/events/stores/view.store";
+import { pageJumpHintActions } from "@web/shortcuts/page-jump/page-jump.store";
 import { LifeView } from "./LifeView";
 import {
   afterAll,
@@ -411,6 +412,15 @@ describe("LifeView", () => {
     );
     expect(randomAge).toBeGreaterThanOrEqual(1);
     expect(randomAge).toBeLessThanOrEqual(100);
+  });
+
+  it("does not shift the life variation title when Mod page-jump hints appear", async () => {
+    await renderLifeViewWithSidebar();
+    const title = screen.getByRole("heading", { level: 2, name: "Average" });
+    const before = title.getBoundingClientRect().left;
+    act(() => pageJumpHintActions.setHintsVisible(true));
+    expect(title.getBoundingClientRect().left).toBe(before);
+    act(() => pageJumpHintActions.setHintsVisible(false));
   });
 
   it("cycles life variations with J and K", async () => {
