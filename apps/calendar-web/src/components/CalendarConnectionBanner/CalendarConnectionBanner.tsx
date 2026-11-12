@@ -15,7 +15,10 @@ import {
 } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 
 const STATIC_COPY: Record<
-  Exclude<CalendarConnectionBannerKind, "reconnect" | "consentRequired">,
+  Exclude<
+    CalendarConnectionBannerKind,
+    "reconnect" | "consentRequired" | "delayed"
+  >,
   { message: string; action: string }
 > = {
   importFailed: {

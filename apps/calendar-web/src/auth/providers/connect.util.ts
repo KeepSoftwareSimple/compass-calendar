@@ -586,6 +586,18 @@ export const getSidebarSyncStatus = ({
     refreshGaveUp &&
     (state === "ATTENTION" || connection?.state === "delayed")
   ) {
+    if (connection) {
+      return {
+        variant: "error",
+        text: calendarDelayedSidebarMessage(
+          connectionProviderKind(connection),
+          {
+            accountEmail: connection.accountEmail,
+            stateReason: connection.stateReason,
+          },
+        ),
+      };
+    }
     return { variant: "error", text: "Calendar updates are delayed" };
   }
 
