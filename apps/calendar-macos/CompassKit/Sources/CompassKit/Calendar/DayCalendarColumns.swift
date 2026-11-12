@@ -14,11 +14,9 @@ public enum DayCalendarColumns {
         let ordered = eligibleCalendarsInOrder(calendars)
         let viewAnchor =
             CompassDateParsing.calendarDateInEffectiveTimeZone(dayKey) ?? .distantPast
-        let queryWindowTimeZone = timedEventsQueryWindowTimeZone(calendars: calendars)
         let eventCalendarIds = calendarIdsWithVisibleEventsOnDay(
             dayKey: dayKey,
             viewDay: viewAnchor,
-            queryWindowTimeZone: queryWindowTimeZone,
             timedEvents: timedEvents,
             allDayEvents: allDayEvents,
             hiddenEventIds: hiddenEventIds
@@ -64,22 +62,9 @@ public enum DayCalendarColumns {
         return []
     }
 
-    private static func timedEventsQueryWindowTimeZone(
-        calendars: [CompassCalendar]
-    ) -> String? {
-        guard TimeZoneFormatting.isUtcLikeTimeZone(EffectiveTimeZone.identifier) else {
-            return nil
-        }
-        if let hint = EffectiveTimeZone.calendarTimeZoneHint {
-            return hint
-        }
-        return CalendarTimeZoneHint.pick(from: calendars)
-    }
-
     private static func calendarIdsWithVisibleEventsOnDay(
         dayKey: String,
         viewDay: Date,
-        queryWindowTimeZone: String?,
         timedEvents: [GridLayoutTimedEventInput],
         allDayEvents: [GridLayoutAllDayEventInput],
         hiddenEventIds: Set<String>
@@ -88,11 +73,7 @@ public enum DayCalendarColumns {
         for timed in timedEvents {
             guard let calendarId = timed.calendarId,
                   !hiddenEventIds.contains(timed.eventId),
-                  timedEventOverlapsViewDay(
-                    timed,
-                    viewDay: viewDay,
-                    queryWindowTimeZone: queryWindowTimeZone
-                  )
+                  timedEventOverlapsViewDay(timed, viewDay: viewDay)
             else { continue }
             ids.insert(calendarId)
         }
@@ -112,13 +93,9 @@ public enum DayCalendarColumns {
 
     private static func timedEventOverlapsViewDay(
         _ timed: GridLayoutTimedEventInput,
-        viewDay: Date,
-        queryWindowTimeZone: String?
+        viewDay: Date
     ) -> Bool {
-        let range = CalendarWindowMath.dayEventQueryBounds(
-            date: viewDay,
-            timeZoneIdentifier: queryWindowTimeZone
-        )
+        let range = CalendarWindowMath.dayEventQueryBounds(date: viewDay)
         let rangeStart = range.start
         let rangeEnd = range.end
         let eventZone = timed.timeZone ?? EffectiveTimeZone.identifier

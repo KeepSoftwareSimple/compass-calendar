@@ -201,8 +201,6 @@ public final class NativeCalendarRootModel {
             demoPresentation == nil
             ? CompassDevicePreferences.readPinnedTimeZoneResolvingAccidentalUtc()
             : nil
-        EffectiveTimeZone.identifier =
-            demoTimeZone ?? pinnedTimeZone ?? TimeZone.current.identifier
         eventsStore = environment.eventsStore
         hiddenEventsStore = environment.hiddenEventsStore
         calendarVisibilityStore = CalendarVisibilityStore()
@@ -782,12 +780,12 @@ public final class NativeCalendarRootModel {
     }
 
     func rebuildPresentation() {
+        viewStore.setCalendarTimeZoneHint(
+            CalendarTimeZoneHint.pick(from: visibleCalendars()))
         if viewStore.view == .life {
             headerTitle = "Life"
             return
         }
-        EffectiveTimeZone.calendarTimeZoneHint =
-            CalendarTimeZoneHint.pick(from: visibleCalendars())
         headerTitle = CalendarHeadingLabel.format(start: startOfView, end: endOfView, now: referenceNow)
         let hiddenIds = gridHiddenEventIdStrings
         let demoIds = demoEventIds

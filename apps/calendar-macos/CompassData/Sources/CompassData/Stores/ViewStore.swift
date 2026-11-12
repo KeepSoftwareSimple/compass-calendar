@@ -18,6 +18,7 @@ public final class ViewStore {
     public var anchorDate: Date
     public var visibleDayCount: Int
     public private(set) var pinnedTimeZone: String?
+    public private(set) var calendarTimeZoneHint: String?
     public private(set) var browserTimeZone: String
     public private(set) var timeTravelTimeZone: String?
 
@@ -39,7 +40,9 @@ public final class ViewStore {
     }
 
     public var effectiveTimeZone: String {
-        pinnedTimeZone ?? browserTimeZone
+        if let pinnedTimeZone { return pinnedTimeZone }
+        if let calendarTimeZoneHint { return calendarTimeZoneHint }
+        return browserTimeZone
     }
 
     public func setAnchorDate(_ date: Date) {
@@ -58,6 +61,12 @@ public final class ViewStore {
         pinnedTimeZone = timeZone
         syncEffectiveTimeZone()
         return true
+    }
+
+    public func setCalendarTimeZoneHint(_ hint: String?) {
+        guard hint == nil || TimeZoneFormatting.isValidTimeZone(hint!) else { return }
+        calendarTimeZoneHint = hint
+        syncEffectiveTimeZone()
     }
 
     public func refreshBrowserTimeZone(_ timeZone: String = TimeZone.current.identifier) {

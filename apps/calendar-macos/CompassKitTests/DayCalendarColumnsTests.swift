@@ -5,7 +5,6 @@ final class DayCalendarColumnsTests: XCTestCase {
     override func setUp() {
         super.setUp()
         EffectiveTimeZone.identifier = "UTC"
-        EffectiveTimeZone.calendarTimeZoneHint = nil
     }
 
     func testDayViewShowsOnlyCalendarsWithVisibleEvents() {
@@ -80,7 +79,8 @@ final class DayCalendarColumnsTests: XCTestCase {
         XCTAssertEqual(columns.map(\.id), [personal.id])
     }
 
-    func testDayViewKeepsBothColumnsAtMergeQueueUTCBoundary() throws {
+    func testDayViewTimedColumnsUseEffectiveQueryWindowOverlap() throws {
+        EffectiveTimeZone.identifier = "America/Denver"
         let denverCalendars = GridLayoutSnapshotFixtures.parityCalendars.map { calendar in
             CompassCalendar(
                 access: calendar.access,
@@ -97,21 +97,20 @@ final class DayCalendarColumnsTests: XCTestCase {
                 isVisible: calendar.isVisible,
                 name: calendar.name,
                 provider: calendar.provider,
-                timeZone: "America/Denver"
+                timeZone: IANATimeZone(rawValue: "America/Denver")
             )
         }
-        let referenceNow = try XCTUnwrap(
-            CompassDateParsing.parseGridDateTime(
-                "2026-11-12T00:23:00.000",
-                timeZoneIdentifier: "UTC"
-            )
-        )
         let work = denverCalendars[0]
         let personal = denverCalendars[1]
         let scenario = GridLayoutScenario(
             calendars: denverCalendars,
             layoutMode: .day,
-            referenceNow: referenceNow,
+            referenceNow: try XCTUnwrap(
+                CompassDateParsing.parseGridDateTime(
+                    "2026-11-12T00:23:00.000",
+                    timeZoneIdentifier: "UTC"
+                )
+            ),
             timedEvents: [
                 GridLayoutTimedEventInput(
                     calendarId: work.id,
@@ -130,7 +129,7 @@ final class DayCalendarColumnsTests: XCTestCase {
                     title: "Afternoon"
                 ),
             ],
-            visibleDateKeys: ["2026-11-12"]
+            visibleDateKeys: ["2026-11-11"]
         )
 
         let columns = scenario.dayViewCalendarsForLayout()

@@ -4,14 +4,14 @@ import Foundation
 public enum CalendarTimeZoneHint {
     public static func pick(from calendars: [CompassCalendar]) -> String? {
         if let primary = calendars.first(where: { $0.isPrimary }),
-           let zone = primary.timeZone,
+           let zone = primary.timeZone?.rawValue,
            TimeZoneFormatting.isValidTimeZone(zone)
         {
             return zone
         }
 
         for calendar in calendars {
-            guard let zone = calendar.timeZone,
+            guard let zone = calendar.timeZone?.rawValue,
                   TimeZoneFormatting.isValidTimeZone(zone),
                   !TimeZoneFormatting.isUtcLikeTimeZone(zone)
             else { continue }
@@ -19,7 +19,7 @@ public enum CalendarTimeZoneHint {
         }
 
         for calendar in calendars {
-            guard let zone = calendar.timeZone,
+            guard let zone = calendar.timeZone?.rawValue,
                   TimeZoneFormatting.isValidTimeZone(zone)
             else { continue }
             return zone
