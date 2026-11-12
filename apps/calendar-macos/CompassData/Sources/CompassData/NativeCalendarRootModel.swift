@@ -136,6 +136,8 @@ public final class NativeCalendarRootModel {
         didSet { syncSidebandWithLoadedEvents() }
     }
     private var refreshTask: Task<Void, Never>?
+    var focusedEventNudgePersistTask: Task<Void, Never>?
+    var focusedEventNudgePersistSerial = 0
     var focusLayoutCards: [FocusLayoutCard] = []
     var eventJumpHintLabels: [EventJumpChipHint] = []
     var quickTimeSlotHintLabels: [QuickTimeSlotHint] = []
