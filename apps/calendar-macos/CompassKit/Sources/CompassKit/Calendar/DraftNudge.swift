@@ -197,12 +197,42 @@ public enum DraftNudge {
         return applyWholeEventMovement(to: schedule, movement: movement, isStartAllowed: isStartAllowed)
     }
 
+    /// Week view: refuse all-day edge moves that would leave the visible week
+    /// (web `wouldAllDayEdgeLeaveVisibleWeek`).
+    public static func wouldAllDayEdgeLeaveVisibleWeek(
+        schedule: DraftSchedule,
+        edge: ScheduleEdge,
+        daysDelta: Int,
+        visibleStart: Date,
+        visibleEndInclusive: Date
+    ) -> Bool {
+        guard schedule.kind == .allDay, daysDelta != 0 else { return false }
+        let calendar = EffectiveTimeZone.calendar
+        let edgeDay: Date
+        switch edge {
+        case .start:
+            edgeDay = calendar.startOfDay(for: schedule.start)
+        case .end:
+            guard let inclusiveEnd = calendar.date(byAdding: .day, value: -1, to: schedule.end) else {
+                return false
+            }
+            edgeDay = calendar.startOfDay(for: inclusiveEnd)
+        }
+        guard let next = calendar.date(byAdding: .day, value: daysDelta, to: edgeDay) else {
+            return false
+        }
+        let first = calendar.startOfDay(for: visibleStart)
+        let last = calendar.startOfDay(for: visibleEndInclusive)
+        return next < first || next > last
+    }
+
     /// Single-edge keyboard nudge; mirrors web `nudgeEventEdgeDates`.
     public static func nudgeScheduleEdgeByKeyboard(
         schedule: DraftSchedule,
         edge: ScheduleEdge,
         key: String,
-        step: EventNudgeStep = .fine
+        step: EventNudgeStep = .fine,
+        weekViewClamp: (visibleStart: Date, visibleEndInclusive: Date)? = nil
     ) -> ScheduleEdgeNudgeResult? {
         let isAllDay = schedule.kind == .allDay
         guard let movement = getArrowKeyMovement(key: key, isAllDay: isAllDay, step: step) else {
@@ -210,6 +240,17 @@ public enum DraftNudge {
         }
         if isAllDay {
             guard movement.days != 0 else { return nil }
+            if let weekViewClamp,
+               wouldAllDayEdgeLeaveVisibleWeek(
+                schedule: schedule,
+                edge: edge,
+                daysDelta: movement.days,
+                visibleStart: weekViewClamp.visibleStart,
+                visibleEndInclusive: weekViewClamp.visibleEndInclusive
+               )
+            {
+                return nil
+            }
             return nudgeAllDayScheduleEdge(schedule: schedule, edge: edge, daysDelta: movement.days)
         }
         guard movement.minutes != 0 else { return nil }
