@@ -129,9 +129,14 @@ export function LifeSidebarContent({
                 />
               </TooltipWrapper>
             </div>
-            {pageJumpHintsVisible ? (
-              <span aria-hidden className="inline-block w-7 shrink-0" />
-            ) : null}
+            <span
+              aria-hidden
+              className={
+                pageJumpHintsVisible
+                  ? "inline-block w-7 shrink-0"
+                  : "inline-block w-7 shrink-0 invisible"
+              }
+            />
             <h2 className="min-w-0 font-semibold text-text">
               {LIFE_VARIATIONS[preferences.variation].label}
             </h2>
