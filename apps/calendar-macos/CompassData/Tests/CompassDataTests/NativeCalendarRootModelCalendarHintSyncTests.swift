@@ -1,6 +1,7 @@
 import CompassData
 import CompassKit
 import XCTest
+@testable import CompassData
 
 @MainActor
 final class NativeCalendarRootModelCalendarHintSyncTests: XCTestCase {
