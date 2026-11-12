@@ -7,6 +7,8 @@ import {
   dayColumnJumpId,
   LIFE_PAGE_JUMP_TARGETS,
   PAGE_JUMP_ATTRIBUTE,
+  PAGE_JUMP_CHIP_ATTRIBUTE,
+  PAGE_JUMP_CHIP_PLACEMENT_ATTRIBUTE,
   type PageJumpTargetId,
 } from "@web/shortcuts/page-jump/page-jump.targets";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -125,6 +127,66 @@ describe("PageJumpHintOverlay", () => {
     expect(status.textContent).toContain("1 for view dropdown");
     expect(status.textContent).toContain("2 for month picker");
     expect(chipsWrapper()?.getAttribute("aria-hidden")).not.toBeNull();
+  });
+
+  it("places the life-variation chip outside the arrow cluster, not over the title", () => {
+    const section = addAnchor("life-variation", { focusable: true });
+    stubRect(section, box(0, 0, 400, 200));
+    const cluster = document.createElement("div");
+    cluster.setAttribute(PAGE_JUMP_CHIP_ATTRIBUTE, "life-variation");
+    cluster.setAttribute(
+      PAGE_JUMP_CHIP_PLACEMENT_ATTRIBUTE,
+      "outside-trailing",
+    );
+    stubRect(cluster, box(20, 8, 52, 56));
+    section.append(cluster);
+    const gutter = document.createElement("span");
+    stubRect(gutter, box(20, 56, 52, 84));
+    const title = document.createElement("h2");
+    stubRect(title, box(20, 88, 52, 168));
+    section.append(gutter, title);
+    const trail = document.createElement("div");
+    stubRect(trail, box(20, 300, 52, 396));
+    section.append(trail);
+
+    render(
+      <PageJumpHintOverlay
+        targets={[
+          { digit: "3", id: "life-variation", label: "Life variation" },
+        ]}
+        visible={true}
+      />,
+    );
+
+    const chip = chipsWrapper()?.firstElementChild as HTMLElement | undefined;
+    expect(chip?.style.left).toBe("60px");
+    expect(chip?.style.top).toBe("22px");
+    const chipLeft = Number.parseFloat(chip?.style.left ?? "");
+    const chipRight = chipLeft + 22;
+    expect(chipRight).toBeLessThanOrEqual(88);
+  });
+
+  it("anchors chips to data-page-jump-chip markers instead of the section edge", () => {
+    const section = addAnchor("life-details", { focusable: true });
+    stubRect(section, box(0, 0, 400, 300));
+    const chipHost = document.createElement("div");
+    chipHost.setAttribute(PAGE_JUMP_CHIP_ATTRIBUTE, "life-details");
+    stubRect(chipHost, box(120, 140, 160, 170));
+    const input = document.createElement("input");
+    chipHost.append(input);
+    section.append(chipHost);
+
+    render(
+      <PageJumpHintOverlay
+        targets={[{ digit: "4", id: "life-details", label: "Life details" }]}
+        visible={true}
+      />,
+    );
+
+    const chip = chipsWrapper()?.firstElementChild as HTMLElement | undefined;
+    expect(chip?.textContent).toBe("4");
+    expect(chip?.style.left).toBe("148px");
+    expect(chip?.style.top).toBe("122px");
   });
 
   it("renders a custom target list, e.g. Life's, skipping absent targets", () => {
