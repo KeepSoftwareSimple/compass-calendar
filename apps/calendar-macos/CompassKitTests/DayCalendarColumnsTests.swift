@@ -78,4 +78,10 @@ final class DayCalendarColumnsTests: XCTestCase {
         )
         XCTAssertEqual(columns.map(\.id), [personal.id])
     }
+
+    /// Web #5229 fixed the same shape: civil-day matching in UTC drops secondary columns
+    /// when Denver-timed events sit on the prior local day. Mac still uses `isTimedEventOnDay`.
+    func testDayViewTimedColumnsNeedQueryWindowParityAtUTCBoundary() throws {
+        throw XCTSkip("Follow-up: align `isTimedEventOnDay` with day query-window overlap (see web #5229).")
+    }
 }
