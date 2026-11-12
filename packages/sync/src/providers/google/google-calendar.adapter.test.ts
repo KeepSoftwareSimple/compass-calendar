@@ -533,6 +533,42 @@ describe("GoogleCalendarAdapter", () => {
     expect(error.reason).toBe("transient");
   });
 
+  it("maps a JSON parse failure on a gateway body to transient", async () => {
+    const parse = Object.assign(new SyntaxError("Failed to parse JSON"), {
+      response: {
+        status: 502,
+        headers: { "content-type": "text/html" },
+      },
+    });
+    const api = new FakeCalendarListApi([], parse);
+    const { adapter } = adapterWith(api);
+
+    const error = (await adapter
+      .discoverCalendars({ accessToken: "at" })
+      .catch((e) => e)) as ProviderCalendarError;
+
+    expect(error.reason).toBe("transient");
+    expect((error.cause as Error).message).toContain("HTTP 502");
+    expect((error.cause as Error).message).toContain("content-type text/html");
+  });
+
+  it("maps a request timeout to transient without HTTP 23 on the cause", async () => {
+    const timeout = new DOMException(
+      "The operation timed out.",
+      "TimeoutError",
+    );
+    const api = new FakeCalendarListApi([], timeout);
+    const { adapter } = adapterWith(api);
+
+    const error = (await adapter
+      .discoverCalendars({ accessToken: "at" })
+      .catch((e) => e)) as ProviderCalendarError;
+
+    expect(error.reason).toBe("transient");
+    expect((error.cause as Error).message).toBe("The operation timed out.");
+    expect((error.cause as Error).message).not.toContain("HTTP");
+  });
+
   it("maps a 5xx provider error to transient", async () => {
     const api = new FakeCalendarListApi([], {
       response: { status: 503 },

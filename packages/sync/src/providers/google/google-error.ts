@@ -1,5 +1,6 @@
 import { type gSchema$Event } from "@core/types/gcal";
 import { parseGoogleInstanceEventId } from "@sync/providers/google/google-instance-id";
+import { providerHttpResponseFacts } from "@sync/providers/provider-transient-error.util";
 import { redactedCause } from "@sync/safety/redact-error";
 
 // Shared triage primitives for googleapis/gaxios failures. Quota/rate-limit
@@ -17,10 +18,21 @@ type GoogleErrorEntry = {
 // code. Reading it does not touch the request. Undefined means no HTTP
 // response reached us (a network failure), which classifies as transient.
 export function googleStatus(error: unknown): number | undefined {
-  const status =
-    (error as { response?: { status?: number } })?.response?.status ??
-    (error as { code?: number })?.code;
-  return typeof status === "number" ? status : undefined;
+  const responseStatus = (error as { response?: { status?: number } })?.response
+    ?.status;
+  if (typeof responseStatus === "number") return responseStatus;
+  const code = (error as { code?: number }).code;
+  if (typeof code !== "number" || code < 100 || code > 599) return undefined;
+  // Gaxios mirrors HTTP status on `code` for some failures (e.g. when
+  // googleapis puts errors[] on the Error object without `response`). Ignore
+  // non-HTTP numeric codes such as DOMException TIMEOUT_ERR (23).
+  if (
+    (error as { response?: unknown }).response != null ||
+    googleErrorEntriesRaw(error).length > 0
+  ) {
+    return code;
+  }
+  return undefined;
 }
 
 function googleErrorEntriesRaw(error: unknown): unknown[] {
@@ -211,9 +223,11 @@ export function isGoogleTransient(
 export function googleFailureCause(error: unknown): Error | undefined {
   const status = googleStatus(error);
   const reason = googleErrorReasons(error)[0];
+  const { contentType } = providerHttpResponseFacts(error);
   const facts = [
     ...(status === undefined ? [] : [`HTTP ${status}`]),
     ...(reason === undefined ? [] : [`reason ${reason}`]),
+    ...(contentType === undefined ? [] : [`content-type ${contentType}`]),
   ];
   // Nothing response-derived to add (a bare network failure): fall back to
   // the plain redacted message.
