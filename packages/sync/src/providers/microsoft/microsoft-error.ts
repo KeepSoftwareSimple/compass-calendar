@@ -1,3 +1,4 @@
+import { providerHttpResponseFacts } from "@sync/providers/provider-transient-error.util";
 import { redactedCause } from "@sync/safety/redact-error";
 
 export function microsoftStatus(error: unknown): number | undefined {
@@ -24,9 +25,11 @@ export function isMicrosoftTransient(
 export function microsoftFailureCause(error: unknown): Error | undefined {
   const status = microsoftStatus(error);
   const code = microsoftErrorCode(error);
+  const { contentType } = providerHttpResponseFacts(error);
   const facts = [
     ...(status === undefined ? [] : [`HTTP ${status}`]),
     ...(code ? [code] : []),
+    ...(contentType === undefined ? [] : [`content-type ${contentType}`]),
   ];
   if (facts.length === 0) return redactedCause(error);
   const message = error instanceof Error ? error.message : null;

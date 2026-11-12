@@ -41,6 +41,18 @@ describe("googleFailureCause", () => {
     expect(cause?.message).toBe("The operation timed out.");
     expect(cause?.message).not.toContain("HTTP");
   });
+
+  it("includes response status and content-type when present", () => {
+    const error = Object.assign(new SyntaxError("Failed to parse JSON"), {
+      response: {
+        status: 502,
+        headers: { "content-type": "text/html" },
+      },
+    });
+    expect(googleFailureCause(error)?.message).toBe(
+      "Failed to parse JSON (HTTP 502, content-type text/html)",
+    );
+  });
 });
 
 describe("googleErrorReasons", () => {

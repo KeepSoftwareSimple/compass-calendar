@@ -714,6 +714,123 @@ describe("SyncJobWorker", () => {
     );
   });
 
+  it("routes a calendarList JSON parse failure on a retryable attempt to onTransientRetry, not onError", async () => {
+    const connection = await connections.upsertByProviderAccount({
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
+      provider: "google",
+      account: {
+        providerAccountId: "acct-parse" as ProviderAccountId,
+        email: "parse@example.com",
+        displayName: "Parse",
+      },
+      capabilities: ["readEvents", "readBusy", "writeEvents"],
+      state: "importing",
+      stateReason: null,
+    });
+    await jobs.enqueue({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceId: null,
+      commandId: null,
+      kind: "calendarListSync",
+      priority: 0,
+      runAfter: now(),
+      coalescingKey: `calendarListSync:${connection._id}`,
+    });
+    const failingDiscovery: ProviderCalendarAdapter = {
+      discoverCalendars: async () => {
+        throw Object.assign(new SyntaxError("Failed to parse JSON"), {
+          response: {
+            status: 502,
+            headers: { "content-type": "text/html" },
+          },
+        });
+      },
+    };
+    const errors: { error: Error; job: JobRecord }[] = [];
+    const transientRetries: { error: Error; job: JobRecord }[] = [];
+    const w = new SyncJobWorker(
+      deps(new FakeReader([]), failingDiscovery),
+      OWNER,
+      {
+        now,
+        scheduleHeartbeat: () => () => {},
+        onError: (error, job) => {
+          if (error instanceof Error) errors.push({ error, job });
+        },
+        onTransientRetry: (error, job) => {
+          if (error instanceof Error) transientRetries.push({ error, job });
+        },
+      },
+    );
+
+    await w.runOnce();
+
+    expect(errors).toHaveLength(0);
+    expect(transientRetries).toHaveLength(1);
+    expect(transientRetries[0]?.error.message).toContain(
+      "Failed to parse JSON",
+    );
+    expect(transientRetries[0]?.error.message).toContain("HTTP 502");
+  });
+
+  it("reports onError when a calendarList JSON parse failure exhausts retries", async () => {
+    const connection = await connections.upsertByProviderAccount({
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
+      provider: "google",
+      account: {
+        providerAccountId: "acct-parse-final" as ProviderAccountId,
+        email: "parse-final@example.com",
+        displayName: "Parse Final",
+      },
+      capabilities: ["readEvents", "readBusy", "writeEvents"],
+      state: "importing",
+      stateReason: null,
+    });
+    await jobs.enqueue({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceId: null,
+      commandId: null,
+      kind: "calendarListSync",
+      priority: 0,
+      runAfter: now(),
+      coalescingKey: `calendarListSync:${connection._id}`,
+    });
+    const failingDiscovery: ProviderCalendarAdapter = {
+      discoverCalendars: async () => {
+        throw Object.assign(new SyntaxError("Failed to parse JSON"), {
+          response: {
+            status: 502,
+            headers: { "content-type": "text/html" },
+          },
+        });
+      },
+    };
+    const errorsTerminal: { error: Error; job: JobRecord }[] = [];
+    const w = new SyncJobWorker(
+      deps(new FakeReader([]), failingDiscovery),
+      OWNER,
+      {
+        now,
+        maxAttempts: 1,
+        scheduleHeartbeat: () => () => {},
+        onError: (error, job) => {
+          if (error instanceof Error) errorsTerminal.push({ error, job });
+        },
+      },
+    );
+
+    await w.runOnce();
+
+    expect(errorsTerminal).toHaveLength(1);
+    expect(errorsTerminal[0]?.error.message).toContain("Failed to parse JSON");
+  });
+
   it("fails a transient job once its retries are exhausted", async () => {
     const calendar = await seedCalendar();
     const resource = await seedResource(calendar, "cursor-0");

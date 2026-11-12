@@ -1,5 +1,6 @@
 import { type gSchema$Event } from "@core/types/gcal";
 import { parseGoogleInstanceEventId } from "@sync/providers/google/google-instance-id";
+import { providerHttpResponseFacts } from "@sync/providers/provider-transient-error.util";
 import { redactedCause } from "@sync/safety/redact-error";
 
 // Shared triage primitives for googleapis/gaxios failures. Quota/rate-limit
@@ -222,9 +223,11 @@ export function isGoogleTransient(
 export function googleFailureCause(error: unknown): Error | undefined {
   const status = googleStatus(error);
   const reason = googleErrorReasons(error)[0];
+  const { contentType } = providerHttpResponseFacts(error);
   const facts = [
     ...(status === undefined ? [] : [`HTTP ${status}`]),
     ...(reason === undefined ? [] : [`reason ${reason}`]),
+    ...(contentType === undefined ? [] : [`content-type ${contentType}`]),
   ];
   // Nothing response-derived to add (a bare network failure): fall back to
   // the plain redacted message.
