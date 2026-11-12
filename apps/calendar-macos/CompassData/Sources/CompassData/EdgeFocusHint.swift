@@ -1,3 +1,4 @@
+import CompassKit
 import Foundation
 
 /// Web `edge-focus-hint.parts.ts`: teach nudge keys while an edge is focused.

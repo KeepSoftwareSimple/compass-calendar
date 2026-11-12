@@ -602,12 +602,16 @@ describe("SidebarStatusBar", () => {
       "aaaaaaaaaaaaaaaaaaaaaaaa",
       "startDate",
       "Editing start time",
+      false,
     );
     const { wrapper } = createStoreWrapper();
 
     render(<SidebarStatusBar />, { wrapper });
 
-    expect(screen.getByRole("status")).toHaveTextContent("Editing start time");
+    expect(screen.getByRole("status")).not.toHaveTextContent(
+      /^Editing start time$/,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("adjusts start");
     expect(screen.queryByText(KEYBOARD_PLACE_HINT)).not.toBeInTheDocument();
   });
 
