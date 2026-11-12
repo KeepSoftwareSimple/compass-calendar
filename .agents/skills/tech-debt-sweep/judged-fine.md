@@ -11,6 +11,58 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-12
+
+Swept the 18 merges that landed after the 2026-11-11 sweep (#5098, #5111, #5218
+to #5224, #5228 to #5238); #5217 was that sweep's own finding and is excluded as
+its output. Gate step 1 was clean: `bun knip` reports no unused files or exports
+(only four config hints), `bun lint` passes every rule, `bun type-check` passes.
+One finding, shipped as the zone-less-primary fix in the macOS
+`CalendarTimeZoneHint` mirror. Everything below was examined and kept.
+
+- **The day-view column fallback chain, web vs macOS** (#5229, #5232).
+  `DayCalendarColumns.swift` resolves its no-events fallback as "first primary,
+  then first ordered calendar", while web's `getDayViewCalendars` goes through
+  `getDefaultTargetCalendar`, which additionally requires the primary to be a
+  *writable provider* calendar and falls back to the local calendar before the
+  first ordered one. So a user whose primary is read-only gets a different
+  single fallback column on each platform. Real, but not a sweep's to settle:
+  mirroring web needs `isWritableProviderCalendar` and `getLocalCalendar`
+  semantics CompassKit does not model, which is a contract decision, and #5232
+  is a same-day parity follow-up to #5229 that extends rather than reworks it.
+  Flagged for a human instead.
+
+- **`EdgeFocusHint.swift` mirroring `edge-focus-hint.parts.ts`** (#5231).
+  The three `modeAnnouncements` strings and the `Tab` keycap are restated as
+  Swift literals where web derives them from `KEYMAP.edgeFocus.hotkey`. Inherent
+  duplication of the `remainderMasterId` kind (2026-11-10): CompassKit cannot
+  import `@compass/core`, and the two sides render different shapes anyway
+  (keycap parts vs prose). Landed today and still being extended by #5234;
+  not a lead.
+
+- **`wholeEventMoveKeys` hardcoding the timed arrow list** in
+  `edge-focus-hint.parts.ts` (#5231), beside `edgeMoveKeys` deriving its timed
+  case from `KEYMAP.moveEvent.timedEdgeKeycaps`. Looks like the `WEEKS_PER_ROW`
+  shape, but there is no owning export being drifted from: `KEYMAP.moveEvent`
+  publishes `keycaps` (a two-key teaching list) and `timedEdgeKeycaps`, not the
+  five-key whole-event list. Naming one to remove a one-line literal is a fix
+  larger than the problem.
+
+- **The sub-hour relative-time copy change** (#5098). Touched 13 files across
+  web and Swift to say "min" instead of "minutes", including three `connect`
+  copy modules. Wide but mechanical, and the shared copy already lives in one
+  module per surface.
+
+- **`self-host/rolling-backend.sh` drain probe** (#5220, #5222). 93 added lines
+  of shell with a bounded probe loop and a posix-safe status readback. Load-bearing
+  mess of the `date-picker-keyboard-dom.util.ts` kind: ugly because `/bin/sh`
+  portability and container draining are ugly. Four new `.test.sh` suites pin it.
+
+- **`sync-token-unsupported` throttling** (#5218, #5219). Adds a snapshot
+  throttle and an etag probe normalizer next to the 2026-11-11 entry's retry
+  constants. Extends that area rather than restating it; the constants are still
+  imported, not re-literalled.
+
 ## 2026-11-11
 
 Swept the 9 merges that landed after the 2026-11-10 sweep (#5209 to #5216 plus
