@@ -7,6 +7,9 @@ export NSUnbufferedIO=YES
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$ROOT"
 
+# shellcheck source=swift-packages-log-detect.sh
+source "${ROOT}/.github/scripts/swift-packages-log-detect.sh"
+
 bash "${ROOT}/.github/scripts/selftest-swift-packages-exit.sh"
 
 # CompassKitTests in `swift test --package-path CompassKit` mirror the
@@ -34,25 +37,6 @@ if [ "${MACOS_SWIFT_PACKAGES_SKIP_BUILD:-0}" = "1" ]; then
   skip_build=1
   echo "swift-packages: skip build (using warmed .build artifacts)"
 fi
-
-# `swift test` can exit 0 when XCTest suites fail and Swift Testing runs afterward
-# with zero tests. Scan the full log for XCTest and Swift Testing failure markers.
-swift_package_log_has_test_failures() {
-  local log="$1"
-  if grep -qE 'Executed [0-9]+ tests?, with [1-9][0-9]* failures' "$log"; then
-    return 0
-  fi
-  if grep -qE "Test Suite 'All tests' failed" "$log"; then
-    return 0
-  fi
-  if grep -qE 'Test run with [1-9][0-9]* failures' "$log"; then
-    return 0
-  fi
-  if grep -qE 'with [1-9][0-9]* issues' "$log"; then
-    return 0
-  fi
-  return 1
-}
 
 run_package_tests() {
   local name="$1"

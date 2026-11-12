@@ -4,28 +4,52 @@ import XCTest
 
 @MainActor
 final class NativeCalendarRootModelInitialWeekAnchorTests: XCTestCase {
-    func testInitialWeekAnchorUsesDeviceZoneBeforeViewStore() throws {
-        let priorPinned = CompassDevicePreferences.readPinnedTimeZone()
-        defer {
-            if let priorPinned {
-                _ = CompassDevicePreferences.writePinnedTimeZone(priorPinned)
-            } else {
-                _ = CompassDevicePreferences.writePinnedTimeZone(nil)
-            }
-        }
-        XCTAssertTrue(CompassDevicePreferences.writePinnedTimeZone("America/Denver"))
+  override func tearDown() async throws {
+    CompassDeviceTimeZone.resetIdentifierProviderForTests()
+    _ = CompassDevicePreferences.writePinnedTimeZone(nil)
+    try await super.tearDown()
+  }
 
+    func testInitialWeekAnchorUsesDeviceZoneBeforeViewStore() throws {
+        CompassDeviceTimeZone.setIdentifierProviderForTests { "America/Denver" }
+        XCTAssertTrue(CompassDevicePreferences.writePinnedTimeZone(nil))
+
+        // Monday 06:00 UTC is still Sunday evening in Denver; week start differs from GMT midnight.
         let referenceNow = try XCTUnwrap(
             CompassDateParsing.parseGridDateTime(
-                "2026-11-12T01:30:00.000",
+                "2026-11-10T06:00:00.000",
                 timeZoneIdentifier: "UTC"
             )
         )
         let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, now: { referenceNow })
 
-        let expected = CalendarWindowMath.sundayWeekViewStart(containing: referenceNow)
-        XCTAssertEqual(model.viewStore.anchorDate, expected)
         XCTAssertEqual(EffectiveTimeZone.identifier, "America/Denver")
+        let denverAnchor = CalendarWindowMath.sundayWeekViewStart(containing: referenceNow)
+        XCTAssertEqual(model.viewStore.anchorDate, denverAnchor)
+
+        EffectiveTimeZone.identifier = "GMT"
+        let gmtAnchor = CalendarWindowMath.sundayWeekViewStart(containing: referenceNow)
+        XCTAssertNotEqual(denverAnchor, gmtAnchor)
+    }
+
+    func testInitialWeekAnchorHonorsPinnedZoneOverDevice() throws {
+        CompassDeviceTimeZone.setIdentifierProviderForTests { "GMT" }
+        XCTAssertTrue(CompassDevicePreferences.writePinnedTimeZone("America/Chicago"))
+
+        let referenceNow = try XCTUnwrap(
+            CompassDateParsing.parseGridDateTime(
+                "2026-06-15T12:00:00.000",
+                timeZoneIdentifier: "UTC"
+            )
+        )
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
+        let model = NativeCalendarRootModel(environment: environment, now: { referenceNow })
+
+        XCTAssertEqual(EffectiveTimeZone.identifier, "America/Chicago")
+        XCTAssertEqual(
+            model.viewStore.anchorDate,
+            CalendarWindowMath.sundayWeekViewStart(containing: referenceNow)
+        )
     }
 }
