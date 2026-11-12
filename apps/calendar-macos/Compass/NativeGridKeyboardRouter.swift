@@ -434,7 +434,10 @@ final class NativeGridKeyboardRouter {
         }
 
         if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
-            if dispatcher.isTextInputFocused {
+            let keyWindow = event.window ?? NSApp.keyWindow
+            if (keyWindow?.firstResponder as? NSTextView)?.isEditable == true
+                || dispatcher.isTextInputFocused
+            {
                 return false
             }
             if model.isEventFormVisible {
