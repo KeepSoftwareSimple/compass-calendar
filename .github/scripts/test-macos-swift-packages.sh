@@ -7,6 +7,8 @@ export NSUnbufferedIO=YES
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$ROOT"
 
+bash "${ROOT}/.github/scripts/selftest-swift-packages-exit.sh"
+
 # CompassKitTests in `swift test --package-path CompassKit` mirror the
 # `apps/calendar-macos/CompassKitTests/` tree (diff -rq reports no differences).
 # macos-build already runs those cases via xcodebuild -only-testing:CompassKitTests
