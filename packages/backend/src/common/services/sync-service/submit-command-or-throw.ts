@@ -110,9 +110,11 @@ export const submitCommandOrThrow = async (
         context.provider,
       );
     }
+    // Future non-terminal states would land here; today only
+    // pending/applying/reconciling remain after failed/cancelled above.
     throw eventMutationError(
       "PROVIDER_FAILURE",
-      `Sync command did not resolve (${outcome.state})`,
+      "Sync command did not resolve",
       undefined,
       context.provider,
     );
