@@ -290,18 +290,32 @@ public struct SidebarMonthPicker: View {
 
     @ViewBuilder
     private var captionTitle: some View {
-        let label = DatePickerCaption.caption(view: captionView, monthTitle: monthTitle, year: displayedYear)
+        let pageYear = captionView == .year ? yearPageYear : displayedYear
+        let label = DatePickerCaption.caption(
+            view: captionView, monthTitle: monthTitle, year: pageYear)
         if captionPicker, captionView == .day {
             Button {
-                yearPageYear = displayedYear
+                yearPageYear = DatePickerCaption.reactYearPage(containing: displayedYear).first
+                    ?? displayedYear
                 captionView = .year
             } label: {
-                Text(label)
-                    .font(.rubik(14, weight: .medium))
-                    .foregroundStyle(theme.textColor)
-                    .fixedSize()
-                    .padding(.horizontal, 2)
-                    .frame(minWidth: 64, alignment: .leading)
+                HStack(spacing: 2) {
+                    Text(label)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .font(.rubik(14, weight: .medium))
+                .foregroundStyle(theme.textColor)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(theme.textColor.opacity(0.05))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(theme.textColor.opacity(0.15), lineWidth: 1)
+                }
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Choose month and year")
@@ -311,6 +325,7 @@ public struct SidebarMonthPicker: View {
                 .foregroundStyle(theme.textColor)
                 .fixedSize()
                 .frame(minWidth: 64, alignment: .leading)
+                .accessibilityLabel(label)
         }
     }
 
@@ -322,7 +337,8 @@ public struct SidebarMonthPicker: View {
         case .day:
             shiftMonth(direction)
         case .year:
-            yearPageYear += direction * DatePickerCaption.yearsPerPage
+            let pageStart = DatePickerCaption.reactYearPage(containing: yearPageYear).first ?? yearPageYear
+            yearPageYear = pageStart + direction * DatePickerCaption.yearsPerPage
         case .month:
             if let next = calendar.date(byAdding: .year, value: direction, to: displayedMonth) {
                 displayedMonth = next
@@ -334,10 +350,10 @@ public struct SidebarMonthPicker: View {
         let calendar = EffectiveTimeZone.calendar
         let columns = Array(
             repeating: GridItem(.flexible(), spacing: 4),
-            count: captionView == .year ? 3 : 4)
+            count: 4)
         return LazyVGrid(columns: columns, spacing: 4) {
             if captionView == .year {
-                ForEach(DatePickerCaption.yearPage(containing: yearPageYear), id: \.self) { year in
+                ForEach(DatePickerCaption.reactYearPage(containing: yearPageYear), id: \.self) { year in
                     captionCell(
                         label: String(year),
                         isSelected: year == calendar.component(.year, from: selectedDate),

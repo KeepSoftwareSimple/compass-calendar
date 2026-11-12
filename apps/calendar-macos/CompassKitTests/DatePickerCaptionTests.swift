@@ -18,18 +18,21 @@ final class DatePickerCaptionTests: XCTestCase {
         XCTAssertNil(DatePickerCaption.View.day.afterSelect)
     }
 
-    func testYearPagesStartOnMultiplesOfTwelve() {
-        XCTAssertEqual(DatePickerCaption.yearPage(containing: 2026).first, 2016)
-        XCTAssertEqual(DatePickerCaption.yearPage(containing: 2026).last, 2027)
-        XCTAssertEqual(DatePickerCaption.yearPage(containing: 2016).first, 2016)
-        XCTAssertEqual(DatePickerCaption.yearPage(containing: 1900).first, 1896)
-        XCTAssertEqual(DatePickerCaption.yearPage(containing: 2026).count, 12)
+    func testReactYearPagesMatchWebDatepicker() {
+        XCTAssertEqual(DatePickerCaption.reactYearPage(containing: 1993).first, 1981)
+        XCTAssertEqual(DatePickerCaption.reactYearPage(containing: 1993).last, 2000)
+        XCTAssertEqual(DatePickerCaption.reactYearPage(containing: 2026).first, 2021)
+        XCTAssertEqual(DatePickerCaption.reactYearPage(containing: 2026).last, 2040)
+        XCTAssertEqual(DatePickerCaption.reactYearPage(containing: 1993).count, 20)
     }
 
     func testCaptionTextMatchesWeb() {
         XCTAssertEqual(DatePickerCaption.caption(view: .day, monthTitle: "Jun 2026", year: 2026), "Jun 2026")
-        XCTAssertEqual(DatePickerCaption.caption(view: .year, monthTitle: "Jun 2026", year: 2026), "Select year")
+        XCTAssertEqual(
+            DatePickerCaption.caption(view: .year, monthTitle: "Jun 2026", year: 2026),
+            "Years 2021 to 2040")
         XCTAssertEqual(DatePickerCaption.caption(view: .month, monthTitle: "Jun 2026", year: 2026), "Select month, 2026")
+        XCTAssertEqual(DatePickerCaption.yearRangeCaption(pageAnchorYear: 1993), "Years 1981 to 2000")
     }
 
     func testRangeLimitsYearsMonthsAndDays() {

@@ -18,9 +18,17 @@ public enum DatePickerCaption {
         }
     }
 
-    /// react-datepicker `yearItemNumber={12}`: pages of 12 years starting at a multiple of 12.
-    public static let yearsPerPage = 12
+    /// Web `CAPTION_YEARS_PER_PAGE` / react-datepicker `yearItemNumber`.
+    public static let yearsPerPage = 20
 
+    /// react-datepicker alignment: 1–20, 21–40, … (1981–2000 for 1993).
+    public static func reactYearPage(containing year: Int) -> [Int] {
+        let block = (year - 1) / yearsPerPage
+        let start = block * yearsPerPage + 1
+        return (start ..< start + yearsPerPage).map { $0 }
+    }
+
+    /// Decade-aligned pages (1980–1999 for 1993); legacy sidebar grids.
     public static func yearPage(containing year: Int) -> [Int] {
         let start = year - ((year % yearsPerPage) + yearsPerPage) % yearsPerPage
         return (start ..< start + yearsPerPage).map { $0 }
@@ -31,10 +39,21 @@ public enum DatePickerCaption {
     ]
 
     /// Web caption text: the month and year, or the prompt for the open grid.
+    public static func yearRangeCaption(pageAnchorYear: Int) -> String {
+        reactYearRangeCaption(containing: pageAnchorYear)
+    }
+
+    public static func reactYearRangeCaption(containing year: Int) -> String {
+        let years = reactYearPage(containing: year)
+        guard let first = years.first, let last = years.last else { return "Select year" }
+        if first == last { return "Year \(first)" }
+        return "Years \(first) to \(last)"
+    }
+
     public static func caption(view: View, monthTitle: String, year: Int) -> String {
         switch view {
         case .day: monthTitle
-        case .year: "Select year"
+        case .year: reactYearRangeCaption(containing: year)
         case .month: "Select month, \(year)"
         }
     }
