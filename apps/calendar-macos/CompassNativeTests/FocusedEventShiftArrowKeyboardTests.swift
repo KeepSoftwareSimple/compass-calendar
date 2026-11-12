@@ -2,6 +2,7 @@ import AppKit
 import CompassData
 import CompassKit
 import XCTest
+@testable import CompassData
 
 @MainActor
 final class FocusedEventShiftArrowKeyboardTests: XCTestCase {
