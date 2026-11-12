@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import { pickCalendarTimeZoneHint } from "@web/timezone/calendar-timezone-hint";
 import { setCalendarTimeZoneHint } from "@web/timezone/effective-timezone.store";
@@ -7,7 +7,7 @@ import { setCalendarTimeZoneHint } from "@web/timezone/effective-timezone.store"
 export function CalendarTimeZoneHintSync() {
   const { data: calendars } = useCalendarsQuery();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setCalendarTimeZoneHint(
       calendars ? pickCalendarTimeZoneHint(calendars) : null,
     );

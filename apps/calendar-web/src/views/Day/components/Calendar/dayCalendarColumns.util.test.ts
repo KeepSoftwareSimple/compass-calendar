@@ -7,10 +7,15 @@ import dayjs from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
+  resetEffectiveTimeZoneStoreForTests,
+  setBrowserTimeZoneForTests,
+  setCalendarTimeZoneHint,
+} from "@web/timezone/effective-timezone.store";
+import {
   calendarIdsWithVisibleEventsOnDay,
   getDayViewCalendars,
 } from "./dayCalendarColumns.util";
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 
 function makeCalendar(overrides: Partial<Calendar>): Calendar {
   return {
@@ -208,6 +213,50 @@ describe("getDayViewCalendars", () => {
 });
 
 describe("calendarIdsWithVisibleEventsOnDay", () => {
+  afterEach(() => {
+    resetEffectiveTimeZoneStoreForTests();
+  });
+
+  it("matches timed events to the viewed day via the day query window, not a separate civil-day string", () => {
+    setBrowserTimeZoneForTests("UTC");
+    setCalendarTimeZoneHint("America/Denver");
+    const viewDay = dayjs.tz("2026-11-11T00:15:00", "America/Denver");
+    const primary = makeCalendar({
+      id: "507f1f77bcf86cd799439011" as Calendar["id"],
+      name: "Acme",
+    });
+    const secondary = makeCalendar({
+      id: "507f1f77bcf86cd799439012" as Calendar["id"],
+      name: "Design",
+    });
+    const timed = [
+      gridEvent({
+        _id: "a",
+        calendarId: primary.id,
+        startDate: "2026-11-11 09:00:00.000",
+        endDate: "2026-11-11 10:30:00.000",
+        timeZone: "America/Denver",
+      }),
+      gridEvent({
+        _id: "b",
+        calendarId: secondary.id,
+        startDate: "2026-11-11 13:00:00.000",
+        endDate: "2026-11-11 14:30:00.000",
+        timeZone: "America/Denver",
+      }),
+    ];
+
+    expect(
+      getDayViewCalendars({
+        allDayEvents: [],
+        calendars: [primary, secondary],
+        dateInView: viewDay,
+        hiddenEventIds: new Set(),
+        timedEvents: timed,
+      }),
+    ).toEqual([primary, secondary]);
+  });
+
   it("returns an empty set when every event is hidden", () => {
     const timed = [
       gridEvent({
