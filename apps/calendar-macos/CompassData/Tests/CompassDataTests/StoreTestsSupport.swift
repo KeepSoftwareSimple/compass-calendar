@@ -148,6 +148,29 @@ enum StoreSampleEvents {
         return try ContractTestDecoding.decodeJSON(json, as: Event.self)
     }
 
+    static func allDayEvent(id: String, title: String = "All day") throws -> Event {
+        let json = """
+        {
+          "id": "\(id)",
+          "calendarId": "cal-1",
+          "content": {
+            "kind": "details",
+            "title": "\(title)",
+            "description": ""
+          },
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "updatedAt": "2026-01-01T00:00:00.000Z",
+          "recurrence": { "kind": "single" },
+          "schedule": {
+            "kind": "allDay",
+            "start": "2026-01-01",
+            "end": "2026-01-02"
+          }
+        }
+        """
+        return try ContractTestDecoding.decodeJSON(json, as: Event.self)
+    }
+
     static func seriesEvent(id: String) throws -> Event {
         let json = """
         {
