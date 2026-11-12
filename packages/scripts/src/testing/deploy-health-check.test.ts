@@ -39,6 +39,40 @@ describe("deploy health check script contract", () => {
     expect(script).not.toContain('url="${BACKEND_API_URL%/}/api/config"');
   });
 
+  it("ignores mongo InterruptedAtShutdown (11600) rollout noise in compose logs", async () => {
+    const result = await runHealthScriptFunction(`
+logs=$(cat <<'EOF'
+mongo-1  | {"code":11600,"codeName":"InterruptedAtShutdown"}
+sync-1   | sync worker ready
+EOF
+)
+if compose_logs_have_fatal_errors "$logs"; then exit 1; else exit 0; fi
+`);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+  });
+
+  it("still flags ECONNREFUSED in compose logs after benign filtering", async () => {
+    const sample = `backend-a-1 | Error: connect ECONNREFUSED 127.0.0.1:27017`;
+
+    const result = await runHealthScriptFunction(
+      `logs='${sample}'; compose_log_fatal_lines "$logs"`,
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("ECONNREFUSED");
+  });
+
+  it("scopes compose log fetch to the latest running container start", () => {
+    const script = readFileSync(HEALTH_CHECK_SCRIPT, "utf8");
+
+    expect(script).toContain("docker inspect --format '{{.State.StartedAt}}'");
+    expect(script).not.toContain("logs --tail=200 --since=15m --no-color");
+    expect(script).toContain("logs --tail=200 --since=\\$since --no-color");
+    expect(script).toContain("compose_log_benign_pattern");
+  });
+
   it("probes /api/config when BACKEND_API_URL already ends in /api", async () => {
     const requested: string[] = [];
     const server = Bun.serve({
