@@ -7,6 +7,11 @@ export NSUnbufferedIO=YES
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$ROOT"
 
+# shellcheck source=swift-packages-log-detect.sh
+source "${ROOT}/.github/scripts/swift-packages-log-detect.sh"
+
+bash "${ROOT}/.github/scripts/selftest-swift-packages-exit.sh"
+
 # CompassKitTests in `swift test --package-path CompassKit` mirror the
 # `apps/calendar-macos/CompassKitTests/` tree (diff -rq reports no differences).
 # macos-build already runs those cases via xcodebuild -only-testing:CompassKitTests
@@ -47,8 +52,24 @@ run_package_tests() {
   echo "── swift ${args[*]} ──"
   local start
   start=$(date +%s)
-  swift "${args[@]}"
+  local log
+  log=$(mktemp)
+  local swift_ec=0
+  set +e
+  swift "${args[@]}" 2>&1 | tee "$log"
+  swift_ec=${PIPESTATUS[0]}
+  set -e
+  local parsed_fail=0
+  if swift_package_log_has_test_failures "$log"; then
+    echo "swift-packages: ${name} reported test failures in log (swift exit ${swift_ec})" >&2
+    parsed_fail=1
+  fi
+  rm -f "$log"
   echo "── ${name} tests finished in $(( $(date +%s) - start ))s ──"
+  if [ "$swift_ec" -ne 0 ] || [ "$parsed_fail" -ne 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 job_start=$(date +%s)

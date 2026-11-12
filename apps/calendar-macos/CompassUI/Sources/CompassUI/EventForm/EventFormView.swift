@@ -57,6 +57,7 @@ public struct EventFormView: View {
                                     model: model,
                                     draft: draft
                                 )
+                                .id(EventFormField.recurrence)
                                 .disabled(model.isScheduleLocked(for: draft))
                             }
                         }

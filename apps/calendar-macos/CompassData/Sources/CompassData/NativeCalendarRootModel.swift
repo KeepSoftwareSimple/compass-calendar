@@ -202,7 +202,7 @@ public final class NativeCalendarRootModel {
             ? CompassDevicePreferences.readPinnedTimeZoneResolvingAccidentalUtc()
             : nil
         EffectiveTimeZone.identifier =
-            demoTimeZone ?? pinnedTimeZone ?? TimeZone.current.identifier
+            demoTimeZone ?? pinnedTimeZone ?? CompassDeviceTimeZone.currentIdentifier
         eventsStore = environment.eventsStore
         hiddenEventsStore = environment.hiddenEventsStore
         calendarVisibilityStore = CalendarVisibilityStore()
@@ -229,7 +229,7 @@ public final class NativeCalendarRootModel {
             anchorDate: anchor,
             visibleDayCount: CalendarWindowMath.weekDayCount,
             pinnedTimeZone: pinnedTimeZone,
-            browserTimeZone: demoTimeZone ?? TimeZone.current.identifier
+            browserTimeZone: demoTimeZone ?? CompassDeviceTimeZone.currentIdentifier
         )
         if demoPresentation == nil {
             viewStore.setTimeTravelTimeZone(CompassDevicePreferences.readTimeTravelTimeZone())
