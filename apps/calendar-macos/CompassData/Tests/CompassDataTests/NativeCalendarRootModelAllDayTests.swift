@@ -38,7 +38,7 @@ final class NativeCalendarRootModelAllDayTests: XCTestCase {
 
     private func model(startDay: Int, endDay: Int) throws -> NativeCalendarRootModel {
         let model = NativeCalendarRootModel(environment: try NativeCalendarEnvironment(inMemoryDatabase: true))
-        EffectiveTimeZone.identifier = "America/Denver"
+        model.viewStore.setCalendarTimeZoneHint("America/Denver")
         model.draftStore.startGridDraft(activity: .keyboardPlace, draft: GridEventDraft(
             clientId: .init(rawValue: "all-day"), schedule: .init(start: date(startDay), end: date(endDay), kind: .allDay),
             calendarId: .init(rawValue: "cal-1")))

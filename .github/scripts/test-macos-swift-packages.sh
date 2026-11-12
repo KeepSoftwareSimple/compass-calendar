@@ -33,6 +33,25 @@ if [ "${MACOS_SWIFT_PACKAGES_SKIP_BUILD:-0}" = "1" ]; then
   echo "swift-packages: skip build (using warmed .build artifacts)"
 fi
 
+# `swift test` can exit 0 when XCTest suites fail and Swift Testing runs afterward
+# with zero tests. Scan the full log for XCTest and Swift Testing failure markers.
+swift_package_log_has_test_failures() {
+  local log="$1"
+  if grep -qE 'Executed [0-9]+ tests?, with [1-9][0-9]* failures' "$log"; then
+    return 0
+  fi
+  if grep -qE "Test Suite 'All tests' failed" "$log"; then
+    return 0
+  fi
+  if grep -qE 'Test run with [1-9][0-9]* failures' "$log"; then
+    return 0
+  fi
+  if grep -qE 'with [1-9][0-9]* issues' "$log"; then
+    return 0
+  fi
+  return 1
+}
+
 run_package_tests() {
   local name="$1"
   local dir="apps/calendar-macos/${name}"
@@ -47,8 +66,24 @@ run_package_tests() {
   echo "── swift ${args[*]} ──"
   local start
   start=$(date +%s)
-  swift "${args[@]}"
+  local log
+  log=$(mktemp)
+  local swift_ec=0
+  set +e
+  swift "${args[@]}" 2>&1 | tee "$log"
+  swift_ec=${PIPESTATUS[0]}
+  set -e
+  local parsed_fail=0
+  if swift_package_log_has_test_failures "$log"; then
+    echo "swift-packages: ${name} reported test failures in log (swift exit ${swift_ec})" >&2
+    parsed_fail=1
+  fi
+  rm -f "$log"
   echo "── ${name} tests finished in $(( $(date +%s) - start ))s ──"
+  if [ "$swift_ec" -ne 0 ] || [ "$parsed_fail" -ne 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 job_start=$(date +%s)

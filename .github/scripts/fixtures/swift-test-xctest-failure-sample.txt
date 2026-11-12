@@ -1,0 +1,8 @@
+Test Case '-[CompassDataTests.ExampleTests testBroken]' failed (0.001 seconds).
+Test Suite 'ExampleTests' failed at 2026-11-12 09:00:29.633.
+Test Suite 'CompassDataPackageTests.xctest' failed at 2026-11-12 09:00:29.633.
+Test Suite 'All tests' failed at 2026-11-12 09:00:29.633.
+	 Executed 374 tests, with 6 failures (0 unexpected) in 55.831 (57.313) seconds
+◇ Test run started.
+↳ Testing Library Version: 0.1.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

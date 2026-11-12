@@ -5,9 +5,15 @@ import XCTest
 @MainActor
 final class NativeCalendarRootModelInitialWeekAnchorTests: XCTestCase {
     func testInitialWeekAnchorUsesDeviceZoneBeforeViewStore() throws {
-        let priorDefault = NSTimeZone.default
-        defer { NSTimeZone.default = priorDefault }
-        NSTimeZone.default = try XCTUnwrap(TimeZone(identifier: "America/Denver"))
+        let priorPinned = CompassDevicePreferences.readPinnedTimeZone()
+        defer {
+            if let priorPinned {
+                _ = CompassDevicePreferences.writePinnedTimeZone(priorPinned)
+            } else {
+                _ = CompassDevicePreferences.writePinnedTimeZone(nil)
+            }
+        }
+        XCTAssertTrue(CompassDevicePreferences.writePinnedTimeZone("America/Denver"))
 
         let referenceNow = try XCTUnwrap(
             CompassDateParsing.parseGridDateTime(
