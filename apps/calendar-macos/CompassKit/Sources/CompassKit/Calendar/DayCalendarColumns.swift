@@ -106,15 +106,12 @@ public enum DayCalendarColumns {
         viewDay: Date,
         viewDayTimeZone: String?
     ) -> Bool {
-        let range = CalendarWindowMath.dayEventQueryRange(
+        let range = CalendarWindowMath.dayEventQueryBounds(
             date: viewDay,
             timeZoneIdentifier: viewDayTimeZone
         )
-        guard let rangeStart = CompassDateParsing.parseInEffectiveTimeZone(range.startDate),
-              let rangeEnd = CompassDateParsing.parseInEffectiveTimeZone(range.endDate)
-        else {
-            return false
-        }
+        let rangeStart = range.start
+        let rangeEnd = range.end
         let eventZone = timed.timeZone ?? EffectiveTimeZone.identifier
         guard let eventStart = CompassDateParsing.parseGridDateTime(
             timed.startDate,
