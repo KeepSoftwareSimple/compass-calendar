@@ -1,5 +1,6 @@
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
+import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { AuthError } from "@backend/common/errors/auth/auth.errors";
 import { type SyncClientErrorKind } from "@backend/common/services/sync-service/sync-service.client";
 import { type ErrorMetadata } from "@backend/common/types/error.types";
@@ -76,11 +77,14 @@ export function throwSyncProxyFailure(
 // write, so a caller MUST retry with the SAME idempotency key.
 export function throwSyncCommandSubmitFailure(
   kind: SyncClientErrorKind,
+  provider?: ProviderKind,
 ): never {
   if (isOperationalKind(kind)) {
     throw eventMutationError(
       "SYNC_UNAVAILABLE",
       `Sync command ${kind}; the mutation may already be applied`,
+      undefined,
+      provider,
     );
   }
   throw eventMutationError(
