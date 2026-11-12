@@ -14,7 +14,7 @@ final class NativeCalendarRootModelInitialWeekAnchorTests: XCTestCase {
         CompassDeviceTimeZone.setIdentifierProviderForTests { "America/Denver" }
         XCTAssertTrue(CompassDevicePreferences.writePinnedTimeZone(nil))
 
-        // Monday 06:00 UTC is still Sunday evening in Denver; week start differs from GMT midnight.
+        // Monday 06:00 UTC is Monday 23:00 MST; local day differs from GMT so week anchors diverge.
         let referenceNow = try XCTUnwrap(
             CompassDateParsing.parseGridDateTime(
                 "2026-11-10T06:00:00.000",
