@@ -22,7 +22,7 @@ test("edge focus sidebar teaches Tab and Shift+Arrow nudge keys", async ({
   await eventButton.focus();
   await page.keyboard.press("Tab");
 
-  const sidebarStatus = page.locator("#sidebar").getByRole("status");
+  const sidebarStatus = page.locator("#sidebar [data-edge-focus-indicator]");
   await expect(sidebarStatus).toBeVisible();
   await expect(sidebarStatus).toContainText(/adjusts start/i);
   await expect(sidebarStatus).toContainText("Tab");
