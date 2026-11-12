@@ -79,9 +79,44 @@ final class DayCalendarColumnsTests: XCTestCase {
         XCTAssertEqual(columns.map(\.id), [personal.id])
     }
 
-    /// Web #5229 fixed the same shape: civil-day matching in UTC drops secondary columns
-    /// when Denver-timed events sit on the prior local day. Mac still uses `isTimedEventOnDay`.
-    func testDayViewTimedColumnsNeedQueryWindowParityAtUTCBoundary() throws {
-        throw XCTSkip("Follow-up: align `isTimedEventOnDay` with day query-window overlap (see web #5229).")
+    func testDayViewKeepsBothColumnsAtMergeQueueUTCBoundary() throws {
+        let primary = GridLayoutSnapshotFixtures.parityCalendars[0]
+        let secondary = GridLayoutSnapshotFixtures.parityCalendars[1]
+        let viewDay = try XCTUnwrap(
+            CompassDateParsing.parseGridDateTime(
+                "2026-11-11T17:23:00",
+                timeZoneIdentifier: "America/Denver"
+            )
+        )
+        let timed = [
+            GridLayoutTimedEventInput(
+                calendarId: primary.id,
+                endDate: "2026-11-11 10:30:00.000",
+                eventId: "boundary-a",
+                startDate: "2026-11-11 09:00:00.000",
+                timeZone: "America/Denver",
+                title: "Morning"
+            ),
+            GridLayoutTimedEventInput(
+                calendarId: secondary.id,
+                endDate: "2026-11-11 14:30:00.000",
+                eventId: "boundary-b",
+                startDate: "2026-11-11 13:00:00.000",
+                timeZone: "America/Denver",
+                title: "Afternoon"
+            ),
+        ]
+
+        let columns = DayCalendarColumns.dayViewCalendars(
+            [primary, secondary],
+            dayKey: "2026-11-11",
+            timedEvents: timed,
+            allDayEvents: [],
+            hiddenEventIds: [],
+            viewDay: viewDay,
+            viewDayTimeZone: "America/Denver"
+        )
+
+        XCTAssertEqual(columns.map(\.name), ["Work", "Personal"])
     }
 }

@@ -9,11 +9,19 @@ public enum DayCalendarColumns {
         allDayEvents: [GridLayoutAllDayEventInput],
         hiddenEventIds: Set<String>,
         pinnedCalendarIds: Set<String> = [],
-        defaultTargetCalendarId: String? = nil
+        defaultTargetCalendarId: String? = nil,
+        viewDay: Date? = nil,
+        viewDayTimeZone: String? = nil
     ) -> [CompassCalendar] {
         let ordered = eligibleCalendarsInOrder(calendars)
+        let viewAnchor =
+            viewDay
+            ?? CompassDateParsing.calendarDateInEffectiveTimeZone(dayKey)
+            ?? .distantPast
         let eventCalendarIds = calendarIdsWithVisibleEventsOnDay(
             dayKey: dayKey,
+            viewDay: viewAnchor,
+            viewDayTimeZone: viewDayTimeZone,
             timedEvents: timedEvents,
             allDayEvents: allDayEvents,
             hiddenEventIds: hiddenEventIds
@@ -61,6 +69,8 @@ public enum DayCalendarColumns {
 
     private static func calendarIdsWithVisibleEventsOnDay(
         dayKey: String,
+        viewDay: Date,
+        viewDayTimeZone: String?,
         timedEvents: [GridLayoutTimedEventInput],
         allDayEvents: [GridLayoutAllDayEventInput],
         hiddenEventIds: Set<String>
@@ -69,7 +79,11 @@ public enum DayCalendarColumns {
         for timed in timedEvents {
             guard let calendarId = timed.calendarId,
                   !hiddenEventIds.contains(timed.eventId),
-                  isTimedEventOnDay(startDate: timed.startDate, dayKey: dayKey)
+                  timedEventOverlapsViewDay(
+                    timed,
+                    viewDay: viewDay,
+                    viewDayTimeZone: viewDayTimeZone
+                  )
             else { continue }
             ids.insert(calendarId)
         }
@@ -87,11 +101,33 @@ public enum DayCalendarColumns {
         return ids
     }
 
-    private static func isTimedEventOnDay(startDate: String, dayKey: String) -> Bool {
-        guard let start = CompassDateParsing.parseInEffectiveTimeZone(startDate) else {
+    private static func timedEventOverlapsViewDay(
+        _ timed: GridLayoutTimedEventInput,
+        viewDay: Date,
+        viewDayTimeZone: String?
+    ) -> Bool {
+        let range = CalendarWindowMath.dayEventQueryRange(
+            date: viewDay,
+            timeZoneIdentifier: viewDayTimeZone
+        )
+        guard let rangeStart = CompassDateParsing.parseInEffectiveTimeZone(range.startDate),
+              let rangeEnd = CompassDateParsing.parseInEffectiveTimeZone(range.endDate)
+        else {
             return false
         }
-        return CompassDateParsing.formatCalendarDay(start) == dayKey
+        let eventZone = timed.timeZone ?? EffectiveTimeZone.identifier
+        guard let eventStart = CompassDateParsing.parseGridDateTime(
+            timed.startDate,
+            timeZoneIdentifier: eventZone
+        ),
+            let eventEnd = CompassDateParsing.parseGridDateTime(
+                timed.endDate,
+                timeZoneIdentifier: eventZone
+            )
+        else {
+            return false
+        }
+        return eventStart < rangeEnd && eventEnd > rangeStart
     }
 
     private static func isAllDayEventOnDay(startDate: String, endDate: String, dayKey: String) -> Bool {
@@ -112,6 +148,8 @@ extension GridLayoutScenario {
         guard layoutMode == .day, let dayKey = visibleDateKeys.first else {
             return DayCalendarColumns.dayViewCalendars(calendars)
         }
+        let viewDay =
+            CompassDateParsing.calendarDateInEffectiveTimeZone(dayKey) ?? referenceNow
         return DayCalendarColumns.dayViewCalendars(
             calendars,
             dayKey: dayKey,
@@ -119,7 +157,8 @@ extension GridLayoutScenario {
             allDayEvents: allDayEvents,
             hiddenEventIds: hiddenEventIds,
             pinnedCalendarIds: pinnedDayColumnCalendarIds,
-            defaultTargetCalendarId: defaultTargetCalendarId
+            defaultTargetCalendarId: defaultTargetCalendarId,
+            viewDay: viewDay
         )
     }
 }
