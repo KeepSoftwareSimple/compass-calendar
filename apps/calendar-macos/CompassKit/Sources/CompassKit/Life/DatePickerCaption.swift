@@ -28,12 +28,6 @@ public enum DatePickerCaption {
         return (start ..< start + yearsPerPage).map { $0 }
     }
 
-    /// Decade-aligned pages (1980–1999 for 1993); legacy sidebar grids.
-    public static func yearPage(containing year: Int) -> [Int] {
-        let start = year - ((year % yearsPerPage) + yearsPerPage) % yearsPerPage
-        return (start ..< start + yearsPerPage).map { $0 }
-    }
-
     public static let monthLabels = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ]
