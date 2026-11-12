@@ -433,6 +433,27 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
+        if keyEvent.modifiers.contains(.shift), shiftArrowKeyboardName(for: keyEvent) != nil {
+            if model.isEventFormVisible {
+                return false
+            }
+            if model.draftStore.gridDraft != nil {
+                if handleDraftKeys(keyEvent) { return true }
+                return false
+            }
+            if model.focusStore.focusedEventId != nil {
+                if attemptShiftArrowEdgeNudge(keyEvent) {
+                    return true
+                }
+                if let focused = model.focusedEvent(), model.isReadOnly(event: focused) {
+                    return false
+                }
+                return false
+            }
+            if handleDraftKeys(keyEvent) { return true }
+            return false
+        }
+
         if handleDraftKeys(keyEvent) {
             return true
         }
@@ -1194,6 +1215,29 @@ final class NativeGridKeyboardRouter {
     private func claimsShiftDayJump(_ letter: Character) -> Bool {
         if String(letter).lowercased() == "s" { return true }
         return DayJumpPrefixes.dayPrefix(forShiftedLetter: letter) != nil
+    }
+
+    private func shiftArrowKeyboardName(for keyEvent: KeyEvent) -> String? {
+        switch keyEvent.key {
+        case .named(.arrowUp): return "ArrowUp"
+        case .named(.arrowDown): return "ArrowDown"
+        case .named(.arrowLeft): return "ArrowLeft"
+        case .named(.arrowRight): return "ArrowRight"
+        default: return nil
+        }
+    }
+
+    private func attemptShiftArrowEdgeNudge(_ keyEvent: KeyEvent) -> Bool {
+        guard keyEvent.modifiers.contains(.shift),
+            let arrow = shiftArrowKeyboardName(for: keyEvent)
+        else {
+            return false
+        }
+        return model.nudgeDraftOrPlace(
+            key: arrow,
+            shiftKey: true,
+            altKey: keyEvent.modifiers.contains(.option)
+        )
     }
 
 }

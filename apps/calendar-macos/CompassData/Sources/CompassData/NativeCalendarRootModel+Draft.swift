@@ -95,9 +95,11 @@ extension NativeCalendarRootModel {
                 if moved { rebuildPresentation() }
                 return moved
             }
-            if focusStore.focusedEventId != nil { return false }
+            if focusStore.focusedEventId != nil {
+                return nudgeFocusedSavedEvent(key: key, altKey: altKey)
+            }
             placeTimedDraft()
-            return true
+            return draftStore.gridDraft != nil
         }
 
         if draftStore.gridDraft != nil {
