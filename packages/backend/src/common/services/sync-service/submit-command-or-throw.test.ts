@@ -76,7 +76,7 @@ describe("submitCommandOrThrow", () => {
     });
   });
 
-  it("never treats pending, applying, or reconciling as success", async () => {
+  it("maps a nonterminal provider outcome to SYNC_UNAVAILABLE", async () => {
     for (const state of ["pending", "applying", "reconciling"] as const) {
       const error = await submit({
         ok: true as const,
@@ -85,8 +85,8 @@ describe("submitCommandOrThrow", () => {
 
       expect(error).toBeInstanceOf(EventMutationException);
       expect(error).toMatchObject({
-        mutationCode: "PROVIDER_FAILURE",
-        message: `Sync command did not resolve (${state})`,
+        mutationCode: "SYNC_UNAVAILABLE",
+        message: `Sync command still ${state}; Compass will retry`,
       });
     }
   });

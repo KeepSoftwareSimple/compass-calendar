@@ -13,6 +13,7 @@ import {
   ProviderWriteUnavailableError,
   submitCloudCommand,
 } from "@sync/domain/cloud-command.service";
+import { runWithInlineProviderRequestBudget } from "@sync/providers/provider-inline-request-budget";
 import {
   type ProviderRegistry,
   resolveAdaptersFrom,
@@ -103,28 +104,32 @@ export function registerCommandRoutes(
           request.eventId,
         );
 
-        const { command, changed } = await submitCloudCommand(
-          {
-            commands: repos.commands,
-            events,
-            calendars: repos.calendars,
-            occurrences: repos.eventOccurrences,
-            resources: repos.syncResources,
-            connections: repos.connections,
-            markers: repos.deletionMarkers,
-            execution: deps.execution,
-            provider,
-          },
-          {
-            tenantId: auth.tenantId,
-            principalId: auth.principalId,
-            idempotencyKey: request.idempotencyKey,
-            eventId: request.eventId,
-            input: request.input,
-            expectedVersion: request.expectedVersion,
-            ...(request.restore ? { restore: true as const } : {}),
-          },
-          () => (deps.now ? new Date(deps.now()) : new Date()),
+        const { command, changed } = await runWithInlineProviderRequestBudget(
+          () =>
+            submitCloudCommand(
+              {
+                commands: repos.commands,
+                events,
+                calendars: repos.calendars,
+                occurrences: repos.eventOccurrences,
+                resources: repos.syncResources,
+                connections: repos.connections,
+                markers: repos.deletionMarkers,
+                execution: deps.execution,
+                provider,
+              },
+              {
+                tenantId: auth.tenantId,
+                principalId: auth.principalId,
+                idempotencyKey: request.idempotencyKey,
+                eventId: request.eventId,
+                input: request.input,
+                expectedVersion: request.expectedVersion,
+                ...(request.restore ? { restore: true as const } : {}),
+              },
+              () => (deps.now ? new Date(deps.now()) : new Date()),
+            ),
+          deps.now ?? Date.now,
         );
 
         // Content-free change-feed notice for Compass API → browser SSE.
