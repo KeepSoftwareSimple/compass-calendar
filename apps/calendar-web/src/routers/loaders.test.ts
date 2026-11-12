@@ -161,6 +161,14 @@ describe("loadTodayData", () => {
 
     expect(loadTodayData().dateString).toBe("2026-11-11");
   });
+
+  it("uses the browser timezone for today when the calendars cache is empty", () => {
+    setBrowserTimeZoneForTests("America/Chicago");
+    setSystemTime(new Date("2026-06-01T18:00:00.000Z"));
+    queryClient.removeQueries({ queryKey: calendarQueryKeys.all });
+
+    expect(loadTodayData().dateString).toBe("2026-06-01");
+  });
 });
 
 describe("loadDateParam", () => {
