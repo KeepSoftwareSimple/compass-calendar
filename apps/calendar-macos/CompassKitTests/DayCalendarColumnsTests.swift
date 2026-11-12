@@ -78,4 +78,61 @@ final class DayCalendarColumnsTests: XCTestCase {
         )
         XCTAssertEqual(columns.map(\.id), [personal.id])
     }
+
+    func testDayViewTimedColumnsUseEffectiveQueryWindowOverlap() throws {
+        EffectiveTimeZone.identifier = "America/Denver"
+        let denverCalendars = GridLayoutSnapshotFixtures.parityCalendars.map { calendar in
+            CompassCalendar(
+                access: calendar.access,
+                accountEmail: calendar.accountEmail,
+                backgroundColor: calendar.backgroundColor,
+                capabilities: calendar.capabilities,
+                conference: calendar.conference,
+                createsGoogleMeet: calendar.createsGoogleMeet,
+                description: calendar.description,
+                foregroundColor: calendar.foregroundColor,
+                id: calendar.id,
+                isActive: calendar.isActive,
+                isPrimary: calendar.isPrimary,
+                isVisible: calendar.isVisible,
+                name: calendar.name,
+                provider: calendar.provider,
+                timeZone: IANATimeZone(rawValue: "America/Denver")
+            )
+        }
+        let work = denverCalendars[0]
+        let personal = denverCalendars[1]
+        let scenario = GridLayoutScenario(
+            calendars: denverCalendars,
+            layoutMode: .day,
+            referenceNow: try XCTUnwrap(
+                CompassDateParsing.parseGridDateTime(
+                    "2026-11-12T00:23:00.000",
+                    timeZoneIdentifier: "UTC"
+                )
+            ),
+            timedEvents: [
+                GridLayoutTimedEventInput(
+                    calendarId: work.id,
+                    endDate: "2026-11-11T10:30:00.000",
+                    eventId: "boundary-a",
+                    startDate: "2026-11-11T09:00:00.000",
+                    timeZone: "America/Denver",
+                    title: "Morning"
+                ),
+                GridLayoutTimedEventInput(
+                    calendarId: personal.id,
+                    endDate: "2026-11-11T14:30:00.000",
+                    eventId: "boundary-b",
+                    startDate: "2026-11-11T13:00:00.000",
+                    timeZone: "America/Denver",
+                    title: "Afternoon"
+                ),
+            ],
+            visibleDateKeys: ["2026-11-11"]
+        )
+
+        let columns = scenario.dayViewCalendarsForLayout()
+        XCTAssertEqual(columns.map(\.name), ["Work", "Personal"])
+    }
 }

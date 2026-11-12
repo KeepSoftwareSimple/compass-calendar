@@ -28,14 +28,34 @@ public enum CalendarWindowMath {
         return (window.startISO, window.endISO)
     }
 
-    /// One day's fetch window as `[startDate, endDate)` with exclusive upper bound.
-    public static func dayEventQueryRange(date: Date) -> (startDate: String, endDate: String) {
-        let calendar = EffectiveTimeZone.calendar
+    public static func dayEventQueryBounds(
+        date: Date,
+        timeZoneIdentifier: String? = nil
+    ) -> (start: Date, end: Date) {
+        let calendar: Calendar
+        if let timeZoneIdentifier,
+           let zone = TimeZone(identifier: timeZoneIdentifier)
+        {
+            var localized = Calendar(identifier: .gregorian)
+            localized.timeZone = zone
+            calendar = localized
+        } else {
+            calendar = EffectiveTimeZone.calendar
+        }
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay
+        return (startOfDay, endOfDay)
+    }
+
+    /// One day's fetch window as `[startDate, endDate)` with exclusive upper bound.
+    public static func dayEventQueryRange(
+        date: Date,
+        timeZoneIdentifier: String? = nil
+    ) -> (startDate: String, endDate: String) {
+        let bounds = dayEventQueryBounds(date: date, timeZoneIdentifier: timeZoneIdentifier)
         return (
-            CompassDateParsing.formatLikeDayjs(startOfDay),
-            CompassDateParsing.formatLikeDayjs(endOfDay)
+            CompassDateParsing.formatLikeDayjs(bounds.start),
+            CompassDateParsing.formatLikeDayjs(bounds.end)
         )
     }
 

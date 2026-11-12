@@ -781,7 +781,19 @@ public final class NativeCalendarRootModel {
         viewStore.view == .day ? .day : .week
     }
 
+    private func syncCalendarTimeZoneHintFromAccountCalendars() {
+        let priorEffective = viewStore.effectiveTimeZone
+        viewStore.setCalendarTimeZoneHint(
+            CalendarTimeZoneHint.pick(from: calendars))
+        guard viewStore.effectiveTimeZone != priorEffective else { return }
+        let today = referenceNow
+        viewStore.setAnchorDate(CalendarWindowMath.sundayWeekViewStart(containing: today))
+        monthPickerMonth = today
+        scheduleRefreshVisibleRange()
+    }
+
     func rebuildPresentation() {
+        syncCalendarTimeZoneHintFromAccountCalendars()
         if viewStore.view == .life {
             headerTitle = "Life"
             return

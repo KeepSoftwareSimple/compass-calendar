@@ -12,8 +12,11 @@ public enum DayCalendarColumns {
         defaultTargetCalendarId: String? = nil
     ) -> [CompassCalendar] {
         let ordered = eligibleCalendarsInOrder(calendars)
+        let viewAnchor =
+            CompassDateParsing.calendarDateInEffectiveTimeZone(dayKey) ?? .distantPast
         let eventCalendarIds = calendarIdsWithVisibleEventsOnDay(
             dayKey: dayKey,
+            viewDay: viewAnchor,
             timedEvents: timedEvents,
             allDayEvents: allDayEvents,
             hiddenEventIds: hiddenEventIds
@@ -61,6 +64,7 @@ public enum DayCalendarColumns {
 
     private static func calendarIdsWithVisibleEventsOnDay(
         dayKey: String,
+        viewDay: Date,
         timedEvents: [GridLayoutTimedEventInput],
         allDayEvents: [GridLayoutAllDayEventInput],
         hiddenEventIds: Set<String>
@@ -69,7 +73,7 @@ public enum DayCalendarColumns {
         for timed in timedEvents {
             guard let calendarId = timed.calendarId,
                   !hiddenEventIds.contains(timed.eventId),
-                  isTimedEventOnDay(startDate: timed.startDate, dayKey: dayKey)
+                  timedEventOverlapsViewDay(timed, viewDay: viewDay)
             else { continue }
             ids.insert(calendarId)
         }
@@ -87,11 +91,26 @@ public enum DayCalendarColumns {
         return ids
     }
 
-    private static func isTimedEventOnDay(startDate: String, dayKey: String) -> Bool {
-        guard let start = CompassDateParsing.parseInEffectiveTimeZone(startDate) else {
+    private static func timedEventOverlapsViewDay(
+        _ timed: GridLayoutTimedEventInput,
+        viewDay: Date
+    ) -> Bool {
+        let range = CalendarWindowMath.dayEventQueryBounds(date: viewDay)
+        let rangeStart = range.start
+        let rangeEnd = range.end
+        let eventZone = timed.timeZone ?? EffectiveTimeZone.identifier
+        guard let eventStart = CompassDateParsing.parseGridDateTime(
+            timed.startDate,
+            timeZoneIdentifier: eventZone
+        ),
+            let eventEnd = CompassDateParsing.parseGridDateTime(
+                timed.endDate,
+                timeZoneIdentifier: eventZone
+            )
+        else {
             return false
         }
-        return CompassDateParsing.formatCalendarDay(start) == dayKey
+        return eventStart < rangeEnd && eventEnd > rangeStart
     }
 
     private static func isAllDayEventOnDay(startDate: String, endDate: String, dayKey: String) -> Bool {
