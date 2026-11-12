@@ -805,6 +805,8 @@ public final class NativeCalendarRootModel {
         syncCalendarTimeZoneHintFromAccountCalendars()
         if viewStore.view == .life {
             headerTitle = "Life"
+            focusStore.setPageJumpTargets(nativePageJumpTargets())
+            publishEventFormTitleAccessibilityProbe()
             return
         }
         headerTitle = CalendarHeadingLabel.format(start: startOfView, end: endOfView, now: referenceNow)
