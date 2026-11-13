@@ -39,7 +39,10 @@ import {
   buildCalendarLookup,
   isEventReadOnly,
 } from "@web/calendars/useCalendarLookup";
-import { handleError } from "@web/common/utils/event/event.util";
+import {
+  handleError,
+  isSyncUnavailablePendingError,
+} from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { showConferenceLinkAddedToast } from "@web/common/utils/toast/conference-link-added.toast";
 import { showDeletedToast } from "@web/common/utils/toast/deleted-toast.util";
@@ -570,6 +573,11 @@ export function useEventMutations(
         }
       }
       if (!context) return;
+      // Sync may already hold this command while the HTTP response timed out.
+      // Keep the optimistic edit so the grid matches what Compass is retrying.
+      if (isSyncUnavailablePendingError(error)) {
+        return;
+      }
       // TanStack still counts *this* mutation as pending while onError runs
       // (it dispatches status "error" only afterwards), so isMutating === 1
       // means we are alone and a full snapshot restore is safe.

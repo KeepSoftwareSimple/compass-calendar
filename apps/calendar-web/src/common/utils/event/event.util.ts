@@ -5,6 +5,7 @@ import { Status } from "@core/errors/status.codes";
 import {
   googleProviderRejectedChangeMessage,
   providerSaveFailureMessage,
+  syncUnavailablePendingMessage,
 } from "@core/event/event-mutation-user-message";
 import {
   type BaseEvent,
@@ -302,8 +303,7 @@ const MUTATION_ERROR_TOAST_MESSAGES: Partial<
     "This event was changed somewhere else. Refresh to load the latest version, then try again.",
   CONNECTION_REVOKED:
     "Calendar access expired or was revoked. Reconnect your calendar in Compass to resume syncing.",
-  SYNC_UNAVAILABLE:
-    "Couldn't save that change, the calendar service is briefly unavailable. Your edit was not applied.",
+  // SYNC_UNAVAILABLE uses syncUnavailablePendingMessage when provider is known.
   // Covers a failed round-trip and a response that broke the contract, so
   // the copy must not claim which one happened.
   // PROVIDER_FAILURE uses providerSaveFailureMessage when provider is known.
@@ -318,11 +318,26 @@ export type HandleErrorContext = {
   provider?: ProviderKind;
 };
 
+export const isSyncUnavailablePendingMutation = (
+  mutationError: EventMutationError,
+): boolean =>
+  mutationError.code === "SYNC_UNAVAILABLE" && mutationError.retryable;
+
+export const isSyncUnavailablePendingError = (error: Error): boolean => {
+  const mutationError = parseExpectedMutationError(error);
+  return mutationError
+    ? isSyncUnavailablePendingMutation(mutationError)
+    : false;
+};
+
 const mutationToastMessage = (
   mutationError: EventMutationError,
   providerHint?: ProviderKind,
 ): string => {
   const provider = mutationError.provider ?? providerHint;
+  if (mutationError.code === "SYNC_UNAVAILABLE") {
+    return syncUnavailablePendingMessage(provider);
+  }
   if (mutationError.code === "PROVIDER_FAILURE") {
     return providerSaveFailureMessage(provider);
   }
@@ -416,12 +431,20 @@ export const handleError = (
     // No error-tracking capture either way — these are expected outcomes.
     const message = mutationToastMessage(mutationError, context.provider);
 
+    // SYNC_UNAVAILABLE means Sync may already have the command: Compass
+    // retries it in the background. A manual Try again would risk a second
+    // submission while the first is still pending.
+    const allowRetry =
+      mutationError.retryable &&
+      onRetry &&
+      !isSyncUnavailablePendingMutation(mutationError);
+
     // The backend already decided whether the same request could succeed
     // (POLICY_BY_CODE in event.error.ts). When it can, hand the user the
     // retry instead of making them redo the edit. Retrying is safe: the
     // command's idempotency key is a hash of the payload, so a replay
     // dedupes rather than applying twice.
-    if (mutationError.retryable && onRetry) {
+    if (allowRetry) {
       showErrorToast(
         createElement(RetryableSaveToast, {
           message,

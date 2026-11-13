@@ -93,6 +93,16 @@ describe("sync-proxy-error", () => {
     },
   );
 
+  it("threads the calendar provider into SYNC_UNAVAILABLE", () => {
+    try {
+      throwSyncCommandSubmitFailure("timeout", "microsoft");
+      throw new Error("expected throw");
+    } catch (e) {
+      const mapped = toEventMutationError(e);
+      expect(mapped.body.provider).toBe("microsoft");
+    }
+  });
+
   it("still maps an unexpected command submit failure to PROVIDER_FAILURE 502", () => {
     try {
       throwSyncCommandSubmitFailure("unexpectedStatus");
