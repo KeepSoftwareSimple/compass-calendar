@@ -11,6 +11,68 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-13
+
+Swept the 8 merges that landed after the 2026-11-12 sweep's own output (#5239,
+#5241, #5244, #5248, #5249, #5251, #5254, and #5236 which landed after that
+sweep ran); #5240 was that sweep's finding and is excluded as its output. Gate
+step 1 was clean: `bun knip` reports no unused files or exports (only the four
+standing config hints), `bun lint` passes every rule, `bun type-check` passes.
+One finding, shipped as the core-owned command submit deadline. Everything
+below was examined and kept.
+
+- **`provider-transient-error.util.ts` and its four call sites** (#5244). The
+  new shared module is imported by `google-error.ts`, `microsoft-error.ts` and
+  both calendar adapters rather than restated at any of them, which is the part
+  that would have mattered. `providerHttpResponseFacts` handles both `Headers`
+  and a plain record because gaxios and `fetch` disagree on header shape, not
+  because anyone duplicated it.
+
+- **`isRetryableProviderHttpStatus`'s `status === 503 || status >= 500`** in
+  `provider-http-retry.util.ts`. The `503` arm is subsumed by `>= 500`, so it is
+  genuinely redundant, but no tool reports it, nothing can diverge, and the
+  explicit arm documents the Graph throttling case next to `429`. Noted rather
+  than spent: a two-token edit is not worth a PR, and folding it would make the
+  next reader look up whether 503 was deliberate.
+
+- **`microsoftGraphRequest`'s separate `parseJsonOrEmpty` and
+  `readGraphJsonBody`** (#5244). Two JSON readers on one request path, but they
+  want opposite things: the `emptyOk` path swallows a parse failure because
+  Graph DELETE has no body, while the normal path must rethrow a `SyntaxError`
+  carrying response status and content-type so the new transient classifier can
+  see it. Folding them would have to reintroduce the distinction as a flag.
+
+- **`event-mutation-user-message.ts`** (#5248). Adds `syncUnavailablePendingMessage`
+  and `providerSaveBrandName` beside the existing product-name map. Two provider
+  name maps in one file looks like debt, but they are different copy registers
+  ("Outlook" in progress copy, "Microsoft Calendar" in failure copy) and the
+  module is already the single owner both web and sync import from.
+
+- **`job.repository.ts`'s `$min` to `lastErrorAt` swap plus the new
+  `inFlightProviderErrors` probe** (#5251). The probe is a fourth near-identical
+  `findOne` in `nextRunAfter`'s candidate list. Shared shape, not shared intent:
+  each candidate reads a different state/failureClass pair and the sort keys
+  differ, so a generic helper would take the whole query as a parameter and save
+  nothing.
+
+- **`calendar-list.translation.ts`'s `map` to `flatMap`** (#5254). A
+  seven-line filter-in-place with the retention rationale in a comment. Smallest
+  correct shape for the fix; a separate predicate would add a name for a
+  one-line condition.
+
+- **The macOS shift+arrow nudge** (#5236, 1,293 added lines across
+  `DraftNudge.swift`, `NativeCalendarRootModel+FocusedEventNudge.swift` and
+  `EventEdgeNudgeBridge.swift`). Large, but it is a new feature with 819 lines
+  of that total in two new test suites, and `DraftNudge.swift` is pure
+  computation the model delegates to rather than a layer over existing code.
+  New code, not debt; a sweep the week after a feature lands is the worst time
+  to judge its shape.
+
+- **`.github/scripts/` XCTest exit detection** (#5239). Three shell scripts
+  including a self-test and a captured failure sample. Load-bearing mess of the
+  `rolling-backend.sh` kind: `swift test` exit codes and log formats are the
+  ugly part, and the self-test pins the detector against a real 43186705883 log.
+
 ## 2026-11-12
 
 Swept the 18 merges that landed after the 2026-11-11 sweep (#5098, #5111, #5218

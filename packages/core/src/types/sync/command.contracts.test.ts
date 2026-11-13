@@ -1,5 +1,8 @@
 import { faker } from "@faker-js/faker";
 import {
+  COMMAND_SUBMIT_RESPONSE_MARGIN_MS,
+  COMMAND_SUBMIT_TIMEOUT_MS,
+  INLINE_COMMAND_REQUEST_BUDGET_MS,
   SyncCommandFailureReasonSchema,
   SyncCommandInputSchema,
   SyncCommandOutcomeSchema,
@@ -527,5 +530,18 @@ describe("Sync command contracts", () => {
       const parsed = SyncCommandSchema.parse(legacy);
       expect(parsed.input).toMatchObject({ attendeesEdit: "preserve" });
     });
+  });
+});
+
+describe("inline command request budget", () => {
+  it("leaves Sync a provider budget strictly inside the submit deadline", () => {
+    // The backend reports a command failure once COMMAND_SUBMIT_TIMEOUT_MS
+    // elapses. A budget at or above it would let Sync keep applying the
+    // mutation after the caller had already given up.
+    expect(INLINE_COMMAND_REQUEST_BUDGET_MS).toBeLessThan(
+      COMMAND_SUBMIT_TIMEOUT_MS,
+    );
+    expect(INLINE_COMMAND_REQUEST_BUDGET_MS).toBeGreaterThan(0);
+    expect(COMMAND_SUBMIT_RESPONSE_MARGIN_MS).toBeGreaterThan(0);
   });
 });

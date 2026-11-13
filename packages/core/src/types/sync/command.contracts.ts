@@ -315,3 +315,22 @@ export const CommandSubmitResponseSchema = z.object({
   command: SyncCommandSchema,
 });
 export type CommandSubmitResponse = z.infer<typeof CommandSubmitResponseSchema>;
+
+// The deadline on POST /internal/commands, owned here because both ends of the
+// call depend on it. Provider create/update/delete run inline inside that
+// request: the default read deadline is too short for a Google round-trip, and
+// aborting mid-delete leaves Sync applying the mutation while Compass API
+// returns an error (staging: DELETE appeared to fail with 5xx while the event
+// was gone).
+export const COMMAND_SUBMIT_TIMEOUT_MS = 30_000;
+
+// Reserved out of the deadline for resolving the command record and
+// serializing the response after provider work finishes.
+export const COMMAND_SUBMIT_RESPONSE_MARGIN_MS = 6_000;
+
+// What Sync may spend on provider requests inside one inline command. Derived
+// so it cannot outlive the caller's deadline: if it did, the backend would
+// give up and report a failure while Sync was still applying the mutation.
+// Stale-command retry covers whatever does not fit.
+export const INLINE_COMMAND_REQUEST_BUDGET_MS =
+  COMMAND_SUBMIT_TIMEOUT_MS - COMMAND_SUBMIT_RESPONSE_MARGIN_MS;
