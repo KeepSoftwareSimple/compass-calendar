@@ -1,13 +1,17 @@
 import { join } from "node:path";
 
+export const COMPASS_MACOS_DIR =
+  process.env["COMPASS_MACOS_DIR"] ??
+  join(process.cwd(), "build/desktop-export");
+
 export const COMPASS_KIT_GENERATED_DIR = join(
-  process.cwd(),
-  "apps/calendar-macos/CompassKit/Sources/CompassKit/Generated",
+  COMPASS_MACOS_DIR,
+  "CompassKit/Sources/CompassKit/Generated",
 );
 
 export const COMPASS_KIT_RESOURCES_DIR = join(
-  process.cwd(),
-  "apps/calendar-macos/CompassKit/Sources/CompassKit/Resources",
+  COMPASS_MACOS_DIR,
+  "CompassKit/Sources/CompassKit/Resources",
 );
 
 export const COMPASS_KIT_FIXTURES_DIR = join(

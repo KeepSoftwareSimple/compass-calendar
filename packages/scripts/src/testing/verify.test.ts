@@ -117,15 +117,6 @@ describe("mapFilesToPackages", () => {
     ).toContain("test:self-host");
   });
 
-  it("selects the macos suite for apps/calendar-macos/ changes", () => {
-    expect(
-      mapFilesToPackages([
-        "apps/calendar-macos/project.yml",
-        "apps/calendar-web/src/App.tsx",
-      ]),
-    ).toEqual(["web", "macos"]);
-  });
-
   it("does not invent core/web for docs-only or empty diffs", () => {
     expect(
       mapFilesToPackages(["docs/development/testing-playbook.md"]),
@@ -221,67 +212,6 @@ describe("planVerify", () => {
       "knip",
     ]);
     expect(plan.checks[0]?.reason).toContain("/storage/");
-  });
-});
-
-describe("planVerify macos", () => {
-  it("runs macOS package and app tests where Xcode is installed", () => {
-    const plan = planVerify({
-      packages: ["macos"],
-      playwrightChromiumAvailable: false,
-      xcodeAvailable: true,
-    });
-    expect(plan.checks.map((check) => check.id)).toEqual([
-      "test:macos:packages",
-      "test:macos",
-      "type-check",
-      "lint",
-      "knip",
-    ]);
-    expect(plan.ciOnly).toEqual([]);
-  });
-
-  it("names macOS checks as CI-only without Xcode instead of skipping them", () => {
-    const plan = planVerify({
-      packages: ["macos"],
-      playwrightChromiumAvailable: false,
-    });
-    expect(plan.checks.map((check) => check.id)).toEqual([
-      "type-check",
-      "lint",
-      "knip",
-    ]);
-    expect(plan.skips).toEqual([]);
-    expect(plan.ciOnly.map((note) => note.id)).toEqual([
-      "test:macos:packages",
-      "test:macos",
-    ]);
-  });
-
-  it("lists CompassUITests as CI-only when macos-ui-shard jobs run them", () => {
-    const previous = process.env.CI_MACOS_UI_SHARDED;
-    process.env.CI_MACOS_UI_SHARDED = "1";
-    try {
-      const plan = planVerify({
-        packages: ["macos"],
-        playwrightChromiumAvailable: false,
-        xcodeAvailable: true,
-      });
-      expect(plan.checks.map((check) => check.id)).toEqual([
-        "test:macos:packages",
-        "type-check",
-        "lint",
-        "knip",
-      ]);
-      expect(plan.skips).toEqual([]);
-      expect(plan.ciOnly.map((note) => note.id)).toEqual(["test:macos"]);
-    } finally {
-      if (previous === undefined) {
-        delete process.env.CI_MACOS_UI_SHARDED;
-      } else {
-        process.env.CI_MACOS_UI_SHARDED = previous;
-      }
-    }
   });
 });
 
@@ -489,51 +419,6 @@ describe("runVerify", () => {
     expect(exitCode).toBe(1);
     expect(logs.lines.at(-1)).toBe("VERDICT: INCOMPLETE");
     expect(logs.errors.join("\n")).toContain("--strict");
-  });
-
-  it("passes --strict on a macos diff without Xcode and names macOS checks as CI-only", async () => {
-    const { spawn, commands } = recordingSpawn();
-    const logs = captureLogs();
-    const exitCode = await runVerify(["--strict"], {
-      git: gitStub({
-        diffs: { "abc123...HEAD": ["apps/calendar-macos/project.yml"] },
-      }),
-      spawn,
-      log: logs.log,
-      chromiumAvailable: () => false,
-      xcodeAvailable: () => false,
-    });
-
-    expect(exitCode).toBe(0);
-    expect(commands).toEqual([
-      ["bun", "run", "type-check"],
-      ["bun", "run", "lint"],
-      ["bun", "run", "knip"],
-    ]);
-    expect(logs.lines.join("\n")).toContain(
-      "Checks CI-only: test:macos:packages",
-    );
-    expect(logs.lines.join("\n")).toContain("test:macos (Swift/AppKit");
-    expect(logs.lines.at(-1)).toBe("VERDICT: PASS");
-  });
-
-  it("runs macOS checks on a macos diff when Xcode is installed", async () => {
-    const { spawn, commands } = recordingSpawn();
-    const logs = captureLogs();
-    const exitCode = await runVerify([], {
-      git: gitStub({
-        diffs: { "abc123...HEAD": ["apps/calendar-macos/project.yml"] },
-      }),
-      spawn,
-      log: logs.log,
-      chromiumAvailable: () => false,
-      xcodeAvailable: () => true,
-    });
-
-    expect(exitCode).toBe(0);
-    expect(commands[0]).toEqual(["bun", "run", "test:macos:packages"]);
-    expect(commands[1]).toEqual(["bun", "run", "test:macos"]);
-    expect(logs.lines.join("\n")).not.toContain("CI-only");
   });
 
   describe("baseline against origin/main", () => {

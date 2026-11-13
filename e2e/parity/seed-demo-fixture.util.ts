@@ -17,7 +17,7 @@ export const PARITY_CONTENT_TRACK_WIDTH =
 
 const DEMO_SEED_PATH = join(
   process.cwd(),
-  "apps/calendar-macos/CompassKit/Sources/CompassKit/Resources/Fixtures/demo-seed.json",
+  "e2e/parity/fixtures/demo-seed.json",
 );
 
 type DemoSeedFixture = {

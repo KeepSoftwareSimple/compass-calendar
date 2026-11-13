@@ -1,0 +1,32 @@
+name: Repository boundary
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # The organization ruleset requires this context. Native builds now belong
+  # to compass-calendar-mac; this Linux check enforces that ownership boundary.
+  macos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify native code and runners stay in the Mac repository
+        run: |
+          test ! -e apps/calendar-macos
+          if git ls-files '*.swift' | grep -q .; then
+            echo 'Swift sources belong in compass-calendar-mac.' >&2
+            exit 1
+          fi
+          if grep -RE 'runs-on: +macos-' .github/workflows; then
+            echo 'Mac runner jobs belong in compass-calendar-mac.' >&2
+            exit 1
+          fi
+          grep -q 'KeepSoftwareSimple/compass-calendar-mac' docs/features/desktop-client.md
