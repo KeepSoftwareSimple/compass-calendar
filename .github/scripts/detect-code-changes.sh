@@ -8,16 +8,14 @@ pull_request_number=${3:-}
 # Path → workflow matrix (pull_request only; merge_group and push use all_on):
 #
 #   docs / *.md only          → unit + e2e skipped (required rollups still Success)
-#   apps/calendar-macos/**    → macos workflow only (test-macos.yml job gate)
 #   apps/calendar-web/**      → unit static (scoped), web legs, e2e
 #   apps/booking-web/**       → unit static (scoped); e2e skipped (Playwright boots calendar-web)
 #   packages/backend|sync|scripts/** → unit static (scoped), matching legs; e2e skipped
-#   packages/core, root lockfile/package.json/tsconfig* → every unit leg + e2e + static_web + contracts
+#   packages/core, root lockfile/package.json/tsconfig* → every unit leg + e2e + static_web
 #
-# code: TS/CI-relevant changes (excludes docs and apps/calendar-macos/**).
-# e2e:  Playwright-reachable changes (excludes backend, sync, scripts, macos, booking-web).
+# code: TS/CI-relevant changes (excludes docs).
+# e2e:  Playwright-reachable changes (excludes backend, sync, scripts, booking-web).
 # static_web: boot gzip delta check and other web-blast-radius static work.
-# contracts: bun cli contracts:swift --check (core schemas or swift-contracts emitter).
 # core/web/backend/sync/scripts: unit-leg filters. packages/core, root package.json,
 #       bun.lock, or root tsconfig* turn every leg on. merge_group and push always run
 #       everything, so nothing reaches main untested.
@@ -31,18 +29,17 @@ write_outputs() {
     printf 'sync=%s\n' "$6"
     printf 'scripts=%s\n' "$7"
     printf 'static_web=%s\n' "$8"
-    printf 'contracts=%s\n' "$9"
   } >>"$GITHUB_OUTPUT"
-  printf 'Non-docs changes: %s\nE2E-reachable changes: %s\nUnit packages: core=%s web=%s backend=%s sync=%s scripts=%s\nStatic web blast: %s\nSwift contracts: %s\n' \
-    "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9"
+  printf 'Non-docs changes: %s\nE2E-reachable changes: %s\nUnit packages: core=%s web=%s backend=%s sync=%s scripts=%s\nStatic web blast: %s\n' \
+    "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8"
 }
 
 all_on() {
-  write_outputs true true true true true true true true true
+  write_outputs true true true true true true true true
 }
 
 all_off() {
-  write_outputs false false false false false false false false false
+  write_outputs false false false false false false false false
 }
 
 if [ "$event_name" != "pull_request" ]; then
@@ -76,14 +73,7 @@ if [ -z "$code_files" ]; then
   exit 0
 fi
 
-# Native desktop Swift sources are validated in test-macos.yml, not lint/knip/e2e.
-ts_code_files=$(printf '%s\n' "$code_files" |
-  grep -vE '^apps/calendar-macos/' || true)
-
-if [ -z "$ts_code_files" ]; then
-  all_off
-  exit 0
-fi
+ts_code_files="$code_files"
 
 e2e_files=$(printf '%s\n' "$ts_code_files" |
   grep -vE '^packages/(backend|sync|scripts)/|^apps/booking-web/' || true)
@@ -100,8 +90,6 @@ sync_files=$(printf '%s\n' "$ts_code_files" | grep -E '^packages/sync(/|$)' || t
 scripts_files=$(printf '%s\n' "$ts_code_files" | grep -E '^packages/scripts(/|$)' || true)
 static_web_files=$(printf '%s\n' "$ts_code_files" |
   grep -E '^(apps/calendar-web(/|$)|\.github/perf/|\.github/workflows/boot-bundle\.yml)' || true)
-swift_contract_files=$(printf '%s\n' "$ts_code_files" |
-  grep -E '^packages/scripts/src/swift-contracts/' || true)
 
 core=false
 web=false
@@ -109,7 +97,6 @@ backend=false
 sync=false
 scripts=false
 static_web=false
-contracts=false
 
 if [ -n "$all_units_files" ]; then
   core=true
@@ -118,14 +105,12 @@ if [ -n "$all_units_files" ]; then
   sync=true
   scripts=true
   static_web=true
-  contracts=true
 else
   [ -n "$web_files" ] && web=true
   [ -n "$backend_files" ] && backend=true
   [ -n "$sync_files" ] && sync=true
   [ -n "$scripts_files" ] && scripts=true
   [ -n "$static_web_files" ] && static_web=true
-  [ -n "$swift_contract_files" ] && contracts=true
 fi
 
-write_outputs "$code" "$e2e" "$core" "$web" "$backend" "$sync" "$scripts" "$static_web" "$contracts"
+write_outputs "$code" "$e2e" "$core" "$web" "$backend" "$sync" "$scripts" "$static_web"

@@ -41,7 +41,6 @@ jobs:
       sync: ${{ steps.filter.outputs.sync }}
       scripts: ${{ steps.filter.outputs.scripts }}
       static_web: ${{ steps.filter.outputs.static_web }}
-      contracts: ${{ steps.filter.outputs.contracts }}
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
@@ -108,15 +107,6 @@ jobs:
       - name: Run type-check
         run: |
           bun run type-check
-
-      - name: Check generated Swift contracts
-        if: needs.changes.outputs.contracts == 'true'
-        run: |
-          bun cli contracts:swift --check
-
-      - name: Check generated desktop export artifacts
-        run: |
-          bun cli desktop:export --check
 
       # Workflow files auto-merge under the same size rails as other paths,
       # so they are linted here. Pinned; the image bundles shellcheck for

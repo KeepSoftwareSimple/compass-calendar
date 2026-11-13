@@ -1,12 +1,5 @@
 name: CodeQL
 
-# Advanced setup replaces the repository default CodeQL configuration (actions,
-# javascript-typescript, swift on every push). After this merges, disable default
-# setup in GitHub Code scanning settings or uploads will conflict.
-#
-# Ubuntu: actions + javascript-typescript on every pull_request, merge_group, and
-# push to main. macOS: Swift only when the diff touches native desktop paths, or
-# on the nightly schedule (not on every main push).
 on:
   pull_request:
     branches:
@@ -15,8 +8,6 @@ on:
   push:
     branches:
       - main
-  schedule:
-  - cron: "15 9 * * *"
 
 permissions:
   contents: read
@@ -27,61 +18,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    outputs:
-      swift: ${{ steps.filter.outputs.swift }}
-    steps:
-      - uses: actions/checkout@v7
-      - name: Detect Swift CodeQL paths
-        id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_SHA: ${{ github.event.merge_group.base_sha }}
-          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
-        run: |
-          if [ "$EVENT" = "schedule" ]; then
-            echo "Nightly Swift CodeQL on main."
-            echo "swift=true" >>"$GITHUB_OUTPUT"
-            exit 0
-          fi
-          swift_patterns='^(apps/calendar-macos/|\.github/workflows/codeql\.yml$)'
-          case "$EVENT" in
-            pull_request)
-              files=$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" \
-                --jq '.[].filename') || files="" ;;
-            merge_group)
-              files=$(gh api "repos/${REPO}/compare/${BASE_SHA}...${HEAD_SHA}" \
-                --jq '.files[].filename') || files="" ;;
-            push)
-              # Main push runs Ubuntu analyzers only; never Swift here.
-              echo "swift=false" >>"$GITHUB_OUTPUT"
-              exit 0 ;;
-            *)
-              echo "swift=false" >>"$GITHUB_OUTPUT"
-              exit 0 ;;
-          esac
-          if [ -z "$files" ]; then
-            echo "Could not read changed files; running Swift CodeQL."
-            echo "swift=true" >>"$GITHUB_OUTPUT"
-            exit 0
-          fi
-          hits=$(printf '%s\n' "$files" | grep -E "$swift_patterns" || true)
-          if [ -n "$hits" ]; then
-            printf 'Swift CodeQL paths:\n%s\n' "$hits"
-            echo "swift=true" >>"$GITHUB_OUTPUT"
-          else
-            echo "No native desktop paths; skipping Swift CodeQL."
-            echo "swift=false" >>"$GITHUB_OUTPUT"
-          fi
-
   analyze-ubuntu:
     name: Analyze (${{ matrix.language }})
-    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -104,26 +42,3 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: /language:${{ matrix.language }}
-
-  analyze-swift:
-    name: Analyze (swift)
-    if: needs.changes.outputs.swift == 'true'
-    needs: [changes]
-    runs-on: macos-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: swift
-          config-file: ./.github/codeql/codeql-config.yml
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: /language:swift
