@@ -2,7 +2,10 @@ import { Status } from "@core/errors/status.codes";
 import { type UserMetadata } from "@core/types/user.types";
 import { UserApi } from "@web/api/user.api";
 import { isAbortError } from "@web/api/util/api.util";
-import { connectionHasReconnectRequired } from "@web/auth/providers/connect.util";
+import {
+  connectionHasReconnectRequired,
+  pickCalendarBannerTarget,
+} from "@web/auth/providers/connect.util";
 import { syncReconnectRequiredFromConnections } from "@web/auth/providers/reconnect.state";
 import {
   aggregateGoogleConnectionState,
@@ -10,14 +13,14 @@ import {
   userMetadataActions,
 } from "@web/auth/state/user-metadata.store";
 import {
-  dismissGoogleDelayedToast,
-  showGoogleDelayedToast,
-} from "@web/common/utils/toast/google-delayed.toast";
-import {
   clearGoogleReconnectToastGate,
   dismissGoogleReconnectToast,
   dismissGoogleReconnectToastIfRecovered,
 } from "@web/common/utils/toast/google-reconnect.toast";
+import {
+  dismissProviderDelayedToast,
+  showProviderDelayedToast,
+} from "@web/common/utils/toast/provider-delayed.toast";
 import { mergeHintShortcutCelebrationFromMetadata } from "@web/shortcuts/tips/hint-shortcut-celebration.storage";
 
 let refreshUserMetadataRequest: Promise<void> | null = null;
@@ -50,14 +53,16 @@ export const applyUserMetadataSideEffects = (metadata: UserMetadata): void => {
   if (aggregateGoogleConnectionState(connections) === "ATTENTION") {
     if (!hasShownDelayedToastThisLoad) {
       hasShownDelayedToastThisLoad = true;
-      showGoogleDelayedToast();
+      showProviderDelayedToast(
+        pickCalendarBannerTarget(connections)?.connection,
+      );
     }
   } else if (hasShownDelayedToastThisLoad) {
     // Recovered: a CRITICAL toast (autoClose: false) never closes on its
     // own, so leaving it up would contradict its own "delayed" copy once
     // the connection is healthy again.
     hasShownDelayedToastThisLoad = false;
-    dismissGoogleDelayedToast();
+    dismissProviderDelayedToast();
   }
 };
 

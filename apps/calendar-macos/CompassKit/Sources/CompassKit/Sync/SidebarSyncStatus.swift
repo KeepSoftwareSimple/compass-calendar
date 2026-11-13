@@ -53,9 +53,13 @@ public struct SidebarSyncStatus: Equatable, Sendable {
             else { return nil }
             return SidebarSyncStatus(variant: .syncing, text: "Syncing in the background…")
         case "delayed":
-            let text = connection.stateReason == "providerErrors"
-                ? "Couldn't update your calendar"
-                : "Calendar updates are delayed"
+            let (product, vendor) = CalendarConnectionBanner.delayedNames(connection.provider)
+            let text: String
+            if connection.stateReason == "providerErrors" {
+                text = "\(product) delayed: \(vendor) is slow"
+            } else {
+                text = "\(product) updates are delayed"
+            }
             return SidebarSyncStatus(variant: .warning, text: text)
         case "connecting", "importing":
             return connection.lastHealthyAt == nil ? adding : nil

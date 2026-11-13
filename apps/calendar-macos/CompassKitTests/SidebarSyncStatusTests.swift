@@ -59,10 +59,10 @@ final class SidebarSyncStatusTests: XCTestCase {
     }
 
     func testDelayedCopyFollowsReason() {
-        XCTAssertEqual(resolve([connection(state: "delayed")])?.text, "Calendar updates are delayed")
+        XCTAssertEqual(resolve([connection(state: "delayed")])?.text, "Google updates are delayed")
         XCTAssertEqual(
             resolve([connection(state: "delayed", stateReason: "providerErrors")])?.text,
-            "Couldn't update your calendar")
+            "Google delayed: Google is slow")
         XCTAssertEqual(resolve([connection(state: "delayed")])?.variant, .warning)
     }
 
@@ -76,13 +76,13 @@ final class SidebarSyncStatusTests: XCTestCase {
             connection(state: "importing", connectionState: .iMPORTING, lastHealthyAt: nil),
             connection(state: "delayed", connectionState: .aTTENTION),
         ])
-        XCTAssertEqual(status?.text, "Calendar updates are delayed")
+        XCTAssertEqual(status?.text, "Google updates are delayed")
     }
 
     func testDegradedStreamShowsOnlyWhenSyncIsQuiet() {
         XCTAssertEqual(resolve([], isStreamDegraded: true), .streamDegraded)
         XCTAssertEqual(
             resolve([connection(state: "delayed")], isStreamDegraded: true)?.text,
-            "Calendar updates are delayed")
+            "Google updates are delayed")
     }
 }

@@ -33,6 +33,7 @@ export const CalendarConnectionBannerGate: FC = () => {
       onAction={target.kind === "reconnect" ? connect : () => refresh()}
       provider={provider}
       accountEmail={target.connection.accountEmail}
+      stateReason={target.connection.stateReason}
     />
   );
 };
