@@ -3,6 +3,7 @@ import {
   parseRetryAfterMs,
   withRetryableProviderHttp,
 } from "@sync/providers/provider-http-retry.util";
+import { inlineProviderRequestBudgetRemainingMs } from "@sync/providers/provider-inline-request-budget";
 
 export interface MicrosoftGraphRequestInit {
   readonly accessToken: string;
@@ -43,11 +44,17 @@ async function executeMicrosoftGraphRequest<T>(
     headers["Content-Type"] = "application/json";
   }
 
+  const remaining = inlineProviderRequestBudgetRemainingMs();
+  const timeoutMs =
+    remaining === undefined
+      ? MICROSOFT_REQUEST_TIMEOUT_MS
+      : Math.max(1, Math.min(MICROSOFT_REQUEST_TIMEOUT_MS, remaining));
+
   const response = await fetch(init.url, {
     method: init.method ?? "GET",
     headers,
     ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
-    signal: AbortSignal.timeout(MICROSOFT_REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (init.emptyOk) {

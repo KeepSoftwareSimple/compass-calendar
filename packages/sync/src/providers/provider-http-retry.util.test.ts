@@ -4,6 +4,7 @@ import {
   providerHttpRetryDelayMs,
   withRetryableProviderHttp,
 } from "@sync/providers/provider-http-retry.util";
+import { runWithInlineProviderRequestBudget } from "@sync/providers/provider-inline-request-budget";
 import { describe, expect, it, mock } from "bun:test";
 
 describe("parseRetryAfterMs", () => {
@@ -61,6 +62,25 @@ describe("withRetryableProviderHttp", () => {
     expect(operation).toHaveBeenCalledTimes(3);
     expect(sleep).toHaveBeenCalledTimes(2);
     expect(sleep.mock.calls[0]?.[0]).toBe(12);
+  });
+
+  it("caps Retry-After during an inline command request", async () => {
+    const sleep = mock(() => Promise.resolve());
+    const operation = mock()
+      .mockRejectedValueOnce(
+        Object.assign(new Error("throttled"), { response: { status: 503 } }),
+      )
+      .mockResolvedValueOnce("ok");
+
+    await runWithInlineProviderRequestBudget(() =>
+      withRetryableProviderHttp(operation, {
+        sleep,
+        readRetryAfterMs: () => 600_000,
+      }),
+    );
+
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(sleep.mock.calls[0]?.[0]).toBeLessThanOrEqual(2_000);
   });
 
   it("does not retry a non-retryable status", async () => {

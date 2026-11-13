@@ -1,3 +1,9 @@
+import {
+  capDelayForInlineProviderRequest,
+  InlineProviderRequestBudgetExhaustedError,
+  inlineProviderRequestBudgetRemainingMs,
+} from "@sync/providers/provider-inline-request-budget";
+
 const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_BASE_DELAY_MS = 1_000;
 const MAX_RETRY_AFTER_MS = 10 * 60_000;
@@ -63,17 +69,30 @@ export async function withRetryableProviderHttp<T>(
   let attempt = 0;
   while (true) {
     attempt += 1;
+    const remainingBeforeAttempt = inlineProviderRequestBudgetRemainingMs();
+    if (remainingBeforeAttempt !== undefined && remainingBeforeAttempt <= 0) {
+      throw new InlineProviderRequestBudgetExhaustedError();
+    }
     try {
       return await operation();
     } catch (error) {
       if (attempt >= maxAttempts || !isRetryable(error)) {
         throw error;
       }
-      const delayMs = providerHttpRetryDelayMs(
-        attempt,
-        readRetryAfterMs(error),
-        options.baseDelayMs,
+      const delayMs = capDelayForInlineProviderRequest(
+        providerHttpRetryDelayMs(
+          attempt,
+          readRetryAfterMs(error),
+          options.baseDelayMs,
+        ),
       );
+      const remainingAfterDelay = inlineProviderRequestBudgetRemainingMs();
+      if (
+        remainingAfterDelay !== undefined &&
+        (remainingAfterDelay <= 0 || delayMs <= 0)
+      ) {
+        throw new InlineProviderRequestBudgetExhaustedError();
+      }
       await sleep(delayMs);
     }
   }

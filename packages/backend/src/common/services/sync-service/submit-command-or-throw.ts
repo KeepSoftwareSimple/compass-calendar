@@ -98,9 +98,23 @@ export const submitCommandOrThrow = async (
   // (ProviderWriteUnavailableError, failCloud); this is the safety net for
   // any path that doesn't, today or in the future.
   if (outcome.state !== "confirmed") {
+    if (
+      outcome.state === "pending" ||
+      outcome.state === "applying" ||
+      outcome.state === "reconciling"
+    ) {
+      throw eventMutationError(
+        "SYNC_UNAVAILABLE",
+        `Sync command still ${outcome.state}; Compass will retry`,
+        undefined,
+        context.provider,
+      );
+    }
+    // Future non-terminal states would land here; today only
+    // pending/applying/reconciling remain after failed/cancelled above.
     throw eventMutationError(
       "PROVIDER_FAILURE",
-      `Sync command did not resolve (${outcome.state})`,
+      "Sync command did not resolve",
       undefined,
       context.provider,
     );
