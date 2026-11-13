@@ -212,6 +212,50 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
         XCTAssertEqual(draft.schedule.end, endBefore)
     }
 
+    func testWeekViewRejectsAllDaySavedEventStartEdgeNudgeOffWeek() async throws {
+        let (model, environment, _) = try await makeWritableAllDayEvent()
+        let weekStart = try XCTUnwrap(CompassDateParsing.parseInEffectiveTimeZone("2025-12-28"))
+        let event = try eventOnAllDay(weekStart)
+        try environment.localEventRepository.put(.init(id: event.id, event: event, isDemo: false))
+        model.loadedEvents = [event]
+        model.viewStore.view = .week
+        model.viewStore.setAnchorDate(weekStart)
+        model.rebuildPresentation()
+        model.focusEvent(eventId: event.id.rawValue)
+        model.focusStore.setEdge(
+            eventId: event.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: true
+        )
+        XCTAssertFalse(model.nudgeDraftOrPlace(key: "ArrowLeft", shiftKey: true, altKey: false))
+        await assertFinishedNudgePersistence(model)
+        let stored = try XCTUnwrap(persistedEvent(environment, id: event.id))
+        XCTAssertEqual(stored.schedule, event.schedule)
+    }
+
+    func testWeekViewRejectsAllDayDraftStartEdgeNudgeOffWeek() async throws {
+        let (model, environment, _) = try await makeWritableAllDayEvent()
+        let weekStart = try XCTUnwrap(CompassDateParsing.parseInEffectiveTimeZone("2025-12-28"))
+        let event = try eventOnAllDay(weekStart)
+        try environment.localEventRepository.put(.init(id: event.id, event: event, isDemo: false))
+        model.loadedEvents = [event]
+        model.viewStore.view = .week
+        model.viewStore.setAnchorDate(weekStart)
+        model.rebuildPresentation()
+        model.focusEvent(eventId: event.id.rawValue)
+        model.openKeyboardEditForFocusedEvent()
+        model.focusStore.setEdge(
+            eventId: event.id,
+            edge: .startDate,
+            announcement: "Editing start time",
+            isAllDay: true
+        )
+        let scheduleBefore = try XCTUnwrap(model.draftStore.gridDraft?.schedule)
+        XCTAssertFalse(model.nudgeDraftOrPlace(key: "ArrowLeft", shiftKey: true, altKey: false))
+        XCTAssertEqual(model.draftStore.gridDraft?.schedule, scheduleBefore)
+    }
+
     func testDraftEndEdgeNudgeOnAllDayDraft() async throws {
         let (model, _, event) = try await makeWritableAllDayEvent()
         model.openKeyboardEditForFocusedEvent()
@@ -238,6 +282,25 @@ final class FocusedEventShiftNudgeTests: XCTestCase {
 
     private func persistedEvent(_ environment: NativeCalendarEnvironment, id: EventId) throws -> Event? {
         try environment.localEventRepository.fetchAll().first { $0.id == id }?.event
+    }
+
+    private func eventOnAllDay(_ day: Date) throws -> Event {
+        let startKey = CompassDateParsing.formatCalendarDay(day)
+        let calendar = EffectiveTimeZone.calendar
+        let exclusiveEnd = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: day))
+        let endKey = CompassDateParsing.formatCalendarDay(exclusiveEnd)
+        let json = """
+        {
+          "id": "week-clamp-allday",
+          "calendarId": "cal-1",
+          "content": { "kind": "details", "title": "Week edge", "description": "" },
+          "createdAt": "2026-01-01T00:00:00.000Z",
+          "updatedAt": "2026-01-01T00:00:00.000Z",
+          "recurrence": { "kind": "single" },
+          "schedule": { "kind": "allDay", "start": "\(startKey)", "end": "\(endKey)" }
+        }
+        """
+        return try ContractTestDecoding.decodeJSON(json, as: Event.self)
     }
 
     private func makeWritableTimedEvent(canWrite: Bool = true) async throws

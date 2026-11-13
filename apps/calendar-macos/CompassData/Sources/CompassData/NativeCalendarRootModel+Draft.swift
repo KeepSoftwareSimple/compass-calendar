@@ -122,7 +122,8 @@ extension NativeCalendarRootModel {
                 schedule: draft.schedule,
                 edge: edge.scheduleEdge,
                 key: key,
-                step: step
+                step: step,
+                weekViewClamp: allDayEdgeWeekViewClamp()
             ) else {
                 return false
             }

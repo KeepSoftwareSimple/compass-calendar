@@ -742,6 +742,12 @@ public final class NativeCalendarRootModel {
         ) ?? startOfView
     }
 
+    /// Week-view window for all-day edge nudge clamping (web `dayBoundary.weekDays`).
+    func allDayEdgeWeekViewClamp() -> (visibleStart: Date, visibleEndInclusive: Date)? {
+        guard viewStore.view == .week else { return nil }
+        return (startOfView, endOfView)
+    }
+
     func visibleDateKeys() -> [String] {
         let calendar = EffectiveTimeZone.calendar
         return (0 ..< viewStore.visibleDayCount).compactMap { offset in
