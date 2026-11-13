@@ -860,10 +860,10 @@
         "apps/calendar-macos/CompassUITests/DescriptionLinkCopyShortcutTests.swift#testExportedShortcutCopiesAPastedDescriptionLink",
         "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/BookingDescriptionKeyboardTests.swift#testBothBookingLinksSupportKeyboardSelectionAndDestinationHelp"
       ],
-      "status": "missing",
-      "reason": "New isolated AppKit integration regression uses a real window/responder and keyboard word selection for both named links, checks full destination help and unchanged HTML. Pending execution. This native caret-selection path does not establish separate tabbable AX links, visible focus-ring review or real signed-in acceptance; those remain missing.",
-      "evidence": "",
-      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+      "status": "passing",
+      "reason": "AppKit integration regression covers real window/responder Option+Shift and Command+arrow word selection for both named links, full destination tooltips, and unchanged HTML. Same coverage as booking-named-link-help; DOM tabindex/c-focus-ring and separate tabbable AX link roles remain open under booking-browser-link-chrome exclusion. Signed-in freeze/responsive acceptance is not this test.",
+      "evidence": "Cross-ref booking-named-link-help: merged #5027 aab6066c, swift-packages strict41232910599 PASS. Inspection 2026-11-07: no native code defect found; inventory missing status was stale.",
+      "review": "2026-11-07 agent: read BookingDescriptionKeyboardTests, BookedMeetingActionsTests, web description-booking-links; reconciled with passing booking-named-link-help."
     },
     {
       "id": "booking-browser-link-chrome",
