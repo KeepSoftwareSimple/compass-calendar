@@ -1,6 +1,6 @@
+import { INLINE_COMMAND_REQUEST_BUDGET_MS } from "@core/types/sync/command.contracts";
 import {
   capDelayForInlineProviderRequest,
-  INLINE_COMMAND_REQUEST_BUDGET_MS,
   INLINE_REQUEST_MAX_RETRY_AFTER_MS,
   inlineProviderRequestBudgetRemainingMs,
   runWithInlineProviderRequestBudget,
