@@ -53,10 +53,9 @@ public struct SidebarSyncStatus: Equatable, Sendable {
             else { return nil }
             return SidebarSyncStatus(variant: .syncing, text: "Syncing in the background…")
         case "delayed":
-            let product = connection.provider == .microsoft ? "Outlook" : "Google"
+            let (product, vendor) = CalendarConnectionBanner.delayedNames(connection.provider)
             let text: String
             if connection.stateReason == "providerErrors" {
-                let vendor = connection.provider == .microsoft ? "Microsoft" : "Google"
                 text = "\(product) delayed: \(vendor) is slow"
             } else {
                 text = "\(product) updates are delayed"

@@ -37,16 +37,11 @@ public struct CalendarConnectionBanner: Equatable, Sendable {
         case .importFailed:
             return "Couldn't add your calendar."
         case .delayed:
-            if connection.provider == .microsoft {
-                if connection.stateReason == "providerErrors" {
-                    return "Outlook updates are delayed: Microsoft is slow to respond."
-                }
-                return "Outlook updates are delayed."
-            }
+            let (product, vendor) = Self.delayedNames(connection.provider)
             if connection.stateReason == "providerErrors" {
-                return "Google updates are delayed: Google is slow to respond."
+                return "\(product) updates are delayed: \(vendor) is slow to respond."
             }
-            return "Google updates are delayed."
+            return "\(product) updates are delayed."
         }
     }
 
@@ -74,6 +69,15 @@ public struct CalendarConnectionBanner: Equatable, Sendable {
         let attention = connection.connectionState == .aTTENTION || connection.state == "delayed"
         if attention, connection.lastHealthyAt == nil { return .importFailed }
         return attention ? .delayed : nil
+    }
+
+    /// The short product and vendor names used in delayed copy.
+    static func delayedNames(_ provider: ProviderEnum?) -> (product: String, vendor: String) {
+        switch provider {
+        case .microsoft: ("Outlook", "Microsoft")
+        case .apple: ("Apple", "Apple")
+        default: ("Google", "Google")
+        }
     }
 
     private static func productName(_ provider: ProviderEnum?) -> String {
