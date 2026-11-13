@@ -63,6 +63,42 @@ const syncCalendarToBrowser = (
   )[0]!;
 
 describe("syncCalendarToBrowser", () => {
+  it("omits retained calendars from disconnected accounts while keeping same-address siblings", () => {
+    const google = providerCalendar();
+    const microsoft = providerCalendar();
+    const reconnect = providerCalendar();
+    const connection = (
+      calendar: ProviderCalendar,
+      provider: ProviderConnection["provider"],
+      state: ProviderConnection["state"],
+    ) =>
+      ({
+        id: calendar.connectionId,
+        provider,
+        state,
+        account: { email: "shared@example.com" },
+      }) as ProviderConnection;
+
+    const result = syncCalendarsToBrowser(
+      [google, microsoft, reconnect],
+      [
+        connection(google, "google", "healthy"),
+        connection(microsoft, "microsoft", "disconnected"),
+        connection(reconnect, "microsoft", "actionRequired"),
+      ],
+    );
+
+    expect(result.map((calendar) => calendar.id)).toEqual([
+      google.id,
+      reconnect.id,
+    ]);
+    expect(
+      result.every(
+        (calendar) => calendar.accountEmail === "shared@example.com",
+      ),
+    ).toBe(true);
+  });
+
   it("uses the sync calendar id directly as the browser calendar id", () => {
     const calendar = providerCalendar();
     // Option 2: calendars are sync-owned, so no id bridge — the browser uses
