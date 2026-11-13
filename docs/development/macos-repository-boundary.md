@@ -21,9 +21,10 @@ Without COMPASS_MACOS_DIR, exports write under build/desktop-export, never into 
 The native repository provides .github/scripts/sync-from-web.sh to run these commands and record the source commit.
 Review and commit generated changes in the native repo. Ordinary web changes do not launch native CI.
 
-Before merging the extraction PR, remove the old required `macos` and Swift CodeQL contexts from the source
-repository ruleset. Require the native repository's `macos` rollup there instead. This is a repository setting,
-not something workflow deletion updates automatically.
+The organization ruleset still requires a check named `macos` in this repository.
+`test-repository-boundary.yml` supplies it on Ubuntu and verifies Swift sources and Mac runner jobs remain
+absent. The native repository owns the actual `macos` build and test rollup. No organization settings change
+is needed for this extraction.
 
 Signing, notarization, Sparkle credentials, and any parity worker credentials must be configured separately in
 the native repository by an owner. Existing releases and appcasts stay available in the source repository so
