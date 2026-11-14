@@ -136,7 +136,7 @@
   const { visitor, appUrl, signInUrl } = window.COMPASS;
   for (const link of document.querySelectorAll("[data-app]")) {
     link.href = appUrl;
-    if (visitor.returning) link.textContent = "MY CALENDAR >";
+    if (visitor.returning) link.textContent = "My calendar";
   }
   for (const link of document.querySelectorAll("[data-signin]")) {
     link.href = signInUrl;
