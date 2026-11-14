@@ -11,6 +11,48 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-14
+
+No finding. Two merges landed after the 2026-11-13 sweep: #5255 was that
+sweep's own finding and is excluded as its output, leaving #5256 as the only
+candidate. Gate step 1 was clean: `bun knip` reports no unused files or
+exports (three standing config hints, down from four now that the native
+tree is gone), `bun lint` passes every rule, `bun type-check` passes.
+
+- **The native repository extraction** (#5256, 908 deleted files). A move this
+  large is the likeliest place for a dangling reference, since no detector
+  follows shell, workflow, or Markdown paths, so each deleted non-resource
+  path was grepped against the remaining tree. The three hits are all
+  deliberate: `docs/README.md` rewrites its five desktop links to
+  `compass-calendar-mac` blob URLs rather than leaving them local,
+  `agent-loop-routine.test.ts` asserts `existsSync(".github/workflows/test-macos.yml")`
+  is `false` as a boundary guard, and `desktop-menu-shortcuts.contract.ts`
+  mentions `CompassKitTests` in a comment about who consumes the shared
+  export. Nothing left behind in `package.json`, `knip.json`, or the
+  workflows.
+
+- **`detect-code-changes.sh` losing its `contracts` output** (#5256). The
+  `apps/calendar-macos/**` filter and the `contracts` leg were removed
+  together with their nine-argument `write_outputs` positions, and
+  `detect-code-changes.test.sh` dropped the two macOS cases and renumbered
+  every expectation in the same commit, so the detector and its fixture
+  cannot drift apart. `contracts:swift` itself is retained and repointed from
+  a hardcoded `apps/calendar-macos/...` path to `COMPASS_MACOS_DIR`, with the
+  native side owning the check per `macos-repository-boundary.md`.
+
+- **`ts_code_files="$code_files"`** in `detect-code-changes.sh`. Now a
+  pointless alias, left where the macOS exclusion used to compute it. Taste,
+  not debt: nothing can diverge, no tool reports it, and the name still
+  carries the "TS, not native" meaning through the pipeline below it. Noted
+  rather than spent.
+
+- **`test-repository-boundary.yml`** (#5256). Its job is named `macos` on
+  purpose, to supply the context the organization ruleset still requires
+  while the native repository owns the real rollup; a rename would hang every
+  PR on a check that never reports. The `grep -RE 'runs-on: +macos-'` arm sits
+  inside an `if`, so its no-match exit status cannot trip the step's `bash -e`.
+  Verified, not changed.
+
 ## 2026-11-13
 
 Swept the 8 merges that landed after the 2026-11-12 sweep's own output (#5239,
