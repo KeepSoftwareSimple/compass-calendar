@@ -238,7 +238,7 @@ export function WelcomeModal() {
   const handleShortcutKey = (e: React.KeyboardEvent) => {
     // A held Enter auto-repeats native button clicks, which would blast
     // through all three screens and into signup. Only the first press counts.
-    if (e.key === "Enter" && e.repeat) {
+    if (e.key === "Enter" && (e.repeat || closing)) {
       e.preventDefault();
       return;
     }

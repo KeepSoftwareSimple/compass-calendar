@@ -587,6 +587,17 @@ describe("WelcomeModal", () => {
     ).not.toBe("true");
   });
 
+  it("does not submit signup when Enter follows S during the practice transition", async () => {
+    const user = userEvent.setup();
+    renderWelcomeModal();
+    await goToChooseScreen(user);
+    await user.keyboard("s{Enter}");
+    expect(mockOpenModal).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(useShortcutShowcaseStore.getState().isActive).toBe(true),
+    );
+  });
+
   it("does not start practice if explore is pressed after login before auth opens", async () => {
     const user = userEvent.setup();
     renderWelcomeModal();
