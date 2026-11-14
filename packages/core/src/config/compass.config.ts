@@ -129,6 +129,13 @@ const CompassConfigSchema = z
         host: optionalString,
       })
       .nullish(),
+    // Kit (kit.com) v4 API key. The landing page's "email me the link" form
+    // adds the visitor as a Kit subscriber. Omit to turn that route off.
+    kit: z
+      .object({
+        apiKey: optionalString,
+      })
+      .nullish(),
     // Google Places API (New) key for location autocomplete in the web
     // event form. Ships to the browser, so restrict it to Places API (New)
     // and your web origins. Omit to keep the plain location input.

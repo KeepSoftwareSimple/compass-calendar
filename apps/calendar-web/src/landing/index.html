@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Compass Calendar: the keyboard calendar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
+    />
+    <link rel="stylesheet" href="/start/crt.css" />
+    <script>
+      // With scripts on, the game replaces the plain fallback links.
+      document.documentElement.classList.add("js");
+    </script>
+    <style>
+      #out {
+        max-width: 760px;
+        white-space: pre-wrap;
+      }
+      #out p {
+        margin: 0 0 0.6em;
+      }
+      #choices {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        max-width: 760px;
+        margin-top: 10px;
+      }
+      #instant {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--fg);
+        font: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      #instant:focus-visible {
+        outline: 1px solid var(--accent);
+        outline-offset: 2px;
+      }
+      #email-form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: 760px;
+        margin: 6px 0 14px;
+      }
+      #email-form[hidden],
+      #instant[hidden],
+      .typing-hint[hidden],
+      .js #fallback {
+        display: none;
+      }
+      /* The pixel pirate from the app's welcome screen, so the game and the
+         calendar read as one place. */
+      #pirate {
+        display: block;
+        width: 64px;
+        height: 64px;
+        margin-bottom: 12px;
+        animation: pirate-scout 2.2s ease-in-out infinite;
+      }
+      @keyframes pirate-scout {
+        0%,
+        50%,
+        100% {
+          transform: translate(0, 0);
+        }
+        25% {
+          transform: translate(-6.25%, -6.25%);
+        }
+        75% {
+          transform: translate(6.25%, -6.25%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #pirate {
+          animation: none;
+        }
+      }
+      #fallback p {
+        margin: 0 0 0.6em;
+      }
+      /* The send button stays quiet until the address looks complete. */
+      #send {
+        border-color: var(--dim);
+        color: var(--dim);
+      }
+      #send.ready {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--on-accent);
+        text-shadow: none;
+      }
+      #send:disabled {
+        cursor: progress;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      #email-form p {
+        margin: 0;
+      }
+      #email {
+        font: inherit;
+        color: var(--hot);
+        background: transparent;
+        border: 1px solid var(--fg);
+        border-radius: 0;
+        padding: 8px 10px;
+        min-height: 48px;
+        width: 100%;
+      }
+      #email:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      /* Phones: center the game in the screen and make it easier to read
+         and tap. */
+      @media (max-width: 640px) {
+        .screen {
+          display: flex;
+          flex-direction: column;
+          padding: 16px 20px;
+        }
+        .stage {
+          margin-block: auto;
+          width: 100%;
+        }
+        #choices {
+          gap: 10px;
+          margin-top: 16px;
+        }
+        #choices .key {
+          min-height: 56px;
+          padding: 10px 14px;
+        }
+      }
+      #choices .key {
+        text-align: left;
+        text-transform: none;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <a href="/start" class="hot">COMPASS</a>
+      <span class="title">THE KEYBOARD CALENDAR</span>
+      <nav aria-label="Compass">
+        <a data-signin href="/week?auth=login">SIGN IN</a>
+        <a class="cta" data-app href="/week">TRY IT &gt;</a>
+      </nav>
+    </header>
+    <main class="screen" id="screen">
+      <div class="stage">
+        <!-- Same pixels as components/WelcomeModal/PixelPirate.tsx. -->
+        <svg
+          id="pirate"
+          viewBox="0 0 16 16"
+          role="img"
+          aria-label="Pixel pirate"
+          shape-rendering="crispEdges"
+        >
+          <g fill="var(--accent)">
+            <rect x="4" y="0" width="8" height="1" />
+            <rect x="3" y="1" width="10" height="1" />
+            <rect x="2" y="2" width="12" height="1" />
+            <rect x="3" y="3" width="10" height="1" />
+          </g>
+          <rect x="7" y="1" width="2" height="1" fill="#e6edf3" />
+          <g fill="#f4d7b5">
+            <rect x="4" y="4" width="8" height="5" />
+            <rect x="3" y="10" width="1" height="1" />
+            <rect x="2" y="8" width="1" height="2" />
+            <rect x="12" y="10" width="1" height="1" />
+            <rect x="13" y="8" width="1" height="2" />
+          </g>
+          <g fill="#0d1017">
+            <rect x="4" y="5" width="8" height="1" />
+            <rect x="5" y="5" width="2" height="2" />
+            <rect x="9" y="6" width="1" height="1" />
+            <rect x="5" y="13" width="6" height="1" />
+            <rect x="6" y="14" width="1" height="1" />
+            <rect x="9" y="14" width="1" height="1" />
+          </g>
+          <g fill="#8b5e3c">
+            <rect x="4" y="9" width="8" height="1" />
+            <rect x="5" y="10" width="6" height="1" />
+          </g>
+          <g fill="#c2c6cc">
+            <rect x="4" y="11" width="8" height="1" />
+            <rect x="5" y="12" width="6" height="1" />
+          </g>
+        </svg>
+        <div id="fallback">
+          <p>COMPASS CALENDAR</p>
+          <p>A calendar you run from your keyboard.</p>
+          <p><a href="/week">Try the calendar now (no signup required)</a></p>
+          <p><a href="/week?auth=login">I have an account. Sign in.</a></p>
+        </div>
+        <div id="out" aria-live="polite"></div>
+        <form id="email-form" novalidate hidden>
+          <label for="email">Your email</label>
+          <input
+            id="email"
+            name="email_address"
+            type="email"
+            inputmode="email"
+            autocomplete="email"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="send"
+            placeholder="you@example.com"
+            aria-describedby="email-status"
+            required
+          />
+          <button type="submit" class="key" id="send">Send me the link</button>
+          <p class="dim">
+            You get one email with the link, then occasional Compass updates.
+            Unsubscribe any time.
+          </p>
+          <p id="email-status" role="status"></p>
+        </form>
+        <nav id="choices" aria-label="Choices"></nav>
+      </div>
+    </main>
+    <footer class="pad dim" id="hints" hidden>
+      <span class="keys-only">
+        1-9 choose &middot; arrows or J/K move &middot; Enter confirm<span
+          class="typing-hint"
+        >
+          &middot; Tab shows all the text at once</span
+        >
+      </span>
+      <span class="touch-only">
+        Tap a choice.<span class="typing-hint">
+          Tap the text to show it all at once.</span
+        >
+      </span>
+      <button
+        type="button"
+        id="instant"
+        class="typing-hint"
+        aria-pressed="false"
+      >
+        TYPING EFFECT: ON
+      </button>
+    </footer>
+    <script
+      src="https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"
+      integrity="sha384-psnXgYQBIOUbtPSN1bi0AUHIeqzwBIxWY13mrAEUXfKii5/aZaQL5tW70jnfrAdY"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/start/config.js"></script>
+    <script src="/start/journey.js"></script>
+    <script src="/start/gamebook.story.js"></script>
+    <script src="/start/gamebook.js"></script>
+  </body>
+</html>

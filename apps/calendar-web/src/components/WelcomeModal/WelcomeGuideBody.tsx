@@ -19,7 +19,7 @@ export function WelcomeGuideBody({
   return (
     <>
       <div className="flex w-full flex-col gap-2">
-        <h2 className="font-bold text-2xl text-text leading-snug">
+        <h2 className="font-[VT323,monospace] text-4xl text-text leading-none">
           The Keyboard Calendar
         </h2>
         <p className="text-text-muted">

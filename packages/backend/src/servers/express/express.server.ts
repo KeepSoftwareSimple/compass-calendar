@@ -32,6 +32,7 @@ import {
 } from "@backend/email/email.routes.config";
 import { EventRoutes } from "@backend/event/event.routes.config";
 import { HealthRoutes } from "@backend/health/health.routes.config";
+import { LandingRoutes } from "@backend/landing/landing.routes.config";
 import { EventsRoutes } from "@backend/servers/sse/events-stream.routes.config";
 import { UserRoutes } from "@backend/user/user.routes.config";
 import { createServer } from "node:http";
@@ -72,6 +73,7 @@ export const initExpressServer = () => {
   routes.push(new UserRoutes(app));
   routes.push(new BillingRoutes(app));
   routes.push(new EmailRoutes(app));
+  routes.push(new LandingRoutes(app));
   routes.push(new EventRoutes(app));
   routes.push(new EventsRoutes(app));
   routes.push(new CalendarRoutes(app));

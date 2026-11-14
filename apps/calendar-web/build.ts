@@ -112,7 +112,7 @@ await Bun.write(
   JSON.stringify({ version: BUILD_VERSION }, null, 2),
 );
 
-await copyStaticAssets(OUTDIR);
+await copyStaticAssets(OUTDIR, config.backend.apiUrl);
 const preloaded = await injectModulePreloads(OUTDIR, result.metafile);
 const precompressed = await precompressBuildOutput(OUTDIR);
 

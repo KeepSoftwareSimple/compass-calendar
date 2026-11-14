@@ -1,6 +1,7 @@
 import { loadCompassConfig } from "@core/config/compass.config";
 import { copyStaticAssets } from "./copy-static-assets";
 import { isGuestMeetStaticPath } from "./guest-meet-static-path";
+import { isLandingPath, LANDING_HTML } from "./landing-static-path";
 import { postcssPlugin } from "./plugins/postcss.plugin";
 import { startStaticDevServer } from "./static-dev-server";
 import path from "node:path";
@@ -64,7 +65,7 @@ async function build() {
     return false;
   }
 
-  await copyStaticAssets(OUTDIR);
+  await copyStaticAssets(OUTDIR, config.backend.apiUrl);
   await Bun.write(
     path.join(OUTDIR, "version.json"),
     JSON.stringify({ version: "dev" }, null, 2),
@@ -82,11 +83,15 @@ await startStaticDevServer({
   build,
   // Guest /meet lives in booking-web now; hand those paths over rather than
   // serving calendar-web's SPA fallback for them.
-  handleRequest: (url) =>
-    isGuestMeetStaticPath(url.pathname)
+  handleRequest: (url) => {
+    if (isLandingPath(url.pathname)) {
+      return new Response(Bun.file(path.join(OUTDIR, LANDING_HTML)));
+    }
+    return isGuestMeetStaticPath(url.pathname)
       ? Response.redirect(
           `${BOOKING_WEB_ORIGIN}${url.pathname}${url.search}`,
           307,
         )
-      : undefined,
+      : undefined;
+  },
 });
