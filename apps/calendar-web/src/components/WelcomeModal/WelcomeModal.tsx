@@ -347,7 +347,7 @@ export function WelcomeModal() {
         {step === 1 && (
           <>
             <div className="flex w-full flex-col gap-2">
-              <h1 className="font-bold text-2xl text-text leading-snug">
+              <h1 className="font-[VT323,monospace] text-4xl text-text leading-none">
                 The Keyboard Calendar
               </h1>
               <p className="text-text-muted">
@@ -371,7 +371,7 @@ export function WelcomeModal() {
                 Get started for free
                 <ShortcutHint className="ml-2">Enter</ShortcutHint>
               </button>
-              <p className="text-center text-text-muted text-xs">
+              <p className="text-center font-[VT323,monospace] text-base text-text-muted">
                 No account needed.
               </p>
             </div>

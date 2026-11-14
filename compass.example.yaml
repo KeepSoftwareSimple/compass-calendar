@@ -86,6 +86,12 @@ supertokens:
 # Omit the whole block to keep email off (no enrollment, poller, or send routes).
 # provider resend requires apiKey, from, webhookSecret, and unsubscribeSecret together.
 
+# kit:
+#   apiKey: REPLACE_WITH_KIT_V4_API_KEY
+# Kit (kit.com) subscriber list. With a key, the landing page's "email me the
+# link" form (phone visitors) adds the address as a Kit subscriber and sends
+# one reminder email through the `email:` provider above. Omit to turn it off.
+
 # billing:
 #   enforcement: false # operator pause switch — keep the app free for everyone
 #   bypassEmails: [] # accounts exempt from the gate, even with enforcement on
