@@ -7,52 +7,43 @@ import {
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1280, height: 900 } });
 
-const openEssentialShortcutsStep = async (page: Page) => {
+const openPractice = async (page: Page) => {
   await installDeterministicBrowserClock(page);
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-
   const welcomeDialog = page.getByRole("dialog", {
     name: "Welcome to Compass Calendar",
   });
   await expect(welcomeDialog).toBeVisible();
   await page.keyboard.press("Enter");
   await page.keyboard.press("Enter");
-  await expect(welcomeDialog.getByText("Step 3 of 4")).toBeVisible();
+  await expect(welcomeDialog.getByText("Step 3 of 3")).toBeVisible();
   await page.keyboard.press("s");
-  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
-  await expect(
-    welcomeDialog.getByRole("heading", { name: "Essential shortcuts" }),
-  ).toBeVisible();
-  return welcomeDialog;
+  await expect(welcomeDialog).toBeHidden();
+  const practice = page.getByRole("region", { name: "Shortcut practice" });
+  await expect(practice).toBeVisible();
+  return practice;
 };
 
-test("local explorers see keyboard shortcuts after the account choice", async ({
+test("local explorers learn shortcuts in Block Party after the account choice", async ({
   page,
 }) => {
-  const welcomeDialog = await openEssentialShortcutsStep(page);
-  await expect(welcomeDialog.getByText("Create an event")).toBeVisible();
+  const practice = await openPractice(page);
   await expect(
-    welcomeDialog.getByText("Open the command palette"),
+    practice.getByRole("heading", { name: "Learn Compass by doing" }),
   ).toBeVisible();
+  await practice.getByRole("button", { name: "Start practicing" }).click();
+  await expect(practice).toContainText("Task 1/11");
+  await page.keyboard.press("c");
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("Enter");
+  await expect(practice).toContainText("Task 2/11");
 });
 
-test("essential shortcuts step keycaps work on web", async ({ page }) => {
-  const welcomeDialog = await openEssentialShortcutsStep(page);
-
+test("calendar shortcuts work after leaving practice", async ({ page }) => {
+  const practice = await openPractice(page);
   await page.keyboard.press("Escape");
-  await expect(welcomeDialog.getByText("Step 3 of 4")).toBeVisible();
-  await page.keyboard.press("s");
-  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
-
-  await welcomeDialog.getByRole("button", { name: "Log in" }).focus();
-  await page.keyboard.press("i");
-  const loginDialog = page.getByRole("dialog", { name: "Hey, welcome back" });
-  await expect(loginDialog).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(loginDialog).toBeHidden();
-
-  await page.keyboard.press("Enter");
-  await expect(welcomeDialog).toBeHidden();
+  await expect(practice).toBeHidden();
 
   const firstEventPrompt = page.getByRole("complementary", {
     name: "Create your first event",

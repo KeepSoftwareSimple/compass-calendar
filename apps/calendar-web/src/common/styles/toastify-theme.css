@@ -7,9 +7,9 @@
 .Toastify__toast-theme--dark,
 .Toastify__toast-theme--light,
 .Toastify__toast-theme--colored.Toastify__toast--default {
-  background: var(--background);
+  background: var(--surface-panel);
   color: var(--text);
-  box-shadow: 0 4px 12px var(--shadow-default);
+  box-shadow: var(--shadow-xl);
 }
 
 .Toastify__progress-bar-theme--light,
@@ -51,9 +51,8 @@
   flex-shrink: 0;
   border-radius: 0.75rem;
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 95%, transparent);
-  backdrop-filter: blur(24px) saturate(150%);
-  box-shadow: 0 4px 12px var(--shadow-default);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-xl);
 }
 
 .compass-bottom-notice-stack .Toastify__toast-body {

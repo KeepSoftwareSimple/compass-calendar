@@ -40,9 +40,9 @@ export const APP_UPDATE_AVAILABLE_TOAST_ID: Id = "app-update-available";
  * default light (#fff) or dark (#121212) panel.
  */
 export const TOAST_CHROME_STYLE: CSSProperties = {
-  backgroundColor: "var(--background)",
+  backgroundColor: "var(--surface-panel)",
   color: "var(--text)",
-  boxShadow: "0 4px 12px var(--shadow-default)",
+  boxShadow: "var(--shadow-xl)",
 };
 
 /** Theme-aware toast defaults. Read the store at call time so toasts match the active palette. */
