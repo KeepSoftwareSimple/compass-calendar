@@ -4,12 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#f3eee2" />
     <title>Compass Calendar: the keyboard calendar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500&family=VT323&display=swap"
     />
     <link rel="stylesheet" href="/start/crt.css" />
     <script>
@@ -17,54 +18,12 @@
       document.documentElement.classList.add("js");
     </script>
     <style>
-      #out {
-        max-width: 760px;
-        white-space: pre-wrap;
-      }
-      #out p {
-        margin: 0 0 0.6em;
-      }
-      #choices {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-        max-width: 760px;
-        margin-top: 10px;
-      }
-      #instant {
-        padding: 0;
-        border: 0;
-        background: none;
-        color: var(--fg);
-        font: inherit;
-        text-decoration: underline;
-        cursor: pointer;
-      }
-      #instant:focus-visible {
-        outline: 1px solid var(--accent);
-        outline-offset: 2px;
-      }
-      #email-form {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        max-width: 760px;
-        margin: 6px 0 14px;
-      }
-      #email-form[hidden],
-      #instant[hidden],
-      .typing-hint[hidden],
-      .js #fallback {
-        display: none;
-      }
-      /* The pixel pirate from the app's welcome screen, so the game and the
-         calendar read as one place. */
+      /* The pixel pirate from the app's welcome screen, in the same corner. */
       #pirate {
         display: block;
-        width: 64px;
-        height: 64px;
-        margin-bottom: 12px;
+        flex: none;
+        width: 56px;
+        height: 56px;
         animation: pirate-scout 2.2s ease-in-out infinite;
       }
       @keyframes pirate-scout {
@@ -85,19 +44,72 @@
           animation: none;
         }
       }
+      #out {
+        white-space: pre-wrap;
+      }
+      #out p,
       #fallback p {
         margin: 0 0 0.6em;
       }
+      #choices {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      #choices .key {
+        text-align: left;
+        text-transform: none;
+        width: 100%;
+      }
+      #instant {
+        display: inline-flex;
+        align-items: center;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--fg);
+        font: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      #email-form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 6px 0 14px;
+      }
+      #email-form[hidden],
+      #instant[hidden],
+      .typing-hint[hidden],
+      .js #fallback {
+        display: none;
+      }
+      #email-form p {
+        margin: 0;
+      }
+      #email {
+        font: inherit;
+        color: var(--hot);
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 8px 10px;
+        min-height: 48px;
+        width: 100%;
+      }
+      #email:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
       /* The send button stays quiet until the address looks complete. */
       #send {
-        border-color: var(--dim);
         color: var(--dim);
       }
       #send.ready {
         border-color: var(--accent);
         background: var(--accent);
         color: var(--on-accent);
-        text-shadow: none;
       }
       #send:disabled {
         cursor: progress;
@@ -110,62 +122,46 @@
         clip-path: inset(50%);
         white-space: nowrap;
       }
-      #email-form p {
-        margin: 0;
-      }
-      #email {
-        font: inherit;
-        color: var(--hot);
-        background: transparent;
-        border: 1px solid var(--fg);
-        border-radius: 0;
-        padding: 8px 10px;
-        min-height: 48px;
-        width: 100%;
-      }
-      #email:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-      }
-      /* Phones: center the game in the screen and make it easier to read
-         and tap. */
-      @media (max-width: 640px) {
-        .screen {
-          display: flex;
-          flex-direction: column;
-          padding: 16px 20px;
-        }
-        .stage {
-          margin-block: auto;
-          width: 100%;
-        }
-        #choices {
-          gap: 10px;
-          margin-top: 16px;
-        }
-        #choices .key {
-          min-height: 56px;
-          padding: 10px 14px;
-        }
-      }
-      #choices .key {
-        text-align: left;
-        text-transform: none;
-        width: 100%;
-      }
     </style>
   </head>
   <body>
-    <header class="bar">
-      <a href="/start" class="hot">COMPASS</a>
-      <span class="title">THE KEYBOARD CALENDAR</span>
-      <nav aria-label="Compass">
-        <a data-signin href="/week?auth=login">SIGN IN</a>
-        <a class="cta" data-app href="/week">TRY IT &gt;</a>
-      </nav>
-    </header>
-    <main class="screen" id="screen">
-      <div class="stage">
+    <!-- A sketch of the week view. Decorative: the real one is at /week. -->
+    <div class="calendar" aria-hidden="true">
+      <div class="cal-main">
+        <div class="cal-title" id="cal-title"></div>
+        <div class="cal-days">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span
+          ><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div class="cal-grid">
+          <span
+            class="cal-event"
+            style="left: calc(100% / 7 + 4px); top: 31%; height: 12%; background: #b9cdb4"
+          ></span>
+          <span
+            class="cal-event"
+            style="left: calc(300% / 7 + 4px); top: 46%; height: 8%; background: #d8c79f"
+          ></span>
+          <span
+            class="cal-event"
+            style="left: calc(400% / 7 + 4px); top: 23%; height: 15%; background: #c7c2d3"
+          ></span>
+          <span
+            class="cal-event"
+            style="left: calc(500% / 7 + 4px); top: 62%; height: 8%; background: #b9cdb4"
+          ></span>
+        </div>
+      </div>
+      <div class="cal-side">
+        <div style="height: 220px"></div>
+        <div style="height: 96px"></div>
+        <div style="height: 56px"></div>
+      </div>
+    </div>
+    <div class="veil"></div>
+
+    <main class="card">
+      <header class="card-top">
         <!-- Same pixels as components/WelcomeModal/PixelPirate.tsx. -->
         <svg
           id="pirate"
@@ -205,6 +201,12 @@
             <rect x="5" y="12" width="6" height="1" />
           </g>
         </svg>
+        <nav aria-label="Compass">
+          <a class="pill" data-signin href="/week?auth=login">Log in</a>
+          <a class="pill" data-app href="/week">Open calendar</a>
+        </nav>
+      </header>
+      <div class="screen" id="screen">
         <div id="fallback">
           <p>COMPASS CALENDAR</p>
           <p>A calendar you run from your keyboard.</p>
@@ -237,8 +239,7 @@
         </form>
         <nav id="choices" aria-label="Choices"></nav>
       </div>
-    </main>
-    <footer class="pad dim" id="hints" hidden>
+      <footer class="pad dim" id="hints" hidden>
       <span class="keys-only">
         1-9 choose &middot; arrows or J/K move &middot; Enter confirm<span
           class="typing-hint"
@@ -260,6 +261,16 @@
         TYPING EFFECT: ON
       </button>
     </footer>
+    </main>
+
+    <script>
+      // The backdrop shows this month, like the calendar header will.
+      document.getElementById("cal-title").textContent =
+        new Date().toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        });
+    </script>
     <script
       src="https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"
       integrity="sha384-psnXgYQBIOUbtPSN1bi0AUHIeqzwBIxWY13mrAEUXfKii5/aZaQL5tW70jnfrAdY"
