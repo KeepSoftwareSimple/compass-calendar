@@ -16,9 +16,12 @@ async function reachFirstEventPrompt(page: import("@playwright/test").Page) {
   await page.keyboard.press("Enter");
   await page.keyboard.press("Enter");
   await page.keyboard.press("s");
-  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
-  await page.keyboard.press("Enter");
   await expect(welcomeDialog).toBeHidden();
+  const practice = page.getByRole("region", { name: "Shortcut practice" });
+  await expect(practice).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(practice).toBeHidden();
 
   const prompt = page.getByRole("complementary", {
     name: "Create your first event",

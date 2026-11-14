@@ -40,11 +40,13 @@ test("exploring without an account returns focus to the week view without trappi
     .click();
   await welcomeDialog.getByRole("button", { name: "Next" }).click();
   await welcomeDialog
-    .getByRole("button", { name: "On this device only" })
+    .getByRole("button", { name: "Start without an account" })
     .click();
-  await welcomeDialog
-    .getByRole("button", { name: "Continue to calendar" })
-    .click();
+  await expect(
+    page.getByRole("region", { name: "Shortcut practice" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
   await expect(welcomeDialog).toBeHidden();
 
   await page.keyboard.press("Tab");

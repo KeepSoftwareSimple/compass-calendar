@@ -19,11 +19,9 @@ const dismissWelcomeWithExplore = async (page: Page) => {
   ).toBeVisible();
   await page.keyboard.press("Enter");
   await expect(
-    welcomeDialog.getByRole("button", { name: "On this device only" }),
+    welcomeDialog.getByRole("button", { name: "Start without an account" }),
   ).toBeVisible();
   await page.keyboard.press("s");
-  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
-  await page.keyboard.press("Enter");
   await expect(welcomeDialog).toBeHidden();
 };
 
@@ -146,18 +144,13 @@ const clearTheQueue = async (page: Page) => {
   await expect(showcase).toContainText("You cleared the week!");
 };
 
-test("exploring without an account leaves Block Party closed", async ({
-  page,
-}) => {
+test("exploring without an account opens Block Party", async ({ page }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
   await dismissWelcomeWithExplore(page);
-
-  await expect(
-    page.getByRole("region", { name: "Shortcut practice" }),
-  ).toHaveCount(0);
+  await startPracticing(page);
   await expect(
     page.getByRole("complementary", { name: "Create your first event" }),
-  ).toBeVisible();
+  ).toBeHidden();
 });
 
 test("stalling on a task surfaces its hint, and progress clears it", async ({
@@ -255,6 +248,9 @@ test("Enter on the end screen hands an anonymous player to signup", async ({
     page.getByRole("region", { name: "Shortcut practice" }),
   ).toHaveCount(0);
   await expect(page).toHaveURL(/auth=signup/);
+  await expect(
+    page.getByRole("dialog", { name: "Nice to meet you" }),
+  ).toBeVisible();
 });
 
 test("Skip to sign up leaves the game for the signup form", async ({
@@ -272,6 +268,9 @@ test("Skip to sign up leaves the game for the signup form", async ({
   await page.keyboard.press("u");
   await expect(showcase).toHaveCount(0);
   await expect(page).toHaveURL(/auth=signup/);
+  await expect(
+    page.getByRole("dialog", { name: "Nice to meet you" }),
+  ).toBeVisible();
 });
 
 test("Escape mid-run skips one task and keeps the game up", async ({

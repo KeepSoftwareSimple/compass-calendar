@@ -54,6 +54,28 @@ test.describe("signup provider layout at 1280", () => {
   });
 });
 
+test("signup field jumps work while typing and preserve numbers", async ({
+  page,
+}) => {
+  await page.goto("/week?auth=signup", { waitUntil: "domcontentloaded" });
+  const email = page.getByRole("textbox", { name: "Email", exact: true });
+  const name = page.getByRole("textbox", { name: "Name", exact: true });
+  const password = page.getByLabel("Password", { exact: true });
+  await expect(email).toBeFocused();
+  await page.keyboard.type("ada123@example.com");
+  await page.keyboard.press("ControlOrMeta+1");
+  await expect(name).toBeFocused();
+  await page.keyboard.type("Ada2");
+  await page.keyboard.press("ControlOrMeta+3");
+  await expect(password).toBeFocused();
+  await page.keyboard.type("a-password-123");
+  await page.keyboard.press("ControlOrMeta+2");
+  await expect(email).toBeFocused();
+  await expect(email).toHaveValue("ada123@example.com");
+  await expect(name).toHaveValue("Ada2");
+  await expect(password).toHaveValue("a-password-123");
+});
+
 test.describe("signup provider layout at 360", () => {
   test.use({ viewport: { width: 360, height: 740 } });
 

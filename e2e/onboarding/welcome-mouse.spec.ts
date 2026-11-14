@@ -18,7 +18,7 @@ test("walks the welcome flow with the mouse only", async ({
   await welcomeDialog
     .getByRole("button", { name: "Get started for free" })
     .click();
-  await expect(welcomeDialog.getByText("Step 2 of 4")).toBeVisible();
+  await expect(welcomeDialog.getByText("Step 2 of 3")).toBeVisible();
 
   const faqQuestions = [
     "Who is Compass for?",
@@ -35,7 +35,7 @@ test("walks the welcome flow with the mouse only", async ({
   }
 
   await welcomeDialog.getByRole("button", { name: "Next" }).click();
-  await expect(welcomeDialog.getByText("Step 3 of 4")).toBeVisible();
+  await expect(welcomeDialog.getByText("Step 3 of 3")).toBeVisible();
 
   await expect(
     welcomeDialog.getByRole("link", { name: "Pricing" }),
@@ -51,11 +51,8 @@ test("walks the welcome flow with the mouse only", async ({
   ).toHaveCount(0);
 
   await welcomeDialog
-    .getByRole("button", { name: "On this device only" })
+    .getByRole("button", { name: "Start without an account" })
     .click();
-  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
-  await welcomeDialog
-    .getByRole("button", { name: "Continue to calendar" })
-    .click();
+
   await expect(welcomeDialog).toHaveCount(0);
 });

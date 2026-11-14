@@ -41,15 +41,15 @@ test("welcomes a first-time user and seeds sample events", async ({
 
   // The welcome modal advertises S for this action; prove the shortcut.
   await expect(
-    welcomeDialog.getByRole("button", { name: "On this device only" }),
+    welcomeDialog.getByRole("button", { name: "Start without an account" }),
   ).toBeVisible();
   await page.keyboard.press("s");
-  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
-  await expect(
-    welcomeDialog.getByRole("heading", { name: "Essential shortcuts" }),
-  ).toBeVisible();
-  await page.keyboard.press("Enter");
   await expect(welcomeDialog).toBeHidden();
+  const practice = page.getByRole("region", { name: "Shortcut practice" });
+  await expect(practice).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(practice).toBeHidden();
   await expect(
     page.getByRole("region", { name: "Shortcut practice" }),
   ).toHaveCount(0);
