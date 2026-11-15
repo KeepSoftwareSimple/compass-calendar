@@ -381,7 +381,7 @@ export function WelcomeModal() {
         {step === 2 && (
           <>
             <div className="flex w-full flex-col gap-2">
-              <h2 className="font-bold text-2xl text-text leading-snug">
+              <h2 className="font-[VT323,monospace] text-4xl text-text leading-none">
                 How Compass works
               </h2>
               <p id={faqHintId} className="text-text-muted">
@@ -412,7 +412,7 @@ export function WelcomeModal() {
         {step === 3 && (
           <>
             <div className="flex w-full flex-col gap-2">
-              <h2 className="font-bold text-2xl text-text leading-snug">
+              <h2 className="font-[VT323,monospace] text-4xl text-text leading-none">
                 Let's get started
               </h2>
               <p className="text-text-muted">

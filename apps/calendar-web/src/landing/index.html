@@ -62,17 +62,6 @@
         text-transform: none;
         width: 100%;
       }
-      #instant {
-        display: inline-flex;
-        align-items: center;
-        padding: 0;
-        border: 0;
-        background: none;
-        color: var(--fg);
-        font: inherit;
-        text-decoration: underline;
-        cursor: pointer;
-      }
       #email-form {
         display: flex;
         flex-direction: column;
@@ -80,7 +69,6 @@
         margin: 6px 0 14px;
       }
       #email-form[hidden],
-      #instant[hidden],
       .typing-hint[hidden],
       .js #fallback {
         display: none;
@@ -244,22 +232,14 @@
         1-9 choose &middot; arrows or J/K move &middot; Enter confirm<span
           class="typing-hint"
         >
-          &middot; Tab shows all the text at once</span
+          &middot; Tab skips the typing</span
         >
       </span>
       <span class="touch-only">
         Tap a choice.<span class="typing-hint">
-          Tap the text to show it all at once.</span
+          Tap the text to skip the typing.</span
         >
       </span>
-      <button
-        type="button"
-        id="instant"
-        class="typing-hint"
-        aria-pressed="false"
-      >
-        TYPING EFFECT: ON
-      </button>
     </footer>
     </main>
 

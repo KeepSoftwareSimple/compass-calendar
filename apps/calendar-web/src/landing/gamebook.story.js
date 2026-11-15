@@ -54,7 +54,7 @@ None of this needs an account.
 === tour_1 ===
 # CLEAR
 STOP 1 OF 4: THE KEYS
-MONDAY. 8:59 AM. A double booking lunges out of Tuesday, all teeth and conference links.
+MONDAY. 8:59 AM. A double booking lunges out of Tuesday.
 + [Reach for the mouse] -> tour_1_mouse
 + [Press a key] -> tour_1_key
 

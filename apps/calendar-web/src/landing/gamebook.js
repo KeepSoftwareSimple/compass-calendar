@@ -29,23 +29,13 @@
     "(prefers-reduced-motion: reduce)",
   ).matches;
   const CHAR_DELAY_MS = 14;
-  // Impatient readers can turn the typing off for good: Tab while it types,
-  // or the footer button. Remembered per browser.
-  const INSTANT_KEY = "compass.landing.instantText";
-  const instantButton = document.getElementById("instant");
-  let instant = false;
-  try {
-    instant = localStorage.getItem(INSTANT_KEY) === "1";
-  } catch {
-    // Storage can be blocked. The toggle still works for this visit.
-  }
-  // With reduced motion there is no typing effect to skip or switch off.
+  // With reduced motion there is no typing effect to skip.
   for (const hint of document.querySelectorAll(".typing-hint")) {
     hint.hidden = reduceMotion;
   }
   document.getElementById("hints").hidden = false;
   let typing = false;
-  let skip = reduceMotion || instant;
+  let skip = reduceMotion;
   let selected = 0;
   let wantsEmailForm = false;
 
@@ -60,20 +50,6 @@
     skip = true;
     wake();
   };
-
-  function setInstant(on) {
-    instant = on;
-    instantButton.textContent = on ? "TYPING EFFECT: OFF" : "TYPING EFFECT: ON";
-    instantButton.setAttribute("aria-pressed", String(on));
-    try {
-      localStorage.setItem(INSTANT_KEY, on ? "1" : "0");
-    } catch {
-      // See above.
-    }
-    if (on) skipTyping();
-  }
-  setInstant(instant);
-  instantButton.addEventListener("click", () => setInstant(!instant));
 
   // Screen readers get the whole line once; the letter-by-letter copy is
   // visual only.
@@ -148,7 +124,7 @@
 
   async function renderScreen() {
     typing = true;
-    skip = reduceMotion || instant;
+    skip = reduceMotion;
     choicesEl.replaceChildren();
     wantsEmailForm = false;
     emailForm.hidden = true;
@@ -238,12 +214,10 @@
     // Typing an email address must not pick choices.
     if (event.target === emailInput) return;
     if (typing) {
-      // Any key finishes this screen. Tab also turns the typing off from
-      // here on. Once the text is up, Tab moves focus as usual.
-      if (event.key === "Tab") {
-        event.preventDefault();
-        setInstant(true);
-      } else skipTyping();
+      // Tab, or any other key, shows the rest of this screen at once. Once
+      // the text is up, Tab moves focus as usual.
+      if (event.key === "Tab") event.preventDefault();
+      skipTyping();
       return;
     }
     const key = event.key.toLowerCase();
