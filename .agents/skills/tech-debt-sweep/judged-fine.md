@@ -11,6 +11,36 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-15
+
+Swept the 4 merges that landed after the 2026-11-14 sweep's ledger (#5259,
+#5261, #5262, #5263); #5257 was that sweep's own output and is excluded. Gate
+step 1 was clean: `bun knip` reports no unused files or exports (three standing
+config hints), `bun lint` passes every rule, `bun type-check` passes. One
+finding, shipped as the command-palette all-day shortcuts reading
+`APP_SHORTCUT_BINDINGS` / `KEYMAP`. Everything below was examined and kept.
+
+- **Onboarding unification** (#5259). WelcomeKeyboardShortcutsStep is gone; the
+  practice path now hands off from ShortcutShowcase. Sign-up Mod+digit jumps use
+  `AUTH_SIGNUP_FIELD_DIGITS_BY_KEY` (name/email/password) rather than
+  `KEYMAP.jumpFormField` (event-form 0-9). Shared shape, not shared intent: the
+  two lists would diverge under a plausible next field. Toast chrome and
+  NoticeCard already share panel tokens; no parallel copy left.
+
+- **The landing game** (#5262, #5263). 1,500 lines of new static page plus a
+  Kit reminder route, still being polished in-flight by #5264. New code, not
+  debt; a sweep the day after a feature lands is the worst time to judge its
+  shape. `LANDING_PATH` / `LANDING_HTML` / `LANDING_ASSET_DIR` already live in
+  one module that the Dockerfiles, `copy-static-assets`, `dev.ts`, and
+  `serve-web` import. Leave it while #5264 is open.
+
+- **Signup digit-jump vs form digit-jump.** Same hold-Mod gesture, different
+  target tables. Folding them would couple onboarding field order to the event
+  form's DOM order.
+
+- **`ts_code_files` in `detect-code-changes.sh`.** Still the 2026-11-14 leftover
+  alias. Nothing new; still not spent.
+
 ## 2026-11-14
 
 No finding. Two merges landed after the 2026-11-13 sweep: #5255 was that
