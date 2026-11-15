@@ -84,10 +84,10 @@ You ask where the AI assistant is. There is not one. Nothing here schedules busy
 
 === tour_3 ===
 # CLEAR
-STOP 3 OF 4: THE DOTS
-You press L. The walls fall away and your whole life appears as a grid of dots, one for each week.
-Fewer are left than you hoped. You delete a recurring status meeting. Nobody notices. It feels wonderful.
-This is the Life view.
+STOP 3 OF 4: THE PALETTE
+You forget a shortcut. It happens.
+You press {mod}+K and type what you want, like "create event" or "go to today". The palette finds it, runs it, and shows you its key for next time.
+You never have to memorize the list up front.
 + [Next stop] -> tour_4
 + [Try the calendar] -> try
 + [Back to the start] -> boot
