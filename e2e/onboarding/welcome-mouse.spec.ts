@@ -24,8 +24,9 @@ test("walks the welcome flow with the mouse only", async ({
     "Who is Compass for?",
     "How is Compass different?",
     "What does 'the keyboard calendar' actually mean?",
-    "Why doesn't my mouse work?",
+    "Does it work with Google Calendar and Outlook?",
     "I don't know any shortcuts yet. Will I be lost?",
+    "Can I trust you?",
   ] as const;
 
   for (const question of faqQuestions) {

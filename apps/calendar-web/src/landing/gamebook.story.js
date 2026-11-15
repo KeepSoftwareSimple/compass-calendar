@@ -38,7 +38,7 @@ Where do you want to start?
 # CLEAR
 THE SHORT VERSION
 Compass is a calendar app for people who would rather type than click.
-1. Every action has a keyboard shortcut. Press C to create an event, arrows to move it.
+1. Every action has a keyboard shortcut.
 2. It syncs with Google Calendar and Microsoft Outlook.
 3. It is minimal and open source, and you can try it without an account.
 + [Show me, one thing at a time (1 minute)] -> tour_1
@@ -58,17 +58,21 @@ None of this needs an account.
 # CLEAR
 STOP 1 OF 4: THE KEYS
 MONDAY. 8:59 AM. A double booking lunges out of Tuesday.
+What do you do?
 + [Reach for the mouse] -> tour_1_mouse
 + [Press a key] -> tour_1_key
 
 === tour_1_mouse ===
-You reach for the mouse. There is no mouse. There was never a mouse.
--> tour_1_key
+No. Throw away your mouse, you don't need it here. Everything has a shortcut. No more clicking.
+-> tour_1_next
 
 === tour_1_key ===
 You press C. A new event appears exactly where your focus sits.
 Alt, Shift and the down arrow slide the conflict an hour later. {mod}+Z, if you regret it.
 In Compass, everything has a key. Nothing needs a click.
+-> tour_1_next
+
+=== tour_1_next ===
 + [Next stop] -> tour_2
 + [That is enough. Try the calendar.] -> try
 + [Back to the start] -> boot
@@ -76,8 +80,7 @@ In Compass, everything has a key. Nothing needs a click.
 === tour_2 ===
 # CLEAR
 STOP 2 OF 4: THE QUIET
-The next room holds one thing: your week, on a single clean screen. Nothing else is competing for your attention.
-You ask where the AI assistant is. There is not one. Nothing here schedules busy work on your behalf.
+The UI is simple and clean. There is no AI assistant to nag you. Making changes is so intuitive that you actually like tweaking your schedule.
 + [Next stop] -> tour_3
 + [Try the calendar] -> try
 + [Back to the start] -> boot
@@ -95,14 +98,13 @@ You never have to memorize the list up front.
 === tour_4 ===
 # CLEAR
 STOP 4 OF 4: THE BRIDGE
-Your Google Calendar and Microsoft Outlook events cross over and arrive intact. Changes sync both ways.
-At the far end is a small booth with your name on it, at /meet/your-name. People pick an open slot and leave. Nobody asks if Thursday works.
+Your Google Calendar and Microsoft Outlook sync both ways. You get your own meeting link and cancel your Calendly subscription.
 + [Finish the tour] -> tour_end
 
 === tour_end ===
 # CLEAR
 THAT IS COMPASS
-A keyboard-first calendar that syncs with the one you already use.
+A keyboard calendar.
 What next?
 + [Try the calendar now (no signup required)] -> try
 + [Sign in or create an account] -> signin
@@ -114,10 +116,10 @@ What next?
 READ MORE
 Compass is open source under the MIT license. Run it locally or self-host it.
 Each page opens in a new tab.
-+ [The blog] -> manual_blog
-+ [The docs] -> manual_docs
-+ [The source code on GitHub] -> manual_github
-+ [The changelog] -> manual_changelog
++ [blog] -> manual_blog
++ [docs] -> manual_docs
++ [src] -> manual_github
++ [changelog] -> manual_changelog
 + [Back] -> look
 
 === manual_docs ===

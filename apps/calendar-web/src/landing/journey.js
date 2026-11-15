@@ -65,7 +65,7 @@
       name: "COMPASS CALENDAR",
       oneLiner: "A calendar you run from your keyboard.",
       short: [
-        "1. Every action has a keyboard shortcut. Press C to create an event, arrows to move it.",
+        "1. Every action has a keyboard shortcut.",
         "2. It syncs with Google Calendar and Microsoft Outlook.",
         "3. It is minimal and open source, and you can try it without an account.",
       ],

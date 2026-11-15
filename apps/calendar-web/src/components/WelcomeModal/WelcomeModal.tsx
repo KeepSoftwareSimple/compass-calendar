@@ -1,4 +1,4 @@
-import { useContext, useEffect, useId, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { SessionContext } from "@web/auth/compass/session/session.context";
@@ -110,9 +110,8 @@ export function WelcomeModal() {
   const secondarySignInProviders = trialPrimaryProvider
     ? available.filter((kind) => kind !== trialPrimaryProvider)
     : available;
-  const faqHintId = `${useId()}-faq-hint`;
   const faq = useFaqDisclosure();
-  // Digits 1-5 only toggle FAQ on the screen that shows it; 6-0 no-op until
+  // FAQ digits only toggle FAQ on the screen that shows it; the rest no-op until
   // the footer links mount on the last screen.
   useWelcomeJumpShortcuts(step === 2 ? faq.toggleAt : undefined);
 
@@ -384,12 +383,8 @@ export function WelcomeModal() {
               <h2 className="font-[VT323,monospace] text-4xl text-text leading-none">
                 How Compass works
               </h2>
-              <p id={faqHintId} className="text-text-muted">
-                Click a question or press its number to open it.
-              </p>
             </div>
             <WelcomeFaqList
-              describedById={faqHintId}
               expanded={faq.expanded}
               flashedKey={null}
               onToggle={faq.toggle}

@@ -6,6 +6,7 @@ import { type ReactNode } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { SOCIAL_LINKS } from "@web/common/constants/social.constants";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
+import { FAQ_ITEMS } from "./faq";
 import { flashedShortcutClass } from "./useFlashedWelcomeShortcut";
 
 const SOCIAL_ICONS = {
@@ -28,20 +29,27 @@ const PRACTICE_LINK = {
 
 const DIGIT_LEGAL_LINKS = [
   {
-    digit: "9",
     label: "Privacy",
     href: "https://www.compasscalendar.com/privacy",
   },
   {
-    digit: "0",
     label: "Terms",
     href: "https://www.compasscalendar.com/terms",
   },
 ] as const;
 
-/** Footer jump indices for Privacy/Terms digit keys (after FAQ digits 1–5). */
+/** Footer jump indices for Privacy/Terms digit keys (after the FAQ digits). */
 const PRIVACY_JUMP_INDEX = 3;
 const TERMS_JUMP_INDEX = 4;
+
+/**
+ * The digit key that activates footer link `jumpIndex`: the digits after the
+ * FAQ rows, with 0 last. Links past 0 have no key and are plain links.
+ */
+function footerDigit(jumpIndex: number): string | undefined {
+  const position = FAQ_ITEMS.length + jumpIndex + 1;
+  return position > 10 ? undefined : String(position % 10);
+}
 
 function JumpAnchor({
   jumpIndex,
@@ -55,7 +63,7 @@ function JumpAnchor({
 }: {
   jumpIndex?: number;
   letter?: string;
-  digit: string;
+  digit?: string;
   href: string;
   label?: string;
   flashedKey: string | null;
@@ -75,14 +83,16 @@ function JumpAnchor({
       data-welcome-letter={letter}
     >
       {children}
-      <span
-        className={classNames(
-          "shrink-0",
-          flashedShortcutClass(flashedKey, digit),
-        )}
-      >
-        <ShortcutHint>{digit}</ShortcutHint>
-      </span>
+      {digit && (
+        <span
+          className={classNames(
+            "shrink-0",
+            flashedShortcutClass(flashedKey, digit),
+          )}
+        >
+          <ShortcutHint>{digit}</ShortcutHint>
+        </span>
+      )}
     </a>
   );
 }
@@ -112,18 +122,21 @@ export function WelcomeLinks({
         >
           {PRICING_LINK.label}
         </JumpAnchor>
-        {DIGIT_LEGAL_LINKS.map(({ digit, label, href }, index) => (
-          <JumpAnchor
-            key={label}
-            jumpIndex={index === 0 ? PRIVACY_JUMP_INDEX : TERMS_JUMP_INDEX}
-            digit={digit}
-            href={href}
-            flashedKey={flashedKey}
-            className={linkClassName}
-          >
-            {label}
-          </JumpAnchor>
-        ))}
+        {DIGIT_LEGAL_LINKS.map(({ label, href }, index) => {
+          const jumpIndex = index === 0 ? PRIVACY_JUMP_INDEX : TERMS_JUMP_INDEX;
+          return (
+            <JumpAnchor
+              key={label}
+              jumpIndex={jumpIndex}
+              digit={footerDigit(jumpIndex)}
+              href={href}
+              flashedKey={flashedKey}
+              className={linkClassName}
+            >
+              {label}
+            </JumpAnchor>
+          );
+        })}
       </div>
     );
   }
@@ -137,7 +150,7 @@ export function WelcomeLinks({
             <JumpAnchor
               key={id}
               jumpIndex={index}
-              digit={String(index + 6)}
+              digit={footerDigit(index)}
               href={href}
               label={label}
               flashedKey={flashedKey}
@@ -164,11 +177,11 @@ export function WelcomeLinks({
         >
           {PRICING_LINK.label}
         </JumpAnchor>
-        {DIGIT_LEGAL_LINKS.map(({ digit, label, href }, index) => (
+        {DIGIT_LEGAL_LINKS.map(({ label, href }, index) => (
           <JumpAnchor
             key={label}
             jumpIndex={SOCIAL_LINKS.length + index}
-            digit={digit}
+            digit={footerDigit(SOCIAL_LINKS.length + index)}
             href={href}
             flashedKey={flashedKey}
             className={linkClassName}
