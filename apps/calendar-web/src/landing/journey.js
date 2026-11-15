@@ -25,8 +25,30 @@
     params.has("mobile") ||
     (window.matchMedia("(pointer: coarse)").matches && window.innerWidth < 768);
 
+  // "Mod" is Cmd on a Mac and Ctrl everywhere else. The app resolves this with
+  // detectPlatform() from @tanstack/hotkeys, which reads navigator.platform and
+  // the user agent (see components/Shortcuts/ShortcutLabel.tsx). This page is
+  // static and cannot import it, so the rule is mirrored here and must stay in
+  // step with it: a visitor told "Ctrl+K" in the tour must not meet a Cmd
+  // keycap in the app. navigator.platform alone is not enough, since browsers
+  // have begun to freeze or blank it. Preview override: ?mod=cmd or ?mod=ctrl.
+  const CMD_SYMBOL = "\u2318";
+  function modifierKeyLabel() {
+    const override = params.get("mod");
+    if (override === "cmd") return CMD_SYMBOL;
+    if (override === "ctrl") return "Ctrl";
+    const platform = navigator.platform?.toLowerCase() ?? "";
+    const userAgent = navigator.userAgent?.toLowerCase() ?? "";
+    const isMac = platform.includes("mac") || userAgent.includes("mac");
+    return isMac ? CMD_SYMBOL : "Ctrl";
+  }
+
   window.COMPASS = {
-    visitor: { returning: hasSignedInBefore(), mobile: isMobile },
+    visitor: {
+      returning: hasSignedInBefore(),
+      mobile: isMobile,
+      mod: modifierKeyLabel(),
+    },
     appUrl: `${APP}/week?utm_source=landing&utm_campaign=retro`,
     signInUrl: `${APP}/week?auth=login&utm_source=landing&utm_campaign=retro`,
     links: {

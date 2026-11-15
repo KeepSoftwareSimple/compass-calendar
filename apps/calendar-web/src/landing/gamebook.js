@@ -25,9 +25,7 @@
   story.variablesState.returning = COMPASS.visitor.returning;
   story.variablesState.mobile = COMPASS.visitor.mobile;
   // Show the visitor's own shortcut key instead of the word "Mod".
-  story.variablesState.mod = /Mac|iPhone|iPad/.test(navigator.platform)
-    ? "\u2318"
-    : "Ctrl";
+  story.variablesState.mod = COMPASS.visitor.mod;
 
   const reduceMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)",
