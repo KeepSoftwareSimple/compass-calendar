@@ -31,6 +31,8 @@ interface Props {
   icon?: ReactNode;
   /** Main title text */
   title?: string;
+  /** Replaces the default title typography (e.g. the retro pixel heading) */
+  titleClassName?: string;
   /** Accessible name when the panel has no visible title */
   ariaLabel?: string;
   /** Optional content rendered on the same row as the title (e.g. a switch link) */
@@ -92,6 +94,7 @@ interface Props {
 export const OverlayPanel = ({
   icon,
   title,
+  titleClassName,
   ariaLabel,
   titleAction,
   message,
@@ -187,7 +190,8 @@ export const OverlayPanel = ({
   );
 
   const titleClasses = classNames(
-    "m-0 line-clamp-2 w-full min-w-0 font-semibold text-lg text-text",
+    "m-0 line-clamp-2 w-full min-w-0",
+    titleClassName ?? "font-semibold text-lg text-text",
   );
 
   const messageClasses = classNames(
