@@ -67,8 +67,6 @@ No. Throw away your mouse, you don't need it here. Everything has a shortcut. No
 -> tour_1_next
 
 === tour_1_key ===
-You press C. A new event appears exactly where your focus sits.
-Alt, Shift and the down arrow slide the conflict an hour later. {mod}+Z, if you regret it.
 In Compass, everything has a key. Nothing needs a click.
 -> tour_1_next
 
