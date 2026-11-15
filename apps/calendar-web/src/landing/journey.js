@@ -57,7 +57,7 @@
         title: "SHORTCUTS FOR EVERYTHING",
         body: [
           "Press C and an event appears where your focus sits.",
-          "Alt+Shift+Arrow slides it an hour. Mod+Z takes it back.",
+          "Alt+Shift+Arrow slides it an hour. Undo takes it back.",
           "Everything has a key. Nothing needs a mouse.",
         ],
       },
