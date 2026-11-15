@@ -11,6 +11,55 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-15 (second sweep)
+
+Swept the two merges that landed after the earlier 2026-11-15 sweep's ledger:
+#5265 was that sweep's own output and is excluded, leaving #5264 as the only
+candidate. (#5264 was still open when that sweep ran, which is why it deferred
+the landing game "while #5264 is open"; that reason has now expired.) Gate step
+1 was clean: `bun knip` reports no unused files or exports (the three standing
+config hints), `bun lint` passes every rule, `bun type-check` passes. One
+finding, shipped as the landing page's modifier-key detection moving into
+`journey.js` and matching the app's `detectPlatform()` rule. Everything below
+was examined and kept.
+
+- **Seven `font-[VT323,monospace]` literals** across `WelcomeModal.tsx`,
+  `WelcomeGuideBody.tsx` and `SomethingBrokeView.tsx` (#5264 added two).
+  `@theme` in `index.css` owns font families and would naturally hold a
+  `--font-pixel` token, so this looks like the three-overflow-predicates case
+  one step further along. Declined anyway: all seven are byte-identical copies
+  of a distinctive, greppable literal, and none of them derives from a token,
+  so there is no asymmetry that could make two of them silently disagree. That
+  is the "name an owner once if a fourth copy appears" nudge, which is
+  consistency, not debt. If the display font is ever swapped, name the token in
+  `@theme` as part of that change rather than folding these seven first.
+
+- **`SignUpForm.tsx`'s inline `resolveModifier("Mod") === "Meta" ? "⌘" : "Ctrl"`.**
+  Reads like a second copy of the Mod display rule that `ShortcutLabel.tsx`
+  owns, but it cannot disagree with it: `resolveModifier("Mod")` returns
+  `"Meta"` exactly when `detectPlatform() === "mac"`, which is the same
+  condition that makes `ShortcutLabel`'s `metaIcon` the Command glyph. The only
+  difference is text instead of an icon component, which is what that key needs
+  inside a prose sentence. Not a drift.
+
+- **`ShortcutLabel.tsx`'s `WindowsLogoIcon` branch.** Unreachable for a `"Mod"`
+  token for the reason above, and no call site passes an explicit `"Meta"`,
+  `"cmd"` or `"command"` token today, so the branch never renders. It is
+  defensive cover for the aliases `ShortcutKeys.tsx` deliberately accepts
+  rather than a mistake, and it predates this window. Noted rather than spent.
+
+- **#5264's typing-toggle removal.** Checked by hand because `knip` does not
+  follow this static page: `INSTANT_KEY`, `instant`, `setInstant`,
+  `instantButton`, the `#instant` button and its CSS block all went together,
+  and the only `instant` left in `src/landing/` is an unrelated word in a
+  comment about skipping feeling instant. Nothing dangling.
+
+- **The landing page's visual polish** (`crt.css`, the terminal-key pills, the
+  fixed card height, the pixel-font welcome headings). Three feature PRs in two
+  days on a surface that is still being designed. Visual design iteration on a
+  product surface, of the `reflection-life-image.ts` kind, not structural debt.
+  The one thing taken from #5264 is a correctness divergence, not its shape.
+
 ## 2026-11-15
 
 Swept the 4 merges that landed after the 2026-11-14 sweep's ledger (#5259,
