@@ -12,11 +12,14 @@
 //   # COPY          copy the app link (mobile handoff)
 //   # EMAIL         show the "email me the link" form (mobile handoff)
 //   # LINK: docs    open a link from journey.js
-// gamebook.js sets "returning" and "mobile" before the story starts.
+// gamebook.js sets "returning", "mobile" and "mod" (the visitor's own
+// shortcut key: the Command symbol on a Mac, Ctrl elsewhere) before the
+// story starts.
 // Avoid "//" inside story text (ink reads it as a comment) and em-dashes.
 window.GAMEBOOK_STORY = `
 VAR returning = false
 VAR mobile = false
+VAR mod = "Ctrl"
 
 -> boot
 
@@ -54,7 +57,7 @@ None of this needs an account.
 === tour_1 ===
 # CLEAR
 STOP 1 OF 4: THE KEYS
-MONDAY. 8:59 AM. A double booking lunges out of Tuesday, all teeth and conference links.
+MONDAY. 8:59 AM. A double booking lunges out of Tuesday.
 + [Reach for the mouse] -> tour_1_mouse
 + [Press a key] -> tour_1_key
 
@@ -64,7 +67,7 @@ You reach for the mouse. There is no mouse. There was never a mouse.
 
 === tour_1_key ===
 You press C. A new event appears exactly where your focus sits.
-Alt, Shift and the down arrow slide the conflict an hour later. Mod and Z, if you regret it.
+Alt, Shift and the down arrow slide the conflict an hour later. {mod}+Z, if you regret it.
 In Compass, everything has a key. Nothing needs a click.
 + [Next stop] -> tour_2
 + [That is enough. Try the calendar.] -> try
@@ -73,7 +76,7 @@ In Compass, everything has a key. Nothing needs a click.
 === tour_2 ===
 # CLEAR
 STOP 2 OF 4: THE QUIET
-The next room is nearly empty. No clutter. No upsells. Just a week, laid out plainly.
+The next room holds one thing: your week, on a single clean screen. Nothing else is competing for your attention.
 You ask where the AI assistant is. There is not one. Nothing here schedules busy work on your behalf.
 + [Next stop] -> tour_3
 + [Try the calendar] -> try
@@ -81,10 +84,10 @@ You ask where the AI assistant is. There is not one. Nothing here schedules busy
 
 === tour_3 ===
 # CLEAR
-STOP 3 OF 4: THE DOTS
-You press L. The walls fall away and your whole life appears as a grid of dots, one for each week.
-Fewer are left than you hoped. You delete a recurring status meeting. Nobody notices. It feels wonderful.
-This is the Life view.
+STOP 3 OF 4: THE PALETTE
+You forget a shortcut. It happens.
+You press {mod}+K and type what you want, like "create event" or "go to today". The palette finds it, runs it, and shows you its key for next time.
+You never have to memorize the list up front.
 + [Next stop] -> tour_4
 + [Try the calendar] -> try
 + [Back to the start] -> boot
