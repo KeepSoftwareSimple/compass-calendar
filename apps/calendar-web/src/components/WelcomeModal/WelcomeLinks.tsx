@@ -38,9 +38,16 @@ const DIGIT_LEGAL_LINKS = [
   },
 ] as const;
 
-/** Footer jump indices for Privacy/Terms digit keys (after the FAQ digits). */
-const PRIVACY_JUMP_INDEX = 3;
-const TERMS_JUMP_INDEX = 4;
+/**
+ * The footer jump index of legal link `index`. The legal links sit after the
+ * social links, and the account-choice screen reuses these indices without
+ * rendering the social links, so Privacy and Terms keep the same digit key on
+ * both screens. Derived from `SOCIAL_LINKS` rather than restated, so adding or
+ * removing a social link cannot leave one screen's keys behind the other's.
+ */
+function legalJumpIndex(index: number): number {
+  return SOCIAL_LINKS.length + index;
+}
 
 /**
  * The digit key that activates footer link `jumpIndex`: the digits after the
@@ -123,7 +130,7 @@ export function WelcomeLinks({
           {PRICING_LINK.label}
         </JumpAnchor>
         {DIGIT_LEGAL_LINKS.map(({ label, href }, index) => {
-          const jumpIndex = index === 0 ? PRIVACY_JUMP_INDEX : TERMS_JUMP_INDEX;
+          const jumpIndex = legalJumpIndex(index);
           return (
             <JumpAnchor
               key={label}
@@ -177,18 +184,21 @@ export function WelcomeLinks({
         >
           {PRICING_LINK.label}
         </JumpAnchor>
-        {DIGIT_LEGAL_LINKS.map(({ label, href }, index) => (
-          <JumpAnchor
-            key={label}
-            jumpIndex={SOCIAL_LINKS.length + index}
-            digit={footerDigit(SOCIAL_LINKS.length + index)}
-            href={href}
-            flashedKey={flashedKey}
-            className={linkClassName}
-          >
-            {label}
-          </JumpAnchor>
-        ))}
+        {DIGIT_LEGAL_LINKS.map(({ label, href }, index) => {
+          const jumpIndex = legalJumpIndex(index);
+          return (
+            <JumpAnchor
+              key={label}
+              jumpIndex={jumpIndex}
+              digit={footerDigit(jumpIndex)}
+              href={href}
+              flashedKey={flashedKey}
+              className={linkClassName}
+            >
+              {label}
+            </JumpAnchor>
+          );
+        })}
       </div>
     </div>
   );

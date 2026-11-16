@@ -11,6 +11,50 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-16
+
+Swept the two merges that landed after the 2026-11-15 second sweep's ledger:
+#5267 was that sweep's own output and is excluded, leaving #5268 and #5269 as
+the candidates. Gate step 1 was clean: `bun knip` reports no unused files or
+exports (the three standing config hints), `bun lint` passes every rule,
+`bun type-check` passes. One finding, shipped as the legal links' footer jump
+index deriving from `SOCIAL_LINKS`. Everything below was examined and kept.
+
+- **#5268's `footerDigit` helper.** The digit beside a footer link now derives
+  from `FAQ_ITEMS.length` instead of the hardcoded `String(index + 6)` and the
+  per-link `digit:` fields it replaced. That is the same class of fix as this
+  sweep's finding, already done one level up, and adding the sixth FAQ row in
+  the same PR is what made it necessary. Finished work, not a lead.
+
+- **`describedById` on `WelcomeFaqList`.** #5268 removed the FAQ hint
+  paragraph and its `describedById=` from `WelcomeModal.tsx`, which leaves the
+  prop looking orphaned, but `WelcomeGuideBody.tsx` still passes it for its own
+  "Tip: Press a number" paragraph. Live, with one caller. Not dead code.
+
+- **The `RETRO_TITLE_CLASS` / `titleClassName` escape hatch** (#5268,
+  `AuthModal.tsx` and `OverlayPanel.tsx`). A class-name prop that overrides a
+  component's default typography is the kind of seam that spreads, and this is
+  now the eighth `font-[VT323,monospace]` literal. Declined for the reason the
+  2026-11-15 second sweep gave for the other seven: they are byte-identical
+  copies of a distinctive, greppable literal, none derives from a token, so
+  none can silently disagree with another. `titleClassName` has exactly one
+  caller and `OverlayPanel` keeps its default when the prop is absent, so
+  nothing else moved. If the display font is ever swapped, name a `--font-pixel`
+  token in `@theme` as part of that change.
+
+- **The welcome FAQ and landing copy rewrites** (#5268, #5269). New questions,
+  reworded answers, and a reshaped tour script, including the `tour_1_next`
+  knot that gives both tour-stop-1 branches one shared continuation. Product
+  copy iteration on a surface still being written, of the
+  `reflection-life-image.ts` kind. The one structural thing #5268 touched that
+  could diverge is this sweep's finding.
+
+- **`useWelcomeJumpShortcuts`'s doc comment.** Says "1-6 toggle FAQ items",
+  which matches the six rows in `FAQ_ITEMS` today, and the code itself reads
+  `FAQ_ITEMS.length` rather than any literal. Prose that restates a derived
+  count can age, but it cannot change behavior and no detector reports it.
+  Noted rather than spent.
+
 ## 2026-11-15 (second sweep)
 
 Swept the two merges that landed after the earlier 2026-11-15 sweep's ledger:
