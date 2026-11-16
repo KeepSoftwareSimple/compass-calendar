@@ -78,6 +78,7 @@ describe("StripeService", () => {
       cancel_url?: string;
     };
     expect(sessionArgs.mode).toBe("subscription");
+    expect(sessionArgs).toHaveProperty("allow_promotion_codes", true);
     expect(sessionArgs.client_reference_id).toBe(userId.toString());
     expect(sessionArgs.subscription_data.trial_period_days).toBe(7);
     expect(sessionArgs.line_items[0]?.price).toBe("price_test");
@@ -111,7 +112,7 @@ describe("StripeService", () => {
         .custom_text,
     ).toBeUndefined();
     expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-      idempotencyKey: `compass-checkout-v10-${userId.toString()}`,
+      idempotencyKey: `compass-checkout-v11-${userId.toString()}`,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
@@ -161,6 +162,7 @@ describe("StripeService", () => {
     )[0]?.[0] as {
       discounts?: Array<{ coupon?: string; promotion_code?: string }>;
     };
+    expect(syntheticArgs).not.toHaveProperty("allow_promotion_codes");
     expect(syntheticArgs.discounts).toEqual([
       { coupon: "coupon_synthetic_100" },
     ]);
@@ -186,6 +188,7 @@ describe("StripeService", () => {
       discounts?: Array<{ coupon?: string; promotion_code?: string }>;
     };
     expect(realArgs.discounts).toBeUndefined();
+    expect(realArgs).toHaveProperty("allow_promotion_codes", true);
     expect((realArgs as { metadata?: unknown }).metadata).toBeUndefined();
     expect(
       (realArgs as { payment_method_collection?: string })
@@ -1093,6 +1096,7 @@ describe("StripeService", () => {
         ui_mode?: string;
         redirect_on_completion?: string;
       };
+      expect(sessionArgs).toHaveProperty("allow_promotion_codes", true);
       expect(sessionArgs.success_url).toBe(
         `http://localhost:9080/billing/desktop-return?outcome=success&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
       );
@@ -1102,7 +1106,7 @@ describe("StripeService", () => {
       expect(sessionArgs.ui_mode).toBeUndefined();
       expect(sessionArgs.redirect_on_completion).toBeUndefined();
       expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-        idempotencyKey: `compass-checkout-v10-desktop-${userId.toString()}`,
+        idempotencyKey: `compass-checkout-v11-desktop-${userId.toString()}`,
       });
     });
 

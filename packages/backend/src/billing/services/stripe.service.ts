@@ -31,7 +31,7 @@ import mongoService from "@backend/common/services/mongo.service";
 import { isPosthogSyntheticAccount } from "@backend/user/posthog-synthetic-account.util";
 
 /** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
-const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v10-";
+const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v11-";
 
 function syntheticJourneyCheckoutDiscounts(user: {
   email: string;
@@ -238,8 +238,7 @@ export class StripeService {
 
     const discounts = syntheticJourneyCheckoutDiscounts(user);
     const syntheticJourneyCheckout = discounts !== undefined;
-    // Only synthetic sessions get metadata, so real users' create params (and
-    // their per-user idempotency keys) are unchanged.
+    // Only synthetic sessions get metadata for analytics exclusion.
     const syntheticAnalyticsAccount = isPosthogSyntheticAccount(
       user.email,
       user.isSynthetic,
@@ -252,7 +251,7 @@ export class StripeService {
           customer: customerId,
           client_reference_id: userId,
           line_items: [{ price: getStripePriceId(), quantity: 1 }],
-          ...(discounts ? { discounts } : {}),
+          ...(discounts ? { discounts } : { allow_promotion_codes: true }),
           ...(syntheticAnalyticsAccount
             ? { metadata: syntheticCheckoutSessionMetadata() }
             : {}),
