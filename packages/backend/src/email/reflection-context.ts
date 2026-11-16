@@ -50,6 +50,16 @@ export async function reflectionCalendarContext(user: WithId<Schema_User>) {
         calendar.accessRole !== "busyOnly" && !excluded.has(calendar.id),
     )
     .map((calendar) => calendar.id);
+  // Holidays are common knowledge, so they never count as personal memories.
+  const holidayCalendarIds = new Set<string>(
+    remote.value.calendars
+      .filter(
+        (calendar) =>
+          calendar.providerCalendarId.includes("#holiday@") ||
+          /\bholidays\b/i.test(calendar.displayName),
+      )
+      .map((calendar) => calendar.id),
+  );
   if (local && !excluded.has(local._id.toHexString()))
     calendarIds.push(SyncEventCalendarIdSchema.parse(local._id.toHexString()));
   const selfEmails = [
@@ -60,7 +70,7 @@ export async function reflectionCalendarContext(user: WithId<Schema_User>) {
       ),
     ]),
   ];
-  return { calendarIds, selfEmails, client, principal };
+  return { calendarIds, holidayCalendarIds, selfEmails, client, principal };
 }
 
 export async function prepareReflection(
@@ -160,6 +170,7 @@ export async function prepareReflection(
     cutoff: new Date(current[0]!.end),
     upcomingCutoff: row.sendAt,
     recentStartDate: current[0]!.startDate,
+    holidayCalendarIds: context.holidayCalendarIds,
     hiddenIds: new Set(await hiddenEventService.listHiddenEventIds(user._id)),
     previousMemoryIds: new Set(
       previous.flatMap((send) => send.reflection?.memoryIds ?? []),

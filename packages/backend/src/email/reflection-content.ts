@@ -46,6 +46,7 @@ export function selectReflectionEvents(input: {
   upcomingCutoff?: Date;
   recentStartDate: string;
   hiddenIds: Set<string>;
+  holidayCalendarIds?: Set<string>;
   previousMemoryIds: Set<string>;
 }) {
   const eligible = unique(
@@ -83,8 +84,10 @@ export function selectReflectionEvents(input: {
             (input.upcomingCutoff ?? input.cutoff).getTime()),
     )
     .sort((a, b) => a.schedule.start.localeCompare(b.schedule.start));
-  const history = eligible.filter((event) =>
-    event.windowKey.startsWith("history:"),
+  const history = eligible.filter(
+    (event) =>
+      event.windowKey.startsWith("history:") &&
+      !input.holidayCalendarIds?.has(event.calendarId),
   );
   const historicalWeekMatch = (event: ReflectionEvent) => {
     const year = event.windowKey.split(":")[1] ?? localDate(event).slice(0, 4);
