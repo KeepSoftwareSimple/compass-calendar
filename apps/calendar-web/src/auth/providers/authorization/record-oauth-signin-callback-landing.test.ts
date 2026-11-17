@@ -47,4 +47,42 @@ describe("recordOAuthSignInCallbackLanding", () => {
     stepSpy.mockRestore();
     trackSpy.mockRestore();
   });
+
+  it("does not relay an empty callback query", () => {
+    const fetchMock = mock(async () => new Response(null, { status: 204 }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const stepSpy = spyOn(signupFunnel, "trackSignupStep").mockImplementation(
+      () => undefined,
+    );
+    const trackSpy = spyOn(trackModule, "track").mockImplementation(
+      () => undefined,
+    );
+
+    recordOAuthSignInCallbackLanding("google", "");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    stepSpy.mockRestore();
+    trackSpy.mockRestore();
+  });
+
+  it("does not relay Apple callbacks because the form_post path already recorded them", () => {
+    const fetchMock = mock(async () => new Response(null, { status: 204 }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const stepSpy = spyOn(signupFunnel, "trackSignupStep").mockImplementation(
+      () => undefined,
+    );
+    const trackSpy = spyOn(trackModule, "track").mockImplementation(
+      () => undefined,
+    );
+
+    recordOAuthSignInCallbackLanding("apple", "?state=abc&code=1");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(stepSpy).toHaveBeenCalled();
+    expect(trackSpy).toHaveBeenCalled();
+
+    stepSpy.mockRestore();
+    trackSpy.mockRestore();
+  });
 });
