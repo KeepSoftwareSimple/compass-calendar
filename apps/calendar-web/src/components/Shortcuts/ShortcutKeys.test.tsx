@@ -1,11 +1,43 @@
 import { render, screen } from "@testing-library/react";
 import { ShortcutKeys } from "./ShortcutKeys";
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 
 const keycaps = (container: HTMLElement) =>
   Array.from(container.querySelectorAll("[aria-hidden='true']"));
 
+// detectPlatform() reads navigator.platform and navigator.userAgent.
+const stubPlatform = (platform: string) => {
+  Object.defineProperty(navigator, "platform", {
+    value: platform,
+    configurable: true,
+  });
+  Object.defineProperty(navigator, "userAgent", {
+    value: platform,
+    configurable: true,
+  });
+};
+
 describe("ShortcutKeys", () => {
+  afterEach(() => {
+    // Drop the own-property stubs so the jsdom prototype getters apply again.
+    Reflect.deleteProperty(navigator, "platform");
+    Reflect.deleteProperty(navigator, "userAgent");
+  });
+
+  it("shows Delete as fn ⌫ on macOS, where ⌫ alone sends Backspace", () => {
+    stubPlatform("MacIntel");
+    const { container } = render(<ShortcutKeys keys={["Delete"]} />);
+
+    expect(keycaps(container)[0]?.textContent).toBe("fn ⌫");
+  });
+
+  it("keeps the Delete label on other platforms", () => {
+    stubPlatform("Win32");
+    const { container } = render(<ShortcutKeys keys={["Delete"]} />);
+
+    expect(keycaps(container)[0]?.textContent).toBe("Delete");
+  });
+
   it("renders one keycap chip per key and uppercases lone letters", () => {
     const { container } = render(<ShortcutKeys keys={["Shift", "w"]} />);
 

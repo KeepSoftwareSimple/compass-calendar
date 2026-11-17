@@ -23,6 +23,8 @@ const keyIconMap: Record<string, Icon> = {
 };
 export function ShortCutLabel({ k }: { k: string; size?: number }) {
   const display = expandModInShortcutDisplay(k);
+  // Mac keyboards have no forward Delete key: ⌫ sends Backspace, fn+⌫ sends Delete.
+  const isMac = detectPlatform() === "mac";
 
   return display.split("+").map((_key) => {
     const key = _key.trim();
@@ -35,7 +37,7 @@ export function ShortCutLabel({ k }: { k: string; size?: number }) {
 
     return (
       <span key={key} data-testid={testId} className="leading-none">
-        {key}
+        {isMac && key === "Delete" ? "fn ⌫" : key}
       </span>
     );
   });
