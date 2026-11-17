@@ -88,6 +88,16 @@ export const SettingsModal: FC = () => {
   const bookingDismissGuardRef = useRef<(() => boolean) | null>(null);
   const { skipFocusRestoreRef, handleDismiss: dismissToPalette } =
     usePaletteAwareOverlayDismiss(isOpen, settingsActions.closeSettings);
+  // Read at unmount: the guest sign-up hand-off closes Settings under the
+  // already-focused auth modal, so restoring focus here would steal it.
+  const [skipFocusRestoreOnUnmountRef] = useState(() => ({
+    get current() {
+      return (
+        skipFocusRestoreRef.current ||
+        useSettingsStore.getState().closedForGuestAuthHandoff
+      );
+    },
+  }));
   useAppLockReason("settingsModal", isOpen);
   const { openDeleteAccountConfirmation } = useDeleteAccountConfirmation();
   const { authenticated } = useSession();
@@ -200,7 +210,7 @@ export const SettingsModal: FC = () => {
       anchor="top"
       initialFocusRef={initialFocusRef}
       onDismiss={handleDismiss}
-      skipFocusRestoreRef={skipFocusRestoreRef}
+      skipFocusRestoreRef={skipFocusRestoreOnUnmountRef}
       title="Settings"
       titleAction={
         <OverlayPanelActionButton
