@@ -94,7 +94,7 @@ describe("GridContextMenuWrapper pointer hint", () => {
     openContextMenu(card, 48, 48);
     expect(selectPointerHintPulse(usePointerHintStore.getState())).toBe(1);
     expect(selectPointerHintAttempt(usePointerHintStore.getState())).toEqual({
-      shortcutKey: ["."],
+      shortcutKey: ["Space", "."],
       source: "pointer",
     });
 

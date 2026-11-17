@@ -242,6 +242,25 @@ describe("GridDraft", () => {
     expect(useDraftStore.getState().status?.isFormOpen).toBe(true);
   });
 
+  it("does not open the menu when Space is pressed on a pastePlace draft", async () => {
+    const draft = createDraft();
+    draftActions.startGridDraft({ activity: "pastePlace", draft });
+
+    renderGridDraft({ draft });
+    const user = userEvent.setup();
+    const card = screen.getByRole("button", { name: /Timed event: Planning/ });
+    card.focus();
+
+    let fired = false;
+    card.addEventListener("contextmenu", (event) => {
+      fired = true;
+      event.preventDefault();
+    });
+
+    await user.keyboard(" ");
+    expect(fired).toBe(false);
+  });
+
   it("does not open the form when Enter is pressed on a pastePlace draft", async () => {
     const draft = createDraft();
     draftActions.startGridDraft({ activity: "pastePlace", draft });

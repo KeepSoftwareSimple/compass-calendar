@@ -23,7 +23,10 @@ import {
   joinGridEventBoxShadow,
   resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
-import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
+import {
+  type GridEventCardActivationOptions,
+  gridEventCardActivationKeyDown,
+} from "@web/grid/components/event-card-activation";
 import {
   gridEventCardClassName,
   gridEventCardLabelSuffix,
@@ -73,6 +76,7 @@ interface TimedEventCardProps {
   isHidden?: boolean;
   isSelected?: boolean;
   motionMode: "dragging" | "idle" | "resizing";
+  eventCardKeyboardOptions?: GridEventCardActivationOptions;
   onBlur?: () => void;
   onEventKeyDown?: (event: GridEvent) => void;
   onFocus?: () => void;
@@ -92,6 +96,7 @@ const TimedEventCardBase = (
     interactionAttributes,
     isHidden = false,
     isSelected = false,
+    eventCardKeyboardOptions,
     motionMode,
     onBlur,
     onEventKeyDown,
@@ -260,7 +265,11 @@ const TimedEventCardBase = (
       style={eventStyle}
       onBlur={onBlur}
       onFocus={onFocus}
-      onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
+      onKeyDown={gridEventCardActivationKeyDown(
+        event,
+        onEventKeyDown,
+        eventCardKeyboardOptions,
+      )}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

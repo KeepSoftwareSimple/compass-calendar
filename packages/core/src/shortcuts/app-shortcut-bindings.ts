@@ -85,7 +85,7 @@ export const APP_SHORTCUT_BINDINGS = {
   editDuplicate: { hotkey: "Mod+D", keycaps: hotkeyKeycaps("Mod+D") },
   editCopy: { hotkey: "Mod+C", keycaps: hotkeyKeycaps("Mod+C") },
   editPaste: { hotkey: "Mod+V", keycaps: hotkeyKeycaps("Mod+V") },
-  editMenu: { keycaps: [EVENT_MENU_LETTER] },
+  editMenu: { keycaps: ["Space", EVENT_MENU_LETTER] },
   editHide: { keycaps: [HIDE_EVENT_LETTER] },
   editSave: { hotkey: "Mod+Enter", keycaps: hotkeyKeycaps("Mod+Enter") },
   editCancelMeeting: {

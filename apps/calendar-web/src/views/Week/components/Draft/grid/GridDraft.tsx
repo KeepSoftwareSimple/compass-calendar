@@ -56,6 +56,11 @@ export const GridDraft: FC<Props> = ({
     ? (activeAllDayDraftEvent ?? draftToAllDayRowGridEvent(draft))
     : draftAsGridEvent;
   const draftEventType = rendersInAllDayRow ? "all-day" : "timed";
+  const suppressSpaceMenu =
+    useDraftStore.getState().status?.activity === "pastePlace";
+  const draftKeyboardOptions = suppressSpaceMenu
+    ? { suppressSpaceMenu: true as const }
+    : undefined;
   const draftInteractionAttributes = draftAsGridEvent._id
     ? {
         ...getWeekInteractionTargetAttributes({
@@ -93,6 +98,7 @@ export const GridDraft: FC<Props> = ({
           isPlaceholder={false}
           isSelected={sidebarEditingRing}
           key={`draft-${draftAsGridEvent._id}`}
+          eventCardKeyboardOptions={draftKeyboardOptions}
           measurements={measurements}
           onEventKeyDown={openDraftFormOrFocusTitle}
           visibleDates={visibleDates}
@@ -105,6 +111,7 @@ export const GridDraft: FC<Props> = ({
           interactionAttributes={draftInteractionAttributes}
           isSelected={sidebarEditingRing}
           key={`draft-${draftAsGridEvent._id}`}
+          eventCardKeyboardOptions={draftKeyboardOptions}
           measurements={measurements}
           onEventKeyDown={openDraftFormOrFocusTitle}
           visibleDates={visibleDates}

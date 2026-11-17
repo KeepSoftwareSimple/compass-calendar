@@ -12,7 +12,7 @@ the working click. `/life` and mobile skip the tracker entirely.
 
 | Signal | Taught registry ids | Pill copy (placeholders become keycaps) |
 | --- | --- | --- |
-| Event card click (no drag) | `edit-open`, `focus-shift-hold` | Press {0} to open. Hold {1} to jump to any event. |
+| Event card click (no drag) | `edit-open`, `edit-menu`, `focus-shift-hold` | Press {0} to open, or {1} for the menu. Hold {2} to jump to any event. |
 | Timed slot click | `create-typed-time`, `create-timed` | Type HHMM for that slot, or press {1}. |
 | All-day slot click | `create-allday` | Press {0} for an all-day event. |
 | Card drag (8px+) | `edit-move-later`, `edit-move-hour-later` | {0} moves 15 min. {1} moves an hour. |
@@ -20,7 +20,7 @@ the working click. `/life` and mobile skip the tracker entirely.
 | Horizontal swipe week nav | `nav-next` or `nav-previous` | Next time, press {0}. |
 | Header or other chrome click with a registry shortcut | that id | Next time, press … (default pill shape) |
 | Form field click (location, etc.) | `edit-jump-field-digit` | Mod+digit chip flash plus pill |
-| Right-click opens event menu | `edit-menu` | Next time, press the period key. |
+| Right-click opens event menu | `edit-menu` | Next time, press Space or the period key. |
 | Hover-hunt (4s, 3+ targets) | `focus-page-jump` | Hold Mod/Cmd to see where you can jump. |
 
 Card click also arms event jump (`requestPointerEventJump`) so Enter opens the

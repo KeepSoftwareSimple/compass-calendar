@@ -415,6 +415,85 @@ describe("EventCard", () => {
     expect(onParentKeyDown).not.toHaveBeenCalled();
   });
 
+  it("dispatches contextmenu on Space and records edit-menu", () => {
+    const track = spyOn(Track, "track");
+    const menuTargets: EventTarget[] = [];
+    const onContextMenu = (event: Event) => {
+      if (event.target) menuTargets.push(event.target);
+      event.preventDefault();
+    };
+    document.addEventListener("contextmenu", onContextMenu);
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button");
+    fireEvent.keyDown(card, { key: " ", code: "Space" });
+
+    expect(menuTargets).toEqual([card]);
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id === "edit-menu",
+    );
+    expect(recorded).toHaveLength(1);
+
+    document.removeEventListener("contextmenu", onContextMenu);
+    track.mockRestore();
+  });
+
+  it("swallows Space without opening the menu when suppressSpaceMenu is set", () => {
+    let fired = false;
+    document.addEventListener("contextmenu", () => {
+      fired = true;
+    });
+
+    render(
+      <TimedEventCard
+        displayMode="draft"
+        event={createEvent()}
+        eventCardKeyboardOptions={{ suppressSpaceMenu: true }}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), { key: " ", code: "Space" });
+    expect(fired).toBe(false);
+  });
+
+  it("does not record edit-open when Space is pressed on a saved event", () => {
+    const track = spyOn(Track, "track");
+    const onEventKeyDown = mock(() => {});
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        onEventKeyDown={onEventKeyDown}
+        position={position}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), { key: " ", code: "Space" });
+
+    expect(onEventKeyDown).not.toHaveBeenCalled();
+    const editOpen = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id === "edit-open",
+    );
+    expect(editOpen).toHaveLength(0);
+    track.mockRestore();
+  });
+
   it("records edit-open when Enter opens a timed event", () => {
     const track = spyOn(Track, "track");
 
