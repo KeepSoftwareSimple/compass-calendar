@@ -28,6 +28,21 @@ describe("signin-oauth-state", () => {
     );
   });
 
+  it("reads posthog distinct id from Apple relay state", () => {
+    const state = btoa(
+      JSON.stringify({
+        frontendRedirectURI: "https://app.example/auth/apple/callback",
+        ph: "anon-apple",
+        fl: "signup",
+      }),
+    );
+    expect(posthogDistinctIdFromSignInOAuthState(state)).toBe("anon-apple");
+    expect(
+      parseSignInOAuthState(state),
+      "Apple state is not a v1 sign-in payload",
+    ).toBeNull();
+  });
+
   it("parses legacy uuid-only state", () => {
     const legacy = "550e8400-e29b-41d4-a716-446655440000";
     expect(parseSignInOAuthState(legacy)).toEqual({

@@ -1,3 +1,4 @@
+import { isOAuthCallbackQueryEmpty } from "@core/analytics/oauth-signup.events";
 import {
   type ProviderKind,
   ProviderKindSchema,
@@ -41,6 +42,10 @@ async function captureOAuthCallbackQueryAnalytics(
   });
 }
 
+function frontendRootUrl(frontendUrl: string = CONFIG.FRONTEND_URL): string {
+  return new URL("/", frontendUrl).toString();
+}
+
 function spaCallbackUrl(
   provider: ProviderKind,
   query: ProviderOAuthCallbackQuery,
@@ -72,6 +77,22 @@ export async function handleProviderOAuthCallback(input: {
   const state = queryField(input.query, "state");
   const code = queryField(input.query, "code");
   const providerError = queryField(input.query, "error");
+
+  const emptyQuery = isOAuthCallbackQueryEmpty({
+    state,
+    code,
+    providerError,
+  });
+
+  if (emptyQuery) {
+    if (input.telemetryOnly) {
+      return { mode: "telemetry" };
+    }
+    return {
+      mode: "redirect",
+      location: frontendRootUrl(input.frontendUrl),
+    };
+  }
 
   await captureOAuthCallbackQueryAnalytics(input.provider, {
     state,
