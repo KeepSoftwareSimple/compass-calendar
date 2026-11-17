@@ -19,6 +19,11 @@ interface SettingsState {
   overlayOpenedFromPalette: boolean;
   /** Public /meet footer CTA: preview setup before sign-up. */
   guestMeetingSetupActive: boolean;
+  /**
+   * Settings closed under the sign-up modal during the guest hand-off. The
+   * auth modal already owns focus, so Settings must not restore its own.
+   */
+  closedForGuestAuthHandoff: boolean;
 }
 
 export const initialSettingsState: SettingsState = {
@@ -29,6 +34,7 @@ export const initialSettingsState: SettingsState = {
   settingsPage: "accounts",
   overlayOpenedFromPalette: false,
   guestMeetingSetupActive: false,
+  closedForGuestAuthHandoff: false,
 };
 
 // Selectors passed to this hook must return primitives or stable references;
@@ -82,13 +88,18 @@ export const settingsActions = {
         type: "closeSettings",
       },
     ),
-  /** Closes Settings for guest sign-up hand-off; keeps the local draft intent. */
+  /**
+   * Closes Settings for guest sign-up hand-off; keeps the local draft intent.
+   * Call after the sign-up modal is open so the backdrop never drops between
+   * the two dialogs.
+   */
   closeSettingsForGuestAuthHandoff: () =>
     useSettingsStore.setState(
       {
         isSettingsOpen: false,
         settingsPage: "accounts",
         overlayOpenedFromPalette: false,
+        closedForGuestAuthHandoff: true,
       },
       false,
       {
@@ -102,6 +113,7 @@ export const settingsActions = {
         settingsPage: "booking",
         guestMeetingSetupActive: true,
         overlayOpenedFromPalette: false,
+        closedForGuestAuthHandoff: false,
       },
       false,
       { type: "beginGuestMeetingSetup" },
@@ -119,6 +131,7 @@ export const settingsActions = {
         isSettingsOpen: true,
         settingsPage: page,
         overlayOpenedFromPalette: fromPalette,
+        closedForGuestAuthHandoff: false,
       },
       false,
       {
@@ -135,6 +148,7 @@ export const settingsActions = {
         isSettingsOpen: !state.isSettingsOpen,
         settingsPage: "accounts",
         overlayOpenedFromPalette: false,
+        closedForGuestAuthHandoff: false,
       }),
       false,
       { type: "toggleSettings" },

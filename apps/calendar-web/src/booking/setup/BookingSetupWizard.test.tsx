@@ -144,14 +144,22 @@ describe("BookingSetupWizard", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Start your free trial to publish your meeting page",
+        name: "Publish your meeting page",
       }),
-    ).toBeInTheDocument();
+    ).toHaveAccessibleDescription("Starts your free trial");
     expect(
       screen.getByText(
         "Review your settings. Your page turns on after sign-up.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("omits the trial note on a signed-in host's go-live step", () => {
+    renderWizard({ setupStep: "live", writableCalendarCount: 1 });
+
+    expect(
+      screen.queryByText("Starts your free trial"),
+    ).not.toBeInTheDocument();
   });
 
   it("does not name the guest's local calendar as the go-live destination", () => {
