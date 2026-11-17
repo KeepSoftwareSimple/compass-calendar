@@ -3,6 +3,7 @@ import { ProviderNotificationError } from "@sync/providers/provider-notification
 import {
   isRetryableProviderResponseParseFailure,
   isTransientProviderError,
+  isTransientSyncJobError,
   logSyncJobEngineError,
 } from "@sync/providers/provider-transient-error.util";
 import { describe, expect, it, mock } from "bun:test";
@@ -49,6 +50,28 @@ describe("isTransientProviderError", () => {
       cause: parse,
     });
     expect(isTransientProviderError(wrapped)).toBe(true);
+  });
+});
+
+describe("isTransientSyncJobError", () => {
+  it("returns true for an Atlas pool checkout timeout in the cause chain", () => {
+    // Staging 2026-11-16: Atlas's own proxy ran out of pooled connections and
+    // paged as "Sync job engine failed" on attempt 1.
+    const atlas = Object.assign(
+      new Error(
+        "Failure getting dbStats: Error checking out client (0x0). err=timed out while checking out a connection from connection pool: context deadline exceeded",
+      ),
+      { name: "MongoServerError" },
+    );
+    const wrapped = new Error(
+      "Sync job calendarListSync (job-id) attempt 1 failed",
+      { cause: atlas },
+    );
+    expect(isTransientSyncJobError(wrapped)).toBe(true);
+  });
+
+  it("returns false for a durable failure", () => {
+    expect(isTransientSyncJobError(new Error("mongo down"))).toBe(false);
   });
 });
 

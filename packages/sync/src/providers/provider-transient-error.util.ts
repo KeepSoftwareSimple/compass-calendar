@@ -1,3 +1,4 @@
+import { isTransientMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { ProviderError } from "@sync/providers/provider-error";
 
 const RETRYABLE_NETWORK_CODES = new Set([
@@ -92,6 +93,12 @@ export function isTransientProviderError(error: unknown): boolean {
   return false;
 }
 
+/** A job failure worth a quiet retry: a provider blip or an Atlas/network blip
+ * on the job's own storage reads (e.g. a pool checkout timeout). */
+export function isTransientSyncJobError(error: unknown): boolean {
+  return isTransientProviderError(error) || isTransientMongoNetworkError(error);
+}
+
 export type SyncJobEngineLogger = {
   error: (message: string, meta?: unknown) => void;
   warn: (message: string, meta?: unknown) => void;
@@ -102,7 +109,7 @@ export function logSyncJobEngineError(
   message: string,
   error: unknown,
 ): void {
-  if (isTransientProviderError(error)) {
+  if (isTransientSyncJobError(error)) {
     logger.warn(message, error);
     return;
   }
