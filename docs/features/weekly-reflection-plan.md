@@ -74,10 +74,9 @@ must be stable across retries of the same edition.
   12 months ago through 18 months ahead. A full canonical import does not make
   old recurring occurrences available through this read model.
 - Web Life View preferences are browser-local in
-  `apps/calendar-web/src/views/Life/life-preferences.storage.ts`. Native has
-  its own persisted `CompassData/.../Stores/LifeStore.swift`.
+  `apps/calendar-web/src/views/Life/life-preferences.storage.ts`.
 - Life math, quote collection, and visual layout currently live under the web
-  Life view; native has a corresponding `LifeMath.swift` and snapshot fixtures.
+  Life view.
 - Backend email delivery already has durable rows, claims, retries, suppression,
   unsubscribe handling, and webhooks. Its provider interface has no attachments;
   dispatch routes every sequence other than `booking-host` to welcome handling,

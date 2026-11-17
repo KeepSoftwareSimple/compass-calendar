@@ -122,7 +122,8 @@ export interface GenerateDemoDataOptions {
 
 /**
  * Generate demo data relative to a reference date (defaults to now).
- * Exported for Playwright demo-week fixtures under `e2e/fixtures/demo-week/`.
+ * Seeded demo events for onboarding; Playwright can mirror the same JSON from
+ * `e2e/fixtures/demo-week/demo-seed.json`.
  */
 export function generateDemoData(
   referenceNow = dayjs(),

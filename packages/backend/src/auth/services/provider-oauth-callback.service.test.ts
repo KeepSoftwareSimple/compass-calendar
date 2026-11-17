@@ -49,7 +49,7 @@ describe("provider-oauth-callback.service", () => {
       "captureCallbackQuery",
     ).mockResolvedValue(true);
 
-    const state = buildSignInOAuthState({ isDesktopClient: false });
+    const state = buildSignInOAuthState({});
     await handleProviderOAuthCallback({
       provider: "google",
       query: { state },

@@ -1,9 +1,8 @@
 import { type BillingCheckoutResponse } from "@core/types/billing.types";
 
 /**
- * A checkout response carries either a client secret (embedded form) or a
- * hosted Checkout URL (desktop return). The embedded panels never ask for the
- * desktop shape, so a missing secret means the server answered the wrong one.
+ * Stripe subscription and card update checkouts return an embedded Checkout
+ * client secret. A missing secret means the server did not return one.
  */
 export function requireCheckoutClientSecret(
   response: BillingCheckoutResponse,

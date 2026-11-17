@@ -9,8 +9,10 @@ so the keyboard calendar stays learnable.
 
 Acceptance walkthroughs live in [Shortcuts](../acceptance/shortcuts.md).
 The display registry lives in `packages/core/src/shortcuts/shortcuts.registry.ts`
-(the web app re-exports it). The web `ShortcutDispatcher` is the source of truth
-for behavior described in this doc.
+(the web app re-exports it). Web binding and dispatch live in
+`apps/calendar-web/src/shortcuts/` (`useGlobalShortcuts`, context-specific
+hooks, and the public catalog helpers). That stack is the source of truth for
+behavior described in this doc.
 
 ---
 

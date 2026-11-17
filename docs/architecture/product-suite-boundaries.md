@@ -65,12 +65,6 @@ Calendar owns events, calendars, attendees on events, recurrence, and the
 calendar experience. Attendees are therefore an expansion of the Calendar
 domain, not a new shared subsystem.
 
-The macOS app is another Calendar client. It should consume the same Calendar
-HTTP/event-stream contracts as the web client. Share framework-neutral domain
-logic where it has proven value, but do not force native UI through a web UI
-abstraction. A thin native shell or shared web surface can be evaluated later
-without changing the service boundary.
-
 ### Booking
 
 Booking owns booking pages, availability rules, appointment types, invitee
@@ -237,8 +231,6 @@ worker is the simplest architecture that preserves future options.
 ### Benefits
 
 - New products receive explicit ownership without immediate microservices.
-- Calendar web and macOS clients share contracts rather than implementation
-  details.
 - Sync remains focused and reusable without becoming a universal workflow
   engine.
 - Domain-owned collections and interfaces preserve an inexpensive future

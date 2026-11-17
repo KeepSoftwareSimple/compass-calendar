@@ -1,14 +1,10 @@
-// The DOMPurify allowlist for event description HTML, which arrives from
-// calendar providers as untrusted input. It is the formatting subset the
-// description editor supports, and CompassKit's `HTMLFragment` parses the
-// same subset on the native client.
+// DOMPurify allowlist for event description HTML from calendar providers
+// (untrusted input). Matches the formatting subset the description editor
+// supports.
 //
-// Two call sites sanitize with it: the editor itself, against the browser's
-// DOM against a jsdom window, when it
-// emits the parity vectors the native parser is tested on. They need
-// different DOMPurify instances but must never allow different tags: a tag
-// added here for the editor and missed there would ship a native parser that
-// silently drops markup the web app renders.
+// Sanitize at the editor and anywhere else provider HTML is rendered in the
+// web app. Use a fresh DOMPurify instance per environment (browser DOM vs
+// jsdom in tests), but keep this tag list identical everywhere.
 export const DESCRIPTION_HTML_ALLOWED_TAGS = [
   "p",
   "br",
@@ -20,7 +16,7 @@ export const DESCRIPTION_HTML_ALLOWED_TAGS = [
   "ol",
   "li",
   "a",
-];
+] as const;
 
 // `href` is the only attribute let through. The editor forces target/rel on
 // its own link mark regardless of what survived on the source tag.

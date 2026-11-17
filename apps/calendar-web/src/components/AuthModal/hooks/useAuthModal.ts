@@ -53,7 +53,7 @@ export interface AuthSearch {
   meetingSetup?: SearchFlag;
   /** ?settings=<page> opens Settings on that page (welcome email CTAs). */
   settings?: SettingsPage;
-  /** ?quickAdd=1 opens the command palette in create mode (macOS panel). */
+  /** ?quickAdd=1 opens the command palette in create mode. */
   quickAdd?: SearchFlag;
 }
 
