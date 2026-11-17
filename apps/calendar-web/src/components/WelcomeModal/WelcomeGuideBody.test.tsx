@@ -86,17 +86,13 @@ describe("WelcomeGuideBody", () => {
     expect(question).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("explains why the mouse does not work", async () => {
+  it("answers whether it can be trusted", async () => {
     const user = userEvent.setup();
     renderWelcomeGuide();
 
-    await user.click(
-      screen.getByRole("button", { name: "Why doesn't my mouse work?" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Can I trust you?" }));
 
-    expect(
-      screen.getByText(/This welcome screen works with your mouse, too/),
-    ).toBeTruthy();
+    expect(screen.getByText(/Compass has been around since 2021/)).toBeTruthy();
   });
 
   it("styles the legend and palette shortcuts in the lost FAQ", async () => {
@@ -117,7 +113,7 @@ describe("WelcomeGuideBody", () => {
     expect(screen.getByText(/and \? opens the full legend/)).toBeTruthy();
   });
 
-  it("opens footer links with digits 6 through 0, and P for Pricing", () => {
+  it("opens footer links with digits 7 through 0, and P for Pricing", () => {
     renderWelcomeGuide();
 
     const x = captureLinkClick("X (Twitter)");
@@ -127,11 +123,10 @@ describe("WelcomeGuideBody", () => {
     const privacy = captureLinkClick("Privacy");
     const terms = captureLinkClick("Terms");
 
-    pressWindowKey({ key: "6", code: "Digit6" });
     pressWindowKey({ key: "7", code: "Digit7" });
     pressWindowKey({ key: "8", code: "Digit8" });
-    pressWindowKey({ key: "p", code: "KeyP" });
     pressWindowKey({ key: "9", code: "Digit9" });
+    pressWindowKey({ key: "p", code: "KeyP" });
     pressWindowKey({ key: "0", code: "Digit0" });
 
     expect(x).toHaveBeenCalledTimes(1);
@@ -139,7 +134,8 @@ describe("WelcomeGuideBody", () => {
     expect(github).toHaveBeenCalledTimes(1);
     expect(pricing).toHaveBeenCalledTimes(1);
     expect(privacy).toHaveBeenCalledTimes(1);
-    expect(terms).toHaveBeenCalledTimes(1);
+    // Six FAQ rows leave no digit for the last footer link.
+    expect(terms).not.toHaveBeenCalled();
     expect(screen.getByRole("link", { name: "GitHub" })).toHaveAttribute(
       "href",
       "https://github.com/KeepSoftwareSimple/compass-calendar",

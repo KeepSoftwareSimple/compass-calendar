@@ -215,10 +215,10 @@ describe("useEventMutations optimistic rsvp", () => {
 
     act(() => failRequest());
 
-    // Rollback: the 503 restores the pre-answer list.
+    // SYNC_UNAVAILABLE: keep the optimistic answer while Compass retries.
     await waitFor(() => {
       expect(cachedAttendees(queryClient, event.id)).toEqual([
-        selfEntry(),
+        selfEntry("accepted"),
         otherGuest,
       ]);
     });

@@ -423,8 +423,8 @@ export class JobRepository {
           leaseExpiresAt: null,
           failureClass: "retryableTransient" as const,
           ...(lastError ? { lastError } : {}),
+          lastErrorAt: at,
         },
-        $min: { lastErrorAt: at },
         $currentDate: { updatedAt: true },
       },
     );
@@ -448,8 +448,8 @@ export class JobRepository {
           leaseExpiresAt: null,
           failureClass: "retryableTransient" as const,
           ...(lastError ? { lastError } : {}),
+          lastErrorAt: at,
         },
-        $min: { lastErrorAt: at },
         $currentDate: { updatedAt: true },
       },
     );
@@ -691,6 +691,26 @@ export class JobRepository {
       candidates.push({
         runAfter: retrying["lastErrorAt"],
         failureClass: (retrying["failureClass"] ??
+          "retryableTransient") as JobRecord["failureClass"],
+      });
+    }
+
+    const inFlightProviderErrors = await this.collection.findOne(
+      {
+        ...scope,
+        state: "claimed",
+        lastErrorAt: { $lte: now },
+        failureClass: "retryableTransient",
+      },
+      {
+        sort: { lastErrorAt: 1 },
+        projection: { lastErrorAt: 1, failureClass: 1 },
+      },
+    );
+    if (inFlightProviderErrors?.["lastErrorAt"] instanceof Date) {
+      candidates.push({
+        runAfter: inFlightProviderErrors["lastErrorAt"],
+        failureClass: (inFlightProviderErrors["failureClass"] ??
           "retryableTransient") as JobRecord["failureClass"],
       });
     }

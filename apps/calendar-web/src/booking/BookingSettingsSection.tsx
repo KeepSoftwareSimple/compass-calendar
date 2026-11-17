@@ -491,16 +491,20 @@ export function BookingSettingsSection({
     if (signupPromptInFlightRef.current) return true;
     signupPromptInFlightRef.current = true;
     void trackSignupStartedAtClick("meeting_page_setup");
-    settingsActions.closeSettingsForGuestAuthHandoff();
-    void importOrReload(() => import("@web/routers")).then(({ router }) => {
-      void router.navigate({
-        to: ".",
-        search: (prev: Record<string, unknown>) => ({
-          ...prev,
-          auth: VIEW_TO_PARAM.signUp,
-        }),
-      });
-    });
+    // Open sign-up over Settings first, then close Settings underneath it.
+    // Closing first left the bare calendar on screen while the router loaded.
+    void importOrReload(() => import("@web/routers")).then(
+      async ({ router }) => {
+        await router.navigate({
+          to: ".",
+          search: (prev: Record<string, unknown>) => ({
+            ...prev,
+            auth: VIEW_TO_PARAM.signUp,
+          }),
+        });
+        settingsActions.closeSettingsForGuestAuthHandoff();
+      },
+    );
     return true;
   };
 

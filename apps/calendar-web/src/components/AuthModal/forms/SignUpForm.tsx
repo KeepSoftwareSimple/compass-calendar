@@ -1,3 +1,4 @@
+import { resolveModifier } from "@tanstack/react-hotkeys";
 import {
   type ChangeEvent,
   type FC,
@@ -75,6 +76,11 @@ export const SignUpForm: FC<SignUpFormProps> = ({
 
   return (
     <form onSubmit={form.handleSubmit} className="flex w-full flex-col gap-4">
+      <p className="pointer-coarse:hidden text-text-muted text-xs">
+        Tab moves between fields. Hold{" "}
+        {resolveModifier("Mod") === "Meta" ? "⌘" : "Ctrl"} and press 1, 2, or 3
+        to jump directly.
+      </p>
       <AuthSignupDigitHintOverlay
         visible={areHintsVisible}
         fieldRefs={fieldRefs}

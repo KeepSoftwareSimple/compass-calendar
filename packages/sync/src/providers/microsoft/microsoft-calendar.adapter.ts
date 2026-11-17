@@ -22,6 +22,10 @@ import {
   type ProviderCalendarAdapter,
   ProviderCalendarError,
 } from "@sync/providers/provider-calendar.port";
+import {
+  isRetryableProviderNetworkFailure,
+  isRetryableProviderResponseParseFailure,
+} from "@sync/providers/provider-transient-error.util";
 
 export interface MicrosoftGraphCalendar {
   readonly id?: string;
@@ -231,6 +235,12 @@ async function microsoftDiscoveryRead<T>(
 function classifyDiscoveryError(
   error: unknown,
 ): "authExpired" | "transient" | "discoveryFailed" {
+  if (
+    isRetryableProviderNetworkFailure(error) ||
+    isRetryableProviderResponseParseFailure(error)
+  ) {
+    return "transient";
+  }
   const status = microsoftStatus(error);
   if (status === 401) return "authExpired";
   if (isMicrosoftTransient(error, status)) return "transient";

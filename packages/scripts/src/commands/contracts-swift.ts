@@ -1,3 +1,4 @@
+import { COMPASS_MACOS_DIR } from "@scripts/desktop-export/paths";
 import {
   assertGeneratedFilesMatch,
   writeGeneratedFiles,
@@ -6,8 +7,8 @@ import { emitContractsSwiftFile } from "@scripts/swift-contracts/emit-swift";
 import { join } from "node:path";
 
 export const CONTRACTS_SWIFT_OUTPUT = join(
-  process.cwd(),
-  "apps/calendar-macos/CompassKit/Sources/CompassKit/Generated/Contracts.swift",
+  COMPASS_MACOS_DIR,
+  "CompassKit/Sources/CompassKit/Generated/Contracts.swift",
 );
 
 export function writeContractsSwift(

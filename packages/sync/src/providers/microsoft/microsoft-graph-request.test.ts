@@ -84,6 +84,33 @@ describe("microsoftGraphRequest", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("attaches HTTP status and content-type when the JSON body is not parseable", async () => {
+    globalThis.fetch = mock(() =>
+      Promise.resolve(
+        new Response("<html>bad gateway</html>", {
+          status: 502,
+          headers: { "Content-Type": "text/html" },
+        }),
+      ),
+    ) as unknown as typeof fetch;
+
+    try {
+      await microsoftGraphRequest({
+        accessToken: "token-1",
+        url: "https://graph.microsoft.com/v1.0/me/calendars",
+        fallbackError: "microsoft_calendar_list_failed",
+      });
+      expect.unreachable("expected the request to reject");
+    } catch (error) {
+      expect((error as Error).message).toBe("Failed to parse JSON");
+      expect(microsoftStatus(error)).toBe(502);
+      expect(
+        (error as { response?: { headers?: { "content-type"?: string } } })
+          .response?.headers?.["content-type"],
+      ).toBe("text/html");
+    }
+  });
+
   it("skips the JSON body on a successful emptyOk delete", async () => {
     const fetchMock = mock(() =>
       Promise.resolve(new Response(null, { status: 204 })),

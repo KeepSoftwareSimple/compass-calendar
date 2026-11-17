@@ -28,9 +28,8 @@ Playwright. Docs index: `docs/README.md`.
 - Failing tests are rerun against `origin/main`: only NEW failures fail the
   verdict. Paste its PRE-EXISTING and FLAKY lists into the PR body.
   Screenshot-only `@artifact` specs: `bun run test:e2e:artifacts`.
-- macOS: `docs/development/local-development.md`. Swift edits: run
-  `bun cli contracts:swift --check` and `bun cli desktop:export --check`
-  (drop `--check` to regenerate when schemas or shortcuts change).
+- Native macOS code and CI live in `KeepSoftwareSimple/compass-calendar-mac`.
+  Shared exports: `docs/development/macos-repository-boundary.md`.
 - Focused suites: `bun test:core|web|backend|sync|scripts|self-host`
   (`:fast` tiers skip Mongo). Avoid bare `bun test`. Also `bun type-check`,
   `bun lint`, `bun knip`.
@@ -70,8 +69,7 @@ Playwright. Docs index: `docs/README.md`.
 - Branches `type/action[-issue-number]`. Commits conventional, lower case,
   present tense: `fix(web): handle disconnected google state`.
 - Stage explicit paths. Never force-push, rewrite published history, weaken
-  tests, or widen timeouts to go green. macOS: batch pushes; no PR-only Mac
-  jobs or strict `test-macos.yml` spam.
+  tests, or widen timeouts to go green.
 - Ship: implement, `bun run verify --strict`, open a PR with `Fixes #N`
   and the `VERDICT:` line, mark it ready, run `gh pr merge --auto`. `main`
   merges only via the merge queue, which squash-merges once required checks

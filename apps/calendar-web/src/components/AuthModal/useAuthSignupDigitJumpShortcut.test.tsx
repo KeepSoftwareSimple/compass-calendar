@@ -82,6 +82,36 @@ describe("useAuthSignupDigitJumpShortcut", () => {
     expect(document.activeElement).toBe(emailInput);
   });
 
+  it("jumps between focused inputs using Mod and leaves bare digits available for typing", () => {
+    renderHook(() => useAuthSignupDigitJumpShortcut(fieldRefs, true));
+    emailInput.focus();
+    for (const [digit, input] of [
+      ["1", nameInput],
+      ["3", passwordInput],
+      ["2", emailInput],
+    ] as const) {
+      act(() => {
+        const event = new KeyboardEvent("keydown", {
+          key: digit,
+          code: `Digit${digit}`,
+          bubbles: true,
+          cancelable: true,
+          ...MOD_INIT,
+        });
+        document.activeElement?.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+      });
+      expect(document.activeElement).toBe(input);
+    }
+    const digit = new KeyboardEvent("keydown", {
+      key: "2",
+      bubbles: true,
+      cancelable: true,
+    });
+    emailInput.dispatchEvent(digit);
+    expect(digit.defaultPrevented).toBe(false);
+  });
+
   it("is inactive when disabled", () => {
     const { result } = renderHook(() =>
       useAuthSignupDigitJumpShortcut(fieldRefs, false),

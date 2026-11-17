@@ -70,7 +70,6 @@ const OUTPUT_KEYS = [
   "sync",
   "scripts",
   "static_web",
-  "contracts",
 ] as const;
 
 const ALL_ON = [...OUTPUT_KEYS.map((key) => `${key}=true`), ""].join("\n");
@@ -102,8 +101,8 @@ describe("detect-code-changes", () => {
   });
 
   it("gates the e2e shards on the e2e output and the unit legs on package outputs", () => {
-    const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
     const e2e = readFileSync(".github/workflows/test-e2e.yml", "utf8");
+    const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
 
     expect(e2e).toContain("e2e: ${{ steps.filter.outputs.e2e }}");
     expect(e2e).toContain("if: needs.changes.outputs.e2e == 'true'");
@@ -121,8 +120,8 @@ describe("detect-code-changes", () => {
   });
 
   it("runs Unit once per PR push and names Unit vs E2E", () => {
-    const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
     const e2e = readFileSync(".github/workflows/test-e2e.yml", "utf8");
+    const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
 
     expect(unit).toMatch(/^name: Unit$/m);
     expect(e2e).toMatch(/^name: E2E$/m);
@@ -178,41 +177,16 @@ describe("detect-code-changes", () => {
     );
   });
 
-  it("skips unit and e2e for macos-only pull requests", () => {
-    const result = runDetector(
-      "pull_request",
-      "apps/calendar-macos/Compass/Sources/App.swift",
-    );
-
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.output).toBe(ALL_OFF);
-  });
-
-  it("runs web and e2e when a pull request mixes macos and calendar-web changes", () => {
-    const result = runDetector(
-      "pull_request",
-      "apps/calendar-macos/Foo.swift\napps/calendar-web/src/app.tsx",
-    );
-
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.output).toBe(
-      flags({ code: true, e2e: true, web: true, static_web: true }),
-    );
-  });
-
-  it("gates boot bundle delta and contracts checks on static_web and contracts outputs", () => {
+  it("gates boot bundle delta on the static_web output", () => {
     const bootBundle = readFileSync(
       ".github/workflows/boot-bundle.yml",
       "utf8",
     );
-    const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
 
     expect(bootBundle).toContain(
       "static_web: ${{ steps.filter.outputs.static_web }}",
     );
     expect(bootBundle).toContain("needs.changes.outputs.static_web == 'true'");
-    expect(unit).toContain("contracts: ${{ steps.filter.outputs.contracts }}");
-    expect(unit).toContain("if: needs.changes.outputs.contracts == 'true'");
   });
 
   it("runs e2e when a backend pull request also touches anything else", () => {

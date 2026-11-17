@@ -14,7 +14,7 @@ const outputDir =
   process.argv[2] ??
   join(
     process.cwd(),
-    "apps/calendar-macos/CompassKit/Sources/CompassKit/Resources/Fixtures",
+    "build/desktop-export/CompassKit/Sources/CompassKit/Resources/Fixtures",
   );
 
 const emitters: Record<

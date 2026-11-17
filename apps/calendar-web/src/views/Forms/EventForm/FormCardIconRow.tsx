@@ -36,8 +36,8 @@ export function FormCardIconRow({
   return (
     <div
       className={classNames(
-        "flex min-h-8 items-start gap-2",
-        FORM_CARD_ICON_ROW_LINE_CLASSNAME,
+        // No fixed height: multi-line content (guest notes, chips) must grow the row.
+        "flex min-h-8 items-start gap-2 leading-5",
         className,
       )}
     >

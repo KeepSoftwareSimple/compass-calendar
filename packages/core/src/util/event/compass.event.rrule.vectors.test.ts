@@ -3,14 +3,14 @@ import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const MACOS_RRULE_FIXTURE_PATH = join(
+const RRULE_FIXTURE_PATH = join(
   process.cwd(),
-  "apps/calendar-macos/CompassKit/Sources/CompassKit/Resources/Fixtures/rrule.vectors.json",
+  "packages/core/src/test/fixtures/rrule.vectors.json",
 );
 
 describe("CompassEventRRule desktop vectors", () => {
-  it("matches the checked-in macOS rrule.vectors.json export", () => {
-    const onDisk = JSON.parse(readFileSync(MACOS_RRULE_FIXTURE_PATH, "utf8"));
+  it("matches the checked-in shared rrule.vectors.json export", () => {
+    const onDisk = JSON.parse(readFileSync(RRULE_FIXTURE_PATH, "utf8"));
     expect(buildRruleFixtures()).toEqual(onDisk);
   });
 });

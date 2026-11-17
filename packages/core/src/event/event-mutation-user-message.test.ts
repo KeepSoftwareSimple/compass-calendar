@@ -2,6 +2,7 @@ import {
   googleProviderRejectedChangeMessage,
   providerCalendarProductName,
   providerSaveFailureMessage,
+  syncUnavailablePendingMessage,
 } from "@core/event/event-mutation-user-message";
 import { describe, expect, it } from "bun:test";
 
@@ -37,5 +38,19 @@ describe("providerCalendarProductName", () => {
   it("matches the web sidebar product names", () => {
     expect(providerCalendarProductName("google")).toBe("Google Calendar");
     expect(providerCalendarProductName("apple")).toBe("Apple Calendar");
+  });
+});
+
+describe("syncUnavailablePendingMessage", () => {
+  it("names Outlook and Microsoft for the microsoft provider", () => {
+    expect(syncUnavailablePendingMessage("microsoft")).toBe(
+      "Still saving to Outlook. Microsoft is responding slowly, so your change may appear shortly. Compass will keep trying.",
+    );
+  });
+
+  it("names Google Calendar for google", () => {
+    expect(syncUnavailablePendingMessage("google")).toContain(
+      "Google Calendar",
+    );
   });
 });

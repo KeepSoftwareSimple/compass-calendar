@@ -109,13 +109,13 @@ describe("BookingSettingsSection guest sign-up hand-off", () => {
     await advanceGuestWizardToGoLive(user);
     expect(
       screen.getByRole("button", {
-        name: "Start your free trial to publish your meeting page",
+        name: "Publish your meeting page",
       }),
     ).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", {
-        name: "Start your free trial to publish your meeting page",
+        name: "Publish your meeting page",
       }),
     );
 
@@ -148,7 +148,7 @@ describe("BookingSettingsSection guest sign-up hand-off", () => {
     await advanceGuestWizardToGoLive(user);
     const modKey = resolveModifier("Mod") === "Meta" ? "Meta" : "Control";
     const goLive = screen.getByRole("button", {
-      name: "Start your free trial to publish your meeting page",
+      name: "Publish your meeting page",
     });
     goLive.focus();
     await user.keyboard(`{${modKey}}{Enter}`);

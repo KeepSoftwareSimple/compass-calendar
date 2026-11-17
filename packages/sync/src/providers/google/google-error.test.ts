@@ -2,9 +2,58 @@ import {
   describeGoogleRequestBodyForLog,
   describeGoogleWriteTargetForLog,
   googleErrorReasons,
+  googleFailureCause,
+  googleStatus,
   hasGoogleRateLimitReason,
 } from "@sync/providers/google/google-error";
 import { describe, expect, it } from "bun:test";
+
+describe("googleStatus", () => {
+  it("does not treat DOMException TIMEOUT_ERR as an HTTP status", () => {
+    const timeout = new DOMException(
+      "The operation timed out.",
+      "TimeoutError",
+    );
+    expect(timeout.code).toBe(23);
+    expect(googleStatus(timeout)).toBeUndefined();
+  });
+
+  it("still reads HTTP status from response and Gaxios code fallbacks", () => {
+    expect(googleStatus({ response: { status: 503 } })).toBe(503);
+    expect(
+      googleStatus(
+        Object.assign(new Error("bad"), {
+          code: 400,
+          errors: [{ reason: "pushNotSupportedForRequestedResource" }],
+        }),
+      ),
+    ).toBe(400);
+  });
+});
+
+describe("googleFailureCause", () => {
+  it("does not label a fetch timeout as HTTP 23", () => {
+    const timeout = new DOMException(
+      "The operation timed out.",
+      "TimeoutError",
+    );
+    const cause = googleFailureCause(timeout);
+    expect(cause?.message).toBe("The operation timed out.");
+    expect(cause?.message).not.toContain("HTTP");
+  });
+
+  it("includes response status and content-type when present", () => {
+    const error = Object.assign(new SyntaxError("Failed to parse JSON"), {
+      response: {
+        status: 502,
+        headers: { "content-type": "text/html" },
+      },
+    });
+    expect(googleFailureCause(error)?.message).toBe(
+      "Failed to parse JSON (HTTP 502, content-type text/html)",
+    );
+  });
+});
 
 describe("googleErrorReasons", () => {
   it("reads reasons from the response body and the error object", () => {

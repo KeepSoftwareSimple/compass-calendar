@@ -256,7 +256,8 @@ export function RootShell() {
         {/* Phone visitors only see MobileGate; a bottom notice card steals
             tray touches and breaks Time Block Party drag/tap. */}
         {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
-        {!isMobile && <LocalModeConnectPrompt />}
+        {/* One ask at a time: the meeting setup flow ends in its own sign-up. */}
+        {!isMobile && !guestMeetingSetupActive && <LocalModeConnectPrompt />}
       </BottomNoticeStack>
     </AuthModalProvider>
   );

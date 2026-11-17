@@ -6,7 +6,7 @@ import {
   SETUP_WIZARD_FORWARD_BUTTON,
 } from "./booking-harness";
 
-const GUEST_GO_LIVE = "Start your free trial to publish your meeting page";
+const GUEST_GO_LIVE = "Publish your meeting page";
 
 // The `/meet` landing link itself is covered by meet-landing.spec.ts. This
 // starts where that link lands: a signed-out visitor on `/?meetingSetup=1`.
