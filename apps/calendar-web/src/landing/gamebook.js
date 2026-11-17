@@ -53,25 +53,40 @@
     wake();
   };
 
+  // "[[Tab]]" in the story marks a key name, shown as a keycap. Splits a line
+  // into plain and key segments; odd indexes are keys.
+  const KEY_MARK = /\[\[(.+?)\]\]/;
+  const splitKeys = (text) => text.split(KEY_MARK);
+
   // Screen readers get the whole line once; the letter-by-letter copy is
   // visual only.
   async function typeLine(text) {
+    const segments = splitKeys(text);
     const p = document.createElement("p");
     const spoken = Object.assign(document.createElement("span"), {
       className: "sr-only",
-      textContent: text,
+      textContent: segments.join(""),
     });
     const typed = document.createElement("span");
     typed.setAttribute("aria-hidden", "true");
     p.append(spoken, typed);
     out.append(p);
-    for (const char of text) {
-      if (skip) break;
-      typed.textContent += char;
-      screen.scrollTop = screen.scrollHeight;
-      await sleep(CHAR_DELAY_MS);
+    const parts = segments
+      .map((segment, i) => {
+        const el = document.createElement(i % 2 ? "kbd" : "span");
+        return { el, text: segment };
+      })
+      .filter((part) => part.text);
+    for (const part of parts) {
+      typed.append(part.el);
+      for (const char of part.text) {
+        if (skip) break;
+        part.el.textContent += char;
+        screen.scrollTop = screen.scrollHeight;
+        await sleep(CHAR_DELAY_MS);
+      }
+      part.el.textContent = part.text;
     }
-    typed.textContent = text;
   }
 
   function applyTags(tags) {

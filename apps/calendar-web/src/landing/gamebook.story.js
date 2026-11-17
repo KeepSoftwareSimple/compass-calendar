@@ -15,6 +15,7 @@
 // gamebook.js sets "returning", "mobile" and "mod" (the visitor's own
 // shortcut key: the Command symbol on a Mac, Ctrl elsewhere) before the
 // story starts.
+// Wrap key names in [[ ]] to show them as keycaps: "press [[{mod}+K]]".
 // Avoid "//" inside story text (ink reads it as a comment) and em-dashes.
 window.GAMEBOOK_STORY = `
 VAR returning = false
@@ -87,7 +88,7 @@ The UI is simple and clean. There is no AI assistant to nag you. Making changes 
 # CLEAR
 STOP 3 OF 4: THE PALETTE
 You forget a shortcut. It happens.
-You press {mod}+K and type what you want, like "create event" or "go to today". The palette finds it, runs it, and shows you its key for next time.
+You press [[{mod}+K]] and type what you want, like "create event" or "go to today". The palette finds it, runs it, and shows you its key for next time.
 You never have to memorize the list up front.
 + [Next stop] -> tour_4
 + [Try the calendar] -> try
