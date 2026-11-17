@@ -4,7 +4,7 @@ import { BaseApi } from "@web/api/base/base.api";
 import { USER_METADATA_REQUEST_TIMEOUT_MS } from "@web/api/user.api";
 import { resetGoogleReconnectRequiredForTests } from "@web/auth/providers/reconnect.state";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
-import { GOOGLE_DELAYED_TOAST_ID } from "@web/common/constants/toast.constants";
+import { PROVIDER_DELAYED_TOAST_ID } from "@web/common/constants/toast.constants";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   applyUserMetadataSideEffects,
@@ -74,7 +74,7 @@ describe("applyUserMetadataSideEffects - delayed toast lifecycle", () => {
 
     expect(mocks.error).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ toastId: GOOGLE_DELAYED_TOAST_ID }),
+      expect.objectContaining({ toastId: PROVIDER_DELAYED_TOAST_ID }),
     );
   });
 
@@ -92,13 +92,13 @@ describe("applyUserMetadataSideEffects - delayed toast lifecycle", () => {
 
     applyUserMetadataSideEffects(healthy);
 
-    expect(mocks.dismiss).toHaveBeenCalledWith(GOOGLE_DELAYED_TOAST_ID);
+    expect(mocks.dismiss).toHaveBeenCalledWith(PROVIDER_DELAYED_TOAST_ID);
   });
 
   it("does not dismiss the delayed toast on recovery if it was never shown", () => {
     applyUserMetadataSideEffects(healthy);
 
-    expect(mocks.dismiss).not.toHaveBeenCalledWith(GOOGLE_DELAYED_TOAST_ID);
+    expect(mocks.dismiss).not.toHaveBeenCalledWith(PROVIDER_DELAYED_TOAST_ID);
   });
 
   it("shows the toast again for a later, separate ATTENTION episode after recovering", () => {
@@ -110,7 +110,7 @@ describe("applyUserMetadataSideEffects - delayed toast lifecycle", () => {
 
     expect(mocks.error).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ toastId: GOOGLE_DELAYED_TOAST_ID }),
+      expect.objectContaining({ toastId: PROVIDER_DELAYED_TOAST_ID }),
     );
   });
 });

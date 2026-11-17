@@ -9,9 +9,9 @@ import {
   setBillingGateOwnsScreen,
 } from "@web/billing/billing-gate-attention";
 import {
-  GoogleDelayedToast,
-  showGoogleDelayedToast,
-} from "@web/common/utils/toast/google-delayed.toast";
+  ProviderDelayedToast,
+  showProviderDelayedToast,
+} from "@web/common/utils/toast/provider-delayed.toast";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import { CalendarConnectionBanner } from "@web/components/CalendarConnectionBanner/CalendarConnectionBanner";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
@@ -22,7 +22,7 @@ mockModuleForFile("@web/auth/providers/useConnectProvider", realConnectGoogle, {
   useConnectGoogle: () => ({ refresh: mockRefresh }),
 });
 
-describe("GoogleDelayedToast", () => {
+describe("ProviderDelayedToast", () => {
   const { port, mocks } = createTestToastPort();
 
   beforeEach(() => {
@@ -36,7 +36,7 @@ describe("GoogleDelayedToast", () => {
   it("shows a G keycap and refreshes when G is pressed", () => {
     render(
       <HotkeysProvider>
-        <GoogleDelayedToast toastId="google-delayed" />
+        <ProviderDelayedToast toastId="google-delayed" />
       </HotkeysProvider>,
     );
 
@@ -57,7 +57,7 @@ describe("GoogleDelayedToast", () => {
   it("does not refresh with S, which other toasts use for Sign up / Sign in", () => {
     render(
       <HotkeysProvider>
-        <GoogleDelayedToast toastId="google-delayed" />
+        <ProviderDelayedToast toastId="google-delayed" />
       </HotkeysProvider>,
     );
 
@@ -72,7 +72,7 @@ describe("GoogleDelayedToast", () => {
     render(
       <HotkeysProvider>
         <CalendarConnectionBanner kind="delayed" onAction={onBannerRefresh} />
-        <GoogleDelayedToast toastId="google-delayed" />
+        <ProviderDelayedToast toastId="google-delayed" />
       </HotkeysProvider>,
     );
 
@@ -96,7 +96,7 @@ describe("GoogleDelayedToast", () => {
   });
 });
 
-describe("showGoogleDelayedToast", () => {
+describe("showProviderDelayedToast", () => {
   const { port, mocks } = createTestToastPort();
 
   beforeEach(() => {
@@ -112,7 +112,7 @@ describe("showGoogleDelayedToast", () => {
 
   it("does not show while the billing gate owns the screen", () => {
     setBillingGateOwnsScreen(true);
-    showGoogleDelayedToast();
+    showProviderDelayedToast();
     expect(mocks.error).not.toHaveBeenCalled();
   });
 });

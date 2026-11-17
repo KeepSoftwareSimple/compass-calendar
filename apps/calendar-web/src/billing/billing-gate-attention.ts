@@ -33,9 +33,9 @@ function flushDeferredAttentionToasts(): void {
     flushDeferredGoogleReconnectToast();
   });
   void importOrReload(
-    () => import("@web/common/utils/toast/google-delayed.toast"),
-  ).then(({ flushDeferredGoogleDelayedToast }) => {
-    flushDeferredGoogleDelayedToast();
+    () => import("@web/common/utils/toast/provider-delayed.toast"),
+  ).then(({ flushDeferredProviderDelayedToast }) => {
+    flushDeferredProviderDelayedToast();
   });
   void importOrReload(() => import("@web/booking/NewMeetingsToast")).then(
     ({ flushDeferredNewMeetingsToast }) => {

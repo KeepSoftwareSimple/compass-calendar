@@ -336,7 +336,7 @@ describe("getSidebarSyncStatus", () => {
     });
   });
 
-  it("shows Calendar updates are delayed for delayed workOverdue", () => {
+  it("shows provider-named delayed copy for delayed workOverdue", () => {
     expect(
       getSidebarSyncStatus({
         connection: {
@@ -355,7 +355,7 @@ describe("getSidebarSyncStatus", () => {
       }),
     ).toEqual({
       variant: "warning",
-      text: "Calendar updates are delayed",
+      text: "Google updates are delayed",
     });
   });
 
@@ -383,7 +383,7 @@ describe("getSidebarSyncStatus", () => {
     });
   });
 
-  it("shows Couldn't update your calendar for delayed providerErrors", () => {
+  it("names the provider when delayed is from providerErrors", () => {
     expect(
       getSidebarSyncStatus({
         connection: {
@@ -402,7 +402,7 @@ describe("getSidebarSyncStatus", () => {
       }),
     ).toEqual({
       variant: "warning",
-      text: "Couldn't update your calendar",
+      text: "Google delayed: Google is slow",
     });
   });
 

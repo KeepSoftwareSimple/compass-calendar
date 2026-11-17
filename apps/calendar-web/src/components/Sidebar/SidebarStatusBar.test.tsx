@@ -297,7 +297,7 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Calendar updates are delayed",
+      "Google updates are delayed",
     );
     expect(screen.queryByRole("status")).not.toHaveTextContent(
       "needs reconnecting",
@@ -319,7 +319,7 @@ describe("SidebarStatusBar", () => {
     expect(screen.queryByText(/needs reconnecting/)).not.toBeInTheDocument();
   });
 
-  it("shows Calendar updates are delayed for delayed workOverdue", () => {
+  it("shows provider-named delayed copy for delayed workOverdue", () => {
     googleState = "ATTENTION";
     connection = createMockConnection("ahab@pequod.com", {
       state: "delayed",
@@ -334,7 +334,7 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Calendar updates are delayed",
+      "Google updates are delayed",
     );
   });
 
@@ -352,7 +352,7 @@ describe("SidebarStatusBar", () => {
 
     render(<SidebarStatusBar />, { wrapper });
     const settingsButton = screen.getByRole("button", {
-      name: "Calendar updates are delayed. Open account settings",
+      name: "Google updates are delayed. Open account settings",
     });
     await user.click(settingsButton);
 
@@ -412,7 +412,7 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Calendar updates are delayed",
+      "Google updates are delayed",
     );
     expect(screen.queryByText("Reconnecting live updates…")).toBeNull();
   });
