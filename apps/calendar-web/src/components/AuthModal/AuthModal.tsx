@@ -65,6 +65,9 @@ function getInitialAuthToken(search: AuthSearch): string | undefined {
  * - Forgot password flow with generic success message
  * - Accessible modal with proper ARIA attributes
  */
+const RETRO_TITLE_CLASS =
+  "font-[VT323,monospace] text-4xl font-normal leading-none text-text";
+
 export const AuthModal: FC = () => {
   const navigate = useNavigate();
   const trialLengthDays =
@@ -299,6 +302,7 @@ export const AuthModal: FC = () => {
         onDismiss={leaveTrialCheckoutOrStep}
         onModEnter={isTrialCheckoutOpen ? undefined : openSignupTrialCheckout}
         title={title}
+        titleClassName={RETRO_TITLE_CLASS}
         variant="modal"
         widthClassName="w-[min(560px,calc(100vw-2rem))]"
       >
@@ -313,6 +317,7 @@ export const AuthModal: FC = () => {
   return (
     <OverlayPanel
       title={title}
+      titleClassName={RETRO_TITLE_CLASS}
       titleAction={
         showAuthSwitch ? (
           <button

@@ -49,6 +49,10 @@ interface BookingSetupWizardProps {
   writableCalendars: Calendar[];
 }
 
+export const GUEST_GO_LIVE_LABEL = "Publish your meeting page";
+export const GUEST_GO_LIVE_TRIAL_NOTE = "Starts your free trial";
+const GUEST_GO_LIVE_TRIAL_NOTE_ID = "booking-setup-trial-note";
+
 const focusStepFirstControl = (
   stepId: SetupStepId,
   root: HTMLElement | null,
@@ -110,6 +114,7 @@ export function BookingSetupWizard({
     writableCalendarCount,
   );
   const isGoLive = setupStep === "live";
+  const showTrialNote = isGoLive && guestGoLive;
   const isFirstStep = setupStep === visibleSetupSteps(writableCalendarCount)[0];
   const canContinue =
     !(setupStep === "destination" && writableCalendarCount === 0) && !isPending;
@@ -119,7 +124,7 @@ export function BookingSetupWizard({
     (form.slug ?? "").length > 0;
   const continueLabel = isGoLive
     ? guestGoLive
-      ? "Start your free trial to publish your meeting page"
+      ? GUEST_GO_LIVE_LABEL
       : "Turn on and copy link"
     : addressSlugReady
       ? "Use this address"
@@ -252,6 +257,9 @@ export function BookingSetupWizard({
         ) : null}
         <OverlayPanelActionButton
           aria-busy={isPending || undefined}
+          aria-describedby={
+            showTrialNote ? GUEST_GO_LIVE_TRIAL_NOTE_ID : undefined
+          }
           aria-keyshortcuts="Meta+Enter Control+Enter"
           disabled={!canContinue}
           onClick={onContinue}
@@ -264,6 +272,14 @@ export function BookingSetupWizard({
           {continueLabel}
         </OverlayPanelActionButton>
       </OverlayPanelActions>
+      {showTrialNote ? (
+        <p
+          className="-mt-2 text-right text-sm text-text-muted"
+          id={GUEST_GO_LIVE_TRIAL_NOTE_ID}
+        >
+          {GUEST_GO_LIVE_TRIAL_NOTE}
+        </p>
+      ) : null}
     </div>
   );
 }

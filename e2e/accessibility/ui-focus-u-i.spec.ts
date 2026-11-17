@@ -14,13 +14,14 @@ test("u returns focus from the month picker to the grid", async ({ page }) => {
 
   const focusedPickerDay = page.locator(".react-datepicker__day:focus");
   await expect(focusedPickerDay).toBeVisible();
-  const weekFocusRing = await focusedPickerDay.evaluate((el) => {
-    const row = el.closest(".react-datepicker__week");
-    if (!row) return null;
-    const afterStyle = getComputedStyle(row, "::after");
-    return afterStyle.boxShadow;
-  });
-  expect(weekFocusRing).toMatch(/inset/);
+  await expect
+    .poll(() =>
+      focusedPickerDay.evaluate((el) => {
+        const row = el.closest(".react-datepicker__week");
+        return row ? getComputedStyle(row, "::after").boxShadow : null;
+      }),
+    )
+    .toMatch(/inset/);
 
   const pickerDay = page.locator('.react-datepicker__day[tabindex="0"]');
   await page.keyboard.press("u");
@@ -41,12 +42,14 @@ test("week picker and grid focus rings stay visible after keyboard focus", async
   await page.keyboard.press("i");
   const focusedPickerDay = page.locator(".react-datepicker__day:focus");
   await expect(focusedPickerDay).toBeVisible();
-  const weekFocusRing = await focusedPickerDay.evaluate((el) => {
-    const row = el.closest(".react-datepicker__week");
-    if (!row) return null;
-    return getComputedStyle(row, "::after").boxShadow;
-  });
-  expect(weekFocusRing).toMatch(/inset/);
+  await expect
+    .poll(() =>
+      focusedPickerDay.evaluate((el) => {
+        const row = el.closest(".react-datepicker__week");
+        return row ? getComputedStyle(row, "::after").boxShadow : null;
+      }),
+    )
+    .toMatch(/inset/);
 
   await page.keyboard.press("u");
   await expect(page.locator("#mainGrid")).toBeFocused();

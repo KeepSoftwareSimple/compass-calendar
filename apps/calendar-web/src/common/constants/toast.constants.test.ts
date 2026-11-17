@@ -7,7 +7,7 @@ describe("getToastDefaultOptions", () => {
 
     expect(options.style).toEqual(
       expect.objectContaining({
-        backgroundColor: "var(--background)",
+        backgroundColor: "var(--surface-panel)",
         color: "var(--text)",
       }),
     );

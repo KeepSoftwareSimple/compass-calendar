@@ -15,11 +15,6 @@ import { join } from "node:path";
  * `--serial` is passed. Web or e2e/ changes also select Playwright a11y and
  * e2e after that wave, unless Chromium is missing — in that case the helper
  * skips those checks and reports incomplete CI parity instead of a silent pass.
- * `apps/calendar-macos/` selects `test:macos:packages` (`swift test` on
- * CompassKit and CompassData) and `test:macos` (xcodegen + xcodebuild for
- * the app and CompassUI) where Xcode is installed; elsewhere, Linux included,
- * the summary names both as CI-only (test-macos.yml) and the verdict is
- * unaffected.
  *
  * When test:web, test:a11y, or test:e2e fails, the failing files are rerun
  * on the branch and on origin/main in a temporary git worktree (see
@@ -52,7 +47,6 @@ const WORKSPACE_PACKAGES = [
 /** Suites with a `test:<name>` script that live outside `packages/`. */
 const STANDALONE_PREFIXES = {
   "self-host/": "self-host",
-  "apps/calendar-macos/": "macos",
 } as const;
 const VALID_PACKAGES = [
   ...WORKSPACE_PACKAGES,
@@ -68,7 +62,6 @@ const PACKAGE_ROOTS: Record<Package, string> = {
   scripts: "packages/scripts/",
   "booking-web": "apps/booking-web/",
   "self-host": "self-host/",
-  macos: "apps/calendar-macos/",
 };
 
 const PACKAGE_PREFIXES: Record<string, Package> = Object.fromEntries(
@@ -83,22 +76,6 @@ const FAST_TEST_PACKAGES = new Set<Package>(["backend", "sync", "scripts"]);
 export const SERIAL_FLAG = "--serial";
 export const STRICT_FLAG = "--strict";
 export type Verdict = "PASS" | "INCOMPLETE" | "FAIL";
-const MACOS_CI_ONLY_REASON =
-  "Swift/AppKit builds run in CI only (test-macos.yml); no Xcode on this machine";
-const MACOS_PACKAGES_CI_ONLY_REASON =
-  "swift test on CompassData and CompassUI runs in CI only (test-macos.yml swift-packages; CompassKit duplicates macos-build); no Xcode on this machine";
-const MACOS_PACKAGE_CHECKS: Array<{ id: string; cmd: string[] }> = [
-  { id: "test:macos:packages", cmd: ["bun", "run", "test:macos:packages"] },
-  { id: "test:macos", cmd: ["bun", "run", "test:macos"] },
-];
-const MACOS_UI_SHARDED_CI_REASON =
-  "CompassUITests run in parallel macos-ui-shard CI jobs (test-macos.yml)";
-
-function macosUiTestsShardedInCi(
-  env: NodeJS.ProcessEnv = process.env,
-): boolean {
-  return env["CI_MACOS_UI_SHARDED"] === "1";
-}
 const FAST_TIER_REASON =
   "no *.db.test.ts and no /storage/ or /repositories/ paths";
 
@@ -158,7 +135,6 @@ export type VerifyDeps = {
   spawn: SpawnFn;
   log: Logger;
   chromiumAvailable?: (spawn: SpawnFn) => boolean | Promise<boolean>;
-  xcodeAvailable?: (spawn: SpawnFn) => boolean | Promise<boolean>;
 };
 
 function isPackage(value: string): value is Package {
@@ -219,19 +195,6 @@ async function detectChromiumAvailable(spawn: SpawnFn): Promise<boolean> {
   return location != null && existsSync(location);
 }
 
-async function detectXcodeAvailable(spawn: SpawnFn): Promise<boolean> {
-  if (process.platform !== "darwin") return false;
-  try {
-    const result = await Promise.resolve(
-      spawn(["xcodebuild", "-version"], { stdio: "pipe" }),
-    );
-    // Command Line Tools alone ship an xcodebuild stub that exits non-zero.
-    return result.exitCode === 0;
-  } catch {
-    return false;
-  }
-}
-
 function filesForPackage(pkg: Package, files: string[]): string[] {
   const prefix = PACKAGE_ROOTS[pkg];
   return files.filter((file) => file.startsWith(prefix));
@@ -287,7 +250,6 @@ export function planVerify(input: {
   packages: Package[];
   files?: string[];
   playwrightChromiumAvailable: boolean;
-  xcodeAvailable?: boolean;
 }): VerifyPlan {
   const packages = VALID_PACKAGES.filter((pkg) => input.packages.includes(pkg));
   const files = input.files ?? [];
@@ -295,26 +257,6 @@ export function planVerify(input: {
   const checks: PlannedCheck[] = [];
   const skips: PlannedSkip[] = [];
   for (const pkg of packages) {
-    if (pkg === "macos") {
-      if (!input.xcodeAvailable) {
-        ciOnly.push(
-          { id: "test:macos:packages", reason: MACOS_PACKAGES_CI_ONLY_REASON },
-          { id: "test:macos", reason: MACOS_CI_ONLY_REASON },
-        );
-        continue;
-      }
-      for (const macosCheck of MACOS_PACKAGE_CHECKS) {
-        if (macosCheck.id === "test:macos" && macosUiTestsShardedInCi()) {
-          ciOnly.push({
-            id: macosCheck.id,
-            reason: MACOS_UI_SHARDED_CI_REASON,
-          });
-          continue;
-        }
-        checks.push({ id: macosCheck.id, cmd: macosCheck.cmd });
-      }
-      continue;
-    }
     checks.push(selectPackageTestCheck(pkg, files));
   }
 
@@ -529,7 +471,6 @@ export async function runVerify(
 ): Promise<number> {
   const { git, spawn, log } = deps;
   const chromiumAvailable = deps.chromiumAvailable ?? detectChromiumAvailable;
-  const xcodeAvailable = deps.xcodeAvailable ?? detectXcodeAvailable;
 
   const parsed = parseVerifyArgs(args);
   if (!parsed.ok) {
@@ -573,9 +514,6 @@ export async function runVerify(
     playwrightChromiumAvailable: playwrightSelected
       ? await Promise.resolve(chromiumAvailable(spawn))
       : true,
-    xcodeAvailable: packages.includes("macos")
-      ? await Promise.resolve(xcodeAvailable(spawn))
-      : false,
   });
 
   const independent = plan.checks.filter(

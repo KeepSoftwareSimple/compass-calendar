@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { expectNoAxeViolations } from "../utils/axe-assertion";
 import { publicBookingAppUrl } from "./booking-harness";
 
-const HEADING = "A simple booking page for your calendar";
+const HEADING = "Compass Calendar Meetings";
 const DOCUMENT_TITLE = "Simple booking page and Calendly alternative - Compass";
 
 test.describe("meeting landing page", () => {

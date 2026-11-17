@@ -99,7 +99,15 @@ const ShowcaseTakeover: FC = () => {
   const skipPending = useShortcutShowcaseStore(selectSkipPending);
   const entry = useShortcutShowcaseStore(selectShowcaseEntry);
   const { closing, beginDismiss } = useDismissTransition(SHOWCASE_REVEAL_MS);
-  const { openModal } = useAuthModal();
+  const { openModal, isOpen: isAuthModalOpen } = useAuthModal();
+  const [authHandoff, setAuthHandoff] = useState(false);
+
+  // URL navigation opens Auth asynchronously. Keep the practice backdrop
+  // mounted until Auth paints, so the calendar never flashes between them.
+  useEffect(() => {
+    if (!isAuthModalOpen || !authHandoff) return;
+    shortcutShowcaseActions.completeAuthHandoff();
+  }, [isAuthModalOpen, authHandoff]);
   const { authenticated } = useContext(SessionContext);
   const [game, setGame] = useState(() => createInitialGameState());
   const [remainingSeconds, setRemainingSeconds] = useState(
@@ -159,15 +167,19 @@ const ShowcaseTakeover: FC = () => {
   };
 
   const skipToSignup = () => {
-    shortcutShowcaseActions.skip("signup", gameContext());
+    if (authHandoff) return;
+    track("shortcut_showcase_skipped", { ...gameContext(), exit: "signup" });
+    shortcutShowcaseActions.markSeen("skipped");
+    setAuthHandoff(true);
     void trackSignupStartedAtClick("shortcut_showcase");
     openModal("signUp");
   };
 
   /** From the end screen the run already finished; this is a handoff, not a skip. */
   const signUpFromEndScreen = () => {
+    if (authHandoff) return;
     shortcutShowcaseActions.markSeen("finished");
-    shortcutShowcaseActions.finish();
+    setAuthHandoff(true);
     void trackSignupStartedAtClick("shortcut_showcase");
     openModal("signUp");
   };
@@ -311,6 +323,10 @@ const ShowcaseTakeover: FC = () => {
       return;
     }
 
+    if (authHandoff) {
+      claim(event);
+      return;
+    }
     const phase = gameRef.current.phase;
     const focusedButton =
       event.target instanceof HTMLElement &&
@@ -618,7 +634,7 @@ const ShowcaseTakeover: FC = () => {
           ? "Leave now"
           : game.phase === "running"
             ? "Leave practice"
-            : "Skip"}
+            : "Go to calendar"}
         {game.phase === "howto" && (
           <ShortcutHint className="shrink-0">Esc</ShortcutHint>
         )}
@@ -642,7 +658,9 @@ const ShowcaseTakeover: FC = () => {
     <section
       ref={regionRef}
       aria-label="Shortcut practice"
-      className={`fixed inset-0 flex items-center justify-center bg-background ${closing ? "c-showcase-curtain" : ""}`}
+      aria-busy={authHandoff || undefined}
+      data-busy={authHandoff || undefined}
+      className={`fixed inset-0 flex items-center justify-center bg-background data-busy:pointer-events-none ${closing ? "c-showcase-curtain" : ""}`}
       data-closing={closing || undefined}
       style={{ zIndex: Z_INDEX_MODAL }}
       tabIndex={-1}
@@ -679,12 +697,12 @@ const ShowcaseTakeover: FC = () => {
                   Block Party
                 </p>
                 <h2 className="font-semibold text-lg text-text">
-                  Compass is keyboard-only. Ready?
+                  Learn Compass by doing
                 </h2>
                 <p className="text-sm text-text-muted">
-                  Schedule a practice week one task at a time. Each card shows
-                  the exact keys to press, and nothing is saved. No clock on
-                  your first run.
+                  Create, move, and edit events with your keyboard. Each task
+                  shows the keys to press. Practice at your own pace in this
+                  sample calendar, then bring the same shortcuts to your week.
                 </p>
               </>
             ) : (

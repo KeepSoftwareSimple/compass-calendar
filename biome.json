@@ -159,8 +159,7 @@
       "!node_modules",
       "!*.min.js",
       "!*.html",
-      "!bun.lock",
-      "!apps/calendar-macos"
+      "!bun.lock"
     ]
   }
 }

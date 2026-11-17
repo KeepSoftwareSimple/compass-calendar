@@ -71,6 +71,17 @@ const activate = (entry: ShowcaseEntry) => {
 };
 
 export const shortcutShowcaseActions = {
+  /** Clear the takeover once Auth has painted, preserving its recorded outcome. */
+  completeAuthHandoff: () => {
+    useShortcutShowcaseStore.setState({
+      isActive: false,
+      skipPending: false,
+      entry: null,
+    });
+  },
+  startFromWelcome: () => {
+    activate("welcome");
+  },
   /** Palette re-entry: always allowed. The how-to card is one Enter long. */
   replay: () => {
     activate("palette");

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { dispatchMissingKey } from "@web/__tests__/utils/keyboard.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import { RUN_TASKS } from "@web/components/ShortcutShowcase/game.tasks";
 import { ShortcutShowcase } from "@web/components/ShortcutShowcase/ShortcutShowcase";
 import {
@@ -12,7 +13,7 @@ import {
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
 import { clearAppLockReasons, isAppLocked } from "@web/shortcuts/app-lock";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const pressKey = (key: string, init: KeyboardEventInit = {}) => {
   act(() => {
@@ -285,12 +286,32 @@ describe("ShortcutShowcase", () => {
     }
   });
 
-  it("Enter on the end screen hands an anonymous player to signup", async () => {
-    render(<ShortcutShowcase />);
+  it("keeps the end screen mounted until signup opens", async () => {
+    const context = {
+      isOpen: false,
+      currentView: "signUp" as const,
+      openModal: mock(),
+      openStartTrialStep: mock(),
+      closeModal: mock(),
+      setView: mock(),
+    };
+    const { rerender } = render(
+      <AuthModalContext.Provider value={context}>
+        <ShortcutShowcase />
+      </AuthModalContext.Provider>,
+    );
     act(() => shortcutShowcaseActions.replay());
     await playWinningRun();
 
     pressKey("Enter");
+    expect(context.openModal).toHaveBeenCalledWith("signUp");
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
+    expect(screen.getByLabelText("Shortcut practice")).toBeVisible();
+    rerender(
+      <AuthModalContext.Provider value={{ ...context, isOpen: true }}>
+        <ShortcutShowcase />
+      </AuthModalContext.Provider>,
+    );
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(
       persistentBrowserStore.get(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
@@ -313,8 +334,20 @@ describe("ShortcutShowcase", () => {
     ).toBeTruthy();
   });
 
-  it("does not treat S as skip-to-signup; U leaves for signup mid-run", () => {
-    render(<ShortcutShowcase />);
+  it("does not treat S as signup and holds the backdrop during a U handoff", () => {
+    const context = {
+      isOpen: false,
+      currentView: "signUp" as const,
+      openModal: mock(),
+      openStartTrialStep: mock(),
+      closeModal: mock(),
+      setView: mock(),
+    };
+    const { rerender } = render(
+      <AuthModalContext.Provider value={context}>
+        <ShortcutShowcase />
+      </AuthModalContext.Provider>,
+    );
     act(() => shortcutShowcaseActions.replay());
     pressKey("Enter");
 
@@ -324,6 +357,15 @@ describe("ShortcutShowcase", () => {
     expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
 
     pressKey("u");
+    expect(context.openModal).toHaveBeenCalledTimes(1);
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
+    pressKey("u");
+    expect(context.openModal).toHaveBeenCalledTimes(1);
+    rerender(
+      <AuthModalContext.Provider value={{ ...context, isOpen: true }}>
+        <ShortcutShowcase />
+      </AuthModalContext.Provider>,
+    );
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
   });
 

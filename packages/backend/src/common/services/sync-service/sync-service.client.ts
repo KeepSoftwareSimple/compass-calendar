@@ -22,6 +22,7 @@ import {
   GlobalChangeFeedResponseSchema,
 } from "@core/types/sync/change-feed.contracts";
 import {
+  COMMAND_SUBMIT_TIMEOUT_MS,
   type CommandSubmitRequest,
   type CommandSubmitResponse,
   CommandSubmitResponseSchema,
@@ -103,11 +104,9 @@ const RETRY_ATTEMPTS = 3;
 const RETRY_STARTING_DELAY_MS = 100;
 // Not mongo.service.ts's `timeMultiple: 5`, which is tuned for its 1s start.
 const RETRY_TIME_MULTIPLE = 3;
-// Provider create/update/delete run inline inside POST /internal/commands.
-// The default read deadline is too short for a Google round-trip; aborting
-// mid-delete leaves Sync applying the mutation while Compass API returns an
-// error (staging: DELETE appeared to fail with 5xx while the event was gone).
-export const COMMAND_TIMEOUT_MS = 30_000;
+// Owned in core: Sync derives its inline provider budget from the same number,
+// so the two cannot drift apart. See COMMAND_SUBMIT_TIMEOUT_MS.
+export const COMMAND_TIMEOUT_MS = COMMAND_SUBMIT_TIMEOUT_MS;
 // List-events pages are larger than a default 5s read. A 15s budget per page
 // is still far below a hung connection, and the process-wide limiter in
 // list-events-concurrency.ts stops a page load from stacking dozens of them.

@@ -20,5 +20,5 @@ export function welcomeTrialPrimaryLabel(kind: ProviderKind): string {
 export function welcomeTrialCardTermsLine(
   trialLengthDays: number = BILLING_PLAN.TRIAL_LENGTH_DAYS,
 ): string {
-  return `${trialLengthDays}-day free trial. Card required, no charge until it ends.`;
+  return `${trialLengthDays}-day free trial. Card required.`;
 }

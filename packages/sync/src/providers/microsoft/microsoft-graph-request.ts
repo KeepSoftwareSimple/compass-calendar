@@ -3,6 +3,7 @@ import {
   parseRetryAfterMs,
   withRetryableProviderHttp,
 } from "@sync/providers/provider-http-retry.util";
+import { inlineProviderRequestBudgetRemainingMs } from "@sync/providers/provider-inline-request-budget";
 
 export interface MicrosoftGraphRequestInit {
   readonly accessToken: string;
@@ -43,11 +44,17 @@ async function executeMicrosoftGraphRequest<T>(
     headers["Content-Type"] = "application/json";
   }
 
+  const remaining = inlineProviderRequestBudgetRemainingMs();
+  const timeoutMs =
+    remaining === undefined
+      ? MICROSOFT_REQUEST_TIMEOUT_MS
+      : Math.max(1, Math.min(MICROSOFT_REQUEST_TIMEOUT_MS, remaining));
+
   const response = await fetch(init.url, {
     method: init.method ?? "GET",
     headers,
     ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
-    signal: AbortSignal.timeout(MICROSOFT_REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (init.emptyOk) {
@@ -60,9 +67,7 @@ async function executeMicrosoftGraphRequest<T>(
     );
   }
 
-  const data = (await response.json()) as T & {
-    error?: { message?: string };
-  };
+  const data = await readGraphJsonBody<T>(response);
   if (!response.ok) {
     throw microsoftGraphHttpError(
       response.status,
@@ -94,5 +99,29 @@ async function parseJsonOrEmpty(response: Response): Promise<unknown> {
     return await response.json();
   } catch {
     return {};
+  }
+}
+
+async function readGraphJsonBody<T>(response: Response): Promise<
+  T & {
+    error?: { message?: string };
+  }
+> {
+  try {
+    return (await response.json()) as T & {
+      error?: { message?: string };
+    };
+  } catch (parseError) {
+    const message =
+      parseError instanceof Error ? parseError.message : "Failed to parse JSON";
+    const contentType = response.headers.get("content-type");
+    throw Object.assign(new SyntaxError(message), {
+      response: {
+        status: response.status,
+        ...(contentType === null
+          ? {}
+          : { headers: { "content-type": contentType } }),
+      },
+    });
   }
 }

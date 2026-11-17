@@ -29,17 +29,11 @@ test.describe("staging onboarding/signup capture", () => {
         .click();
       await welcomeDialog.getByRole("button", { name: "Next" }).click();
       await welcomeDialog
-        .getByRole("button", { name: "On this device only" })
+        .getByRole("button", { name: "Start without an account" })
         .click();
-      await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible({
-        timeout: 15_000,
-      });
       await expect(
-        welcomeDialog.getByRole("heading", { name: "Essential shortcuts" }),
+        page.getByRole("region", { name: "Shortcut practice" }),
       ).toBeVisible();
-      await welcomeDialog
-        .getByRole("button", { name: "Continue to calendar" })
-        .waitFor({ state: "visible" });
 
       await page.screenshot({
         path: `${ARTIFACT_DIR}/staging-welcome-shortcuts-step-${suffix}.png`,
