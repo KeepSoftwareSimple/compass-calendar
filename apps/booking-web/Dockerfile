@@ -4,7 +4,6 @@ WORKDIR /app
 
 # Install before COPY . . so source edits do not bust the install layer.
 COPY package.json bun.lock bunfig.toml ./
-COPY patches ./patches
 COPY apps/booking-web/package.json apps/booking-web/package.json
 COPY packages/backend/package.json packages/backend/package.json
 COPY packages/core/package.json packages/core/package.json
