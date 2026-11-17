@@ -17,5 +17,8 @@ One-line reasons for non-caret pins and root `resolutions` / `overrides`.
 
 ## Patches (`patches/`)
 
-- `@tanstack/react-router@1.170.17`: Guard falsy CatchBoundary errors and never-resolving load promises during cold beforeLoad redirects (TanStack/router#7457).
-- `@tanstack/hotkeys@0.3.3`: Treat non-string key names safely in `normalizeKeyName` so hotkey handling does not throw on bad input.
+None. Both former patches (`@tanstack/react-router@1.170.17`,
+`@tanstack/hotkeys@0.3.3`) were pinned to versions the tree no longer
+resolves, so `bun install` had stopped applying them; upstream fixed both
+defects. Add a `patchedDependencies` entry here with its reason if a new
+patch is ever needed.
