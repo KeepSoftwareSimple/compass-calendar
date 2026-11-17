@@ -1,7 +1,27 @@
-import { oauthFailedReasonFromCallbackQuery } from "@core/analytics/oauth-signup.events";
+import {
+  isOAuthCallbackQueryEmpty,
+  oauthFailedReasonFromCallbackQuery,
+} from "@core/analytics/oauth-signup.events";
 import { describe, expect, it } from "bun:test";
 
 describe("oauth-signup.events", () => {
+  it("treats a blank callback query as empty rather than invalid_state", () => {
+    expect(
+      isOAuthCallbackQueryEmpty({
+        state: null,
+        code: null,
+        providerError: null,
+      }),
+    ).toBe(true);
+    expect(
+      oauthFailedReasonFromCallbackQuery({
+        state: null,
+        code: null,
+        providerError: null,
+      }),
+    ).toBeUndefined();
+  });
+
   it("derives callback failure reasons from query params", () => {
     expect(
       oauthFailedReasonFromCallbackQuery({
