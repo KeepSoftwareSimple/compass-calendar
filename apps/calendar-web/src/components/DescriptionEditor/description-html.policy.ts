@@ -4,7 +4,7 @@
 // same subset on the native client.
 //
 // Two call sites sanitize with it: the editor itself, against the browser's
-// DOM, and `desktop-export/html-fragment`, against a jsdom window, when it
+// DOM against a jsdom window, when it
 // emits the parity vectors the native parser is tested on. They need
 // different DOMPurify instances but must never allow different tags: a tag
 // added here for the editor and missed there would ship a native parser that

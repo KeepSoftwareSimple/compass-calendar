@@ -122,7 +122,7 @@ export interface GenerateDemoDataOptions {
 
 /**
  * Generate demo data relative to a reference date (defaults to now).
- * Exported for native parity fixtures via `bun cli desktop:export`.
+ * Exported for Playwright demo-week fixtures under `e2e/fixtures/demo-week/`.
  */
 export function generateDemoData(
   referenceNow = dayjs(),

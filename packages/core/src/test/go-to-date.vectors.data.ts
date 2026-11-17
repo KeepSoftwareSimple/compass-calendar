@@ -1,6 +1,6 @@
 /**
  * Shared go-to-date parse and announcement inputs for web unit tests,
- * desktop-export JSON (macOS GoToDateParityTests), and fixture emitters.
+ * shared fixture emitters, and Playwright demo-week tests.
  * Expected outputs are computed at runtime in each consumer.
  */
 export const GO_TO_DATE_REFERENCE_NOW_ISO = "2026-09-15T12:00:00.000Z";

@@ -289,7 +289,6 @@ describe("serve-web unknown paths", () => {
       ROOT_ROUTES.LIFE,
       ROOT_ROUTES.SHORTCUTS,
       "/auth/google/callback",
-      ROOT_ROUTES.BILLING_DESKTOP_RETURN,
     ]) {
       const response = await fetch(`${baseUrl}${route}`);
       expect({ route, status: response.status }).toEqual({

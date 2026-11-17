@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   installParityWebEnvironment,
   prepareParityDemoWeek,
-} from "../parity/seed-demo-fixture.util";
+} from "../utils/demo-week-fixture.util";
 
 const HORIZONTAL_TOLERANCE_PX = 32;
 const MAX_BOTTOM_GAP_PX = 40;

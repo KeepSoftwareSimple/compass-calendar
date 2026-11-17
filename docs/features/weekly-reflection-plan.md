@@ -293,10 +293,9 @@ enabling general enrollment; the private trial has its explicit history exceptio
 
 Run focused core/web/backend/sync/scripts suites for the changed boundaries,
 including Mongo-backed import, preferences, and queue tests. Keep regression
-tests. Run `bun run verify --strict` before shipping. Native changes also require
-`bun cli contracts:swift --check`, `bun cli desktop:export --check`, and the
-focused LifeStore/LifeMath tests. Perform visual image/email QA separately from
-automated checks. Rehearse on staging before any production activation.
+tests. Run `bun run verify --strict` before shipping. Perform visual image/email
+QA separately from automated checks. Rehearse on staging before any production
+activation.
 
 ## External references
 

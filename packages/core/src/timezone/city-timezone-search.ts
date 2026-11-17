@@ -22,7 +22,7 @@ export interface PlaceTimeZoneSearchHit {
   multiZoneRegion?: string;
 }
 
-/** Compact rows for native bundle export (desktop:export). */
+/** Compact rows for timezone search indexes. */
 export interface CityTimezoneIndexRow {
   city: string;
   province: string;
