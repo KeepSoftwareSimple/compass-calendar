@@ -11,6 +11,84 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-17
+
+Swept the five merges that landed after the 2026-11-16 ledger (#5271, #5273,
+#5274, #5275, #5276); #5270 was that sweep's own output and is excluded. Gate
+step 1 was clean on the three named detectors: `bun knip` reports no unused
+files or exports (the three standing config hints), `bun lint` passes every
+rule, `bun type-check` passes. One finding, shipped as the removal of both
+stale `patchedDependencies` entries, which `bun install` reports on every run
+in every worktree. Everything below was examined and kept.
+
+- **`SettingsModal.tsx`'s `useState`-wrapped getter ref** (#5276). A
+  `useState(() => ({ get current() { ... } }))` object standing in for a ref,
+  so `OverlayPanel` reads `skipFocusRestoreRef.current ||
+  closedForGuestAuthHandoff` at unmount rather than at render. It reads as a
+  fake ref and is the kind of seam that spreads, but it cannot misbehave:
+  `usePaletteAwareOverlayDismiss` returns a `useRef`, so the identity the
+  getter closes over is stable for the component's life, and
+  `closedForGuestAuthHandoff` is read through `getState()` precisely because
+  unmount is after the store settled. Declined as taste: there is no mechanism
+  by which it produces a wrong focus target. If a second overlay host needs
+  the same unmount-time read, that is the point to name a
+  `useLatchedSkipFocusRestore` hook, not now with one caller.
+
+- **`closedForGuestAuthHandoff` not reset by `closeSettings`** (#5276). The
+  flag latches true on the guest hand-off and is cleared by
+  `openSettings`, `toggleSettings` and `beginGuestMeetingSetup`, but not by
+  the plain `closeSettings`. Looks like a leak; is not one. Every path that
+  mounts Settings again clears it first, and the flag is only ever read while
+  Settings is unmounting, so a stale true can never reach a second dismiss.
+  Resetting it in `closeSettings` too would be harmless but would also be a
+  change with no failure behind it.
+
+- **`isTransientSyncJobError` composing two predicates** (#5275).
+  `RETRYABLE_NETWORK_CODES` in `provider-transient-error.util.ts` and
+  `TRANSIENT_MONGO_MESSAGE_PATTERNS` in `mongo-network-error.util.ts` overlap
+  on `ETIMEDOUT` and `ECONNRESET`, so the two look like one list split in
+  half. They are not: the provider side matches an `error.code` property on
+  HTTP/port failures, the Mongo side matches driver message text and error
+  names, and `core` deliberately holds no mongodb runtime dependency. They
+  change for different reasons, and the new function composes them by name
+  rather than merging the tables. Correct as written.
+
+- **The `FormCardIconRow` 20px line box** (#5271). The file now writes the
+  `text-sm` line height five ways: `FORM_CARD_FIELD_LINE_HEIGHT = "1.25rem"`,
+  `FORM_CARD_ICON_ROW_LINE_CLASSNAME = "h-5 leading-5"`, `leading-5` inside
+  `FORM_CARD_FIELD_INPUT_CLASSNAME`, and the bare `leading-5` that #5271 put
+  on the row when it dropped the `h-5` that was clipping multi-line guest
+  content. That is the closest thing in this window to a class-2 divergence,
+  and #5111 and #5271 are both evidence this alignment does break in
+  practice. Declined anyway: all five literals sit in one 48-line file where
+  they are read together, so there is no distant site that can drift
+  unnoticed, and the row genuinely cannot reuse the constant because the
+  `h-5` half is what it had to remove. Splitting a `leading-5`-only constant
+  out would add an export to spare one literal. Revisit only if a sixth copy
+  appears outside this file.
+
+- **The gamebook `[[Key]]` markup** (#5274). `KEY_MARK = /\[\[(.+?)\]\]/`
+  with `split` and an odd-index-is-a-key convention is a miniature parser in a
+  static page, and `.filter((part) => part.text)` quietly drops empty
+  segments. It is contained in one 40-line function, the story file is its
+  only input, and a mis-marked line degrades to visible brackets rather than
+  breaking the page. Not worth a PR.
+
+- **The guest-overflow and holiday-memory fixes** (#5271). The holiday
+  detection in `reflection-context.ts` matches
+  `providerCalendarId.includes("#holiday@")` or `/\bholidays\b/i` on the
+  display name, which is provider-shaped string matching in domain code and
+  sits near the "never branch on a provider name" rule. It is a heuristic over
+  calendar identity, not a provider capability branch, and tightening it is a
+  product decision about what counts as a personal memory. Escalate rather
+  than sweep if it ever misclassifies.
+
+- **#5273's idempotency prefix bump.** `CHECKOUT_IDEMPOTENCY_PREFIX` went
+  `v10` to `v11` because the create params changed, which is exactly what the
+  comment above it tells you to do. A hand-maintained version counter looks
+  like debt but is the cheapest correct mechanism here; deriving it from a
+  hash of the params would be a fix larger than the problem.
+
 ## 2026-11-16
 
 Swept the two merges that landed after the 2026-11-15 second sweep's ledger:
