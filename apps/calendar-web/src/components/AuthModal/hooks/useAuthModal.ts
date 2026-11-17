@@ -6,7 +6,7 @@ import {
   useEffect,
   useMemo,
 } from "react";
-import { DESKTOP_QUICK_ADD_SEARCH_PARAM } from "@core/desktop/desktop-quick-add.contract";
+import { QUICK_ADD_SEARCH_PARAM } from "@core/shortcuts/quick-add-search-param";
 import { useSession } from "@web/auth/compass/session/useSession";
 import {
   type SearchFlag,
@@ -66,7 +66,7 @@ export function validateAuthSearch(
     play: searchFlagValue(search.play),
     meetingSetup: searchFlagValue(search.meetingSetup),
     settings: settingsPageFromSearch(search.settings),
-    quickAdd: searchFlagValue(search[DESKTOP_QUICK_ADD_SEARCH_PARAM]),
+    quickAdd: searchFlagValue(search[QUICK_ADD_SEARCH_PARAM]),
   };
 }
 

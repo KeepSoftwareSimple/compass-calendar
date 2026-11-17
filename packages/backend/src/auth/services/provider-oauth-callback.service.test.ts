@@ -20,7 +20,6 @@ describe("provider-oauth-callback.service", () => {
     ).mockResolvedValue(true);
 
     const state = buildSignInOAuthState({
-      isDesktopClient: false,
       posthogDistinctId: "anon-abc",
     });
 
@@ -53,7 +52,7 @@ describe("provider-oauth-callback.service", () => {
       "captureCallbackQuery",
     ).mockResolvedValue(true);
 
-    const state = buildSignInOAuthState({ isDesktopClient: false });
+    const state = buildSignInOAuthState({});
     const result = await handleProviderOAuthCallback({
       provider: "microsoft",
       query: { state, code: "auth-code" },

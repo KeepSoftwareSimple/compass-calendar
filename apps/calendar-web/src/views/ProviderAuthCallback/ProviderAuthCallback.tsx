@@ -2,8 +2,6 @@ import { useLocation, useParams, useRouter } from "@tanstack/react-router";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { AuthApi } from "@web/api/auth.api";
 import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
-import { DesktopOAuthCallbackRelay } from "@web/auth/callback/DesktopOAuthCallbackRelay";
-import { shouldRelayDesktopOAuthCallback } from "@web/auth/callback/desktop-oauth-callback-relay";
 import { reportAuthCallbackCrash } from "@web/auth/callback/report-auth-callback-crash";
 import { resolveStaleProviderOAuthReplay } from "@web/auth/callback/resolve-stale-provider-oauth-replay";
 import { stripOAuthCallbackQueryFromHistory } from "@web/auth/callback/strip-oauth-callback-url";
@@ -119,27 +117,14 @@ export function ProviderAuthCallbackView() {
   const location = useLocation();
   const router = useRouter();
   const completeAuthentication = useCompleteAuthentication();
-  const searchParams = new URLSearchParams(location.searchStr);
-  const oauthState = searchParams.get("state");
-  const shouldRelay =
-    providerParam &&
-    isSignInProviderKind(providerParam) &&
-    shouldRelayDesktopOAuthCallback(oauthState, false);
-
   useRedirectStaleProviderOAuthReplay(
     providerParam && isSignInProviderKind(providerParam)
       ? providerParam
       : "google",
-    Boolean(
-      providerParam && isSignInProviderKind(providerParam) && !shouldRelay,
-    ),
+    Boolean(providerParam && isSignInProviderKind(providerParam)),
   );
 
   useOneShotAuthCallback(() => {
-    if (shouldRelay) {
-      return;
-    }
-
     if (!providerParam || !isSignInProviderKind(providerParam)) {
       showErrorToast("We couldn't finish signing you in. Please try again.");
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
@@ -162,15 +147,6 @@ export function ProviderAuthCallbackView() {
       }),
     );
   });
-
-  if (shouldRelay && providerParam && isSignInProviderKind(providerParam)) {
-    return (
-      <DesktopOAuthCallbackRelay
-        provider={providerParam}
-        search={location.searchStr}
-      />
-    );
-  }
 
   return <AuthCallbackOverlay />;
 }
