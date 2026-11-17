@@ -3,10 +3,10 @@ import { putLocalEventRecords } from "../utils/local-event-seed.util";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Matches `AppDelegate` default content size on macOS. */
+/** Default desktop viewport for deterministic Playwright grid screenshots. */
 export const PARITY_VIEWPORT = { width: 1280, height: 820 } as const;
 
-/** Keep in sync with `ParityCaptureGeometry.swift` and index.html boot track math. */
+/** Sidebar and content-track widths for demo-week layout checks. */
 export const PARITY_SIDEBAR_WIDTH = 345;
 export const PARITY_CONTENT_LEADING_INSET = 32;
 export const PARITY_SIDEBAR_DIVIDER_WIDTH = 32;
@@ -17,7 +17,7 @@ export const PARITY_CONTENT_TRACK_WIDTH =
 
 const DEMO_SEED_PATH = join(
   process.cwd(),
-  "e2e/parity/fixtures/demo-seed.json",
+  "e2e/fixtures/demo-week/demo-seed.json",
 );
 
 type DemoSeedFixture = {
@@ -36,7 +36,7 @@ type ParityWebOptions = {
   dismissOnboarding?: boolean;
 };
 
-/** Playwright-only setup for `e2e/parity/desktop-web-parity.spec.ts`; not used by the web app. */
+/** Playwright-only demo-week localStorage and clock setup; not used by the web app. */
 export async function installParityWebEnvironment(
   page: Page,
   options: ParityWebOptions = {},
@@ -48,7 +48,7 @@ export async function installParityWebEnvironment(
     "compass.localCalendarId": demoFixture.calendarId,
     "compass.view.sidebar-open": "true",
     "compass.sidebar.width": String(PARITY_SIDEBAR_WIDTH),
-    // Parity captures only: macOS asserts UTC on the grid header; pin web the same for screenshots.
+    // Demo-week e2e only: pin UTC on the grid header for deterministic screenshots.
     "compass.timezone.default": demoFixture.timeZone,
   };
   if (dismissOnboarding) {
@@ -90,7 +90,7 @@ export async function prepareParityDemoWeek(
   }
   await page.locator("#mainGrid").focus();
   await page.keyboard.press("t");
-  // Match macOS instant scroll-to-now during parity capture (no mid-animation PNGs).
+  // Jump to now without waiting on scroll animation (stable screenshots).
   await page.evaluate(
     ({ referenceNowIso }) => {
       const timedGrid = document.getElementById("timedColumns");

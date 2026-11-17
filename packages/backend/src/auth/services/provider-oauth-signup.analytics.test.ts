@@ -22,7 +22,6 @@ describe("provider-oauth-signup.analytics", () => {
     }) as typeof fetch;
 
     const state = buildSignInOAuthState({
-      isDesktopClient: false,
       posthogDistinctId: "anon-xyz",
       flow: "signup",
     });
@@ -108,7 +107,6 @@ describe("provider-oauth-signup.analytics", () => {
     }) as typeof fetch;
 
     const state = buildSignInOAuthState({
-      isDesktopClient: false,
       posthogDistinctId: "anon-deny",
       flow: "signup",
     });

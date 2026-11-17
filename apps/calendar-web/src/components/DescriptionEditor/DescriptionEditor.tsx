@@ -38,17 +38,16 @@ import { useDescriptionLinkPresentation } from "@web/components/DescriptionEdito
 import { Divider } from "@web/components/Divider/Divider";
 import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 
-// The allowlist is shared with the desktop export (description-html.policy),
-// which sanitizes the same untrusted provider HTML before emitting the native
-// parser's parity vectors. TipTap's own schema (StarterKit with
+// Provider HTML is sanitized with description-html.policy before editing.
+// TipTap's own schema (StarterKit with
 // headings/code/blockquote/etc disabled below) is a second filter here: any
 // surviving tag it doesn't recognize as a node/mark just becomes plain text.
 // target/rel are forced by the SafeLink mark below regardless of what (if
 // anything) survived on the source tag.
 const sanitizeDescriptionHtml = (html: string): string =>
   DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: DESCRIPTION_HTML_ALLOWED_TAGS,
-    ALLOWED_ATTR: DESCRIPTION_HTML_ALLOWED_ATTR,
+    ALLOWED_TAGS: [...DESCRIPTION_HTML_ALLOWED_TAGS],
+    ALLOWED_ATTR: [...DESCRIPTION_HTML_ALLOWED_ATTR],
   });
 
 // DOMPurify only runs on the `value` prop at (re)creation - pasting into a

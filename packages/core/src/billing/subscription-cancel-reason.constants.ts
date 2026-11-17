@@ -1,4 +1,4 @@
-/** Stable slugs for optional subscription cancel feedback (web + macOS). */
+/** Stable slugs for optional subscription cancel feedback in Settings. */
 export const SUBSCRIPTION_CANCEL_REASONS = [
   { slug: "too_expensive", label: "Too expensive" },
   { slug: "missing_feature", label: "Missing a feature" },

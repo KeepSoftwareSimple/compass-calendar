@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   installParityWebEnvironment,
   prepareParityDemoWeek,
-} from "../parity/seed-demo-fixture.util";
+} from "../utils/demo-week-fixture.util";
 import { putLocalEventRecords } from "../utils/local-event-seed.util";
 
 const DEMO_REFERENCE_NOW = "2026-06-10T15:00:00.000Z";
