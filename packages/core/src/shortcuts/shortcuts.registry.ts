@@ -309,7 +309,7 @@ export const SHORTCUTS_REGISTRY = [
     // (the browser turns it into a contextmenu event). It is deliberately not
     // listed here: it would be a second row with this exact label.
     id: "edit-menu",
-    keys: [...B.editMenu.keycaps],
+    keys: [...B.editMenuLegendKeycaps],
     label: "Open event menu",
     section: "edit",
     requiresWrite: true,

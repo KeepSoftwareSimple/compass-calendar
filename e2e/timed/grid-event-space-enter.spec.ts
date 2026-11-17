@@ -59,4 +59,29 @@ test.describe("focused grid event keyboard", () => {
     await page.keyboard.press("Enter");
     await expect(getFormTitleInput(page)).toHaveValue(title);
   });
+
+  test("holding Space keeps the menu open and does not open the form", async ({
+    page,
+  }) => {
+    await prepareTeachingWeek(page);
+
+    const title = createEventTitle("Space hold");
+    await openTimedEventFormWithKeyboard(page);
+    await fillTitleAndSaveEventForm(page, title);
+    await expectTimedEventVisible(page, title);
+
+    const eventButton = page
+      .locator("#mainGrid")
+      .getByRole("button", { name: title });
+    await eventButton.focus();
+
+    await page.keyboard.down("Space");
+    await page.waitForTimeout(600);
+    await page.keyboard.up("Space");
+
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    await expect(getFormTitleInput(page)).toBeHidden();
+    await expect(menu.getByRole("menuitem").first()).toBeFocused();
+  });
 });

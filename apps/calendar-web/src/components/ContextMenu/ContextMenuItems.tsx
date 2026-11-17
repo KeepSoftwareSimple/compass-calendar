@@ -190,7 +190,15 @@ export function ContextMenuItemsView({
           close();
         };
         const itemProps = nav
-          ? nav.getItemProps({ onClick: select })
+          ? nav.getItemProps({
+              onClick: select,
+              onKeyDown: (keyEvent) => {
+                if (keyEvent.key === " " && keyEvent.repeat) {
+                  keyEvent.preventDefault();
+                  keyEvent.stopPropagation();
+                }
+              },
+            })
           : { onClick: select };
         return (
           <button

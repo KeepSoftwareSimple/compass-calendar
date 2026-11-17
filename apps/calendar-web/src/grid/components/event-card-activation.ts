@@ -24,6 +24,22 @@ export const gridEventCardActivationKeyDown =
       return;
     }
 
+    if (keyEvent.key === " ") {
+      if (keyEvent.repeat) {
+        keyEvent.preventDefault();
+        keyEvent.stopPropagation();
+        return;
+      }
+      if (
+        keyEvent.shiftKey ||
+        keyEvent.altKey ||
+        keyEvent.metaKey ||
+        keyEvent.ctrlKey
+      ) {
+        return;
+      }
+    }
+
     // Claimed either way: Space would scroll the grid and Enter would reach
     // the row beneath, even when no handler is wired up.
     keyEvent.preventDefault();

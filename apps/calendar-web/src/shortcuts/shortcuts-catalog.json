@@ -323,7 +323,7 @@
       },
       {
         "id": "edit-menu",
-        "keys": ["Space", "."],
+        "keys": ["Space", "or", "."],
         "label": "Open event menu",
         "section": "edit",
         "requiresWrite": true

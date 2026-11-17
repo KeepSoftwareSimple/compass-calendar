@@ -42,7 +42,7 @@ export function maybePulseContextMenuOpenedByPointer(
 
   contextMenuPointerHintShownThisSession = true;
   pointerHintActions.pulse({
-    shortcutKey: [...APP_SHORTCUT_BINDINGS.editMenu.keycaps],
+    shortcutKey: [...APP_SHORTCUT_BINDINGS.editMenuPointerKeycaps],
     source: "pointer",
   });
   track("pointer_hint_shown", {

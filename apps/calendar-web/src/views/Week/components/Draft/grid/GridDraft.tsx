@@ -56,8 +56,8 @@ export const GridDraft: FC<Props> = ({
     ? (activeAllDayDraftEvent ?? draftToAllDayRowGridEvent(draft))
     : draftAsGridEvent;
   const draftEventType = rendersInAllDayRow ? "all-day" : "timed";
-  const suppressSpaceMenu =
-    useDraftStore.getState().status?.activity === "pastePlace";
+  const draftActivity = useDraftStore((state) => state.status?.activity);
+  const suppressSpaceMenu = draftActivity === "pastePlace";
   const draftKeyboardOptions = suppressSpaceMenu
     ? { suppressSpaceMenu: true as const }
     : undefined;

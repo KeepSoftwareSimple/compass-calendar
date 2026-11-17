@@ -244,9 +244,11 @@ describe("GridDraft", () => {
 
   it("does not open the menu when Space is pressed on a pastePlace draft", async () => {
     const draft = createDraft();
+    draftActions.startGridDraft({ activity: "keyboardPlace", draft });
+    renderGridDraft({ draft });
+
     draftActions.startGridDraft({ activity: "pastePlace", draft });
 
-    renderGridDraft({ draft });
     const user = userEvent.setup();
     const card = screen.getByRole("button", { name: /Timed event: Planning/ });
     card.focus();

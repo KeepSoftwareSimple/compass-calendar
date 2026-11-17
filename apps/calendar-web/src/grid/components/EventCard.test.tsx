@@ -468,6 +468,75 @@ describe("EventCard", () => {
     expect(fired).toBe(false);
   });
 
+  it("dispatches contextmenu on Space for an all-day event card", () => {
+    let fired = false;
+    document.addEventListener("contextmenu", (event) => {
+      fired = true;
+      event.preventDefault();
+    });
+
+    render(
+      <AllDayEventCard
+        event={createEvent({
+          endDate: "2024-01-16T00:00:00.000Z",
+          isAllDay: true,
+          startDate: "2024-01-15T00:00:00.000Z",
+          title: "All-day offsite",
+        })}
+        isPlaceholder={false}
+        position={{ ...position, height: 28 }}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), { key: " ", code: "Space" });
+    expect(fired).toBe(true);
+  });
+
+  it("ignores repeated Space keydown without opening the menu again", () => {
+    const menuTargets: EventTarget[] = [];
+    document.addEventListener("contextmenu", (event) => {
+      if (event.target) menuTargets.push(event.target);
+      event.preventDefault();
+    });
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button");
+    fireEvent.keyDown(card, { key: " ", code: "Space", repeat: false });
+    fireEvent.keyDown(card, { key: " ", code: "Space", repeat: true });
+    expect(menuTargets).toHaveLength(1);
+  });
+
+  it("does not open the menu on Shift+Space", () => {
+    let fired = false;
+    document.addEventListener("contextmenu", () => {
+      fired = true;
+    });
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), {
+      key: " ",
+      code: "Space",
+      shiftKey: true,
+    });
+    expect(fired).toBe(false);
+  });
+
   it("does not record edit-open when Space is pressed on a saved event", () => {
     const track = spyOn(Track, "track");
     const onEventKeyDown = mock(() => {});
