@@ -245,6 +245,21 @@ button:focus-visible {
   }
 }
 
+/* A keycap chip, like the app's c-keycap (src/index.css), so key names stand
+   out from the prose around them. */
+kbd {
+  display: inline-block;
+  font: inherit;
+  line-height: 1;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
 .key {
   font: inherit;
   color: var(--fg);
