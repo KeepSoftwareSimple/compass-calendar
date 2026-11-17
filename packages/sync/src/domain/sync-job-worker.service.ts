@@ -4,7 +4,7 @@ import {
   dispatchSyncJob,
   type SyncJobDispatchDeps,
 } from "@sync/domain/sync-job-dispatch.service";
-import { isTransientProviderError } from "@sync/providers/provider-transient-error.util";
+import { isTransientSyncJobError } from "@sync/providers/provider-transient-error.util";
 import { type JobRecord } from "@sync/storage/contracts/job.contracts";
 import { type JobRepository } from "@sync/storage/repositories/job.repository";
 
@@ -216,7 +216,7 @@ export class SyncJobWorker {
         { cause: error instanceof Error ? error : undefined },
       );
       const willRetry =
-        isTransientProviderError(wrapped) && job.attempt < this.#maxAttempts;
+        isTransientSyncJobError(wrapped) && job.attempt < this.#maxAttempts;
       if (willRetry) {
         this.#onTransientRetry(wrapped, job);
       } else {
