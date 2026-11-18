@@ -63,7 +63,7 @@ describe("announceUpcomingEvents", () => {
     expect(show).toHaveBeenCalledTimes(1);
     const [title, options] = show.mock.calls[0] as [string, { body: string }];
     expect(title).toBe("Event standup");
-    expect(options.body).toMatch(/^Starts in 3 minutes \(/);
+    expect(options.body).toMatch(/^Starts in 3 min \(/);
   });
 
   it("states the start time in the calendar's timezone, not the browser's", () => {
@@ -73,7 +73,7 @@ describe("announceUpcomingEvents", () => {
     announceUpcomingEvents(port, NOW, [eventAt(3)], new Set());
 
     const [, options] = show.mock.calls[0] as [string, { body: string }];
-    expect(options.body).toMatch(/^Starts in 3 minutes \(/);
+    expect(options.body).toMatch(/^Starts in 3 min \(/);
   });
 
   it("tags each notification with its de-dupe key so reloads replace, not stack", () => {

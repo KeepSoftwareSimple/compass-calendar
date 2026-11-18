@@ -34,7 +34,6 @@
     "test:a11y": "bunx playwright test e2e/accessibility",
     "test:e2e": "bunx playwright test",
     "test:e2e:artifacts": "PLAYWRIGHT_ARTIFACTS=1 bunx playwright test",
-    "parity:screenshots:web": "PARITY_WEB_OUT=build/desktop-parity/web bunx playwright test e2e/parity/desktop-web-parity.spec.ts --project chromium-desktop --workers=1",
     "test:backend": "bun packages/scripts/src/testing/test-mongo-env.ts backend --",
     "test:backend:fast": "bun packages/scripts/src/testing/test-parallel.ts backend-fast -- --path-ignore-patterns '**/*.db.test.ts' --path-ignore-patterns '**/header-session.test.ts'",
     "test:backend:db": "bun packages/scripts/src/testing/test-mongo-env.ts backend -- './packages/backend/src/**/*.db.test.ts'",
@@ -45,8 +44,6 @@
     "test:booking-web": "cd apps/booking-web && bun test",
     "test:scripts": "bun packages/scripts/src/testing/test-mongo-env.ts scripts --",
     "test:self-host": "bun test ./self-host",
-    "test:macos": "bash .github/scripts/test-macos-xcodebuild.sh",
-    "test:macos:packages": "bash .github/scripts/test-macos-swift-packages.sh",
     "test:scripts:fast": "bun packages/scripts/src/testing/test-parallel.ts scripts-fast -- --path-ignore-patterns '**/*.db.test.ts'",
     "test:scripts:db": "bun packages/scripts/src/testing/test-mongo-env.ts scripts -- './packages/scripts/src/**/*.db.test.ts'",
     "type-check": "bunx typescript@7.0.2 -b tsconfig.typecheck.json --noEmit",
@@ -143,9 +140,5 @@
   "packageManager": "bun@1.3.14",
   "trustedDependencies": [
     "@mongodb-js/zstd"
-  ],
-  "patchedDependencies": {
-    "@tanstack/react-router@1.170.17": "patches/@tanstack%2Freact-router@1.170.17.patch",
-    "@tanstack/hotkeys@0.3.3": "patches/@tanstack%2Fhotkeys@0.3.3.patch"
-  }
+  ]
 }

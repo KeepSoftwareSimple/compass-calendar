@@ -26,6 +26,7 @@ import { providerLabelPatchFields } from "@sync/domain/provider-patch-fields";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import { reprojectMaster } from "@sync/domain/series-exception";
+import { resolveSeriesMasterForOccurrence } from "@sync/domain/series-split-successor";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
@@ -66,18 +67,38 @@ export async function executeProviderOccurrenceUpdate(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  const {
-    input,
-    recurrenceId,
-    connectionId,
-    providerEventId: seriesProviderEventId,
-  } = requireLinkedSeriesAt(
+  const linked = requireLinkedSeriesAt(
     "executeProviderOccurrenceUpdate",
     "update",
     "this",
     command,
     master,
   );
+  const { input, recurrenceId } = linked;
+
+  const resolved = await resolveSeriesMasterForOccurrence(
+    deps.events,
+    command,
+    master,
+    recurrenceId,
+  );
+  if (!resolved.ok) {
+    return failCommand(
+      deps,
+      command,
+      "providerRejectedChange",
+      linked.connectionId,
+    );
+  }
+  master = resolved.master;
+  const { connectionId, providerEventId: seriesProviderEventId } =
+    requireLinkedSeriesAt(
+      "executeProviderOccurrenceUpdate",
+      "update",
+      "this",
+      command,
+      master,
+    );
 
   // Guest-list editing is whole-event/whole-series only in v1: a replace on a
   // "this" scope has no defined per-occurrence semantics yet, so refuse typed
@@ -106,6 +127,10 @@ export async function executeProviderOccurrenceUpdate(
         originalStartAt: recurrenceId,
         scheduleKind: master.schedule.kind,
       }),
+    {
+      absentFailureReason: "providerRejectedChange",
+      absentLogMessage: `provider instance not found at recurrenceId ${recurrenceId}`,
+    },
   );
   if (!fetched.ok) return fetched.command;
   const instance = fetched.current;
@@ -266,18 +291,38 @@ export async function executeProviderOccurrenceDelete(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  const {
-    input,
-    recurrenceId,
-    connectionId,
-    providerEventId: seriesProviderEventId,
-  } = requireLinkedSeriesAt(
+  const linked = requireLinkedSeriesAt(
     "executeProviderOccurrenceDelete",
     "delete",
     "this",
     command,
     master,
   );
+  const { input, recurrenceId } = linked;
+
+  const resolved = await resolveSeriesMasterForOccurrence(
+    deps.events,
+    command,
+    master,
+    recurrenceId,
+  );
+  if (!resolved.ok) {
+    return failCommand(
+      deps,
+      command,
+      "providerRejectedChange",
+      linked.connectionId,
+    );
+  }
+  master = resolved.master;
+  const { connectionId, providerEventId: seriesProviderEventId } =
+    requireLinkedSeriesAt(
+      "executeProviderOccurrenceDelete",
+      "delete",
+      "this",
+      command,
+      master,
+    );
 
   const token = await resolveCommandAccessToken(deps, command, connectionId);
   if (!token.ok) return token.command;

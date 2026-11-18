@@ -86,7 +86,7 @@ test.describe("staging first-event trial trace", () => {
         .click();
       await welcomeDialog.getByRole("button", { name: "Next" }).click();
       await welcomeDialog
-        .getByRole("button", { name: "Sign up with email" })
+        .getByRole("button", { name: "Continue with email" })
         .click();
     } else {
       await page.goto(`${BASE}/week?auth=signup`, {

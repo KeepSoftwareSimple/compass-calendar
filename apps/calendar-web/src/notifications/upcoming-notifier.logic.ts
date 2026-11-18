@@ -113,9 +113,7 @@ export function showUpcomingEventNotification(
   const body =
     minutesUntilStart === 0
       ? `Starting now (${startLabel})`
-      : minutesUntilStart === 1
-        ? `Starts in 1 minute (${startLabel})`
-        : `Starts in ${minutesUntilStart} minutes (${startLabel})`;
+      : `Starts in ${minutesUntilStart} min (${startLabel})`;
 
   return port.show(event.title?.trim() || "Untitled event", {
     body,

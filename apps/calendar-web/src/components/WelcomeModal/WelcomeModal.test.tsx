@@ -19,6 +19,7 @@ import {
   resetProviderAvailabilityForTests,
   setProviderAvailabilityForTests,
 } from "@web/auth/providers/useIsProviderAvailable";
+import { hasShowcaseInProgress } from "@web/components/ShortcutShowcase/showcase.storage";
 import {
   afterAll,
   afterEach,
@@ -97,7 +98,7 @@ const goToChooseScreen = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.keyboard("{Enter}");
   await user.keyboard("{Enter}");
   expect(
-    screen.getByRole("button", { name: "On this device only" }),
+    screen.getByRole("button", { name: "Continue as guest" }),
   ).toBeTruthy();
 };
 
@@ -185,13 +186,8 @@ describe("WelcomeModal", () => {
     const user = userEvent.setup();
     renderWelcomeModal();
     await goToChooseScreen(user);
-    await user.click(
-      screen.getByRole("button", { name: "On this device only" }),
-    );
-    expect(screen.getByText("Step 4 of 4")).toBeTruthy();
-
     const continueButton = screen.getByRole("button", {
-      name: "Continue to calendar",
+      name: "Continue as guest",
     });
     expect(continueButton.getAttribute("aria-busy")).toBe("false");
 
@@ -203,7 +199,7 @@ describe("WelcomeModal", () => {
         screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
       ).toBeNull();
     });
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
   });
 
   it("does not restore underlay focus when handing off to auth", async () => {
@@ -270,15 +266,15 @@ describe("WelcomeModal", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "The Keyboard Calendar" }),
     ).toBeTruthy();
-    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Get started for free" }),
     ).toHaveFocus();
     expect(screen.getByText("No account needed.")).toBeTruthy();
     for (const name of [
-      "Sign up",
+      "Continue with email",
       "Continue with Google",
-      "On this device only",
+      "Continue as guest",
       "Who is Compass for?",
       "Back",
     ]) {
@@ -294,7 +290,7 @@ describe("WelcomeModal", () => {
     await user.click(
       screen.getByRole("button", { name: "Get started for free" }),
     );
-    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
 
     for (const [index, item] of FAQ_ITEMS.entries()) {
       const row = screen.getByRole("button", { name: item.question });
@@ -306,25 +302,20 @@ describe("WelcomeModal", () => {
     }
 
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByText("Step 3 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Next" }));
 
-    await user.click(
-      screen.getByRole("button", { name: "On this device only" }),
-    );
-    expect(screen.getByText("Step 4 of 4")).toBeTruthy();
-    await user.click(
-      screen.getByRole("button", { name: "Continue to calendar" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Continue as guest" }));
+
     await waitFor(() => {
       expect(
         screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
       ).toBeNull();
     });
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
   });
 
   it("advances with Enter after clicking non-button modal content", async () => {
@@ -338,7 +329,7 @@ describe("WelcomeModal", () => {
     expect(dialog).toHaveFocus();
 
     await user.keyboard("{Enter}");
-    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
   });
 
   it("does not advance with Enter when Log in is focused", async () => {
@@ -351,7 +342,7 @@ describe("WelcomeModal", () => {
 
     await user.keyboard("{Enter}");
     expect(mockOpenModal).toHaveBeenCalledWith("login");
-    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
   });
 
   it("advances with Enter or a click, and Escape steps back", async () => {
@@ -359,14 +350,14 @@ describe("WelcomeModal", () => {
     renderWelcomeModal();
 
     await user.keyboard("{Enter}");
-    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Who is Compass for?" }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Next" })).toHaveFocus();
 
     await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByText("Step 3 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "Let's get started" }),
     ).toBeTruthy();
@@ -387,18 +378,20 @@ describe("WelcomeModal", () => {
       screen.queryByRole("link", { name: "Practice the shortcuts" }),
     ).toBeNull();
     expect(screen.queryByRole("link", { name: "GitHub" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Sign up" })).toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: "Continue with email" }),
+    ).toHaveFocus();
 
     await user.keyboard("{Escape}");
-    expect(screen.getByText("Step 2 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
 
     // Escape on the first screen is a no-op: the dialog stays and nothing
     // starts the practice game behind the visitor's back.
     await user.keyboard("{Escape}");
     expect(screen.getByRole("dialog", WELCOME_DIALOG)).toBeTruthy();
-    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBeNull();
   });
@@ -414,7 +407,7 @@ describe("WelcomeModal", () => {
     expect(mockOpenModal).not.toHaveBeenCalled();
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBeNull();
-    expect(screen.getByText("Step 1 of 4")).toBeTruthy();
+    expect(screen.getByText("Step 1 of 3")).toBeTruthy();
 
     await user.keyboard("i");
     expect(mockOpenModal).toHaveBeenCalledWith("login");
@@ -537,11 +530,11 @@ describe("WelcomeModal", () => {
     await goToChooseScreen(user);
 
     for (const [name, key] of [
-      ["Start free trial with Google", "Enter"],
-      ["Sign up with email", "U"],
+      ["Continue with Google", "Enter"],
+      ["Continue with email", "U"],
       ["Log in", "i"],
       ["Back", "Esc"],
-      ["On this device only", "S"],
+      ["Continue as guest", "S"],
     ] as const) {
       const hint = within(screen.getByRole("button", { name })).getByText(key);
       expect(hint.className).not.toMatch(/opacity-0/);
@@ -571,7 +564,7 @@ describe("WelcomeModal", () => {
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBe("true");
   });
 
-  it("shows keyboard shortcuts before exploring without an account", async () => {
+  it("starts Block Party directly when exploring without an account", async () => {
     const user = userEvent.setup();
 
     renderWelcomeModal();
@@ -579,15 +572,9 @@ describe("WelcomeModal", () => {
 
     await user.keyboard("s");
 
-    expect(screen.getByText("Step 4 of 4")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Essential shortcuts" }),
-    ).toBeTruthy();
-    expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).not.toBe(
-      "true",
-    );
-
-    await user.keyboard("{Enter}");
+      screen.queryByRole("heading", { name: "Essential shortcuts" }),
+    ).toBeNull();
 
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBe("true");
     await waitFor(() => {
@@ -595,10 +582,21 @@ describe("WelcomeModal", () => {
         screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
       ).toBeNull();
     });
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
     expect(
       localStorage.getItem(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
     ).not.toBe("true");
+  });
+
+  it("does not submit signup when Enter follows S during the practice transition", async () => {
+    const user = userEvent.setup();
+    renderWelcomeModal();
+    await goToChooseScreen(user);
+    await user.keyboard("s{Enter}");
+    expect(mockOpenModal).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(useShortcutShowcaseStore.getState().isActive).toBe(true),
+    );
   });
 
   it("does not start practice if explore is pressed after login before auth opens", async () => {
@@ -633,18 +631,21 @@ describe("WelcomeModal", () => {
     ).not.toBe("true");
   });
 
-  it("does not defer the practice offer when signing up from welcome", async () => {
+  it("queues Block Party for after sign-up instead of starting it now", async () => {
     const user = userEvent.setup();
     renderWelcomeModal();
     await goToChooseScreen(user);
 
-    await user.click(screen.getByRole("button", { name: "Sign up" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue with email" }),
+    );
 
     expect(mockOpenModal).toHaveBeenCalledWith("signUp");
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(
       localStorage.getItem(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
     ).not.toBe("true");
+    expect(hasShowcaseInProgress()).toBe(true);
   });
 
   it("ignores KeyboardEvents with no key instead of throwing", () => {
@@ -689,7 +690,7 @@ describe("WelcomeModal", () => {
     await goToChooseScreen(user);
 
     const trialPrimary = screen.getByRole("button", {
-      name: "Start free trial with Google",
+      name: "Continue with Google",
     });
     expect(trialPrimary).toHaveFocus();
 
@@ -741,40 +742,36 @@ describe("WelcomeModal", () => {
       await goToChooseScreen(user);
 
       const trialPrimary = screen.getByRole("button", {
-        name: "Start free trial with Google",
+        name: "Continue with Google",
       });
       expect(trialPrimary).toHaveClass("w-full", "h-10", "c-button-primary");
-      expect(trialPrimary).toHaveClass("c-button-elevated");
-      expect(
-        screen.getByText(
-          "7-day free trial. Card required, no charge until it ends.",
-        ),
-      ).toBeTruthy();
+      expect(trialPrimary).not.toHaveClass("c-button-elevated");
+      expect(screen.getByText("7-day free trial. Card required.")).toBeTruthy();
       expect(within(trialPrimary).getByText("Enter")).toBeTruthy();
       const explore = screen.getByRole("button", {
-        name: "On this device only",
+        name: "Continue as guest",
       });
       expect(explore).not.toHaveClass("c-button-primary");
       expect(explore).not.toHaveClass("c-button");
       expect(within(explore).getByText("S")).toBeTruthy();
       const emailSignUp = screen.getByRole("button", {
-        name: "Sign up with email",
+        name: "Continue with email",
       });
       expect(
         emailSignUp.compareDocumentPosition(explore) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
       expect(
-        screen.queryByRole("button", { name: "Continue with Google" }),
-      ).toBeNull();
+        screen.getAllByRole("button", { name: "Continue with Google" }),
+      ).toHaveLength(1);
       expect(
-        screen.getByRole("button", { name: "Sign up with email" }),
+        screen.getByRole("button", { name: "Continue with email" }),
       ).toHaveClass("w-full", "h-10", "c-button-secondary");
       expect(
-        screen.getByRole("button", { name: "Sign up with email" }),
+        screen.getByRole("button", { name: "Continue with email" }),
       ).not.toHaveClass("c-button-primary");
       expect(
-        screen.getByRole("button", { name: "Sign up with email" }),
+        screen.getByRole("button", { name: "Continue with email" }),
       ).not.toHaveClass("c-button-elevated");
     });
 
@@ -784,7 +781,7 @@ describe("WelcomeModal", () => {
       await goToChooseScreen(user);
 
       await user.click(
-        screen.getByRole("button", { name: "Start free trial with Google" }),
+        screen.getByRole("button", { name: "Continue with Google" }),
       );
 
       expect(startGoogleAuthorization).toHaveBeenCalled();
@@ -813,8 +810,8 @@ describe("WelcomeModal", () => {
       await goToChooseScreen(user);
 
       expect(
-        screen.getByRole("button", { name: "Start free trial with Google" }),
-      ).toHaveTextContent("Start free trial with Google");
+        screen.getByRole("button", { name: "Continue with Google" }),
+      ).toHaveTextContent("Continue with Google");
       expect(
         screen.getByRole("button", { name: "Continue with Microsoft" }),
       ).toHaveTextContent("Continue with Microsoft");
@@ -829,8 +826,8 @@ describe("WelcomeModal", () => {
       ).toBeNull();
       expect(screen.queryByText("You'll pick your calendar next.")).toBeNull();
       expect(
-        screen.queryByRole("button", { name: "Connect Microsoft Calendar" }),
-      ).toBeNull();
+        screen.getAllByRole("button", { name: "Continue with Microsoft" }),
+      ).toHaveLength(1);
     });
 
     it("renders only the Google trial primary when it is the sole configured provider", async () => {
@@ -839,7 +836,7 @@ describe("WelcomeModal", () => {
       await goToChooseScreen(user);
 
       expect(
-        screen.getByRole("button", { name: "Start free trial with Google" }),
+        screen.getByRole("button", { name: "Continue with Google" }),
       ).toBeTruthy();
       expect(
         screen.queryByRole("button", { name: "Continue with Microsoft" }),
@@ -849,7 +846,7 @@ describe("WelcomeModal", () => {
       ).toBeNull();
     });
 
-    it("shows Sign up as the primary when no providers are configured", async () => {
+    it("shows Continue with email as the primary when no providers are configured", async () => {
       setSignInAvailability({});
       const user = userEvent.setup();
       renderWelcomeModal();
@@ -858,12 +855,11 @@ describe("WelcomeModal", () => {
       expect(
         screen.queryByRole("button", { name: "Continue with Google" }),
       ).toBeNull();
-      expect(screen.getByRole("button", { name: "Sign up" })).toHaveClass(
-        "c-button-primary",
-      );
-      expect(
-        screen.queryByRole("button", { name: "Sign up with email" }),
-      ).toBeNull();
+      const emailButtons = screen.getAllByRole("button", {
+        name: "Continue with email",
+      });
+      expect(emailButtons).toHaveLength(1);
+      expect(emailButtons[0]).toHaveClass("c-button-primary");
     });
 
     it("starts Google auth from Enter on step 3", async () => {
@@ -910,10 +906,10 @@ describe("WelcomeModal", () => {
         screen.getByRole("heading", { name: "Let's get started" }),
       ).toBeTruthy();
       expect(
-        screen.getByRole("button", { name: "Connect Microsoft Calendar" }),
+        screen.getByRole("button", { name: "Continue with Microsoft" }),
       ).toBeTruthy();
       await user.click(
-        screen.getByRole("button", { name: "Connect Microsoft Calendar" }),
+        screen.getByRole("button", { name: "Continue with Microsoft" }),
       );
       expect(mockOpenModal).toHaveBeenCalledWith("signUp");
     });

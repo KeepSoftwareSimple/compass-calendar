@@ -18,12 +18,12 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "What does 'the keyboard calendar' actually mean?",
     answer:
-      "You can target any element on screen without endless Tabbing, chain shortcuts into sequences, and pull up a command palette for anything you can't remember. Compass surfaces the right shortcut at the right moment instead of dumping the full list on you. It feels a bit like playing Tetris.",
+      "You can target any element on screen without endless Tabbing, chain shortcuts into sequences, and do everything from the mighty command palette. It feels a bit like playing Tetris.",
   },
   {
-    question: "Why doesn't my mouse work?",
+    question: "Does it work with Google Calendar and Outlook?",
     answer:
-      "The calendar grid does not open or create from clicks alone. Click an event or an empty slot once and Compass shows the keys that do it. Key hints beside controls and ? show the rest. This welcome screen works with your mouse, too: every button and link here responds to a click.",
+      "Yes. Your Google Calendar and Microsoft Outlook events sync both ways, so changes you make in Compass show up there, and the other way around.",
   },
   {
     question: "I don't know any shortcuts yet. Will I be lost?",
@@ -34,5 +34,10 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
       { keys: KEYMAP.commandPalette.keycaps },
       " opens a command palette for anything you can't remember.",
     ],
+  },
+  {
+    question: "Can I trust you?",
+    answer:
+      "Yes. Compass has been around since 2021. We're open-source, bootstrapped, and have no plans of stopping.",
   },
 ];

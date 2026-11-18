@@ -41,7 +41,6 @@ jobs:
       sync: ${{ steps.filter.outputs.sync }}
       scripts: ${{ steps.filter.outputs.scripts }}
       static_web: ${{ steps.filter.outputs.static_web }}
-      contracts: ${{ steps.filter.outputs.contracts }}
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
@@ -109,25 +108,16 @@ jobs:
         run: |
           bun run type-check
 
-      - name: Check generated Swift contracts
-        if: needs.changes.outputs.contracts == 'true'
-        run: |
-          bun cli contracts:swift --check
-
-      - name: Check generated desktop export artifacts
-        run: |
-          bun cli desktop:export --check
-
       # Workflow files auto-merge under the same size rails as other paths,
       # so they are linted here. Pinned; the image bundles shellcheck for
       # run: steps.
       - name: Lint workflows
         run: |
           docker run --rm -v "${GITHUB_WORKSPACE}:/repo" -w /repo \
-            rhysd/actionlint:1.7.7 -color \
+            rhysd/actionlint:1.7.12 -color \
             -ignore 'unexpected key "queue" for "concurrency" section'
           # `queue:` is a real concurrency key (_deploy-environment.yml) that
-          # this actionlint release does not know yet; drop the ignore on upgrade.
+          # 1.7.12 still does not know; `macos-26-intel` is known since 1.7.12.
 
       # self-host/*.test.ts (the runtime server and the compose/deploy
       # contracts) is matched by no test:<package> scan root, so from the day

@@ -1122,10 +1122,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                   </FormCardIconRow>
                 )}
                 {showAttendeeEditor && (
-                  <FormCardIconRow
-                    icon={<UsersIcon size={16} />}
-                    className="items-start"
-                  >
+                  <FormCardIconRow icon={<UsersIcon size={16} />}>
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       {attendeeChipTally && (
                         <p className="text-text-muted text-xs">

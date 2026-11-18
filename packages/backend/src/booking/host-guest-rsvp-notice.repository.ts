@@ -40,6 +40,13 @@ class HostGuestRsvpNoticeRepository {
     expected: { at?: Date; observationId?: ObjectId },
     next: { at: Date; observationId: ObjectId },
   ): Promise<boolean> {
+    if (
+      expected.observationId !== undefined &&
+      next.observationId.equals(expected.observationId)
+    ) {
+      return false;
+    }
+
     const filter =
       expected.at === undefined
         ? { userId, noticedAt: { $exists: false } }
@@ -55,7 +62,7 @@ class HostGuestRsvpNoticeRepository {
               noticedObservationId: { $exists: false },
             };
 
-    const result = await mongoService.hostGuestRsvpNoticeState.findOneAndUpdate(
+    const result = await mongoService.hostGuestRsvpNoticeState.updateOne(
       filter,
       {
         $set: {
@@ -64,9 +71,8 @@ class HostGuestRsvpNoticeRepository {
           updatedAt: new Date(),
         },
       },
-      { returnDocument: "after" },
     );
-    return result !== null;
+    return result.modifiedCount === 1;
   }
 }
 

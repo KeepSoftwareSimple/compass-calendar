@@ -1,4 +1,8 @@
-import { type FC } from "react";
+import { type FC, useMemo } from "react";
+import {
+  calendarGridSidebarModeHintsEligible,
+  sidebarDatePickerHintEligible,
+} from "@core/shortcuts/sidebar-hint-surface";
 import {
   getAggregateSidebarSyncStatus,
   SSE_DEGRADED_STATUS,
@@ -11,6 +15,7 @@ import {
 } from "@web/auth/state/user-metadata.store";
 import { useShortcutWriteLocked } from "@web/billing/useBillingWriteLock";
 import { SYNC_STATUS_VARIANT_CLASSNAME } from "@web/calendars/sync-status.types";
+import { isCalendarGridPathname } from "@web/components/RootShell/isCalendarGridPathname";
 import { useHasPendingEventMutations } from "@web/events/mutations/useEventPending";
 import { EventPastePreviewIndicator } from "@web/events/paste-preview/EventPastePreviewIndicator";
 import {
@@ -58,25 +63,41 @@ import { useTimeTravelZone } from "@web/timezone/time-travel.store";
  * that opens Settings > Accounts, where the full sentence fits.
  */
 export const SidebarStatusBar: FC = () => {
+  const pathname = window.location.pathname;
+  const gridModeHintsEligible = calendarGridSidebarModeHintsEligible(pathname);
   const hint = useShortcutHintContext();
-  const datePickerHintActive = useDatePickerHintStore(
-    (s) => s.stack.length > 0,
+  const datePickerStack = useDatePickerHintStore((s) => s.stack);
+  const datePickerHintActive = useMemo(
+    () =>
+      sidebarDatePickerHintEligible(
+        pathname,
+        datePickerStack.map((surface) => surface.id),
+      ),
+    [pathname, datePickerStack],
   );
   const writeLocked = useShortcutWriteLocked();
   const quickTimeDigits = useEventJumpStore(selectQuickTimeDigits);
   const isEventJump = useEventJumpStore(selectEventJumpActive);
   const eventJumpAnnouncement = useEventJumpStore(selectEventJumpAnnouncement);
-  const showEventJump = isEventJump || Boolean(eventJumpAnnouncement);
+  const showEventJump =
+    gridModeHintsEligible && (isEventJump || Boolean(eventJumpAnnouncement));
   const isEdgeFocus = useEdgeFocusStore(selectEdgeFocusActive);
   const edgeFocusAnnouncement = useEdgeFocusStore(selectEdgeFocusAnnouncement);
-  const showEdgeFocus = isEdgeFocus || Boolean(edgeFocusAnnouncement);
+  const showEdgeFocus =
+    gridModeHintsEligible && (isEdgeFocus || Boolean(edgeFocusAnnouncement));
   const draftActivity = useDraftStore(selectDraftActivity);
   const isDraftFormOpen = useDraftStore(selectIsEventFormOpen);
-  const isKeyboardPlace = draftActivity === "keyboardPlace" && !isDraftFormOpen;
-  const isPastePreview = useEventPastePreviewStore(
+  const isKeyboardPlace =
+    gridModeHintsEligible &&
+    draftActivity === "keyboardPlace" &&
+    !isDraftFormOpen;
+  const pastePreviewActive = useEventPastePreviewStore(
     selectEventPastePreviewActive,
   );
-  const isTimeTraveling = useTimeTravelZone() !== null;
+  const isPastePreview = gridModeHintsEligible && pastePreviewActive;
+  const timeTravelZone = useTimeTravelZone();
+  const isTimeTraveling =
+    isCalendarGridPathname(pathname) && timeTravelZone !== null;
   const isSaving = useHasPendingEventMutations();
   // The unscoped hook's `connection` is the primary connection (the one
   // whose own state matches the aggregate) - without it, an account's
@@ -108,7 +129,8 @@ export const SidebarStatusBar: FC = () => {
   // is the idle default. Operational status uses the settings button.
   // A half-typed time is the most transient state on the bar, and it lapses on
   // its own in well under a second, so it outranks every mode indicator.
-  const indicator = quickTimeDigits ? (
+  const showQuickTime = gridModeHintsEligible && Boolean(quickTimeDigits);
+  const indicator = showQuickTime ? (
     <QuickTimeIndicator />
   ) : isPastePreview ? (
     <EventPastePreviewIndicator />

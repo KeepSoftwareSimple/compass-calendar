@@ -36,7 +36,7 @@ export const SyncConnectionSummarySchema = z.object({
 });
 export type SyncConnectionSummary = z.infer<typeof SyncConnectionSummarySchema>;
 
-/** Wire shape for GET/POST /api/user/metadata fields the native client reads. */
+/** Wire shape for GET/POST /api/user/metadata persisted account fields. */
 export const UserMetadataSchema = z.object({
   sync: z
     .object({

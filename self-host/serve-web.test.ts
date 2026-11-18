@@ -246,6 +246,22 @@ describe("serve-web guest /meet cutover", () => {
   });
 });
 
+describe("serve-web landing game", () => {
+  it("serves start.html for /start instead of the app shell", async () => {
+    writeFileSync(
+      join(buildRoot, "start.html"),
+      "<!doctype html><html><body>A calendar you run from your keyboard.</body></html>",
+    );
+
+    const response = await fetch(`${server.baseUrl}/start`);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain(
+      "A calendar you run from your keyboard.",
+    );
+  });
+});
+
 describe("serve-web path traversal", () => {
   it("blocks a traversal attempt from escaping the build root", async () => {
     const response = await fetch(`${baseUrl}/..%2f..%2f..%2fetc%2fpasswd`, {
@@ -273,7 +289,6 @@ describe("serve-web unknown paths", () => {
       ROOT_ROUTES.LIFE,
       ROOT_ROUTES.SHORTCUTS,
       "/auth/google/callback",
-      ROOT_ROUTES.BILLING_DESKTOP_RETURN,
     ]) {
       const response = await fetch(`${baseUrl}${route}`);
       expect({ route, status: response.status }).toEqual({

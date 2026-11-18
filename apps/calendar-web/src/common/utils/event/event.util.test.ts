@@ -365,11 +365,30 @@ describe("handleError", () => {
     expect(mockCaptureException).not.toHaveBeenCalled();
     const [message] = mocks.error.mock.calls[0] ?? [];
     expect(message).toBe(
-      "Couldn't save that change, the calendar service is briefly unavailable. Your edit was not applied.",
+      "Still saving your change. The calendar service is slow to respond, so it may appear shortly. Compass will keep trying.",
     );
   });
 
-  it("offers a retry the caller can re-dispatch when the backend says retryable", () => {
+  it("names Outlook when Sync is slow for a Microsoft calendar", () => {
+    const error = createServerError(Status.SERVICE_UNAVAILABLE);
+    error.response = {
+      status: Status.SERVICE_UNAVAILABLE,
+      data: {
+        code: "SYNC_UNAVAILABLE",
+        message: "backend contract message, not toast copy",
+        retryable: true,
+        provider: "microsoft",
+      },
+    } as ApiResponse<unknown>;
+
+    handleError(error);
+
+    const [message] = mocks.error.mock.calls[0] ?? [];
+    expect(message).toContain("Outlook");
+    expect(message).toContain("Microsoft");
+  });
+
+  it("does not offer Try again for a pending Sync command", () => {
     const onRetry = mock(() => {});
     const error = createServerError(Status.SERVICE_UNAVAILABLE);
     error.response = {
@@ -383,13 +402,31 @@ describe("handleError", () => {
 
     handleError(error, onRetry);
 
-    expect(mocks.error).toHaveBeenCalledTimes(1);
-    const [content, options] = mocks.error.mock.calls[0] ?? [];
-    // Its own toastId: a recoverable save failure must not dedupe against
-    // the generic error toast.
-    expect(options).toMatchObject({ toastId: EVENT_SAVE_RETRYABLE_TOAST_ID });
-    expect(EVENT_SAVE_RETRYABLE_TOAST_ID).not.toBe(GENERIC_ERROR_TOAST_ID);
+    expect(onRetry).not.toHaveBeenCalled();
+    expect(mocks.error.mock.calls[0]?.[1]).toMatchObject({
+      toastId: GENERIC_ERROR_TOAST_ID,
+    });
+    const [message] = mocks.error.mock.calls[0] ?? [];
+    expect(message).toContain("Compass will keep trying");
+  });
 
+  it("offers a retry for other retryable provider failures", () => {
+    const onRetry = mock(() => {});
+    const error = createServerError(Status.BAD_GATEWAY);
+    error.response = {
+      status: Status.BAD_GATEWAY,
+      data: {
+        code: "PROVIDER_FAILURE",
+        message: "provider blip",
+        retryable: true,
+        provider: "google",
+      },
+    } as ApiResponse<unknown>;
+
+    handleError(error, onRetry);
+
+    const [content, options] = mocks.error.mock.calls[0] ?? [];
+    expect(options).toMatchObject({ toastId: EVENT_SAVE_RETRYABLE_TOAST_ID });
     const props = (content as { props: { onRetry: () => void } }).props;
     props.onRetry();
     expect(onRetry).toHaveBeenCalledTimes(1);

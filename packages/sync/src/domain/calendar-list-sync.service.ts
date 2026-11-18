@@ -5,6 +5,7 @@ import {
 import { applyInactiveCalendarSideEffects } from "@sync/domain/calendar-retirement";
 import { discoverCalendarsWithAuthRetry } from "@sync/domain/discover-calendars-with-auth-retry";
 import { type AccessTokenSource } from "@sync/domain/provider-write-ladder";
+import { SYNC_TOKEN_UNSUPPORTED_RETRY_AFTER_MS } from "@sync/domain/sync-token-unsupported";
 import {
   type ProviderCalendarAdapter,
   ProviderCalendarError,
@@ -187,6 +188,12 @@ export async function syncCalendarList(
       principalId,
       connectionId,
       new Date(now().getTime() - WATCH_UNSUPPORTED_RETRY_AFTER_MS),
+    );
+    await deps.resources.clearSyncTokenUnsupportedByConnection(
+      tenantId,
+      principalId,
+      connectionId,
+      new Date(now().getTime() - SYNC_TOKEN_UNSUPPORTED_RETRY_AFTER_MS),
     );
     retiredIds = await deps.calendars.deactivateAbsent(
       tenantId,

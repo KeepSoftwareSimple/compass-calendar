@@ -26,7 +26,11 @@ function ShortcutRowContent({ shortcut }: { shortcut: Shortcut }) {
       </span>
       <span className="flex shrink-0 items-center gap-2">
         {shortcut.locked ? <ShortcutProBadge /> : null}
-        <ShortcutKeys className="shrink-0" keys={shortcut.keys} />
+        <ShortcutKeys
+          className="shrink-0"
+          keys={shortcut.keys}
+          alternatives={shortcut.keyAlternatives}
+        />
         {shortcut.used ? (
           <span className="shrink-0 text-text">
             <span className="sr-only">used</span>

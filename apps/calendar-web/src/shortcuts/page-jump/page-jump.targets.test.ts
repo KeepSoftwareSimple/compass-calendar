@@ -9,9 +9,11 @@ import {
   dayColumnJumpDigits,
   dayColumnJumpId,
   focusPageJumpTarget,
+  getPageJumpChipAnchor,
   getPageJumpFocusElement,
   LIFE_PAGE_JUMP_TARGETS,
   PAGE_JUMP_ATTRIBUTE,
+  PAGE_JUMP_CHIP_ATTRIBUTE,
   type PageJumpTargetId,
 } from "@web/shortcuts/page-jump/page-jump.targets";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -232,6 +234,46 @@ describe("buildDayPageJumpTargets", () => {
       [personal.id, "2"],
       [work.id, "3"],
     ]);
+  });
+});
+
+describe("getPageJumpChipAnchor", () => {
+  it("prefers an explicit chip marker over the section box", () => {
+    const anchor = addAnchor("life-details");
+    const chipHost = document.createElement("div");
+    chipHost.setAttribute(PAGE_JUMP_CHIP_ATTRIBUTE, "life-details");
+    const birthInput = document.createElement("input");
+    chipHost.append(birthInput);
+    anchor.append(chipHost);
+
+    expect(getPageJumpChipAnchor("life-details")).toBe(chipHost);
+  });
+
+  it("falls back to the focus target when it has layout", () => {
+    const anchor = addAnchor("calendars");
+    const toggle = document.createElement("button");
+    toggle.getBoundingClientRect = () =>
+      ({
+        width: 24,
+        height: 24,
+        top: 0,
+        left: 0,
+        bottom: 24,
+        right: 24,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    anchor.append(toggle);
+
+    expect(getPageJumpChipAnchor("calendars")).toBe(toggle);
+  });
+
+  it("falls back to the section when the focus target has no layout", () => {
+    const anchor = addAnchor("calendars");
+    anchor.append(document.createElement("button"));
+
+    expect(getPageJumpChipAnchor("calendars")).toBe(anchor);
   });
 });
 

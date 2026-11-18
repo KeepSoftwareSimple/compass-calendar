@@ -1,5 +1,4 @@
 import Stripe from "stripe";
-import { STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER } from "@core/desktop/desktop-billing-return.util";
 import { type Schema_UserBilling } from "@core/types/user.types";
 import {
   cleanupCollections,
@@ -78,6 +77,7 @@ describe("StripeService", () => {
       cancel_url?: string;
     };
     expect(sessionArgs.mode).toBe("subscription");
+    expect(sessionArgs).toHaveProperty("allow_promotion_codes", true);
     expect(sessionArgs.client_reference_id).toBe(userId.toString());
     expect(sessionArgs.subscription_data.trial_period_days).toBe(7);
     expect(sessionArgs.line_items[0]?.price).toBe("price_test");
@@ -111,7 +111,7 @@ describe("StripeService", () => {
         .custom_text,
     ).toBeUndefined();
     expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-      idempotencyKey: `compass-checkout-v10-${userId.toString()}`,
+      idempotencyKey: `compass-checkout-v11-${userId.toString()}`,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
@@ -161,6 +161,7 @@ describe("StripeService", () => {
     )[0]?.[0] as {
       discounts?: Array<{ coupon?: string; promotion_code?: string }>;
     };
+    expect(syntheticArgs).not.toHaveProperty("allow_promotion_codes");
     expect(syntheticArgs.discounts).toEqual([
       { coupon: "coupon_synthetic_100" },
     ]);
@@ -186,6 +187,7 @@ describe("StripeService", () => {
       discounts?: Array<{ coupon?: string; promotion_code?: string }>;
     };
     expect(realArgs.discounts).toBeUndefined();
+    expect(realArgs).toHaveProperty("allow_promotion_codes", true);
     expect((realArgs as { metadata?: unknown }).metadata).toBeUndefined();
     expect(
       (realArgs as { payment_method_collection?: string })
@@ -1046,118 +1048,6 @@ describe("StripeService", () => {
         status: 409,
         clientMessage: "No active subscription to update.",
       });
-    });
-  });
-
-  describe("desktop returnTo checkout URLs", () => {
-    it("builds hosted subscription checkout return URLs for desktop", async () => {
-      using _env = mockEnv(stripeConfigured);
-      const userId = mongoService.objectId();
-      await mongoService.user.insertOne({
-        _id: userId,
-        email: "desktop@example.com",
-        name: "Desktop User",
-        firstName: "Desktop",
-        lastName: "User",
-        locale: "en",
-        billing: {
-          subscriptionStatus: "awaiting_checkout",
-          stripeCustomerId: "cus_desktop",
-        },
-      });
-
-      const sessionsCreate = mock(() =>
-        Promise.resolve({
-          url: "https://checkout.stripe.com/c/pay/cs_desktop",
-        }),
-      );
-      const stripeService = new StripeService(
-        stubBillingGateway({
-          createCheckoutSession: sessionsCreate,
-        }),
-      );
-
-      const result = await stripeService.createCheckoutSession(
-        userId.toString(),
-        { returnTo: "desktop" },
-      );
-
-      expect(result).toEqual({
-        url: "https://checkout.stripe.com/c/pay/cs_desktop",
-      });
-      const sessionArgs = (
-        sessionsCreate.mock.calls as unknown[][]
-      )[0]?.[0] as {
-        success_url?: string;
-        cancel_url?: string;
-        ui_mode?: string;
-        redirect_on_completion?: string;
-      };
-      expect(sessionArgs.success_url).toBe(
-        `http://localhost:9080/billing/desktop-return?outcome=success&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
-      );
-      expect(sessionArgs.cancel_url).toBe(
-        `http://localhost:9080/billing/desktop-return?outcome=cancel&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
-      );
-      expect(sessionArgs.ui_mode).toBeUndefined();
-      expect(sessionArgs.redirect_on_completion).toBeUndefined();
-      expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-        idempotencyKey: `compass-checkout-v10-desktop-${userId.toString()}`,
-      });
-    });
-
-    it("builds hosted setup checkout return URLs for desktop", async () => {
-      using _env = mockEnv(stripeConfigured);
-      const userId = mongoService.objectId();
-      await mongoService.user.insertOne({
-        _id: userId,
-        email: "desktop-card@example.com",
-        name: "Desktop Card",
-        firstName: "Desktop",
-        lastName: "Card",
-        locale: "en",
-        billing: {
-          subscriptionStatus: "active",
-          stripeCustomerId: "cus_desktop_card",
-          stripeSubscriptionId: "sub_desktop_card",
-        },
-      });
-
-      const sessionsCreate = mock(() =>
-        Promise.resolve({
-          url: "https://checkout.stripe.com/c/pay/cs_setup_desktop",
-        }),
-      );
-      const stripeService = new StripeService(
-        stubBillingGateway({
-          createCheckoutSession: sessionsCreate,
-        }),
-      );
-
-      const result = await stripeService.createPaymentMethodSession(
-        userId.toString(),
-        { returnTo: "desktop" },
-      );
-
-      expect(result).toEqual({
-        url: "https://checkout.stripe.com/c/pay/cs_setup_desktop",
-      });
-      const sessionArgs = (
-        sessionsCreate.mock.calls as unknown[][]
-      )[0]?.[0] as {
-        success_url?: string;
-        cancel_url?: string;
-        ui_mode?: string;
-        redirect_on_completion?: string;
-      };
-      expect(sessionArgs.success_url).toBe(
-        `http://localhost:9080/billing/desktop-return?outcome=success&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
-      );
-      expect(sessionArgs.cancel_url).toBe(
-        `http://localhost:9080/billing/desktop-return?outcome=cancel&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
-      );
-      expect(sessionArgs.ui_mode).toBeUndefined();
-      expect(sessionArgs.redirect_on_completion).toBeUndefined();
     });
   });
 

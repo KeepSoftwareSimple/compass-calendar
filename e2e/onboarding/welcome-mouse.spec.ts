@@ -18,14 +18,15 @@ test("walks the welcome flow with the mouse only", async ({
   await welcomeDialog
     .getByRole("button", { name: "Get started for free" })
     .click();
-  await expect(welcomeDialog.getByText("Step 2 of 4")).toBeVisible();
+  await expect(welcomeDialog.getByText("Step 2 of 3")).toBeVisible();
 
   const faqQuestions = [
     "Who is Compass for?",
     "How is Compass different?",
     "What does 'the keyboard calendar' actually mean?",
-    "Why doesn't my mouse work?",
+    "Does it work with Google Calendar and Outlook?",
     "I don't know any shortcuts yet. Will I be lost?",
+    "Can I trust you?",
   ] as const;
 
   for (const question of faqQuestions) {
@@ -35,7 +36,7 @@ test("walks the welcome flow with the mouse only", async ({
   }
 
   await welcomeDialog.getByRole("button", { name: "Next" }).click();
-  await expect(welcomeDialog.getByText("Step 3 of 4")).toBeVisible();
+  await expect(welcomeDialog.getByText("Step 3 of 3")).toBeVisible();
 
   await expect(
     welcomeDialog.getByRole("link", { name: "Pricing" }),
@@ -51,11 +52,8 @@ test("walks the welcome flow with the mouse only", async ({
   ).toHaveCount(0);
 
   await welcomeDialog
-    .getByRole("button", { name: "On this device only" })
+    .getByRole("button", { name: "Continue as guest" })
     .click();
-  await expect(welcomeDialog.getByText("Step 4 of 4")).toBeVisible();
-  await welcomeDialog
-    .getByRole("button", { name: "Continue to calendar" })
-    .click();
+
   await expect(welcomeDialog).toHaveCount(0);
 });

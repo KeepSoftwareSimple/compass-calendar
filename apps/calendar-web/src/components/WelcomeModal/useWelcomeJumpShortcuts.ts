@@ -14,8 +14,8 @@ export const WELCOME_LETTER_ATTR = "data-welcome-letter";
  * Press a number (with or without Mod) to toggle that FAQ or open a footer
  * link. Bare digits work because browsers steal Cmd/Ctrl+1–8 for tab switching.
  *
- * 1–5 toggle FAQ items when `toggleFaqAt` is given (omit it on a screen with
- * no FAQ). 6–0 activate matching `[data-welcome-jump]` links, and no-op when
+ * 1–6 toggle FAQ items when `toggleFaqAt` is given (omit it on a screen with
+ * no FAQ). The remaining digits activate matching `[data-welcome-jump]` links, and no-op when
  * none is mounted. Bare letters activate matching `[data-welcome-letter]`
  * links (Pricing / P).
  */

@@ -199,6 +199,22 @@ describe("reflection content", () => {
     });
     expect(selected.memories).toHaveLength(1);
   });
+  it("keeps holiday calendar events out of memories but not out of the week", () => {
+    const selected = selectReflectionEvents({
+      ...input,
+      holidayCalendarIds: new Set(["holidays"]),
+      events: [
+        event("Veterans Day", "2022-11-04", { calendarId: "holidays" }),
+        event("Veterans Day now", "2026-11-04", {
+          calendarId: "holidays",
+          windowKey: "recent",
+        }),
+        event("A trip", "2020-11-04"),
+      ],
+    });
+    expect(selected.memories.map((memory) => memory.id)).toEqual(["A trip"]);
+    expect(selected.recent.map((e) => e.id)).toEqual(["Veterans Day now"]);
+  });
   it("deduplicates identical cross-calendar facts even with different or missing UIDs before counting and selecting", () => {
     const holiday = event("holiday-one", "2026-11-03", {
       title: "Holiday",

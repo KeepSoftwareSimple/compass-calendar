@@ -34,6 +34,7 @@ import {
   reprojectMaster,
   truncatedSeriesMaster,
 } from "@sync/domain/series-exception";
+import { resolveSeriesMasterForOccurrence } from "@sync/domain/series-split-successor";
 import {
   type InvitationIntent,
   type ProviderWriteRecurrence,
@@ -57,14 +58,37 @@ export async function executeProviderSeriesFollowingDelete(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  const { input, recurrenceId, connectionId, providerEventId, seriesRules } =
-    requireLinkedSeriesAt(
-      "executeProviderSeriesFollowingDelete",
-      "delete",
-      "thisAndFollowing",
+  let linked = requireLinkedSeriesAt(
+    "executeProviderSeriesFollowingDelete",
+    "delete",
+    "thisAndFollowing",
+    command,
+    master,
+  );
+  const resolved = await resolveSeriesMasterForOccurrence(
+    deps.events,
+    command,
+    master,
+    linked.recurrenceId,
+  );
+  if (!resolved.ok) {
+    return failCommand(
+      deps,
       command,
-      master,
+      "providerRejectedChange",
+      linked.connectionId,
     );
+  }
+  master = resolved.master;
+  linked = requireLinkedSeriesAt(
+    "executeProviderSeriesFollowingDelete",
+    "delete",
+    "thisAndFollowing",
+    command,
+    master,
+  );
+  const { input, recurrenceId, connectionId, providerEventId, seriesRules } =
+    linked;
   const splitAt = new Date(recurrenceId);
 
   if (isFollowingSplitAtSeriesStart(master.schedule, splitAt)) {
@@ -213,14 +237,37 @@ export async function executeProviderSeriesFollowingUpdate(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  const { input, recurrenceId, connectionId, providerEventId, seriesRules } =
-    requireLinkedSeriesAt(
-      "executeProviderSeriesFollowingUpdate",
-      "update",
-      "thisAndFollowing",
+  let linked = requireLinkedSeriesAt(
+    "executeProviderSeriesFollowingUpdate",
+    "update",
+    "thisAndFollowing",
+    command,
+    master,
+  );
+  const resolved = await resolveSeriesMasterForOccurrence(
+    deps.events,
+    command,
+    master,
+    linked.recurrenceId,
+  );
+  if (!resolved.ok) {
+    return failCommand(
+      deps,
       command,
-      master,
+      "providerRejectedChange",
+      linked.connectionId,
     );
+  }
+  master = resolved.master;
+  linked = requireLinkedSeriesAt(
+    "executeProviderSeriesFollowingUpdate",
+    "update",
+    "thisAndFollowing",
+    command,
+    master,
+  );
+  const { input, recurrenceId, connectionId, providerEventId, seriesRules } =
+    linked;
   const splitAt = new Date(recurrenceId);
 
   if (isFollowingSplitAtSeriesStart(master.schedule, splitAt)) {

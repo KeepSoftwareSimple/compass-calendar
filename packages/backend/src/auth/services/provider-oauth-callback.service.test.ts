@@ -13,6 +13,83 @@ describe("provider-oauth-callback.service", () => {
     expect(parseProviderOAuthCallbackProvider("unknown")).toBeNull();
   });
 
+  it("records nothing and redirects home when the callback query is empty", async () => {
+    const capture = spyOn(
+      analytics.providerOAuthSignupAnalytics,
+      "captureCallbackQuery",
+    ).mockResolvedValue(true);
+
+    const result = await handleProviderOAuthCallback({
+      provider: "apple",
+      query: {},
+      telemetryOnly: false,
+      frontendUrl: "http://localhost:9080",
+    });
+
+    expect(capture).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      mode: "redirect",
+      location: "http://localhost:9080/",
+    });
+
+    const telemetryOnly = await handleProviderOAuthCallback({
+      provider: "google",
+      query: {},
+      telemetryOnly: true,
+    });
+    expect(capture).not.toHaveBeenCalled();
+    expect(telemetryOnly).toEqual({ mode: "telemetry" });
+
+    capture.mockRestore();
+  });
+
+  it("records nothing for a whitespace-only state instead of missing_code", async () => {
+    const capture = spyOn(
+      analytics.providerOAuthSignupAnalytics,
+      "captureCallbackQuery",
+    ).mockResolvedValue(true);
+
+    // A blank param is junk traffic, not a real callback: before the emptiness
+    // rule trimmed, this captured an `oauth_callback` failure of missing_code.
+    const result = await handleProviderOAuthCallback({
+      provider: "google",
+      query: { state: " " },
+      telemetryOnly: false,
+      frontendUrl: "http://localhost:9080",
+    });
+
+    expect(capture).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      mode: "redirect",
+      location: "http://localhost:9080/",
+    });
+
+    capture.mockRestore();
+  });
+
+  it("still records failures when state is present without a code", async () => {
+    const capture = spyOn(
+      analytics.providerOAuthSignupAnalytics,
+      "captureCallbackQuery",
+    ).mockResolvedValue(true);
+
+    const state = buildSignInOAuthState({});
+    await handleProviderOAuthCallback({
+      provider: "google",
+      query: { state },
+      telemetryOnly: false,
+    });
+
+    expect(capture).toHaveBeenCalledWith({
+      provider: "google",
+      state,
+      code: undefined,
+      providerError: null,
+    });
+
+    capture.mockRestore();
+  });
+
   it("captures oauth_callback then redirects to the SPA", async () => {
     const capture = spyOn(
       analytics.providerOAuthSignupAnalytics,
@@ -20,7 +97,6 @@ describe("provider-oauth-callback.service", () => {
     ).mockResolvedValue(true);
 
     const state = buildSignInOAuthState({
-      isDesktopClient: false,
       posthogDistinctId: "anon-abc",
     });
 
@@ -53,7 +129,7 @@ describe("provider-oauth-callback.service", () => {
       "captureCallbackQuery",
     ).mockResolvedValue(true);
 
-    const state = buildSignInOAuthState({ isDesktopClient: false });
+    const state = buildSignInOAuthState({});
     const result = await handleProviderOAuthCallback({
       provider: "microsoft",
       query: { state, code: "auth-code" },

@@ -4,13 +4,12 @@ import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { APP_UPDATE_AVAILABLE_TOAST_ID } from "@web/common/constants/toast.constants";
 import * as realBrowserNavigation from "@web/common/utils/browser/browser-navigation.util";
-import {
-  APP_UPDATE_TOAST_MESSAGE,
-  AppUpdateAvailableToast,
-  showAppUpdateAvailableToast,
-} from "@web/common/utils/toast/app-update-available.toast";
+import { ToastNotice } from "@web/common/utils/toast/ToastNotice";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
+import * as realPixelPirate from "@web/components/WelcomeModal/PixelPirate";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+
+const APP_UPDATE_MASCOT_LABEL = "App update mascot";
 
 const reloadLocation = mock();
 mockModuleForFile(
@@ -19,8 +18,27 @@ mockModuleForFile(
   { reloadLocation },
 );
 
+const pixelPirateRender = mock((props: { className?: string }) => (
+  <span aria-hidden="true" className={props.className ?? ""}>
+    {APP_UPDATE_MASCOT_LABEL}
+  </span>
+));
+mockModuleForFile("@web/components/WelcomeModal/PixelPirate", realPixelPirate, {
+  PixelPirate: pixelPirateRender,
+});
+
+const {
+  APP_UPDATE_TOAST_MESSAGE,
+  AppUpdateAvailableToast,
+  showAppUpdateAvailableToast,
+} = await import("@web/common/utils/toast/app-update-available.toast");
+
 describe("AppUpdateAvailableToast", () => {
-  it("renders one line, a reload shortcut, and a dismiss control", () => {
+  beforeEach(() => {
+    pixelPirateRender.mockClear();
+  });
+
+  it("renders the headline, a cheering pirate, a reload shortcut, and a dismiss control", () => {
     render(
       <HotkeysProvider>
         <AppUpdateAvailableToast />
@@ -28,6 +46,13 @@ describe("AppUpdateAvailableToast", () => {
     );
 
     expect(screen.getByText(APP_UPDATE_TOAST_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText(/Refresh to update/i)).not.toBeInTheDocument();
+    expect(pixelPirateRender).toHaveBeenCalledTimes(1);
+    expect(pixelPirateRender.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        className: expect.stringContaining("c-pirate-cheer"),
+      }),
+    );
     const refresh = screen.getByRole("button", { name: /Refresh/i });
     expect(refresh).toBeInTheDocument();
     expect(refresh.className).toContain("c-button-primary");
@@ -35,6 +60,15 @@ describe("AppUpdateAvailableToast", () => {
       screen.getByRole("button", { name: "Dismiss update notice" }),
     ).toBeInTheDocument();
     expect(refresh.textContent).toMatch(/R/);
+  });
+
+  it("does not show the pirate on generic toast notices", () => {
+    render(
+      <ToastNotice>
+        <p>Calendar connected</p>
+      </ToastNotice>,
+    );
+    expect(pixelPirateRender).not.toHaveBeenCalled();
   });
 
   it("reloads from the main action and dismisses from ×", () => {

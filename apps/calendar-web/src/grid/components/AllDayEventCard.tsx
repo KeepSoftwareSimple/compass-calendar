@@ -11,11 +11,13 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
   eventCardFill,
-  gridEventSidebarEditingBoxShadow,
+  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   joinGridEventBoxShadow,
-  resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
-import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
+import {
+  type GridEventCardActivationOptions,
+  gridEventCardActivationKeyDown,
+} from "@web/grid/components/event-card-activation";
 import {
   gridEventCardClassName,
   gridEventCardLabelSuffix,
@@ -40,6 +42,7 @@ export interface AllDayEventCardProps {
   isHidden?: boolean;
   isPlaceholder: boolean;
   isSelected?: boolean;
+  eventCardKeyboardOptions?: GridEventCardActivationOptions;
   onBlur?: () => void;
   onEventKeyDown?: (event: GridEvent) => void;
   onFocus?: () => void;
@@ -57,6 +60,7 @@ const AllDayEventCardBase = (
     interactionAttributes,
     isHidden = false,
     isPlaceholder,
+    eventCardKeyboardOptions,
     isSelected = false,
     onBlur,
     onEventKeyDown,
@@ -92,10 +96,6 @@ const AllDayEventCardBase = (
   // fill/darken tweak can't quietly drop the title below 4.5:1.
   const titleColor = theme.getContrastText(fill.fillStops);
 
-  const focusIndicatorColor = resolveEventFocusIndicatorColor(
-    focusColor,
-    fill.fillStops,
-  );
   const { focusedEdge, focusColorCss, edgeFocusShadow } = useGridEventEdgeFocus(
     event._id,
     focusColor,
@@ -132,7 +132,7 @@ const AllDayEventCardBase = (
       })}
       style={gridEventCardStyle({
         boxShadow: joinGridEventBoxShadow(
-          isSelected && gridEventSidebarEditingBoxShadow(focusIndicatorColor),
+          isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
           edgeFocusShadow,
         ),
         fill,
@@ -144,7 +144,11 @@ const AllDayEventCardBase = (
       })}
       onBlur={onBlur}
       onFocus={onFocus}
-      onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
+      onKeyDown={gridEventCardActivationKeyDown(
+        event,
+        onEventKeyDown,
+        eventCardKeyboardOptions,
+      )}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

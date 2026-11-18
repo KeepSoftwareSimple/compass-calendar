@@ -19,11 +19,13 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
   eventCardFill,
-  gridEventSidebarEditingBoxShadow,
+  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   joinGridEventBoxShadow,
-  resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
-import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
+import {
+  type GridEventCardActivationOptions,
+  gridEventCardActivationKeyDown,
+} from "@web/grid/components/event-card-activation";
 import {
   gridEventCardClassName,
   gridEventCardLabelSuffix,
@@ -73,6 +75,7 @@ interface TimedEventCardProps {
   isHidden?: boolean;
   isSelected?: boolean;
   motionMode: "dragging" | "idle" | "resizing";
+  eventCardKeyboardOptions?: GridEventCardActivationOptions;
   onBlur?: () => void;
   onEventKeyDown?: (event: GridEvent) => void;
   onFocus?: () => void;
@@ -92,6 +95,7 @@ const TimedEventCardBase = (
     interactionAttributes,
     isHidden = false,
     isSelected = false,
+    eventCardKeyboardOptions,
     motionMode,
     onBlur,
     onEventKeyDown,
@@ -167,10 +171,6 @@ const TimedEventCardBase = (
   // a fixed white ring vanished on the light theme's paper background. Pair
   // with a background halo so the ring stays visible on dark default fills.
   const contentColor = theme.getContrastText(fill.fillStops);
-  const focusIndicatorColor = resolveEventFocusIndicatorColor(
-    focusColor,
-    fill.fillStops,
-  );
   const { focusedEdge, focusColorCss, edgeFocusShadow } = useGridEventEdgeFocus(
     event._id,
     focusColor,
@@ -180,7 +180,7 @@ const TimedEventCardBase = (
 
   const eventStyle = gridEventCardStyle({
     boxShadow: joinGridEventBoxShadow(
-      isSelected && gridEventSidebarEditingBoxShadow(focusIndicatorColor),
+      isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
       boxShadow,
       edgeFocusShadow,
     ),
@@ -260,7 +260,11 @@ const TimedEventCardBase = (
       style={eventStyle}
       onBlur={onBlur}
       onFocus={onFocus}
-      onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
+      onKeyDown={gridEventCardActivationKeyDown(
+        event,
+        onEventKeyDown,
+        eventCardKeyboardOptions,
+      )}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

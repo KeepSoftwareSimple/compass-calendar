@@ -54,13 +54,27 @@ describe("oauth-state", () => {
     );
   });
 
-  it("round-trips a desktop relay flag", () => {
-    const original = payload({ relayDesktop: true });
-    const token = signOAuthState(SECRET, original);
+  it("ignores a legacy desktop relay flag in the payload json", () => {
+    const base = payload();
+    const encoded = Buffer.from(
+      JSON.stringify({
+        t: base.tenantId,
+        p: base.principalId,
+        c: base.connectionId,
+        k: base.provider,
+        i: base.issuedAt,
+        d: true,
+      }),
+      "utf8",
+    ).toString("base64url");
+    const signature = createHmac("sha256", SECRET)
+      .update(encoded)
+      .digest("hex");
+    const token = `${encoded}.${signature}`;
 
-    const result = verifyOAuthState(SECRET, token, original.issuedAt);
+    const result = verifyOAuthState(SECRET, token, base.issuedAt);
 
-    expect(result).toEqual({ ok: true, payload: original });
+    expect(result).toEqual({ ok: true, payload: base });
   });
 
   it("rejects a token signed with a different secret", () => {

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#f3eee2" />
+    <title>Compass Calendar: the keyboard calendar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500&family=VT323&display=swap"
+    />
+    <link rel="stylesheet" href="/start/crt.css" />
+    <script>
+      // With scripts on, the game replaces the plain fallback links.
+      document.documentElement.classList.add("js");
+    </script>
+    <style>
+      /* The pixel pirate from the app's welcome screen, in the same corner. */
+      #pirate {
+        display: block;
+        flex: none;
+        width: 56px;
+        height: 56px;
+        animation: pirate-scout 2.2s ease-in-out infinite;
+      }
+      @keyframes pirate-scout {
+        0%,
+        50%,
+        100% {
+          transform: translate(0, 0);
+        }
+        25% {
+          transform: translate(-6.25%, -6.25%);
+        }
+        75% {
+          transform: translate(6.25%, -6.25%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #pirate {
+          animation: none;
+        }
+      }
+      #out {
+        white-space: pre-wrap;
+      }
+      #out p,
+      #fallback p {
+        margin: 0 0 0.6em;
+      }
+      #choices {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      #choices .key {
+        text-align: left;
+        text-transform: none;
+        width: 100%;
+      }
+      #email-form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 6px 0 14px;
+      }
+      #email-form[hidden],
+      .typing-hint[hidden],
+      .js #fallback {
+        display: none;
+      }
+      #email-form p {
+        margin: 0;
+      }
+      #email {
+        font: inherit;
+        color: var(--hot);
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 8px 10px;
+        min-height: 48px;
+        width: 100%;
+      }
+      #email:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      /* The send button stays quiet until the address looks complete. */
+      #send {
+        color: var(--dim);
+      }
+      #send.ready {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--on-accent);
+      }
+      #send:disabled {
+        cursor: progress;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A sketch of the week view. Decorative: the real one is at /week. -->
+    <div class="calendar" aria-hidden="true">
+      <div class="cal-main">
+        <div class="cal-title" id="cal-title"></div>
+        <div class="cal-days">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span
+          ><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div class="cal-grid">
+          <span
+            class="cal-event"
+            style="left: calc(100% / 7 + 4px); top: 31%; height: 12%; background: #b9cdb4"
+          ></span>
+          <span
+            class="cal-event"
+            style="left: calc(300% / 7 + 4px); top: 46%; height: 8%; background: #d8c79f"
+          ></span>
+          <span
+            class="cal-event"
+            style="left: calc(400% / 7 + 4px); top: 23%; height: 15%; background: #c7c2d3"
+          ></span>
+          <span
+            class="cal-event"
+            style="left: calc(500% / 7 + 4px); top: 62%; height: 8%; background: #b9cdb4"
+          ></span>
+        </div>
+      </div>
+      <div class="cal-side">
+        <div style="height: 220px"></div>
+        <div style="height: 96px"></div>
+        <div style="height: 56px"></div>
+      </div>
+    </div>
+    <div class="veil"></div>
+
+    <main class="card">
+      <header class="card-top">
+        <!-- Same pixels as components/WelcomeModal/PixelPirate.tsx. -->
+        <svg
+          id="pirate"
+          viewBox="0 0 16 16"
+          role="img"
+          aria-label="Pixel pirate"
+          shape-rendering="crispEdges"
+        >
+          <g fill="var(--accent)">
+            <rect x="4" y="0" width="8" height="1" />
+            <rect x="3" y="1" width="10" height="1" />
+            <rect x="2" y="2" width="12" height="1" />
+            <rect x="3" y="3" width="10" height="1" />
+          </g>
+          <rect x="7" y="1" width="2" height="1" fill="#e6edf3" />
+          <g fill="#f4d7b5">
+            <rect x="4" y="4" width="8" height="5" />
+            <rect x="3" y="10" width="1" height="1" />
+            <rect x="2" y="8" width="1" height="2" />
+            <rect x="12" y="10" width="1" height="1" />
+            <rect x="13" y="8" width="1" height="2" />
+          </g>
+          <g fill="#0d1017">
+            <rect x="4" y="5" width="8" height="1" />
+            <rect x="5" y="5" width="2" height="2" />
+            <rect x="9" y="6" width="1" height="1" />
+            <rect x="5" y="13" width="6" height="1" />
+            <rect x="6" y="14" width="1" height="1" />
+            <rect x="9" y="14" width="1" height="1" />
+          </g>
+          <g fill="#8b5e3c">
+            <rect x="4" y="9" width="8" height="1" />
+            <rect x="5" y="10" width="6" height="1" />
+          </g>
+          <g fill="#c2c6cc">
+            <rect x="4" y="11" width="8" height="1" />
+            <rect x="5" y="12" width="6" height="1" />
+          </g>
+        </svg>
+        <nav aria-label="Compass">
+          <a class="pill" data-signin href="/week?auth=login">Log in</a>
+          <a class="pill" data-app href="/week">Open calendar</a>
+        </nav>
+      </header>
+      <div class="screen" id="screen">
+        <div id="fallback">
+          <p>COMPASS CALENDAR</p>
+          <p>A calendar you run from your keyboard.</p>
+          <p><a href="/week">Try the calendar now (no signup required)</a></p>
+          <p><a href="/week?auth=login">I have an account. Sign in.</a></p>
+        </div>
+        <div id="out" aria-live="polite"></div>
+        <form id="email-form" novalidate hidden>
+          <label for="email">Your email</label>
+          <input
+            id="email"
+            name="email_address"
+            type="email"
+            inputmode="email"
+            autocomplete="email"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="send"
+            placeholder="you@example.com"
+            aria-describedby="email-status"
+            required
+          />
+          <button type="submit" class="key" id="send">Send me the link</button>
+          <p class="dim">
+            You get one email with the link, then occasional Compass updates.
+            Unsubscribe any time.
+          </p>
+          <p id="email-status" role="status"></p>
+        </form>
+        <nav id="choices" aria-label="Choices"></nav>
+      </div>
+      <footer class="pad dim" id="hints" hidden>
+      <span class="keys-only">
+        <kbd>1-9</kbd> choose &middot; <kbd>&uarr;</kbd><kbd>&darr;</kbd> or
+        <kbd>J/K</kbd> move &middot; <kbd>Enter</kbd> confirm<span
+          class="typing-hint"
+        >
+          &middot; <kbd>Tab</kbd> skips the typing</span
+        >
+      </span>
+      <span class="touch-only">
+        Tap a choice.<span class="typing-hint">
+          Tap the text to skip the typing.</span
+        >
+      </span>
+    </footer>
+    </main>
+
+    <script>
+      // The backdrop shows this month, like the calendar header will.
+      document.getElementById("cal-title").textContent =
+        new Date().toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        });
+    </script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/inkjs@2.4.0/dist/ink-full.js"
+      integrity="sha384-psnXgYQBIOUbtPSN1bi0AUHIeqzwBIxWY13mrAEUXfKii5/aZaQL5tW70jnfrAdY"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/start/config.js"></script>
+    <script src="/start/journey.js"></script>
+    <script src="/start/gamebook.story.js"></script>
+    <script src="/start/gamebook.js"></script>
+  </body>
+</html>

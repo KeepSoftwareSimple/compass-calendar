@@ -4,6 +4,10 @@ import {
   isGuestMeetStaticPath,
 } from "../apps/calendar-web/guest-meet-static-path";
 import {
+  isLandingPath,
+  LANDING_HTML,
+} from "../apps/calendar-web/landing-static-path";
+import {
   isCalendarSpaPath,
   selfCanonicalPath,
 } from "../apps/calendar-web/spa-route-path";
@@ -320,6 +324,17 @@ const server = Bun.serve({
       const landingResponse = await fileResponse(
         request,
         path.join(root, "meet-landing.html"),
+        resolvedRoot,
+      );
+      if (landingResponse) {
+        return landingResponse;
+      }
+    }
+
+    if (!servesGuestMeet && isLandingPath(pathname)) {
+      const landingResponse = await fileResponse(
+        request,
+        path.join(root, LANDING_HTML),
         resolvedRoot,
       );
       if (landingResponse) {

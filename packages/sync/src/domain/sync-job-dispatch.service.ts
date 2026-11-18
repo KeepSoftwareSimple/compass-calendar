@@ -18,6 +18,11 @@ import {
   type SubscriptionMaintenanceDeps,
 } from "@sync/domain/subscription-maintenance.service";
 import {
+  isSyncTokenUnsupportedSnapshotDue,
+  SYNC_TOKEN_UNSUPPORTED_ENTER_STREAK,
+  SYNC_TOKEN_UNSUPPORTED_FULL_SNAPSHOT_INTERVAL_MS,
+} from "@sync/domain/sync-token-unsupported";
+import {
   type ProviderAdapters,
   ProviderNotConfiguredError,
   type ResolveProviderAdapters,
@@ -462,6 +467,7 @@ async function runSyncJob(
   if (
     job.kind === "incrementalPull" &&
     !executionDeps.reader.fullSnapshotOnly &&
+    resource.syncTokenUnsupportedAt === null &&
     resource.cursorExpiredBackoffUntil !== null &&
     resource.cursorExpiredBackoffUntil > now()
   ) {
@@ -474,6 +480,26 @@ async function runSyncJob(
     return {
       result: "drop",
       reason: `calendar ${calendar._id} cursor keeps expiring; holding off pulls until ${resource.cursorExpiredBackoffUntil.toISOString()}`,
+    };
+  }
+
+  if (
+    job.kind === "incrementalPull" &&
+    resource.syncTokenUnsupportedAt !== null &&
+    !isSyncTokenUnsupportedSnapshotDue(resource, now())
+  ) {
+    await deps.resources.markAttempt(
+      resource.tenantId,
+      resource.principalId,
+      resource._id,
+      now(),
+    );
+    return {
+      result: "drop",
+      reason: `calendar ${calendar._id} sync token unsupported; holding off full snapshots until ${new Date(
+        (resource.lastFullSnapshotAt ?? now()).getTime() +
+          SYNC_TOKEN_UNSUPPORTED_FULL_SNAPSHOT_INTERVAL_MS,
+      ).toISOString()}`,
     };
   }
 
@@ -518,6 +544,16 @@ async function runSyncJob(
         const cursorExpiryCleared = pull.resource.cursorExpiredStreak > 0;
         if (cursorExpiryCleared) {
           await deps.resources.clearCursorExpiry(
+            resource.tenantId,
+            resource.principalId,
+            resource._id,
+          );
+        }
+        if (
+          resource.syncTokenUnsupportedAt === null &&
+          pull.resource.syncTokenUnsupportedAt === null
+        ) {
+          await deps.resources.clearSyncTokenUnsupported(
             resource.tenantId,
             resource.principalId,
             resource._id,
@@ -569,6 +605,21 @@ async function runSyncJob(
       // never survives settles into a slow full-rebuild cadence instead of
       // re-running the whole lap every ~45s.
       const streak = pull.resource.cursorExpiredStreak + 1;
+      if (
+        resource.syncTokenUnsupportedAt === null &&
+        streak >= SYNC_TOKEN_UNSUPPORTED_ENTER_STREAK
+      ) {
+        await deps.resources.markSyncTokenUnsupported(
+          resource.tenantId,
+          resource.principalId,
+          resource._id,
+          now(),
+        );
+        deps.log?.info?.(
+          `Sync resource ${resource._id} (calendar ${calendar._id}): sync token unsupported after ${streak} consecutive expiries; using scheduled full snapshots`,
+        );
+        return { result: "done" };
+      }
       const holdOffMs = cursorExpiryHoldOffMs(streak);
       await deps.resources.recordCursorExpiry(
         resource.tenantId,

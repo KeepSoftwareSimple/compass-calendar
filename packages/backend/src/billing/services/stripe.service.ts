@@ -1,6 +1,5 @@
 import type Stripe from "stripe";
 import { isSyntheticAccountEmail } from "@core/analytics/synthetic-account.util";
-import { buildDesktopBillingReturnUrl } from "@core/desktop/desktop-billing-return.util";
 import { Status } from "@core/errors/status.codes";
 import {
   type BillingCheckoutRequest,
@@ -31,7 +30,7 @@ import mongoService from "@backend/common/services/mongo.service";
 import { isPosthogSyntheticAccount } from "@backend/user/posthog-synthetic-account.util";
 
 /** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
-const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v10-";
+const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v11-";
 
 function syntheticJourneyCheckoutDiscounts(user: {
   email: string;
@@ -49,17 +48,8 @@ function syntheticJourneyCheckoutDiscounts(user: {
   return [{ coupon: discountId }];
 }
 
-/**
- * Desktop and web send different create params for the same user, so they need
- * separate keys or Stripe replays whichever session was created first.
- */
-const checkoutIdempotencyKey = (
-  userId: string,
-  options: BillingCheckoutRequest,
-): string => {
-  const surface = options.returnTo === "desktop" ? "desktop-" : "";
-  return `${CHECKOUT_IDEMPOTENCY_PREFIX}${surface}${userId}`;
-};
+const checkoutIdempotencyKey = (userId: string): string =>
+  `${CHECKOUT_IDEMPOTENCY_PREFIX}${userId}`;
 
 const TRIAL_CANCEL_WITHOUT_CARD = {
   trial_settings: {
@@ -97,42 +87,14 @@ type CheckoutSessionResult = Awaited<
   ReturnType<StripeBillingGateway["createCheckoutSession"]>
 >;
 
-type CheckoutReturnParams =
-  | { success_url: string; cancel_url: string }
-  | { ui_mode: "embedded_page"; redirect_on_completion: "never" };
+const checkoutReturnParams = (): {
+  ui_mode: "embedded_page";
+  redirect_on_completion: "never";
+} => ({ ui_mode: "embedded_page", redirect_on_completion: "never" });
 
-/**
- * The desktop shell leaves the app for Stripe's hosted page, so it needs real
- * return URLs; the web app keeps the embedded form in place. Both the
- * subscription and the card-update session make this same choice.
- */
-const checkoutReturnParams = (
-  options: BillingCheckoutRequest,
-): CheckoutReturnParams => {
-  if (options.returnTo !== "desktop") {
-    return { ui_mode: "embedded_page", redirect_on_completion: "never" };
-  }
-  const frontendUrl = CONFIG.FRONTEND_URL;
-  if (!frontendUrl) {
-    throw new Error("FRONTEND_URL is required for desktop billing return");
-  }
-  return {
-    success_url: buildDesktopBillingReturnUrl(frontendUrl, "success"),
-    cancel_url: buildDesktopBillingReturnUrl(frontendUrl, "cancel"),
-  };
-};
-
-/** Hosted Checkout answers with a URL, the embedded form with a client secret. */
 const checkoutResponse = (
   session: CheckoutSessionResult,
-  options: BillingCheckoutRequest,
 ): BillingCheckoutResponse => {
-  if (options.returnTo === "desktop") {
-    if (!session.url) {
-      throw new Error("Stripe Checkout did not return a hosted URL");
-    }
-    return { url: session.url };
-  }
   if (!session.client_secret) {
     throw new Error("Stripe Checkout did not return a client secret");
   }
@@ -182,7 +144,7 @@ export class StripeService {
 
   createCheckoutSession = async (
     userId: string,
-    options: BillingCheckoutRequest = {},
+    _options: BillingCheckoutRequest = {},
   ): Promise<BillingCheckoutResponse> => {
     if (!isStripeConfigured(CONFIG)) {
       throw new Error("Stripe is not configured");
@@ -238,8 +200,7 @@ export class StripeService {
 
     const discounts = syntheticJourneyCheckoutDiscounts(user);
     const syntheticJourneyCheckout = discounts !== undefined;
-    // Only synthetic sessions get metadata, so real users' create params (and
-    // their per-user idempotency keys) are unchanged.
+    // Only synthetic sessions get metadata for analytics exclusion.
     const syntheticAnalyticsAccount = isPosthogSyntheticAccount(
       user.email,
       user.isSynthetic,
@@ -252,7 +213,7 @@ export class StripeService {
           customer: customerId,
           client_reference_id: userId,
           line_items: [{ price: getStripePriceId(), quantity: 1 }],
-          ...(discounts ? { discounts } : {}),
+          ...(discounts ? { discounts } : { allow_promotion_codes: true }),
           ...(syntheticAnalyticsAccount
             ? { metadata: syntheticCheckoutSessionMetadata() }
             : {}),
@@ -273,19 +234,19 @@ export class StripeService {
                 customer_update: { address: "auto" },
                 billing_address_collection: "required" as const,
               }),
-          ...checkoutReturnParams(options),
+          ...checkoutReturnParams(),
           subscription_data: {
             ...trialFields,
             metadata: { compassUserId: userId },
           },
         },
         sendCheckoutIdempotency
-          ? { idempotencyKey: checkoutIdempotencyKey(userId, options) }
+          ? { idempotencyKey: checkoutIdempotencyKey(userId) }
           : undefined,
       )
       .catch(wrapStripeFailure);
 
-    return checkoutResponse(session, options);
+    return checkoutResponse(session);
   };
 
   /**
@@ -455,7 +416,7 @@ export class StripeService {
 
   createPaymentMethodSession = async (
     userId: string,
-    options: BillingCheckoutRequest = {},
+    _options: BillingCheckoutRequest = {},
   ): Promise<BillingCheckoutResponse> => {
     if (!isStripeConfigured(CONFIG)) {
       throw new Error("Stripe is not configured");
@@ -479,11 +440,11 @@ export class StripeService {
         allowed_payment_method_types: ["card"],
         client_reference_id: userId,
         setup_intent_data: { metadata: { compassUserId: userId } },
-        ...checkoutReturnParams(options),
+        ...checkoutReturnParams(),
       })
       .catch(wrapStripeFailure);
 
-    return checkoutResponse(session, options);
+    return checkoutResponse(session);
   };
 }
 

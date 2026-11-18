@@ -1,5 +1,4 @@
 import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
-import { PUBLIC_BOOKING_HEADING_CLASS } from "@booking-web/booking/PublicBookingStatusMessage";
 import { useBookingDocumentTitle } from "@booking-web/booking/use-booking-document-title";
 import {
   MEET_LANDING_CTA_LABEL,
@@ -13,6 +12,10 @@ import {
 } from "@booking-web/telemetry/guest-booking-funnel";
 import { useEffect, useRef } from "react";
 import { meetingSetupRootHref } from "@web/booking/meeting-setup.search";
+
+/** Retro VT323 wordmark heading, matching the calendar's welcome and auth screens. */
+const MEET_LANDING_HEADING_CLASS =
+  "font-[VT323,monospace] font-normal text-4xl text-text leading-none";
 
 /**
  * Bare `/meet` is the landing page for meeting pages. One headline, one line,
@@ -34,9 +37,7 @@ export function MeetLandingPage() {
   return (
     <PublicBookingLayout showFooter={false}>
       <header className="flex flex-col gap-3">
-        <h1 className={PUBLIC_BOOKING_HEADING_CLASS}>
-          {MEET_LANDING_HEADLINE}
-        </h1>
+        <h1 className={MEET_LANDING_HEADING_CLASS}>{MEET_LANDING_HEADLINE}</h1>
         <p className="text-sm text-text-muted">{MEET_LANDING_SUPPORTING}</p>
       </header>
 

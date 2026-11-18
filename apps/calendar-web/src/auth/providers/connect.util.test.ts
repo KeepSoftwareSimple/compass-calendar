@@ -1,5 +1,7 @@
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
+  calendarDelayedSidebarMessage,
+  calendarDelayedToastMessage,
   formatLastSyncedLabel,
   formatLastUpdatedClause,
   getCalendarConnectionBannerKind,
@@ -26,10 +28,10 @@ describe("formatLastSyncedLabel", () => {
       "Updated just now",
     );
     expect(formatLastSyncedLabel("2026-07-24T11:59:00.000Z", nowMs)).toBe(
-      "Updated 1 minute ago",
+      "Updated 1 min ago",
     );
     expect(formatLastSyncedLabel("2026-07-24T11:45:00.000Z", nowMs)).toBe(
-      "Updated 15 minutes ago",
+      "Updated 15 min ago",
     );
     expect(formatLastSyncedLabel("2026-07-24T10:00:00.000Z", nowMs)).toBe(
       "Updated 2 hours ago",
@@ -41,7 +43,7 @@ describe("formatLastSyncedLabel", () => {
 
   it("formats the mid-sentence Last updated clause", () => {
     expect(formatLastUpdatedClause("2026-07-24T11:45:00.000Z", nowMs)).toBe(
-      "Last updated 15 minutes ago",
+      "Last updated 15 min ago",
     );
   });
 });
@@ -129,7 +131,7 @@ describe("getGoogleSyncStatus", () => {
       ),
     ).toEqual({
       variant: "syncing",
-      text: "Syncing in the background… Last updated 15 minutes ago. This usually finishes on its own.",
+      text: "Syncing in the background… Last updated 15 min ago. This usually finishes on its own.",
     });
   });
 
@@ -240,7 +242,7 @@ describe("getGoogleSyncStatus", () => {
       ),
     ).toEqual({
       variant: "warning",
-      text: "Calendar updates are taking longer than usual. Last updated 15 minutes ago. Try Refresh, or reconnect if this continues.",
+      text: "Calendar updates are taking longer than usual. Last updated 15 min ago. Try Refresh, or reconnect if this continues.",
     });
   });
 
@@ -262,7 +264,7 @@ describe("getGoogleSyncStatus", () => {
       ),
     ).toEqual({
       variant: "warning",
-      text: "Couldn't update your calendar. Last updated 15 minutes ago. Try Refresh, or reconnect if this continues.",
+      text: "Couldn't update your calendar. Last updated 15 min ago. Try Refresh, or reconnect if this continues.",
     });
   });
 
@@ -285,7 +287,7 @@ describe("getGoogleSyncStatus", () => {
       ),
     ).toEqual({
       variant: "error",
-      text: "We couldn't update your calendar. Last updated 15 minutes ago. Reconnect, or email tyler@switchback.tech for help.",
+      text: "We couldn't update your calendar. Last updated 15 min ago. Reconnect, or email tyler@switchback.tech for help.",
     });
   });
 });
@@ -336,7 +338,7 @@ describe("getSidebarSyncStatus", () => {
     });
   });
 
-  it("shows Calendar updates are delayed for delayed workOverdue", () => {
+  it("shows provider-named delayed copy for delayed workOverdue", () => {
     expect(
       getSidebarSyncStatus({
         connection: {
@@ -355,7 +357,7 @@ describe("getSidebarSyncStatus", () => {
       }),
     ).toEqual({
       variant: "warning",
-      text: "Calendar updates are delayed",
+      text: "Google Calendar updates are delayed",
     });
   });
 
@@ -383,7 +385,7 @@ describe("getSidebarSyncStatus", () => {
     });
   });
 
-  it("shows Couldn't update your calendar for delayed providerErrors", () => {
+  it("uses the same product-named copy when delayed is from providerErrors", () => {
     expect(
       getSidebarSyncStatus({
         connection: {
@@ -402,7 +404,7 @@ describe("getSidebarSyncStatus", () => {
       }),
     ).toEqual({
       variant: "warning",
-      text: "Couldn't update your calendar",
+      text: "Google Calendar updates are delayed",
     });
   });
 
@@ -474,6 +476,61 @@ describe("getSidebarSyncStatus", () => {
       variant: "error",
       text: "Calendar needs reconnecting",
     });
+  });
+});
+
+describe("calendarDelayedToastMessage", () => {
+  const delayed = (
+    overrides: Partial<SyncConnectionSummary>,
+  ): SyncConnectionSummary => ({
+    id: "c1",
+    provider: "google",
+    state: "delayed",
+    stateReason: "workOverdue",
+    lastSyncedAt: null,
+    lastHealthyAt: null,
+    accountEmail: null,
+    connectionState: "ATTENTION",
+    canSuggestContacts: false,
+    ...overrides,
+  });
+
+  it("names the calendar product in the title and a distinct body", () => {
+    expect(calendarDelayedToastMessage(delayed({}))).toEqual({
+      title: "Google Calendar updates are delayed",
+      body: "Google Calendar is taking longer than usual to sync. Compass will keep trying.",
+    });
+  });
+
+  it("says the provider is slow for providerErrors without repeating the title", () => {
+    expect(
+      calendarDelayedToastMessage(
+        delayed({ provider: "microsoft", stateReason: "providerErrors" }),
+      ),
+    ).toEqual({
+      title: "Microsoft Calendar updates are delayed",
+      body: "Microsoft Calendar is slow to respond. Compass will keep trying.",
+    });
+  });
+
+  it("names Apple Calendar for an Apple connection", () => {
+    expect(
+      calendarDelayedToastMessage(delayed({ provider: "apple" })).title,
+    ).toBe("Apple Calendar updates are delayed");
+  });
+});
+
+describe("calendarDelayedSidebarMessage", () => {
+  it("names the calendar product", () => {
+    expect(calendarDelayedSidebarMessage("google")).toBe(
+      "Google Calendar updates are delayed",
+    );
+    expect(calendarDelayedSidebarMessage("microsoft")).toBe(
+      "Microsoft Calendar updates are delayed",
+    );
+    expect(calendarDelayedSidebarMessage("apple")).toBe(
+      "Apple Calendar updates are delayed",
+    );
   });
 });
 

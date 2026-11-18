@@ -4,7 +4,6 @@ WORKDIR /app
 
 # Install before COPY . . so source edits do not bust the install layer.
 COPY package.json bun.lock bunfig.toml ./
-COPY patches ./patches
 COPY apps/booking-web/package.json apps/booking-web/package.json
 COPY packages/backend/package.json packages/backend/package.json
 COPY packages/core/package.json packages/core/package.json
@@ -45,6 +44,7 @@ COPY --from=build --chown=compass:compass /app/build/booking-web ./build/booking
 # restart-loops.
 COPY --from=build --chown=compass:compass /app/apps/calendar-web/compressible-static-types.ts ./apps/calendar-web/compressible-static-types.ts
 COPY --from=build --chown=compass:compass /app/apps/calendar-web/guest-meet-static-path.ts ./apps/calendar-web/guest-meet-static-path.ts
+COPY --from=build --chown=compass:compass /app/apps/calendar-web/landing-static-path.ts ./apps/calendar-web/landing-static-path.ts
 COPY --from=build --chown=compass:compass /app/apps/calendar-web/spa-route-path.ts ./apps/calendar-web/spa-route-path.ts
 COPY --from=build --chown=compass:compass /app/apps/calendar-web/src/common/constants/routes.ts ./apps/calendar-web/src/common/constants/routes.ts
 COPY --from=build --chown=compass:compass /app/self-host/serve-web.ts ./self-host/serve-web.ts

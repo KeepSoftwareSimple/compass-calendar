@@ -73,8 +73,8 @@ jobs:
   # otherwise, so a new directory cannot silently skip CI. Resize by moving
   # directories between lists, never by raising the step cap; measured
   # `Run e2e tests` durations are in docs/CI-CD/ci-audit-2026-09.md.
-  # 2026-10-23: the timezone and parity work added e2e/dst, e2e/event-form
-  # and e2e/parity, and grew e2e/timed to 46 tests. The four-way list put all
+  # 2026-10-23: the timezone work added e2e/dst and e2e/event-form, and grew
+  # e2e/timed to 46 tests. The four-way list put all
   # of them on shard 3, which reached 6m06s of the 8m cap on main and then
   # timed out twice in a row (PR #4770 and its merge-queue run) at 64 of 67
   # specs passed with zero failures. e2e/timed measured 3.2m of that load and
@@ -100,7 +100,7 @@ jobs:
           - shard: 4
             specs: e2e/onboarding e2e/calendars e2e/life e2e/navigation e2e/attendees
           - shard: 5
-            specs: e2e/dst e2e/event-form e2e/journey e2e/overlap e2e/parity
+            specs: e2e/dst e2e/event-form e2e/journey e2e/overlap
     container:
       # Keep this tag aligned with @playwright/test + playwright in bun.lock.
       image: mcr.microsoft.com/playwright:v1.64.1-noble

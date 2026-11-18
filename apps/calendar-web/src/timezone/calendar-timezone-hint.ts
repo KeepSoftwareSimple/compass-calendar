@@ -1,5 +1,6 @@
 import { type Calendar } from "@core/types/calendar.contracts";
 import { isValidTimeZone } from "@web/timezone/browser-timezone";
+import { setCalendarTimeZoneHint } from "@web/timezone/effective-timezone.store";
 import { isUtcLikeTimeZone } from "@web/timezone/utc-like-timezone";
 
 /**
@@ -31,4 +32,13 @@ export function pickCalendarTimeZoneHint(
   }
 
   return null;
+}
+
+/** Keep Auto effective zone aligned with connected calendars (see CalendarTimeZoneHintSync). */
+export function syncCalendarTimeZoneHintFromCalendars(
+  calendars: readonly Calendar[] | null | undefined,
+): void {
+  setCalendarTimeZoneHint(
+    calendars ? pickCalendarTimeZoneHint(calendars) : null,
+  );
 }

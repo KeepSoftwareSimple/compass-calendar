@@ -1,5 +1,4 @@
 import { type AuthOAuthFlow } from "@core/analytics/oauth-signup.events";
-import { DESKTOP_OAUTH_STATE_PREFIX } from "@core/desktop/desktop-oauth-state.util";
 
 const SIGNIN_OAUTH_STATE_VERSION_PREFIX = "v1.";
 
@@ -11,7 +10,6 @@ export type ParsedSignInOAuthState = {
   nonce: string;
   posthogDistinctId?: string;
   flow: AuthOAuthFlow;
-  isDesktop: boolean;
 };
 
 type SignInOAuthStatePayload = {
@@ -74,7 +72,6 @@ function decodePayload(body: string): SignInOAuthStatePayload | null {
 
 /** Builds OAuth `state` for provider sign-in, optionally carrying PostHog anon id. */
 export function buildSignInOAuthState(input: {
-  isDesktopClient: boolean;
   posthogDistinctId?: string;
   flow?: AuthOAuthFlow;
 }): string {
@@ -83,26 +80,19 @@ export function buildSignInOAuthState(input: {
     ...(input.posthogDistinctId ? { ph: input.posthogDistinctId } : {}),
     ...(input.flow ? { fl: input.flow } : {}),
   };
-  const body = encodePayload(payload);
-  return input.isDesktopClient ? `${DESKTOP_OAUTH_STATE_PREFIX}${body}` : body;
+  return encodePayload(payload);
 }
 
 export function parseSignInOAuthState(
   state: string,
 ): ParsedSignInOAuthState | null {
-  let body = state;
-  let isDesktop = false;
-  if (body.startsWith(DESKTOP_OAUTH_STATE_PREFIX)) {
-    isDesktop = true;
-    body = body.slice(DESKTOP_OAUTH_STATE_PREFIX.length);
-  }
+  const body = state.replace(/^compass-desktop:/, "");
 
   if (LEGACY_UUID_PATTERN.test(body)) {
     return {
       rawState: state,
       nonce: body,
       flow: "login",
-      isDesktop,
     };
   }
 
@@ -119,7 +109,6 @@ export function parseSignInOAuthState(
     nonce: payload.n,
     posthogDistinctId,
     flow: payload.fl ?? "login",
-    isDesktop,
   };
 }
 

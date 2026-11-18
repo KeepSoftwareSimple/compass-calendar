@@ -31,6 +31,8 @@ interface Props {
   icon?: ReactNode;
   /** Main title text */
   title?: string;
+  /** Replaces the default title typography (e.g. the retro pixel heading) */
+  titleClassName?: string;
   /** Accessible name when the panel has no visible title */
   ariaLabel?: string;
   /** Optional content rendered on the same row as the title (e.g. a switch link) */
@@ -85,6 +87,11 @@ interface Props {
   panelClassName?: string;
   /** When true, applies dismiss-transition `data-closing` styles before unmount */
   closing?: boolean;
+  /**
+   * Dismiss into a solid background instead of fading the backdrop out, for
+   * hand-offs to a full-screen takeover so the page underneath never shows.
+   */
+  closeToSolid?: boolean;
   /** Bubbled keydown from the backdrop (dialog shell or any focused descendant). */
   onKeyDown?: (e: React.KeyboardEvent) => void;
 }
@@ -92,6 +99,7 @@ interface Props {
 export const OverlayPanel = ({
   icon,
   title,
+  titleClassName,
   ariaLabel,
   titleAction,
   message,
@@ -110,6 +118,7 @@ export const OverlayPanel = ({
   bodyPaddingClassName = "p-8",
   panelClassName,
   closing = false,
+  closeToSolid = false,
   anchor = "center",
   onKeyDown,
   footer,
@@ -152,7 +161,9 @@ export const OverlayPanel = ({
     "fixed inset-0 flex justify-center bg-background/85 backdrop-blur-sm",
     anchor === "top" ? "items-start pt-[5vh]" : "items-center",
     variant === "modal" &&
-      "transition-opacity duration-400 ease-out data-closing:opacity-0 motion-reduce:transition-none",
+      (closeToSolid
+        ? "transition-colors duration-400 ease-out data-closing:bg-background motion-reduce:transition-none"
+        : "transition-opacity duration-400 ease-out data-closing:opacity-0 motion-reduce:transition-none"),
     backdropClassName,
   );
 
@@ -163,7 +174,9 @@ export const OverlayPanel = ({
       widthClassName,
       scrollChildrenOnly && "min-h-0",
       "max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl outline-none will-change-transform",
-      "transition-transform duration-400 ease-out data-closing:scale-105 motion-reduce:transition-none",
+      closeToSolid
+        ? "transition-[transform,opacity] duration-400 ease-out data-closing:scale-105 data-closing:opacity-0 motion-reduce:transition-none"
+        : "transition-transform duration-400 ease-out data-closing:scale-105 motion-reduce:transition-none",
       panelClassName ??
         "gap-6 bg-surface-panel shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)]",
     ],
@@ -187,7 +200,8 @@ export const OverlayPanel = ({
   );
 
   const titleClasses = classNames(
-    "m-0 line-clamp-2 w-full min-w-0 font-semibold text-lg text-text",
+    "m-0 line-clamp-2 w-full min-w-0",
+    titleClassName ?? "font-semibold text-lg text-text",
   );
 
   const messageClasses = classNames(

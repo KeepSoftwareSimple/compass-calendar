@@ -140,6 +140,10 @@ jobs:
           SUPERTOKENS_KEY: ${{ secrets.SUPERTOKENS_KEY }}
           SUPERTOKENS_POSTGRES_PASSWORD: ${{ secrets.SUPERTOKENS_POSTGRES_PASSWORD }}
           SUPERTOKENS_URI: ${{ secrets.SUPERTOKENS_URI }}
+          # Kit subscriber list for the landing page's "email me the link"
+          # form. Bound directly, like Stripe below; the cloud-only gate is
+          # in the shell that writes compass.yaml.
+          KIT_API_SECRET: ${{ secrets.KIT_API_SECRET }}
           # Bind Stripe secrets directly. Do not wrap them in
           # `condition && secrets.X || ''` — GitHub blanks secrets used in
           # boolean expressions, which left staging-cloud with no stripe:
@@ -279,6 +283,13 @@ jobs:
                 'posthog:' \
                 "  key: \"${POSTHOG_KEY}\"" \
                 "  host: \"${POSTHOG_HOST}\""
+            fi
+            # Hosted cloud only, same gate as Stripe below.
+            if { [ "${{ inputs.environment }}" = "production" ] || [ "${{ inputs.environment }}" = "staging-cloud" ]; } &&
+              [ -n "$KIT_API_SECRET" ]; then
+              printf '%s\n' \
+                'kit:' \
+                "  apiKey: \"${KIT_API_SECRET}\""
             fi
             # Hosted cloud only. staging-selfhosted must omit this block even
             # if a repo-level STRIPE_* secret exists. Log to stderr — this

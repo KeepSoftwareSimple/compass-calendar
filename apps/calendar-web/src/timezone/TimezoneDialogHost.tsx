@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import { usePaletteAwareOverlayDismiss } from "@web/settings/usePaletteAwareOverlayDismiss";
-import { TimezonePickerDialog } from "@web/timezone/TimezonePickerDialog";
+import { LazyTimezonePickerDialog } from "@web/timezone/TimezonePickerDialog.lazy";
 import {
   selectTimezoneDialogOpen,
   selectTimezoneDialogPurpose,
@@ -18,10 +19,12 @@ export function TimezoneDialogHost() {
   if (!isOpen) return null;
 
   return (
-    <TimezonePickerDialog
-      onDismiss={handleDismiss}
-      purpose={purpose}
-      skipFocusRestoreRef={skipFocusRestoreRef}
-    />
+    <Suspense fallback={null}>
+      <LazyTimezonePickerDialog
+        onDismiss={handleDismiss}
+        purpose={purpose}
+        skipFocusRestoreRef={skipFocusRestoreRef}
+      />
+    </Suspense>
   );
 }

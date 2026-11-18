@@ -205,7 +205,6 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
     "google",
     (_redirectUri, posthogDistinctId, signupFlow) =>
       buildSignInOAuthState({
-        isDesktopClient: false,
         posthogDistinctId,
         flow: signupFlow ? "signup" : "login",
       }),
@@ -255,7 +254,6 @@ const useMicrosoftProviderAuthorizationStrategy =
     notConfiguredMessage: "Microsoft sign-in is not configured",
     createState: (_redirectUri, posthogDistinctId, signupFlow) =>
       buildSignInOAuthState({
-        isDesktopClient: false,
         posthogDistinctId,
         flow: signupFlow ? "signup" : "login",
       }),

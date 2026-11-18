@@ -81,9 +81,7 @@ async function ensureUpdateToastVisible(page: Page) {
   });
 
   await expect(updateToast).toBeVisible({ timeout: 15_000 });
-  await expect(
-    page.getByText("Compass just got better. Refresh to update."),
-  ).toBeVisible();
+  await expect(page.getByText("Compass just got better.")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Refresh/i })).toBeVisible();
 }
 

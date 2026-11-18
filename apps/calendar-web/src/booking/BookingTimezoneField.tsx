@@ -3,7 +3,7 @@ import { type TimeZone } from "@core/types/domain-primitives";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
 import { TimezoneCombobox } from "@web/timezone/TimezoneCombobox";
-import { timeZoneCityName } from "@web/timezone/timezone-catalog";
+import { timeZoneCityName } from "@web/timezone/timezone-iana-label.util";
 
 interface BookingTimezoneFieldProps {
   timeZone: TimeZone;

@@ -38,8 +38,8 @@ export type IntentTeaching = {
 
 export const INTENT_TEACHING: Record<PointerIntent, IntentTeaching> = {
   "card-click": {
-    shortcutIds: ["edit-open", "focus-shift-hold"],
-    message: () => "Press {0} to open. Hold {1} to jump to any event.",
+    shortcutIds: ["edit-open", "edit-menu"],
+    message: () => "Press {0} to open, {1} for the menu.",
   },
   "slot-click": {
     shortcutIds: ["create-typed-time", "create-timed"],

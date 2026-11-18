@@ -1,3 +1,4 @@
+import { Logger } from "@core/logger/winston.logger";
 import { type DateTime } from "@core/types/domain-primitives";
 import { type EventSchedule } from "@core/types/event.contracts";
 import { type Attendee } from "@core/types/event-attendance.contracts";
@@ -36,6 +37,8 @@ import { type ProviderWriteRecurrence } from "@sync/providers/provider-event-wri
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
+
+const providerCommandLogger = Logger("sync:provider-command");
 
 // The entry invariants every provider executor that targets a linked series
 // master re-states. provider-command.service routes by command kind, scope,
@@ -172,11 +175,17 @@ export async function stopCommand(
 // for most paths and one resolved instance (fetchInstanceAt) for a
 // per-occurrence rsvp. Mirrors resolveCommandAccessToken's result shape, so a
 // caller forwards `command` on the not-ok branch and keeps going otherwise.
+export type ResolveCurrentProviderEventOptions = {
+  absentFailureReason?: SyncCommandFailureReason;
+  absentLogMessage?: string;
+};
+
 export async function resolveCurrentProviderEvent(
   deps: ProviderMutationDeps,
   command: CommandRecord,
   connectionId: ConnectionId,
   read: () => Promise<ProviderEventRead | null>,
+  options?: ResolveCurrentProviderEventOptions,
 ): Promise<
   { ok: true; current: ProviderEvent } | { ok: false; command: CommandRecord }
 > {
@@ -188,12 +197,17 @@ export async function resolveCurrentProviderEvent(
     };
   }
   if (fetchResult.value?.kind !== "event") {
+    if (options?.absentLogMessage) {
+      providerCommandLogger.warn(
+        `Command ${command._id} (${command.input.kind} ${command.eventId}): ${options.absentLogMessage}`,
+      );
+    }
     return {
       ok: false,
       command: await failCommand(
         deps,
         command,
-        "permanentProviderError",
+        options?.absentFailureReason ?? "permanentProviderError",
         connectionId,
       ),
     };

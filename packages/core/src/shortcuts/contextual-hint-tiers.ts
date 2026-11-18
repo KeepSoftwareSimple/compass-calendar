@@ -218,8 +218,3 @@ export function tieredRecurrenceUntilHints(): TieredContextualHint {
   assertPrimaryHintBudget(tiered);
   return tiered;
 }
-
-/** macOS event form footer when the date grid popover is open. */
-export function tieredNativeEventFormDatePickerFooterHints(): TieredContextualHint {
-  return tieredDatePickerGridDayHints();
-}

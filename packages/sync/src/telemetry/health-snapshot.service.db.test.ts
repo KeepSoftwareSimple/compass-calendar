@@ -13,6 +13,7 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
+import { DEFAULT_RENEW_BEFORE_MS } from "@sync/domain/subscription-maintenance.service";
 import {
   type ProviderRegistration,
   ProviderRegistry,
@@ -26,7 +27,6 @@ import {
   computeHealthSnapshotForProvider,
   computeHealthSnapshots,
   emitHealthSnapshot,
-  HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS,
 } from "@sync/telemetry/health-snapshot.service";
 import { beforeEach, describe, expect, it } from "bun:test";
 
@@ -140,7 +140,7 @@ describe("computeHealthSnapshot", () => {
       subscriptionResourceId: "res-1",
       subscriptionToken: "tok-1",
       subscriptionExpiresAt: new Date(
-        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+        NOW.getTime() + DEFAULT_RENEW_BEFORE_MS + 60_000,
       ),
     });
     await resources.advanceCursor(
@@ -285,6 +285,42 @@ describe("computeHealthSnapshot", () => {
     expect(snapshot.freshness.percentOver30s).toBe(0);
   });
 
+  it("reports sync-token-unsupported and cursor-expiry streak counts separately", async () => {
+    const healthy = await seedConnection("google", "healthy");
+    const tenantId = healthy.tenantId;
+    const principalId = healthy.principalId;
+    const tokenUnsupported = await resources.ensure({
+      tenantId,
+      principalId,
+      connectionId: healthy._id as ConnectionId,
+      resourceKind: "events",
+      calendarId: objectId() as never,
+    });
+    await resources.markSyncTokenUnsupported(
+      tenantId,
+      principalId,
+      tokenUnsupported._id,
+      NOW,
+    );
+    const cursorStreak = await resources.ensure({
+      tenantId,
+      principalId,
+      connectionId: healthy._id as ConnectionId,
+      resourceKind: "events",
+      calendarId: objectId() as never,
+    });
+    await resources.recordCursorExpiry(
+      tenantId,
+      principalId,
+      cursorStreak._id,
+      NOW,
+    );
+
+    const snapshot = await computeHealthSnapshotForProvider(deps(), "google");
+    expect(snapshot.freshness.syncTokenUnsupported).toBe(1);
+    expect(snapshot.freshness.cursorExpiryStreak).toBe(1);
+  });
+
   it("reports the older importing connection age", async () => {
     const older = await seedConnection("google", "importing");
     const newer = await seedConnection("google", "importing");
@@ -339,7 +375,7 @@ describe("computeHealthSnapshot", () => {
       subscriptionResourceId: "res-handshake",
       subscriptionToken: "tok-handshake",
       subscriptionExpiresAt: new Date(
-        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+        NOW.getTime() + DEFAULT_RENEW_BEFORE_MS + 60_000,
       ),
     });
     await resources.markPushReceived(
@@ -370,7 +406,7 @@ describe("computeHealthSnapshot", () => {
       subscriptionResourceId: "res-served",
       subscriptionToken: "tok-served",
       subscriptionExpiresAt: new Date(
-        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+        NOW.getTime() + DEFAULT_RENEW_BEFORE_MS + 60_000,
       ),
     });
 
@@ -426,7 +462,7 @@ describe("computeHealthSnapshot", () => {
       subscriptionResourceId: "res-live",
       subscriptionToken: "tok-live",
       subscriptionExpiresAt: new Date(
-        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+        NOW.getTime() + DEFAULT_RENEW_BEFORE_MS + 60_000,
       ),
     });
     await resources.markChangeNotified(

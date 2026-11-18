@@ -22,6 +22,7 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
+import { normalizeProviderUpdatedAtForFingerprint } from "@sync/domain/provider-page-applier";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
   EventReadSchema,
@@ -99,6 +100,39 @@ export type UpsertByProviderIdentityOptions = {
 };
 
 export class EventRepository {
+  async listProviderFingerprintsAtGeneration(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    calendarId: EventRecord["calendarId"],
+    generation: number,
+  ): Promise<Map<string, string>> {
+    const rows = await this.collection
+      .find({
+        tenantId,
+        principalId,
+        calendarId,
+        generation,
+        providerEventId: { $ne: null },
+      })
+      .project({ providerEventId: 1, providerVersion: 1, providerUpdatedAt: 1 })
+      .toArray();
+    const fingerprints = new Map<string, string>();
+    for (const row of rows) {
+      const providerEventId = row["providerEventId"] as
+        | string
+        | null
+        | undefined;
+      if (!providerEventId) continue;
+      fingerprints.set(
+        providerEventId,
+        `${(row["providerVersion"] as string | null | undefined) ?? ""}\0${normalizeProviderUpdatedAtForFingerprint(
+          row["providerUpdatedAt"] as Date | string | null | undefined,
+        )}`,
+      );
+    }
+    return fingerprints;
+  }
+
   async findUnlinkedBelowGeneration(
     tenantId: TenantId,
     principalId: PrincipalId,

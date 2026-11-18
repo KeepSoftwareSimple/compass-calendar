@@ -1,5 +1,11 @@
 import { HotkeysProvider, resolveModifier } from "@tanstack/react-hotkeys";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
@@ -111,6 +117,44 @@ describe("DescriptionEditor link UX", () => {
     await expect(copyButton).toBeVisible();
     await user.click(copyButton);
     expect(copyTextMock).toHaveBeenCalledWith("https://example.com/meet");
+  });
+
+  it("portals link hint chrome so overflow hidden ancestors do not clip it", async () => {
+    const user = userEvent.setup();
+    const longUrl =
+      "https://www.esmailcorp.com/news/mr-robot-final-season-premiere";
+    render(
+      <section
+        aria-label="Overflow panel"
+        style={{ width: "260px", overflow: "hidden" }}
+      >
+        <DescriptionEditor
+          value={`<ol><li>first</li><li><a href="${longUrl}">esmailcorp.com</a></li></ol>`}
+          onChange={mock()}
+          editable={true}
+          resetKey="portal-overflow"
+        />
+      </section>,
+    );
+
+    const panel = screen.getByRole("region", { name: "Overflow panel" });
+    const link = screen.getByRole("link", { name: /esmailcorp/ });
+    await user.hover(link);
+
+    const hintGroup = await waitFor(() =>
+      screen.getByRole("group", { name: "Link shortcut and copy" }),
+    );
+
+    expect(panel.contains(hintGroup)).toBe(false);
+    expect(document.body.contains(hintGroup)).toBe(true);
+
+    const panelRect = panel.getBoundingClientRect();
+    const chromeRect = hintGroup.getBoundingClientRect();
+    expect(chromeRect.left).toBeGreaterThanOrEqual(panelRect.left);
+    expect(chromeRect.right).toBeLessThanOrEqual(panelRect.right + 1);
+
+    const urlLabel = within(hintGroup).getByTitle(longUrl);
+    expect(urlLabel).toHaveTextContent(longUrl);
   });
 
   it("keeps link hint chrome inside a narrow description panel", async () => {

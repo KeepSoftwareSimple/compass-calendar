@@ -1,0 +1,29 @@
+name: Repository boundary
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  repository-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify this repo stays web-only
+        run: |
+          test ! -e apps/calendar-macos
+          if git ls-files '*.swift' | grep -q .; then
+            echo 'Swift sources belong in compass-calendar-mac.' >&2
+            exit 1
+          fi
+          if grep -RE 'runs-on: +macos-' .github/workflows; then
+            echo 'Mac runner jobs belong in compass-calendar-mac.' >&2
+            exit 1
+          fi

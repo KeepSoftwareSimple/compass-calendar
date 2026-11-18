@@ -1,5 +1,5 @@
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { type EventId } from "@core/types/domain-primitives";
+import { type DateTime, type EventId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import { isDateRangeOverlapping } from "@core/util/date/date.util";
 import {
@@ -85,6 +85,22 @@ export function findEventInCache(
     if (event) return event;
   }
   return null;
+}
+
+export function findOccurrenceInCacheByRecurrenceId(
+  queryClient: QueryClient,
+  recurrenceId: DateTime,
+  source?: EventRepositorySource,
+): Event | undefined {
+  for (const { data } of getEventQueryEntries(queryClient, { source })) {
+    for (const id of data.ids) {
+      const event = data.entities[id];
+      if (event?.recurrence.kind !== "occurrence") continue;
+      const parts = decodeOccurrenceId(event.id);
+      if (parts?.recurrenceId === recurrenceId) return event;
+    }
+  }
+  return undefined;
 }
 
 export function findSeriesEventsInCache(

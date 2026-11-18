@@ -14,7 +14,14 @@ import { ID_LIFE_BIRTH_DATE } from "@web/common/constants/web.constants";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { NumberInput } from "@web/components/NumberInput/NumberInput";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
-import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
+import {
+  selectPageJumpHintsVisible,
+  usePageJumpHintStore,
+} from "@web/shortcuts/page-jump/page-jump.store";
+import {
+  pageJumpAttrs,
+  pageJumpChipAttrs,
+} from "@web/shortcuts/page-jump/page-jump.targets";
 import { LifeBirthDateField } from "@web/views/Life/LifeBirthDateField";
 import { LifeQuote } from "./LifeQuote";
 import { type LifePreferences } from "./life-preferences.storage";
@@ -43,6 +50,7 @@ export function LifeSidebarContent({
   today,
   onPreferencesChange,
 }: LifeSidebarContentProps) {
+  const pageJumpHintsVisible = usePageJumpHintStore(selectPageJumpHintsVisible);
   const [isBirthDatePickerOpen, setIsBirthDatePickerOpen] = useState(false);
   const [lifespanInput, setLifespanInput] = useState(() =>
     String(preferences.lifespan),
@@ -95,26 +103,48 @@ export function LifeSidebarContent({
         className="flex flex-col gap-2 text-text-muted"
         {...pageJumpAttrs("life-variation")}
       >
-        <div className="flex items-center gap-1">
-          <TooltipWrapper description="Previous life variation" shortcut="J">
-            <ArrowButton
-              direction="left"
-              label="Previous life variation in sidebar"
-              onClick={() => onCycleVariation(-1)}
+        <div className="flex w-full items-center gap-1">
+          <div className="flex min-w-0 items-center gap-1">
+            <div
+              className="flex shrink-0 items-center gap-1"
+              {...pageJumpChipAttrs("life-variation", {
+                placement: "outside-trailing",
+              })}
+            >
+              <TooltipWrapper
+                description="Previous life variation"
+                shortcut="J"
+              >
+                <ArrowButton
+                  direction="left"
+                  label="Previous life variation in sidebar"
+                  onClick={() => onCycleVariation(-1)}
+                />
+              </TooltipWrapper>
+              <TooltipWrapper description="Next life variation" shortcut="K">
+                <ArrowButton
+                  direction="right"
+                  label="Next life variation in sidebar"
+                  onClick={() => onCycleVariation(1)}
+                />
+              </TooltipWrapper>
+            </div>
+            <span
+              aria-hidden
+              className={
+                pageJumpHintsVisible
+                  ? "inline-block w-7 shrink-0"
+                  : "invisible inline-block w-7 shrink-0"
+              }
             />
-          </TooltipWrapper>
-          <TooltipWrapper description="Next life variation" shortcut="K">
-            <ArrowButton
-              direction="right"
-              label="Next life variation in sidebar"
-              onClick={() => onCycleVariation(1)}
-            />
-          </TooltipWrapper>
-          <h2 className="font-semibold text-text">
-            {LIFE_VARIATIONS[preferences.variation].label}
-          </h2>
+            <h2 className="min-w-0 font-semibold text-text">
+              {LIFE_VARIATIONS[preferences.variation].label}
+            </h2>
+          </div>
           {headerEndContent ? (
-            <div className="ml-auto flex items-center">{headerEndContent}</div>
+            <div className="ml-auto flex shrink-0 items-center">
+              {headerEndContent}
+            </div>
           ) : null}
         </div>
         <p>{getLifeVariationDescription(preferences.lifespan)}</p>
@@ -139,19 +169,24 @@ export function LifeSidebarContent({
           <TooltipWrapper description="Saved to your account when signed in">
             <span className="cursor-help">Date of birth</span>
           </TooltipWrapper>
-          <LifeBirthDateField
-            id={ID_LIFE_BIRTH_DATE}
-            isOpen={isBirthDatePickerOpen}
-            maxDate={maximumBirthDate}
-            minDate={minimumBirthDate}
-            onCalendarClose={() => setIsBirthDatePickerOpen(false)}
-            onCalendarOpen={() => {
-              flushSync(() => setIsBirthDatePickerOpen(true));
-            }}
-            onCommit={commitBirthDate}
-            storedBirthDate={preferences.birthDate}
-            today={today}
-          />
+          <div
+            className="w-full max-w-44"
+            {...pageJumpChipAttrs("life-details")}
+          >
+            <LifeBirthDateField
+              id={ID_LIFE_BIRTH_DATE}
+              isOpen={isBirthDatePickerOpen}
+              maxDate={maximumBirthDate}
+              minDate={minimumBirthDate}
+              onCalendarClose={() => setIsBirthDatePickerOpen(false)}
+              onCalendarOpen={() => {
+                flushSync(() => setIsBirthDatePickerOpen(true));
+              }}
+              onCommit={commitBirthDate}
+              storedBirthDate={preferences.birthDate}
+              today={today}
+            />
+          </div>
         </div>
 
         <div className="flex w-full flex-col items-center gap-1 text-text-muted">

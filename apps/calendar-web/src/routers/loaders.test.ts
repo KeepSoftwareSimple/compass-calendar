@@ -5,6 +5,10 @@ import {
   createRouter,
   isRedirect,
 } from "@tanstack/react-router";
+import { TimeZoneSchema } from "@core/types/domain-primitives";
+import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.factory";
+import { queryClient } from "@web/api/query-client";
+import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import * as prefetchWeekEvents from "@web/events/queries/prefetch-week-events";
 import {
@@ -16,7 +20,18 @@ import {
   redirectToToday,
   validateWeekDateParam,
 } from "@web/routers/loaders";
-import { afterEach, describe, expect, it, spyOn } from "bun:test";
+import {
+  resetEffectiveTimeZoneStoreForTests,
+  setBrowserTimeZoneForTests,
+} from "@web/timezone/effective-timezone.store";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  setSystemTime,
+  spyOn,
+} from "bun:test";
 
 function getRedirect(fn: () => unknown) {
   try {
@@ -123,6 +138,36 @@ describe("router redirects", () => {
 
     expect(router.state.location.pathname).toBe(`/day/${dateString}`);
     expect(router.state.location.search).toEqual({ ref: "newsletter" });
+  });
+});
+
+describe("loadTodayData", () => {
+  afterEach(() => {
+    resetEffectiveTimeZoneStoreForTests();
+    queryClient.clear();
+    setSystemTime();
+  });
+
+  it("applies a cached calendar hint before picking today at the merge-queue boundary", () => {
+    setBrowserTimeZoneForTests("UTC");
+    setSystemTime(new Date("2026-11-12T00:23:00.000Z"));
+    queryClient.setQueryData(calendarQueryKeys.all, [
+      createMockCalendar({
+        name: "miscellaneous",
+        timeZone: TimeZoneSchema.parse("America/Denver"),
+        isPrimary: true,
+      }),
+    ]);
+
+    expect(loadTodayData().dateString).toBe("2026-11-11");
+  });
+
+  it("uses the browser timezone for today when the calendars cache is empty", () => {
+    setBrowserTimeZoneForTests("America/Chicago");
+    setSystemTime(new Date("2026-06-01T18:00:00.000Z"));
+    queryClient.removeQueries({ queryKey: calendarQueryKeys.all });
+
+    expect(loadTodayData().dateString).toBe("2026-06-01");
   });
 });
 

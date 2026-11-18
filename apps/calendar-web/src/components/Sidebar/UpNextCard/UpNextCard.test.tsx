@@ -86,11 +86,11 @@ describe("formatStartsIn", () => {
   const inMinutes = (minutes: number) => now.add(minutes, "minute");
 
   it("counts down in minutes below an hour", () => {
-    expect(formatStartsIn(inMinutes(5), now)).toBe("Starts in 5 minutes");
+    expect(formatStartsIn(inMinutes(5), now)).toBe("Starts in 5 min");
   });
 
-  it("uses the singular for one minute", () => {
-    expect(formatStartsIn(inMinutes(1), now)).toBe("Starts in 1 minute");
+  it("uses min for one minute", () => {
+    expect(formatStartsIn(inMinutes(1), now)).toBe("Starts in 1 min");
   });
 
   it("rolls up to hours at an hour and beyond", () => {
@@ -113,7 +113,7 @@ describe("UpNextCard", () => {
     });
 
     expect(screen.getByText("Soon Event")).toBeInTheDocument();
-    expect(screen.getByText("Starts in 30 minutes")).toBeInTheDocument();
+    expect(screen.getByText("Starts in 30 min")).toBeInTheDocument();
     expect(screen.queryByText("Later Event")).toBeNull();
     expect(screen.getByText("N")).toBeInTheDocument();
   });

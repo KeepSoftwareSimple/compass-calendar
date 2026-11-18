@@ -26,6 +26,10 @@ import { CopyButton } from "@web/components/CopyButton/CopyButton";
 import { ATTENDEE_RSVP_LABEL, statusForEmail } from "@web/events/attendee-rsvp";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { AttendeeRsvpStatus } from "@web/views/Forms/EventForm/AttendeeRsvpStatus";
+import {
+  FORM_CARD_FIELD_FONT_SIZE,
+  FORM_CARD_FIELD_LINE_HEIGHT,
+} from "@web/views/Forms/EventForm/FormCardIconRow";
 
 /**
  * Fetches guest suggestions for the attendee combobox. Raw email chips
@@ -135,9 +139,48 @@ const themeColor =
     color: cssVar,
   });
 
+const zeroHorizontalInset = (base: CSSObjectWithLabel): CSSObjectWithLabel => ({
+  ...base,
+  margin: 0,
+  padding: 0,
+});
+
+const formCardLineTypography = (
+  base: CSSObjectWithLabel,
+): CSSObjectWithLabel => ({
+  ...zeroHorizontalInset(base),
+  fontSize: FORM_CARD_FIELD_FONT_SIZE,
+  lineHeight: FORM_CARD_FIELD_LINE_HEIGHT,
+});
+
 const attendeeFieldStyles = {
-  input: themeColor("var(--text)"),
-  placeholder: themeColor("var(--text-muted)"),
+  control: (base: CSSObjectWithLabel): CSSObjectWithLabel => ({
+    ...base,
+    alignItems: "center",
+    minHeight: FORM_CARD_FIELD_LINE_HEIGHT,
+    border: 0,
+    backgroundColor: "transparent",
+    boxShadow: "none",
+    "&:hover": {
+      border: 0,
+      backgroundColor: "transparent",
+    },
+  }),
+  valueContainer: (base: CSSObjectWithLabel): CSSObjectWithLabel => ({
+    ...base,
+    margin: 0,
+    padding: 0,
+    alignItems: "center",
+    minHeight: FORM_CARD_FIELD_LINE_HEIGHT,
+  }),
+  input: (base: CSSObjectWithLabel): CSSObjectWithLabel => ({
+    ...formCardLineTypography(base),
+    color: "var(--text)",
+  }),
+  placeholder: (base: CSSObjectWithLabel): CSSObjectWithLabel => ({
+    ...formCardLineTypography(base),
+    color: "var(--text-muted)",
+  }),
   noOptionsMessage: themeColor("var(--text-muted)"),
   loadingMessage: themeColor("var(--text-muted)"),
   option: (

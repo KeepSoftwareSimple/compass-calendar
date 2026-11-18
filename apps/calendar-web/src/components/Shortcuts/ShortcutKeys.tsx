@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import { Fragment } from "react";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { ShortCutLabel } from "./ShortcutLabel";
 
@@ -35,6 +36,8 @@ interface Props {
   keys: string | string[];
   title?: string;
   className?: string;
+  /** Keys are alternatives (either works): render a plain "or" between them. */
+  alternatives?: boolean;
 }
 
 /**
@@ -44,7 +47,12 @@ interface Props {
  * Hidden on touch-first devices (`pointer: coarse`): a `⌘ Enter` chip on a
  * phone is noise. The shortcut itself and `aria-keyshortcuts` stay wired.
  */
-export function ShortcutKeys({ keys, title, className }: Props) {
+export function ShortcutKeys({
+  keys,
+  title,
+  className,
+  alternatives = false,
+}: Props) {
   const cleaned = toKeyArray(keys)
     .map((key) => key.trim())
     .filter(Boolean);
@@ -62,9 +70,16 @@ export function ShortcutKeys({ keys, title, className }: Props) {
     >
       {cleaned.map((key, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: keycap sequences repeat keys; position is the identity
-        <ShortcutHint key={`${key}-${index}`} variant="keycap">
-          <ShortCutLabel k={normalizeKeyToken(key)} />
-        </ShortcutHint>
+        <Fragment key={`${key}-${index}`}>
+          {alternatives && index > 0 ? (
+            <span aria-hidden="true" className="text-text-muted text-xs">
+              or
+            </span>
+          ) : null}
+          <ShortcutHint variant="keycap">
+            <ShortCutLabel k={normalizeKeyToken(key)} />
+          </ShortcutHint>
+        </Fragment>
       ))}
     </span>
   );

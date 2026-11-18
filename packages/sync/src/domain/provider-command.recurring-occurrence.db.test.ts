@@ -24,6 +24,7 @@ import {
   executeProviderOccurrenceDelete,
   executeProviderOccurrenceUpdate,
 } from "@sync/domain/provider-command.occurrence";
+import { executeProviderSeriesFollowingUpdate } from "@sync/domain/provider-command.series-following";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import { type ProviderEvent } from "@sync/providers/provider-event.port";
 import { ProviderWriteError } from "@sync/providers/provider-event-writer.port";
@@ -68,6 +69,8 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
   const weekly3 = ["RRULE:FREQ=WEEKLY;COUNT=3"];
   const SECOND_START = "2026-07-21T09:00:00-06:00";
   const SECOND_START_UTC = "2026-07-21T15:00:00.000Z";
+  const THIRD_START = "2026-07-28T09:00:00-06:00";
+  const THIRD_START_UTC = "2026-07-28T15:00:00.000Z";
   const content = (title: string) => ({
     title,
     description: "",
@@ -321,8 +324,104 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
       expect(result.outcome.state).toBe("failed");
       expect(
         result.outcome.state === "failed" && result.outcome.failureReason,
-      ).toBe("permanentProviderError");
+      ).toBe("providerRejectedChange");
       expect(writer.patchCalls).toHaveLength(0);
+    });
+
+    it("resolves the remainder master after a thisAndFollowing split (stale series id)", async () => {
+      const { tenantId, principalId, calendar, master } = await seedMaster();
+      const splitWriter = new FakeProviderEventWriter();
+      splitWriter.fetchEventResult = providerSeries("Old", "etag-1", weekly3);
+      splitWriter.createResult = {
+        providerEventId: "g-remainder-1" as ProviderEventId,
+        providerVersion: "etag-2",
+      };
+      const splitCommand = (
+        await commands.submit({
+          tenantId: master.tenantId,
+          principalId: master.principalId,
+          idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
+          eventId: master._id,
+          input: {
+            kind: "update",
+            invitation: "none",
+            content: content("Split"),
+            schedule: {
+              kind: "timed",
+              start: SECOND_START,
+              end: "2026-07-21T10:00:00-06:00",
+              timeZone: "America/Denver",
+            },
+            recurrence: {
+              kind: "series",
+              rules: ["RRULE:FREQ=WEEKLY;COUNT=2"],
+            },
+            scope: "thisAndFollowing",
+            recurrenceId: SECOND_START,
+          } as unknown as SyncCommandInput,
+          expectedVersion: null,
+        })
+      ).record;
+      await executeProviderSeriesFollowingUpdate(
+        deps(splitWriter),
+        splitCommand,
+        master,
+        calendar,
+        now,
+      );
+
+      const truncated = await events.findById(
+        tenantId,
+        principalId,
+        master._id,
+      );
+      expect(truncated).not.toBeNull();
+
+      const thisWriter = new FakeProviderEventWriter();
+      thisWriter.fetchInstanceResult = providerInstance(
+        "g-inst-3",
+        "Old",
+        "etag-3",
+        {
+          kind: "timed",
+          start: THIRD_START,
+          end: "2026-07-28T10:00:00-06:00",
+          timeZone: "America/Denver",
+        },
+      );
+      const thirdCommand = (
+        await commands.submit({
+          tenantId: master.tenantId,
+          principalId: master.principalId,
+          idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
+          eventId: master._id,
+          input: {
+            kind: "update",
+            invitation: "none",
+            content: content("Meal Prep | Unwind"),
+            recurrence: { kind: "preserve" },
+            scope: "this",
+            recurrenceId: THIRD_START_UTC,
+          } as unknown as SyncCommandInput,
+          expectedVersion: null,
+        })
+      ).record;
+
+      const result = await executeProviderOccurrenceUpdate(
+        deps(thisWriter),
+        thirdCommand,
+        truncated!,
+        calendar,
+        now,
+      );
+
+      expect(result.outcome.state).toBe("confirmed");
+      expect(thisWriter.fetchInstanceCalls[0]?.seriesProviderEventId).toBe(
+        "g-remainder-1",
+      );
+      expect(thisWriter.patchCalls[0]?.content.title).toBe(
+        "Meal Prep | Unwind",
+      );
     });
 
     it("re-fetches the instance and retries once after providerRejectedChange", async () => {

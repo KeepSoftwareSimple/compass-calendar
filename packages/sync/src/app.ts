@@ -60,7 +60,10 @@ import {
 } from "@sync/domain/reconcile-sweep-rows";
 import { enqueueForResources } from "@sync/domain/resource-sweep-enqueue";
 import { retryStaleCommands } from "@sync/domain/stale-command-retry.service";
-import { DEFAULT_PUSH_STAMP_HEAL_COOLDOWN_MS } from "@sync/domain/subscription-maintenance.service";
+import {
+  DEFAULT_PUSH_STAMP_HEAL_COOLDOWN_MS,
+  DEFAULT_RENEW_BEFORE_MS,
+} from "@sync/domain/subscription-maintenance.service";
 import { SweepScheduler } from "@sync/domain/sweep-scheduler.service";
 import { SyncJobWorker } from "@sync/domain/sync-job-worker.service";
 import { SyncScheduler } from "@sync/domain/sync-scheduler.service";
@@ -373,10 +376,6 @@ const FAILED_JOB_REQUEUE_COOLDOWN_MS = 30 * 60_000;
 // almost certainly cleared, short enough that "deleting" doesn't sit visibly
 // stuck for too long.
 const STALE_COMMAND_RETRY_AFTER_MS = 5 * 60_000;
-// A push channel expiring within this window is swept for renewal. Matches
-// maintainSubscription's default renew guard so the sweep and the operation
-// agree on what "near expiry" means.
-const SUBSCRIPTION_RENEW_BEFORE_MS = 24 * 60 * 60_000;
 // How often to look for soft-disconnected connections past the 30-day cache
 // window. Daily is enough for the retention SLA; hourly keeps catch-up snappy.
 const RETENTION_SWEEP_INTERVAL_MS = 60 * 60_000;
@@ -779,7 +778,7 @@ function buildSchedulers(
       // so a channel is replaced before it lapses. Aligns with
       // maintainSubscription's renew guard.
       name: "subscription",
-      windowMs: SUBSCRIPTION_RENEW_BEFORE_MS,
+      windowMs: DEFAULT_RENEW_BEFORE_MS,
       run: (before) =>
         enqueueForResources(
           { jobs, onEnqueueError: onEnqueueError("subscription") },

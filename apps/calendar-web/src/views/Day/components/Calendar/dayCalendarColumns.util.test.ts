@@ -7,10 +7,14 @@ import dayjs from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
+  resetEffectiveTimeZoneStoreForTests,
+  setBrowserTimeZoneForTests,
+} from "@web/timezone/effective-timezone.store";
+import {
   calendarIdsWithVisibleEventsOnDay,
   getDayViewCalendars,
 } from "./dayCalendarColumns.util";
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 
 function makeCalendar(overrides: Partial<Calendar>): Calendar {
   return {
@@ -208,6 +212,115 @@ describe("getDayViewCalendars", () => {
 });
 
 describe("calendarIdsWithVisibleEventsOnDay", () => {
+  afterEach(() => {
+    resetEffectiveTimeZoneStoreForTests();
+  });
+
+  it("shows every stress calendar column when viewed day matches denver event day", () => {
+    setBrowserTimeZoneForTests("UTC");
+    const stressCalendars = Array.from({ length: 12 }, (_, index) =>
+      makeCalendar({
+        id: `f${String(index).padStart(23, "0")}` as Calendar["id"],
+        name: `stress-${index}`,
+        isPrimary: index === 0,
+      }),
+    );
+    const dateInViewDenver = dayjs.tz("2026-11-11T17:23:00", "America/Denver");
+    const timed = stressCalendars.map((calendar, index) =>
+      gridEvent({
+        _id: String(50 + index),
+        calendarId: calendar.id,
+        startDate: "2026-11-11 09:00:00.000",
+        endDate: "2026-11-11 10:00:00.000",
+        timeZone: "America/Denver",
+      }),
+    );
+
+    expect(
+      getDayViewCalendars({
+        allDayEvents: [],
+        calendars: stressCalendars,
+        dateInView: dateInViewDenver,
+        hiddenEventIds: new Set(),
+        timedEvents: timed,
+      }),
+    ).toHaveLength(12);
+  });
+
+  it("falls back to primary when viewed utc day mismatches denver stress events", () => {
+    setBrowserTimeZoneForTests("UTC");
+    const stressCalendars = Array.from({ length: 12 }, (_, index) =>
+      makeCalendar({
+        id: `f${String(index).padStart(23, "0")}` as Calendar["id"],
+        name: `stress-${index}`,
+        isPrimary: index === 0,
+      }),
+    );
+    const dateInViewUtc = dayjs.tz("2026-11-12T00:23:00", "UTC");
+    const timed = stressCalendars.map((calendar, index) =>
+      gridEvent({
+        _id: String(50 + index),
+        calendarId: calendar.id,
+        startDate: "2026-11-11 09:00:00.000",
+        endDate: "2026-11-11 10:00:00.000",
+        timeZone: "America/Denver",
+      }),
+    );
+
+    expect(
+      getDayViewCalendars({
+        allDayEvents: [],
+        calendars: stressCalendars,
+        dateInView: dateInViewUtc,
+        hiddenEventIds: new Set(),
+        timedEvents: timed,
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("keeps both day columns at the merge-queue UTC boundary (browser UTC, no calendar hint)", () => {
+    setBrowserTimeZoneForTests("UTC");
+    const primary = makeCalendar({
+      id: "507f1f77bcf86cd799439011" as Calendar["id"],
+      name: "Acme",
+      isPrimary: true,
+    });
+    const secondary = makeCalendar({
+      id: "507f1f77bcf86cd799439012" as Calendar["id"],
+      name: "Design",
+    });
+    const dateInViewBoundary = dayjs.tz(
+      "2026-11-11T17:23:00",
+      "America/Denver",
+    );
+    const timed = [
+      gridEvent({
+        _id: "a",
+        calendarId: primary.id,
+        startDate: "2026-11-11 09:00:00.000",
+        endDate: "2026-11-11 10:30:00.000",
+        timeZone: "America/Denver",
+      }),
+      gridEvent({
+        _id: "b",
+        calendarId: secondary.id,
+        startDate: "2026-11-11 13:00:00.000",
+        endDate: "2026-11-11 14:30:00.000",
+        timeZone: "America/Denver",
+      }),
+    ];
+
+    expect(
+      getDayViewCalendars({
+        allDayEvents: [],
+        calendars: [primary, secondary],
+        dateInView: dateInViewBoundary,
+        hiddenEventIds: new Set(),
+        timedEvents: timed,
+      }).map((calendar) => calendar.name),
+    ).toEqual(["Acme", "Design"]);
+  });
+
   it("returns an empty set when every event is hidden", () => {
     const timed = [
       gridEvent({

@@ -1,11 +1,11 @@
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
-import { type Dayjs } from "@core/util/date/dayjs";
+import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { getDefaultTargetCalendar } from "@web/calendars/calendar.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { isEventVisibleOnGrid } from "@web/events/visibility/filter-events-visible-on-grid";
-import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
-import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
+import { parseGridScheduleDate } from "@web/timezone/parse-grid-schedule-date";
+import { dayEventQueryRange } from "@web/views/Day/util/day-window.util";
 import { isAllDayEventOnDay } from "./dayAllDayRows.util";
 
 type DayViewCalendarColumnInput = {
@@ -37,12 +37,14 @@ const eligibleCalendarsInOrder = (calendars: Calendar[]): Calendar[] => {
   return calendars.slice(0, 1);
 };
 
-const CIVIL_DAY_FORMAT = "YYYY-MM-DD";
-
-const timedEventCivilDay = (event: GridEvent, viewZone: string) =>
-  inEffectiveTimeZone(event.startDate, event.timeZone ?? viewZone).format(
-    CIVIL_DAY_FORMAT,
-  );
+const timedEventOverlapsViewDay = (event: GridEvent, dateInView: Dayjs) => {
+  const { startDate, endDate } = dayEventQueryRange(dateInView);
+  const rangeStart = dayjs(startDate);
+  const rangeEnd = dayjs(endDate);
+  const eventStart = parseGridScheduleDate(event.startDate, event.timeZone);
+  const eventEnd = parseGridScheduleDate(event.endDate, event.timeZone);
+  return eventStart.isBefore(rangeEnd) && eventEnd.isAfter(rangeStart);
+};
 
 export const calendarIdsWithVisibleEventsOnDay = ({
   allDayEvents,
@@ -54,16 +56,13 @@ export const calendarIdsWithVisibleEventsOnDay = ({
   "allDayEvents" | "dateInView" | "hiddenEventIds" | "timedEvents"
 >): Set<CalendarId> => {
   const ids = new Set<CalendarId>();
-  const viewZone = getEffectiveTimeZone();
-  const viewDay = inEffectiveTimeZone(dateInView, viewZone).format(
-    CIVIL_DAY_FORMAT,
-  );
 
   for (const event of timedEvents) {
     if (
       !event.calendarId ||
       !isEventVisibleOnGrid(event, hiddenEventIds) ||
-      timedEventCivilDay(event, viewZone) !== viewDay
+      event.isAllDay ||
+      !timedEventOverlapsViewDay(event, dateInView)
     ) {
       continue;
     }

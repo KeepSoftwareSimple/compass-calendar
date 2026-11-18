@@ -1,5 +1,6 @@
-import { type DateTime, type EventId } from "@core/types/domain-primitives";
+import { type DateTime } from "@core/types/domain-primitives";
 import { type SyncEventRecurrence } from "@core/types/sync/event.contracts";
+import { remainderMasterId } from "@core/util/series-split";
 import {
   resolveUpdateContent,
   resolveUpdateSchedule,
@@ -13,7 +14,6 @@ import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
-import { createHash } from "node:crypto";
 
 type SeriesMasterRecurrence = Extract<
   SyncEventRecurrence,
@@ -107,23 +107,6 @@ export async function deleteFollowingExceptions(
       new Date(exceptionInstant(exception)).getTime() >= splitAt.getTime(),
   );
   await deleteExceptions(deps, command, following);
-}
-
-// A deterministic event id for the remainder series of a thisAndFollowing
-// split, so the same split always resolves to the same master and a retry
-// never duplicates it. A 24-hex prefix of a SHA-256 over (seriesId, split) is
-// a valid Compass event id and collision-safe. Lowercase hex is a strict
-// subset of Google's base32hex event-id charset, so a provider-linked split
-// reuses this SAME id as the provider event id too — one deterministic
-// identity, not two independently derived ones.
-export function remainderMasterId(
-  seriesId: EventId,
-  splitAt: DateTime,
-): EventId {
-  return createHash("sha256")
-    .update(`${seriesId}:${splitAt}`)
-    .digest("hex")
-    .slice(0, 24) as EventId;
 }
 
 // Split an edit-all's exceptions into kept cancelled tombstones versus

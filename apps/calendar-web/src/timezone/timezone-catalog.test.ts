@@ -1,13 +1,17 @@
+import { ensurePlaceTimeZoneSearchForTests } from "@web/timezone/place-timezone-search.lazy";
 import {
   buildTimeZoneList,
   filterTimeZones,
   sortTimeZonesByOffsetDistance,
 } from "@web/timezone/timezone-catalog";
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 
 const at = new Date("2026-07-15T18:00:00.000Z");
 
 describe("timezone-catalog", () => {
+  beforeAll(async () => {
+    await ensurePlaceTimeZoneSearchForTests();
+  });
   const zones = buildTimeZoneList(at);
 
   it("finds Buenos Aires by city name for booking settings", () => {

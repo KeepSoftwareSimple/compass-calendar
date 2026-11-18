@@ -1,6 +1,9 @@
 import { redirect } from "@tanstack/react-router";
+import { type Calendar } from "@core/types/calendar.contracts";
 import { zYearMonthDayString } from "@core/types/type.utils";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
+import { queryClient } from "@web/api/query-client";
+import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import {
   DEFAULT_CALENDAR_ROUTE,
   ROOT_ROUTES,
@@ -11,6 +14,7 @@ import {
   prefetchWeekEventsQuery,
   weekDateStringFromPathname,
 } from "@web/events/queries/prefetch-week-events";
+import { syncCalendarTimeZoneHintFromCalendars } from "@web/timezone/calendar-timezone-hint";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 
 export interface DayLoaderData {
@@ -38,7 +42,15 @@ export async function loadAuthenticated() {
   return { authenticated };
 }
 
+function syncCachedCalendarTimeZoneHintBeforeToday(): void {
+  const calendars = queryClient.getQueryData<Calendar[]>(calendarQueryKeys.all);
+  if (calendars?.length) {
+    syncCalendarTimeZoneHintFromCalendars(calendars);
+  }
+}
+
 export function loadTodayData(): DayLoaderData {
+  syncCachedCalendarTimeZoneHintBeforeToday();
   const dateInView = dayjs().tz(getEffectiveTimeZone());
   const dateFormat = dayjs.DateFormat.YEAR_MONTH_DAY_FORMAT;
 

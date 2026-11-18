@@ -72,7 +72,7 @@ export const sundayWeekViewStart = (day: Dayjs) => day.startOf("week");
 
 /**
  * First visible day for a partial-week window that still includes `day`.
- * Matches macOS `NativeCalendarRootModel.currentWeekWindowStart()`.
+ * Anchors partial-week scrolling so the anchor day stays visible.
  */
 export const currentWeekWindowStart = (
   day: Dayjs,

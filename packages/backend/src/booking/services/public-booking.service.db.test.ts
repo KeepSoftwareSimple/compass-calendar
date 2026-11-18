@@ -1485,7 +1485,7 @@ describe("PublicBookingService", () => {
 
     await expect(
       bookingService.cancelReservation(reservationId, { token }),
-    ).rejects.toMatchObject({ mutationCode: "PROVIDER_FAILURE" });
+    ).rejects.toMatchObject({ mutationCode: "SYNC_UNAVAILABLE" });
     expect(submitCommand).toHaveBeenCalledTimes(1);
 
     const stored = await bookingReservationRepository.findById(reservationId);

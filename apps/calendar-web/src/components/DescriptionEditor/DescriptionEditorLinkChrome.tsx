@@ -1,8 +1,9 @@
-import { autoUpdate, useFloating } from "@floating-ui/react";
+import { autoUpdate, FloatingPortal, useFloating } from "@floating-ui/react";
 import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
 import { type Editor } from "@tiptap/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KEYMAP } from "@core/shortcuts/keymap";
+import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import {
   applyDescriptionLinkAccessibleLabel,
   copyDescriptionLinkUrl,
@@ -12,6 +13,7 @@ import {
 } from "@web/components/DescriptionEditor/description-link.util";
 import {
   DESCRIPTION_LINK_CHROME_PLACEMENT,
+  descriptionLinkChromeBoundary,
   descriptionLinkChromeMiddleware,
 } from "@web/components/DescriptionEditor/description-link-chrome-floating";
 import { setDescriptionLinkInteraction } from "@web/components/DescriptionEditor/description-link-interaction.ref";
@@ -149,10 +151,18 @@ export const DescriptionEditorLinkChrome = ({
     };
   }, [cancelClearHover, editor, editorRoot, scheduleClearHover]);
 
-  const { refs, floatingStyles } = useFloating({
+  const positioningBoundary =
+    editorRoot && chromeLink
+      ? descriptionLinkChromeBoundary(editorRoot)
+      : undefined;
+
+  const { refs, floatingStyles, isPositioned } = useFloating({
     open: Boolean(chromeLink),
     placement: DESCRIPTION_LINK_CHROME_PLACEMENT,
-    middleware: editorRoot ? descriptionLinkChromeMiddleware(editorRoot) : [],
+    strategy: "fixed",
+    middleware: positioningBoundary
+      ? descriptionLinkChromeMiddleware(positioningBoundary)
+      : [],
     whileElementsMounted: autoUpdate,
   });
 
@@ -172,46 +182,54 @@ export const DescriptionEditorLinkChrome = ({
   const copyUrl = () => copyDescriptionLinkUrl(chromeLink.href);
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: keeps the editor focused when pressing the copy control beside a link mark.
-    <div
-      ref={(node) => {
-        floatingRef.current = node;
-        refs.setFloating(node);
-      }}
-      className="z-10"
-      style={floatingStyles}
-      onMouseDown={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      }}
-      onPointerEnter={cancelClearHover}
-      onPointerLeave={scheduleClearHover}
-    >
-      <fieldset
-        aria-label="Link shortcut and copy"
-        className="flex max-w-[min(100%,18rem)] items-center gap-1.5 rounded-xs border-0 bg-surface-panel p-0 px-2 py-1 text-xs shadow-sm"
+    <FloatingPortal>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: keeps the editor focused when pressing the copy control beside a link mark. */}
+      <div
+        ref={(node) => {
+          floatingRef.current = node;
+          refs.setFloating(node);
+        }}
+        style={{
+          ...floatingStyles,
+          zIndex: Z_INDEX_TOOLTIP,
+          visibility: isPositioned ? "visible" : "hidden",
+        }}
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onPointerEnter={cancelClearHover}
+        onPointerLeave={scheduleClearHover}
       >
-        <span className="min-w-0 truncate text-text-muted">
-          {chromeLink.href}
-        </span>
-        <span className="shrink-0 text-text-muted" aria-hidden="true">
-          ·
-        </span>
-        <ShortcutKeys
-          keys={[...KEYMAP.openDescriptionLinkAtCaret.keycaps]}
-          className="pointer-coarse:inline-flex shrink-0"
-        />
-        <IconButton
-          aria-label="Copy link"
-          size="small"
-          type="button"
-          onClick={() => {
-            void copyUrl();
-          }}
+        <fieldset
+          aria-label="Link shortcut and copy"
+          className="flex min-w-0 items-center gap-1.5 rounded-xs border-0 bg-surface-panel p-0 px-2 py-1 text-xs shadow-sm"
         >
-          <Copy size={COPY_ICON_SIZE} />
-        </IconButton>
-      </fieldset>
-    </div>
+          <span
+            className="min-w-0 truncate text-text-muted"
+            title={chromeLink.href}
+          >
+            {chromeLink.href}
+          </span>
+          <span className="shrink-0 text-text-muted" aria-hidden="true">
+            ·
+          </span>
+          <ShortcutKeys
+            keys={[...KEYMAP.openDescriptionLinkAtCaret.keycaps]}
+            className="pointer-coarse:inline-flex shrink-0"
+          />
+          <IconButton
+            aria-label="Copy link"
+            size="small"
+            type="button"
+            onClick={() => {
+              void copyUrl();
+            }}
+          >
+            <Copy size={COPY_ICON_SIZE} />
+          </IconButton>
+        </fieldset>
+      </div>
+    </FloatingPortal>
   );
 };

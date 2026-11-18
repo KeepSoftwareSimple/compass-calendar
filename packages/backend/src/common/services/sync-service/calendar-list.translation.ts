@@ -104,13 +104,19 @@ export const syncCalendarsToBrowser = (
   const connectionById = new Map(
     connections.map((connection) => [connection.id, connection]),
   );
-  return calendars.map((calendar) => {
+  return calendars.flatMap((calendar) => {
     const connection = connectionById.get(calendar.connectionId);
-    return syncCalendarToBrowser(
-      calendar,
-      connection?.provider ?? "google",
-      connection?.account.email ?? undefined,
-      connection?.capabilities,
-    );
+    // Sync retains disconnected accounts' calendars until retention cleanup.
+    // Sending them to the browser recreates the removed account's sidebar
+    // section on the first refetch after disconnecting.
+    if (connection?.state === "disconnected") return [];
+    return [
+      syncCalendarToBrowser(
+        calendar,
+        connection?.provider ?? "google",
+        connection?.account.email ?? undefined,
+        connection?.capabilities,
+      ),
+    ];
   });
 };

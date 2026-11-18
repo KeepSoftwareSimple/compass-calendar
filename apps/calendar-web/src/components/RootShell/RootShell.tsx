@@ -83,6 +83,7 @@ import {
   useNavigationShortcuts,
 } from "@web/shortcuts/useGlobalShortcuts";
 import { isLifePathname } from "./isLifePathname";
+import { useSuspendCalendarGridOnLifeView } from "./useSuspendCalendarGridOnLifeView";
 
 /**
  * The auth modal is driven by the router's `?auth=` search param, so its
@@ -93,6 +94,7 @@ import { isLifePathname } from "./isLifePathname";
 export function RootShell() {
   const { pathname } = useLocation();
   const isLifeView = isLifePathname(pathname);
+  useSuspendCalendarGridOnLifeView();
   const deferCalendarOnboarding = isLifeView;
   const { authenticated } = useContext(SessionContext);
   const guestMeetingSetupActive = useSettingsStore(
@@ -164,11 +166,13 @@ export function RootShell() {
     !isMobile;
   const showPastDue = access.kind === "server" && access.status === "past_due";
 
+  // Also picks up the Block Party run a welcome sign-up queued, once the
+  // sign-up and trial steps in the auth modal are out of the way.
   useEffect(() => {
-    if (!showCalendarOnboarding || hasPlayDeepLink()) return;
+    if (!showCalendarOnboarding || isAuthModalOpen || hasPlayDeepLink()) return;
     if (!hasSeenWelcome()) return;
     shortcutShowcaseActions.resumeIfInProgress();
-  }, [showCalendarOnboarding]);
+  }, [showCalendarOnboarding, isAuthModalOpen]);
 
   const onboardingFlags = useMemo((): OnboardingSurfaceFlags => {
     const billingGateClear = gateStatus === null;
@@ -254,7 +258,8 @@ export function RootShell() {
         {/* Phone visitors only see MobileGate; a bottom notice card steals
             tray touches and breaks Time Block Party drag/tap. */}
         {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
-        {!isMobile && <LocalModeConnectPrompt />}
+        {/* One ask at a time: the meeting setup flow ends in its own sign-up. */}
+        {!isMobile && !guestMeetingSetupActive && <LocalModeConnectPrompt />}
       </BottomNoticeStack>
     </AuthModalProvider>
   );
