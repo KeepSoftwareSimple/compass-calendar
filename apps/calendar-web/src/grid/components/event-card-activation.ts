@@ -24,29 +24,19 @@ export const gridEventCardActivationKeyDown =
       return;
     }
 
-    if (keyEvent.key === " ") {
-      if (keyEvent.repeat) {
-        keyEvent.preventDefault();
-        keyEvent.stopPropagation();
-        return;
-      }
-      if (
-        keyEvent.shiftKey ||
-        keyEvent.altKey ||
-        keyEvent.metaKey ||
-        keyEvent.ctrlKey
-      ) {
-        return;
-      }
-    }
-
     // Claimed either way: Space would scroll the grid and Enter would reach
     // the row beneath, even when no handler is wired up.
     keyEvent.preventDefault();
     keyEvent.stopPropagation();
 
     if (keyEvent.key === " ") {
-      if (options?.suppressSpaceMenu) {
+      // Held (auto-repeat) or modified Space must not open the menu again.
+      const modified =
+        keyEvent.shiftKey ||
+        keyEvent.altKey ||
+        keyEvent.metaKey ||
+        keyEvent.ctrlKey;
+      if (keyEvent.repeat || modified || options?.suppressSpaceMenu) {
         return;
       }
       dispatchGridEventContextMenuFromElement(keyEvent.currentTarget);

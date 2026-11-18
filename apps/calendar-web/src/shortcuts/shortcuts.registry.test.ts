@@ -100,7 +100,8 @@ describe("shortcuts.registry", () => {
       );
 
       expect(byId["focus-notice"]?.keys).toEqual(["p"]);
-      expect(byId["edit-menu"]?.keys).toEqual(["Space", "or", "."]);
+      expect(byId["edit-menu"]?.keys).toEqual(["Space", "."]);
+      expect(byId["edit-menu"]?.keyAlternatives).toBe(true);
       expect(byId["edit-menu"]?.label).toBe("Open event menu");
       expect(byId["edit-hide"]?.keys).toEqual(["x"]);
       expect(byId["edit-hide"]?.label).toBe("Hide or show focused event");

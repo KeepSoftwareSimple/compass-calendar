@@ -76,12 +76,19 @@ test.describe("focused grid event keyboard", () => {
     await eventButton.focus();
 
     await page.keyboard.down("Space");
-    await page.waitForTimeout(600);
+    const menu = page.getByRole("menu");
+    const firstItem = menu.getByRole("menuitem").first();
+    await expect(firstItem).toBeFocused();
+
+    // Further downs while Space is held arrive as auto-repeat keydowns on the
+    // focused menu item; none of them may activate it.
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.down("Space");
+    }
     await page.keyboard.up("Space");
 
-    const menu = page.getByRole("menu");
     await expect(menu).toBeVisible();
+    await expect(firstItem).toBeFocused();
     await expect(getFormTitleInput(page)).toBeHidden();
-    await expect(menu.getByRole("menuitem").first()).toBeFocused();
   });
 });

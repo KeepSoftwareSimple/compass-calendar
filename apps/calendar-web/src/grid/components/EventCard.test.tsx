@@ -537,6 +537,36 @@ describe("EventCard", () => {
     expect(fired).toBe(false);
   });
 
+  it("prevents page scroll on modified Space without opening the menu", () => {
+    let fired = false;
+    const onContextMenu = () => {
+      fired = true;
+    };
+    document.addEventListener("contextmenu", onContextMenu);
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button");
+    for (const modifier of ["shiftKey", "ctrlKey", "altKey", "metaKey"]) {
+      const notCancelled = fireEvent.keyDown(card, {
+        key: " ",
+        code: "Space",
+        [modifier]: true,
+      });
+      expect(notCancelled).toBe(false);
+    }
+    expect(fired).toBe(false);
+
+    document.removeEventListener("contextmenu", onContextMenu);
+  });
+
   it("does not record edit-open when Space is pressed on a saved event", () => {
     const track = spyOn(Track, "track");
     const onEventKeyDown = mock(() => {});

@@ -147,4 +147,35 @@ describe("ContextMenu keyboard operability", () => {
       screen.getByRole("menuitemradio", { name: "Calendar default" }),
     ).toHaveFocus();
   });
+
+  it("swallows auto-repeated Space on a focused item without activating it", async () => {
+    const onClose = mock();
+    render(<OpenMenuHarness onClose={onClose} />);
+    await flushFocusSeat();
+
+    const item = screen.getByRole("menuitem", { name: "Edit" });
+    const notCancelled = fireEvent.keyDown(item, {
+      key: " ",
+      code: "Space",
+      repeat: true,
+    });
+
+    expect(notCancelled).toBe(false);
+    expect(actions.edit).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(getMenu()).toBeInTheDocument();
+    expect(item).toHaveFocus();
+  });
+
+  it("leaves a fresh Space press to the native button activation", async () => {
+    render(<OpenMenuHarness />);
+    await flushFocusSeat();
+
+    const notCancelled = fireEvent.keyDown(
+      screen.getByRole("menuitem", { name: "Edit" }),
+      { key: " ", code: "Space" },
+    );
+
+    expect(notCancelled).toBe(true);
+  });
 });

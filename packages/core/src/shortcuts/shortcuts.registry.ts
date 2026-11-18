@@ -310,6 +310,7 @@ export const SHORTCUTS_REGISTRY = [
     // listed here: it would be a second row with this exact label.
     id: "edit-menu",
     keys: [...B.editMenuLegendKeycaps],
+    keyAlternatives: true,
     label: "Open event menu",
     section: "edit",
     requiresWrite: true,
