@@ -1,4 +1,5 @@
 import { type BookingNewMeetingsClaimResponse } from "@core/types/booking.contracts";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { useCheckoutCelebrationStore } from "@web/billing/checkout-celebration.store";
 import { type GuestRsvpToastPayload } from "@web/booking/GuestRsvpToast";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
@@ -14,7 +15,8 @@ let pendingReconnect: {
   connectionId?: string | null;
   accountEmail?: string | null;
 } | null = null;
-let pendingDelayed = false;
+/** Deferred delayed toast, with the connection it names (null: generic copy). */
+let pendingDelayed: { connection: SyncConnectionSummary | null } | null = null;
 let pendingNewMeetings: BookingNewMeetingsClaimResponse | null = null;
 let pendingGuestRsvp: GuestRsvpToastPayload | null = null;
 
@@ -69,13 +71,17 @@ export function takePendingReconnect(): {
   return next;
 }
 
-export function rememberPendingDelayed(): void {
-  pendingDelayed = true;
+export function rememberPendingDelayed(
+  connection: SyncConnectionSummary | null = null,
+): void {
+  pendingDelayed = { connection };
 }
 
-export function takePendingDelayed(): boolean {
+export function takePendingDelayed(): {
+  connection: SyncConnectionSummary | null;
+} | null {
   const next = pendingDelayed;
-  pendingDelayed = false;
+  pendingDelayed = null;
   return next;
 }
 
@@ -104,7 +110,7 @@ export function takePendingGuestRsvp(): GuestRsvpToastPayload | null {
 export function resetBillingGateAttentionForTests(): void {
   ownsScreen = false;
   pendingReconnect = null;
-  pendingDelayed = false;
+  pendingDelayed = null;
   pendingNewMeetings = null;
   pendingGuestRsvp = null;
 }

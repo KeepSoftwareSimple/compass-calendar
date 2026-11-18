@@ -18,6 +18,7 @@ import {
 import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
 import {
   CONSENT_REQUIRED_COPY,
+  calendarProductName,
   RECONNECT_BANNER_MESSAGE,
 } from "@web/auth/providers/provider-copy.util";
 import {
@@ -256,8 +257,11 @@ export const calendarReconnectBannerMessage = (
   return RECONNECT_BANNER_MESSAGE[provider];
 };
 
-const delayedProductLabel = (provider: ProviderKind): string =>
-  provider === "microsoft" ? "Outlook" : providerDisplayName(provider);
+const delayedTitle = (provider: ProviderKind): string =>
+  `${calendarProductName(provider)} updates are delayed`;
+
+const delayedProviderErrorBody = (provider: ProviderKind): string =>
+  `${calendarProductName(provider)} is slow to respond. Compass will keep trying.`;
 
 /** Week/day banner when Sync reports delayed or soft ATTENTION for one account. */
 export const calendarDelayedBannerMessage = (
@@ -268,50 +272,27 @@ export const calendarDelayedBannerMessage = (
   } = {},
 ): string => {
   const account = options.accountEmail?.trim();
-  const product = delayedProductLabel(provider);
   const prefix = account ? `${account}: ` : "";
-  if (options.stateReason === "providerErrors") {
-    const vendor =
-      provider === "microsoft" ? "Microsoft" : providerDisplayName(provider);
-    return `${prefix}${product} updates are delayed: ${vendor} is slow to respond.`;
-  }
-  return `${prefix}${product} updates are delayed. Compass is still syncing in the background.`;
+  const detail =
+    options.stateReason === "providerErrors"
+      ? delayedProviderErrorBody(provider)
+      : "Compass is still syncing in the background.";
+  return `${prefix}${delayedTitle(provider)}. ${detail}`;
 };
 
-export const calendarDelayedSidebarMessage = (
-  provider: ProviderKind,
-  options: {
-    accountEmail?: string | null;
-    stateReason?: ConnectionStateReason | string | null;
-  } = {},
-): string => {
-  const product = delayedProductLabel(provider);
-  if (options.stateReason === "providerErrors") {
-    const vendor =
-      provider === "microsoft" ? "Microsoft" : providerDisplayName(provider);
-    return nameAccountInCopy(
-      `${product} delayed: ${vendor} is slow`,
-      options.accountEmail,
-    );
-  }
-  return nameAccountInCopy(
-    `${product} updates are delayed`,
-    options.accountEmail,
-  );
-};
+/** Sidebar status line for a delayed connection. */
+export const calendarDelayedSidebarMessage = (provider: ProviderKind): string =>
+  delayedTitle(provider);
 
 export const calendarDelayedToastMessage = (
   connection: SyncConnectionSummary,
 ): { title: string; body: string } => {
   const provider = connectionProviderKind(connection);
-  const title = `${delayedProductLabel(provider)} updates are delayed`;
   const body =
     connection.stateReason === "providerErrors"
-      ? calendarDelayedBannerMessage(provider, {
-          stateReason: connection.stateReason,
-        })
-      : `${delayedProductLabel(provider)} is taking longer than usual to sync. Compass will keep trying.`;
-  return { title, body };
+      ? delayedProviderErrorBody(provider)
+      : `${calendarProductName(provider)} is taking longer than usual to sync. Compass will keep trying.`;
+  return { title: delayedTitle(provider), body };
 };
 
 const delayedSettingsStatus = (
@@ -589,13 +570,7 @@ export const getSidebarSyncStatus = ({
     if (connection) {
       return {
         variant: "error",
-        text: calendarDelayedSidebarMessage(
-          connectionProviderKind(connection),
-          {
-            accountEmail: connection.accountEmail,
-            stateReason: connection.stateReason,
-          },
-        ),
+        text: calendarDelayedSidebarMessage(connectionProviderKind(connection)),
       };
     }
     return { variant: "error", text: "Calendar updates are delayed" };
@@ -625,10 +600,6 @@ export const getSidebarSyncStatus = ({
       case "delayed": {
         const text = calendarDelayedSidebarMessage(
           connectionProviderKind(connection),
-          {
-            accountEmail: connection.accountEmail,
-            stateReason: connection.stateReason,
-          },
         );
         return { variant: "warning", text };
       }

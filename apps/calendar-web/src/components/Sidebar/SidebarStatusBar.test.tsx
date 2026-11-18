@@ -297,7 +297,7 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Google updates are delayed",
+      "Google Calendar updates are delayed",
     );
     expect(screen.queryByRole("status")).not.toHaveTextContent(
       "needs reconnecting",
@@ -334,7 +334,7 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Google updates are delayed",
+      "Google Calendar updates are delayed",
     );
   });
 
@@ -352,7 +352,7 @@ describe("SidebarStatusBar", () => {
 
     render(<SidebarStatusBar />, { wrapper });
     const settingsButton = screen.getByRole("button", {
-      name: "Google updates are delayed. Open account settings",
+      name: "Google Calendar updates are delayed. Open account settings",
     });
     await user.click(settingsButton);
 
@@ -412,7 +412,7 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Google updates are delayed",
+      "Google Calendar updates are delayed",
     );
     expect(screen.queryByText("Reconnecting live updates…")).toBeNull();
   });

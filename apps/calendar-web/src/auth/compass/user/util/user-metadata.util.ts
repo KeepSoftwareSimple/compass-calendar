@@ -2,13 +2,11 @@ import { Status } from "@core/errors/status.codes";
 import { type UserMetadata } from "@core/types/user.types";
 import { UserApi } from "@web/api/user.api";
 import { isAbortError } from "@web/api/util/api.util";
-import {
-  connectionHasReconnectRequired,
-  pickCalendarBannerTarget,
-} from "@web/auth/providers/connect.util";
+import { connectionHasReconnectRequired } from "@web/auth/providers/connect.util";
 import { syncReconnectRequiredFromConnections } from "@web/auth/providers/reconnect.state";
 import {
   aggregateGoogleConnectionState,
+  findPrimaryGoogleSyncConnection,
   findSyncConnectionsFromMetadata,
   userMetadataActions,
 } from "@web/auth/state/user-metadata.store";
@@ -53,9 +51,9 @@ export const applyUserMetadataSideEffects = (metadata: UserMetadata): void => {
   if (aggregateGoogleConnectionState(connections) === "ATTENTION") {
     if (!hasShownDelayedToastThisLoad) {
       hasShownDelayedToastThisLoad = true;
-      showProviderDelayedToast(
-        pickCalendarBannerTarget(connections)?.connection,
-      );
+      // Name the Google connection that is in ATTENTION, not whichever
+      // provider ranks first across all accounts.
+      showProviderDelayedToast(findPrimaryGoogleSyncConnection(connections));
     }
   } else if (hasShownDelayedToastThisLoad) {
     // Recovered: a CRITICAL toast (autoClose: false) never closes on its

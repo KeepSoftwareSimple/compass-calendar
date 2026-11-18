@@ -149,13 +149,13 @@ describe("CalendarConnectionBanner", () => {
     renderBanner("delayed", onAction);
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Google updates are delayed",
+      "Google Calendar updates are delayed",
     );
     await user.click(screen.getByRole("button", { name: "Refresh" }));
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 
-  it("names Outlook when Microsoft is slow to respond", () => {
+  it("names Microsoft Calendar when Microsoft is slow to respond", () => {
     render(
       <HotkeysProvider>
         <CalendarConnectionBanner
@@ -168,7 +168,7 @@ describe("CalendarConnectionBanner", () => {
     );
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Outlook updates are delayed: Microsoft is slow to respond.",
+      "Microsoft Calendar updates are delayed. Microsoft Calendar is slow to respond. Compass will keep trying.",
     );
   });
 

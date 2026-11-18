@@ -54,14 +54,18 @@ export const ProviderDelayedToast = ({
   );
 };
 
+/** Connection named by the visible toast, so a deferral can replay it. */
+let shownConnection: SyncConnectionSummary | null = null;
+
 export function showProviderDelayedToast(
-  connection?: SyncConnectionSummary | null,
+  connection: SyncConnectionSummary | null = null,
 ): Id {
   if (shouldDeferAttentionToasts()) {
-    rememberPendingDelayed();
+    rememberPendingDelayed(connection);
     return PROVIDER_DELAYED_TOAST_ID;
   }
 
+  shownConnection = connection;
   return showErrorToast(
     createElement(ProviderDelayedToast, {
       toastId: PROVIDER_DELAYED_TOAST_ID,
@@ -78,15 +82,14 @@ export function deferProviderDelayedToastIfVisible(): void {
   const toast = getToast();
   if (toast.isActive?.(PROVIDER_DELAYED_TOAST_ID) !== true) return;
 
-  rememberPendingDelayed();
+  rememberPendingDelayed(shownConnection);
   dismissProviderDelayedToast();
 }
 
-export function flushDeferredProviderDelayedToast(
-  connection?: SyncConnectionSummary | null,
-): void {
-  if (!takePendingDelayed()) return;
-  showProviderDelayedToast(connection);
+export function flushDeferredProviderDelayedToast(): void {
+  const pending = takePendingDelayed();
+  if (!pending) return;
+  showProviderDelayedToast(pending.connection);
 }
 
 export function dismissProviderDelayedToast(): void {
