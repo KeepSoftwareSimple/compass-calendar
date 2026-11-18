@@ -11,9 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  # Ruleset "Copilot PR Review" (#8388539) still requires this job id `macos`.
-  # After that check name is removed from required_status_checks, delete this workflow.
-  macos:
+  repository-boundary:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
