@@ -89,6 +89,7 @@ export const EventFormDateField = ({
   );
 
   const shownDateRef = useRef<number | null>(null);
+  const typedValueRef = useRef<string | null>(null);
   const [captionView, setCaptionView] = useState<CaptionPickerView>("day");
 
   const inputPhrase = sideLabel === "start" ? "start date" : "end date";
@@ -139,6 +140,7 @@ export const EventFormDateField = ({
   }, [isOpen, selected]);
 
   const revertInput = (target: HTMLInputElement) => {
+    typedValueRef.current = null;
     target.value = formatEventFormDateLabel(selectedRef.current);
   };
 
@@ -160,8 +162,10 @@ export const EventFormDateField = ({
    */
   const commitOrRevert = (
     target: HTMLInputElement,
+    text = target.value,
   ): "committed" | "unchanged" | "rejected" => {
-    const value = target.value.trim();
+    typedValueRef.current = null;
+    const value = text.trim();
     const parsed = value ? parseUserDate(value, dayjs()) : null;
     if (parsed && !parsed.isSame(selectedRef.current, "day")) {
       const date = parsed.startOf("day").toDate();
@@ -357,8 +361,7 @@ export const EventFormDateField = ({
       className={`${DATE_FIELD_CLASSNAME} group/control ${isOpen ? "" : "group-focus-within/control:[&_.c-event-form-date-field__input]:pr-8"}`}
       id={jumpId}
       onBlur={(event) => {
-        // react-datepicker skips onBlur while its calendar is open, so listen
-        // on the wrapper. Moving into the calendar is not leaving the field.
+        // An outside click can reset the picker's input before blur runs.
         const next = event.relatedTarget;
         if (next instanceof Element && next.closest(".react-datepicker"))
           return;
@@ -371,7 +374,10 @@ export const EventFormDateField = ({
           }
         }
         if (event.target instanceof HTMLInputElement) {
-          commitOrRevert(event.target);
+          commitOrRevert(
+            event.target,
+            typedValueRef.current ?? event.target.value,
+          );
         }
       }}
       onMouseDown={stopPropagation}
@@ -394,6 +400,14 @@ export const EventFormDateField = ({
         }}
         onCalendarOpen={onCalendarOpen}
         onChange={() => null}
+        onChangeRaw={(event) => {
+          if (
+            event?.type !== "change" ||
+            !(event.currentTarget instanceof HTMLInputElement)
+          )
+            return;
+          typedValueRef.current = event.currentTarget.value;
+        }}
         onCaptionViewChange={setCaptionView}
         onPickerInputFocus={onPickerInputFocus}
         onPickerInputBlur={onPickerInputBlur}
@@ -406,6 +420,7 @@ export const EventFormDateField = ({
         }}
         onSelect={(date) => {
           if (!date) return;
+          typedValueRef.current = null;
           onCommit(date);
         }}
         openToDate={pickerMonth.toDate()}

@@ -57,7 +57,9 @@ describe("SidebarEventDetails", () => {
     });
     draftActions.startGridDraft({ activity: "gridClick", draft });
 
-    render(<SidebarEventDetails />);
+    await act(async () => {
+      render(<SidebarEventDetails />);
+    });
 
     const title = await screen.findByPlaceholderText("Title");
     await waitFor(() => expect(title).toHaveFocus());
