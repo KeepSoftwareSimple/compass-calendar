@@ -52,7 +52,7 @@ test("walks the welcome flow with the mouse only", async ({
   ).toHaveCount(0);
 
   await welcomeDialog
-    .getByRole("button", { name: "Start without an account" })
+    .getByRole("button", { name: "Continue as guest" })
     .click();
 
   await expect(welcomeDialog).toHaveCount(0);
