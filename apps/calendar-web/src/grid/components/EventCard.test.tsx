@@ -5,7 +5,7 @@ import { brighten } from "@web/common/styles/color.utils";
 import { getEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
-  gridEventSidebarEditingBoxShadow,
+  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
 import { pastEventFill } from "@web/grid/components/grid-event-card-shell";
@@ -201,9 +201,7 @@ describe("EventCard", () => {
       getEventPalette().base,
     );
     expect(card.style.boxShadow).toContain(
-      gridEventSidebarEditingBoxShadow(
-        resolveEventFocusIndicatorColor(null, getEventPalette().base),
-      ),
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
     );
   });
 
@@ -227,9 +225,7 @@ describe("EventCard", () => {
     });
     expect(card.style.getPropertyValue("--event-bg")).toBe("#c4b5fd");
     expect(card.style.boxShadow).toContain(
-      gridEventSidebarEditingBoxShadow(
-        resolveEventFocusIndicatorColor(null, "#c4b5fd"),
-      ),
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
     );
   });
 
@@ -247,9 +243,7 @@ describe("EventCard", () => {
       name: "All-day event: Conference",
     });
     expect(card.style.boxShadow).toContain(
-      gridEventSidebarEditingBoxShadow(
-        resolveEventFocusIndicatorColor(null, getEventPalette().base),
-      ),
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
     );
   });
 
