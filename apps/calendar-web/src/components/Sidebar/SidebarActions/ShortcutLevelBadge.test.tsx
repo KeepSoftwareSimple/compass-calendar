@@ -121,6 +121,19 @@ describe("ShortcutLevelBadge", () => {
     expect(await screen.findByText(label)).not.toHaveClass("truncate");
   });
 
+  it("renders key alternatives with 'or', not as a chord", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    const editMenu = SHORTCUTS_REGISTRY.find((row) => row.id === "edit-menu");
+    if (!editMenu) throw new Error("edit-menu missing from registry");
+    expect(editMenu.keyAlternatives).toBe(true);
+    renderBadge([{ id: "edit", title: "Edit", shortcuts: [editMenu] }]);
+
+    await user.hover(screen.getByRole("button", { name: /Shortcut level/ }));
+
+    const row = (await screen.findByText(editMenu.label)).parentElement;
+    expect(row).toHaveTextContent("Spaceor.");
+  });
+
   it("prefers edit rows in try-next when a calendar event is focused", async () => {
     const user = userEvent.setup({ skipHover: true });
     focusEventCard();
