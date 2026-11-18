@@ -1,6 +1,6 @@
 import {
-  OAUTH_CALLBACK_RECEIVED_EVENT,
   isOAuthCallbackQueryEmpty,
+  OAUTH_CALLBACK_RECEIVED_EVENT,
 } from "@core/analytics/oauth-signup.events";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
