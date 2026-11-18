@@ -1,6 +1,5 @@
-# Dependabot PRs target main so the required checks run on them; the
-# `dependencies` side branch they used to target had no checks and nobody
-# drained it. Weekly, grouped, capped, so the queue is not flooded.
+# PRs target main and use its required checks. Group only packages that
+# should upgrade together. Other updates get individual PRs.
 version: 2
 updates:
   # Use Bun so dependency PRs update bun.lock alongside package.json.
@@ -15,10 +14,31 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
-      minor-and-patch:
-        update-types:
-          - "minor"
-          - "patch"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      opentelemetry:
+        patterns:
+          - "@opentelemetry/*"
+      tiptap:
+        patterns:
+          - "@tiptap/*"
+      react-query:
+        patterns:
+          - "@tanstack/react-query"
+          - "@tanstack/react-query-devtools"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      playwright:
+        patterns:
+          - "@playwright/test"
+          - "playwright"
+          - "playwright-core"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

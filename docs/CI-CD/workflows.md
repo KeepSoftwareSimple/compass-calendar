@@ -34,6 +34,23 @@ hourly/`workflow_dispatch` kick, and `launch-next` on automerge merge.
 
 ---
 
+## Dependency maintenance
+
+Dependabot opens weekly Bun and GitHub Actions updates. Bun groups cover
+packages that need to move together. Each other version update gets its own
+PR, up to five open Bun version PRs. Security updates have a separate queue.
+
+The daily **Compass dependency maintenance** Codex automation checks
+[open Dependabot alerts](https://github.com/KeepSoftwareSimple/compass-calendar/security/dependabot),
+runs `bun audit --json` against current `main`, and triages open update PRs.
+It prioritizes confirmed advisories and opens a focused patch PR if Dependabot
+has no suitable update. For passing updates it verifies the diff, including
+manifest and lockfile consistency, and submits through the normal merge queue.
+For failing updates it checks the same tests on the base commit and prepares
+the required migration in a focused PR. Link superseded bot PRs to their
+replacement PR or a tracking issue so the work is picked up on the next run.
+Record evidence and any decision needed on the relevant PR or issue.
+
 ## Unit workflow
 
 Source: [`.github/workflows/test-unit.yml`](../../.github/workflows/test-unit.yml)
