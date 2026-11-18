@@ -81,6 +81,7 @@ import {
   findCalendarEventForTarget,
   type GridEventShortcutTarget,
   getChronologicallyAdjacentTarget,
+  getHorizontallyAdjacentTarget,
   getNearestTargetToNow,
   getSpatiallyAdjacentTarget,
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
@@ -788,34 +789,34 @@ export function useGridEventEditShortcuts({
     const focused = targeting.getFocusedNavigable();
     const visible = targeting.listNavigable();
 
-    // Day view: all four arrows move chronological focus. Period changes stay
-    // on j/k (same split as week view: arrows focus, j/k navigate). Week uses
+    // Day view: Up/Down move chronological focus; Left/Right move to the
+    // overlap column beside the focused event. Period changes stay on j/k
+    // (same split as week view: arrows focus, j/k navigate). Week uses
     // spatial adjacency across the visible days. With no event focused and
     // no particular control focused, the first arrow seeds the nearest-to-now
     // event instead of no-op'ing.
+    const direction = SPATIAL_DIRECTION[keyboardEvent.key];
     let adjacent: FocusableGridEventTarget | null = null;
     if (focused) {
       adjacent =
-        dayBoundary.kind === "follow"
-          ? getChronologicallyAdjacentTarget({
+        dayBoundary.kind !== "follow"
+          ? getSpatiallyAdjacentTarget({
               allDayEvents,
-              direction:
-                keyboardEvent.key === "ArrowUp" ||
-                keyboardEvent.key === "ArrowLeft"
-                  ? "previous"
-                  : "next",
-              focused,
-              timedEvents,
-              visible,
-            })
-          : getSpatiallyAdjacentTarget({
-              allDayEvents,
-              direction: SPATIAL_DIRECTION[keyboardEvent.key],
+              direction,
               focused,
               timedEvents,
               visible,
               weekDays: dayBoundary.weekDays,
-            });
+            })
+          : direction === "left" || direction === "right"
+            ? getHorizontallyAdjacentTarget({ direction, focused, visible })
+            : getChronologicallyAdjacentTarget({
+                allDayEvents,
+                direction: direction === "up" ? "previous" : "next",
+                focused,
+                timedEvents,
+                visible,
+              });
     } else if (isUnspecifiedDocumentFocus()) {
       adjacent = getNearestTargetToNow({
         allDayEvents,

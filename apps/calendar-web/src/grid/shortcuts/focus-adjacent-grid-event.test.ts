@@ -4,6 +4,7 @@ import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
   getChronologicallyAdjacentTarget,
+  getHorizontallyAdjacentTarget,
   getNearestTargetToNow,
   getSpatiallyAdjacentTarget,
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
@@ -380,5 +381,71 @@ describe("getNearestTargetToNow", () => {
     });
 
     expect(picked?.eventId).toBe("all");
+  });
+});
+
+describe("getHorizontallyAdjacentTarget", () => {
+  // Day view with overlap columns: "dev" spans two columns, "admin" is
+  // nested inside it, "solo" sits in its own column, "write" is alone above.
+  const dev = target("dev", "timed");
+  const admin = target("admin", "timed");
+  const solo = target("solo", "timed");
+  const write = target("write", "timed");
+  const visible = [write, dev, admin, solo];
+  const rects = new Map([
+    [dev, { top: 460, bottom: 540, left: 115, right: 1180 }],
+    [admin, { top: 505, bottom: 585, left: 275, right: 1180 }],
+    [solo, { top: 460, bottom: 585, left: 1195, right: 1835 }],
+    [write, { top: 85, bottom: 250, left: 115, right: 755 }],
+  ]);
+  const rectOf = (t: (typeof visible)[number]) => rects.get(t)!;
+
+  it("moves right through each overlap column", () => {
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "right",
+        focused: dev,
+        visible,
+        rectOf,
+      })?.eventId,
+    ).toBe("admin");
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "right",
+        focused: admin,
+        visible,
+        rectOf,
+      })?.eventId,
+    ).toBe("solo");
+  });
+
+  it("moves left back to the nearest column", () => {
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "left",
+        focused: solo,
+        visible,
+        rectOf,
+      })?.eventId,
+    ).toBe("admin");
+  });
+
+  it("stays put when nothing sits beside the event", () => {
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "right",
+        focused: write,
+        visible,
+        rectOf,
+      }),
+    ).toBeNull();
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "left",
+        focused: dev,
+        visible,
+        rectOf,
+      }),
+    ).toBeNull();
   });
 });

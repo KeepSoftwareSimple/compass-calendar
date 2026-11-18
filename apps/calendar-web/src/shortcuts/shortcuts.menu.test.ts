@@ -333,13 +333,15 @@ describe("shortcut menu sections", () => {
           keys: ["ArrowLeft"],
           label:
             view === "day"
-              ? "Focus previous event"
+              ? "Focus event to the left"
               : "Focus event on previous day",
         });
         expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
           keys: ["ArrowRight"],
           label:
-            view === "day" ? "Focus next event" : "Focus event on next day",
+            view === "day"
+              ? "Focus event to the right"
+              : "Focus event on next day",
         });
         expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
           keys: ["Enter"],
