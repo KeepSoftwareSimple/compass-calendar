@@ -11,10 +11,7 @@ import {
   editGridEventDraft,
 } from "@web/events/grid-event-draft.adapter";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
-import {
-  gridEventSidebarEditingBoxShadow,
-  resolveEventFocusIndicatorColor,
-} from "@web/grid/components/calendar-accent.util";
+import { GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW } from "@web/grid/components/calendar-accent.util";
 import { type TimedDeckLayout } from "@web/grid/layout/timed-deck.layout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import { GridDraft } from "./GridDraft";
@@ -222,9 +219,7 @@ describe("GridDraft", () => {
     const card = screen.getByRole("button", { name: /Timed event: Planning/ });
     expect(card.style.getPropertyValue("--event-bg")).toBe("#c4b5fd");
     expect(card.style.boxShadow).toContain(
-      gridEventSidebarEditingBoxShadow(
-        resolveEventFocusIndicatorColor(null, "#c4b5fd"),
-      ),
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
     );
   });
 
