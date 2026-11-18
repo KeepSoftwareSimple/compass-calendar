@@ -1,10 +1,15 @@
-import { type UserMetadata } from "@core/types/user.types";
+import { type ReactElement } from "react";
+import {
+  type SyncConnectionSummary,
+  type UserMetadata,
+} from "@core/types/user.types";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { BaseApi } from "@web/api/base/base.api";
 import { USER_METADATA_REQUEST_TIMEOUT_MS } from "@web/api/user.api";
+import { calendarDelayedToastMessage } from "@web/auth/providers/connect.util";
 import { resetGoogleReconnectRequiredForTests } from "@web/auth/providers/reconnect.state";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
-import { GOOGLE_DELAYED_TOAST_ID } from "@web/common/constants/toast.constants";
+import { PROVIDER_DELAYED_TOAST_ID } from "@web/common/constants/toast.constants";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   applyUserMetadataSideEffects,
@@ -41,13 +46,12 @@ const googleConnection = (
 const healthy: UserMetadata = {
   connections: [googleConnection("HEALTHY")],
 };
+const googleDelayed = {
+  ...googleConnection("ATTENTION"),
+  state: "delayed",
+};
 const attention: UserMetadata = {
-  connections: [
-    {
-      ...googleConnection("ATTENTION"),
-      state: "delayed",
-    },
-  ],
+  connections: [googleDelayed],
 };
 const reconnectRequired: UserMetadata = {
   connections: [
@@ -74,7 +78,7 @@ describe("applyUserMetadataSideEffects - delayed toast lifecycle", () => {
 
     expect(mocks.error).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ toastId: GOOGLE_DELAYED_TOAST_ID }),
+      expect.objectContaining({ toastId: PROVIDER_DELAYED_TOAST_ID }),
     );
   });
 
@@ -92,13 +96,13 @@ describe("applyUserMetadataSideEffects - delayed toast lifecycle", () => {
 
     applyUserMetadataSideEffects(healthy);
 
-    expect(mocks.dismiss).toHaveBeenCalledWith(GOOGLE_DELAYED_TOAST_ID);
+    expect(mocks.dismiss).toHaveBeenCalledWith(PROVIDER_DELAYED_TOAST_ID);
   });
 
   it("does not dismiss the delayed toast on recovery if it was never shown", () => {
     applyUserMetadataSideEffects(healthy);
 
-    expect(mocks.dismiss).not.toHaveBeenCalledWith(GOOGLE_DELAYED_TOAST_ID);
+    expect(mocks.dismiss).not.toHaveBeenCalledWith(PROVIDER_DELAYED_TOAST_ID);
   });
 
   it("shows the toast again for a later, separate ATTENTION episode after recovering", () => {
@@ -110,7 +114,53 @@ describe("applyUserMetadataSideEffects - delayed toast lifecycle", () => {
 
     expect(mocks.error).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ toastId: GOOGLE_DELAYED_TOAST_ID }),
+      expect.objectContaining({ toastId: PROVIDER_DELAYED_TOAST_ID }),
+    );
+  });
+});
+
+describe("applyUserMetadataSideEffects - delayed toast names the connection", () => {
+  const { port, mocks } = createTestToastPort();
+
+  const shownConnection = () => {
+    const [content] = mocks.error.mock.calls[0] ?? [];
+    return (content as ReactElement<{ connection: SyncConnectionSummary }>)
+      .props.connection;
+  };
+
+  beforeEach(() => {
+    registerToastPort(port);
+    resetGoogleReconnectRequiredForTests();
+    // Clear the once-per-load latch left by earlier tests.
+    applyUserMetadataSideEffects(healthy);
+    mocks.error.mockClear();
+  });
+
+  it("passes the Google ATTENTION connection to the toast", () => {
+    applyUserMetadataSideEffects(attention);
+
+    expect(shownConnection()).toEqual(googleDelayed);
+  });
+
+  it("names Google, not a reconnect-required Outlook account, in a mixed-provider payload", () => {
+    applyUserMetadataSideEffects({
+      connections: [
+        {
+          ...googleConnection("RECONNECT_REQUIRED"),
+          id: "conn-ms",
+          provider: "microsoft",
+          state: "actionRequired",
+          stateReason: "authorizationRevoked",
+          accountEmail: "lance@outlook.example",
+        },
+        googleDelayed,
+      ],
+    });
+
+    const connection = shownConnection();
+    expect(connection).toEqual(googleDelayed);
+    expect(calendarDelayedToastMessage(connection).title).toBe(
+      "Google Calendar updates are delayed",
     );
   });
 });
