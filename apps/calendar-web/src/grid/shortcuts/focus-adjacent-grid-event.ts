@@ -263,3 +263,53 @@ export function getNearestTargetToNow({
 
   return best;
 }
+
+type Box = Pick<DOMRect, "top" | "bottom" | "left" | "right">;
+
+/**
+ * Day-view Left/Right: move to the side-by-side column the user sees. Picks
+ * the on-screen neighbor whose center is left/right of the focused event and
+ * that shares some vertical span with it; nearest horizontally wins, then
+ * nearest top. No neighbor means no move.
+ */
+export function getHorizontallyAdjacentTarget({
+  direction,
+  focused,
+  visible,
+  rectOf = (target) => target.element.getBoundingClientRect(),
+}: {
+  direction: "left" | "right";
+  focused: GridEventShortcutTarget | null;
+  visible: FocusableGridEventTarget[];
+  rectOf?: (target: FocusableGridEventTarget) => Box;
+}): FocusableGridEventTarget | null {
+  if (!focused) return null;
+  const current = visible.find(
+    (target) =>
+      target.eventId === focused.eventId &&
+      target.eventType === focused.eventType,
+  );
+  if (!current) return null;
+
+  const from = rectOf(current);
+  const fromCenter = (from.left + from.right) / 2;
+  const sign = direction === "right" ? 1 : -1;
+
+  let best: FocusableGridEventTarget | null = null;
+  let bestDx = Number.POSITIVE_INFINITY;
+  let bestDy = Number.POSITIVE_INFINITY;
+  for (const target of visible) {
+    if (target === current) continue;
+    const rect = rectOf(target);
+    const dx = sign * ((rect.left + rect.right) / 2 - fromCenter);
+    const overlapsVertically = rect.top < from.bottom && rect.bottom > from.top;
+    if (dx <= 0 || !overlapsVertically) continue;
+    const dy = Math.abs(rect.top - from.top);
+    if (dx < bestDx || (dx === bestDx && dy < bestDy)) {
+      best = target;
+      bestDx = dx;
+      bestDy = dy;
+    }
+  }
+  return best;
+}
