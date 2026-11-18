@@ -166,11 +166,13 @@ export function RootShell() {
     !isMobile;
   const showPastDue = access.kind === "server" && access.status === "past_due";
 
+  // Also picks up the Block Party run a welcome sign-up queued, once the
+  // sign-up and trial steps in the auth modal are out of the way.
   useEffect(() => {
-    if (!showCalendarOnboarding || hasPlayDeepLink()) return;
+    if (!showCalendarOnboarding || isAuthModalOpen || hasPlayDeepLink()) return;
     if (!hasSeenWelcome()) return;
     shortcutShowcaseActions.resumeIfInProgress();
-  }, [showCalendarOnboarding]);
+  }, [showCalendarOnboarding, isAuthModalOpen]);
 
   const onboardingFlags = useMemo((): OnboardingSurfaceFlags => {
     const billingGateClear = gateStatus === null;
