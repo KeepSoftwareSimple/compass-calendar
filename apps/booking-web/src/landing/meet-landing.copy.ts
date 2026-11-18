@@ -9,10 +9,10 @@ export const MEET_LANDING_DOCUMENT_TITLE =
 /** Full HTML document title for static shell and crawlers. */
 export const MEET_LANDING_HTML_TITLE = `${MEET_LANDING_DOCUMENT_TITLE} | Compass Calendar`;
 
-export const MEET_LANDING_HEADLINE = "Compass Calendar Meetings";
+export const MEET_LANDING_HEADLINE = "Let people book time with you";
 
 export const MEET_LANDING_SUPPORTING =
-  "Let guests find a time so you can get back to work. It's like Calendly, but simpler.";
+  "Set your booking hours and share your link. Guests pick an open time, and Compass adds the meeting to your calendar.";
 
 export const MEET_LANDING_CTA_LABEL = "Set up your meeting page";
 

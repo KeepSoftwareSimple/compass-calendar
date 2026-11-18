@@ -1,5 +1,6 @@
 import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
 import { useBookingDocumentTitle } from "@booking-web/booking/use-booking-document-title";
+import { MeetLandingExample } from "@booking-web/landing/MeetLandingExample";
 import {
   MEET_LANDING_CTA_LABEL,
   MEET_LANDING_DOCUMENT_TITLE,
@@ -13,15 +14,6 @@ import {
 import { useEffect, useRef } from "react";
 import { meetingSetupRootHref } from "@web/booking/meeting-setup.search";
 
-/** Retro VT323 wordmark heading, matching the calendar's welcome and auth screens. */
-const MEET_LANDING_HEADING_CLASS =
-  "font-[VT323,monospace] font-normal text-4xl text-text leading-none";
-
-/**
- * Bare `/meet` is the landing page for meeting pages. One headline, one line,
- * one CTA to `/?meetingSetup=1` (guest wizard or Meeting settings when signed
- * in). No trial copy or logged-in callouts on this page.
- */
 export function MeetLandingPage() {
   const setupHref = meetingSetupRootHref();
   const viewedRef = useRef(false);
@@ -35,19 +27,24 @@ export function MeetLandingPage() {
   }, []);
 
   return (
-    <PublicBookingLayout showFooter={false}>
-      <header className="flex flex-col gap-3">
-        <h1 className={MEET_LANDING_HEADING_CLASS}>{MEET_LANDING_HEADLINE}</h1>
-        <p className="text-sm text-text-muted">{MEET_LANDING_SUPPORTING}</p>
+    <PublicBookingLayout showFooter={false} wide>
+      <header className="flex flex-col items-start gap-3">
+        <p className="text-sm text-text-muted">Compass Calendar / Meetings</p>
+        <h1 className="text-balance font-[VT323,monospace] font-normal text-4xl leading-none sm:text-5xl">
+          {MEET_LANDING_HEADLINE}
+        </h1>
+        <p className="max-w-lg text-base text-text-muted">
+          {MEET_LANDING_SUPPORTING}
+        </p>
+        <a
+          className="c-focus-ring mt-2 inline-flex min-h-11 items-center rounded-md bg-accent px-4 font-medium text-on-accent text-sm hover:bg-accent-hover"
+          href={setupHref}
+          onClick={() => trackBookingSetupCtaClicked("landing")}
+        >
+          {MEET_LANDING_CTA_LABEL}
+        </a>
       </header>
-
-      <a
-        className="c-focus-ring inline-flex min-h-11 w-fit items-center rounded-md bg-accent px-4 font-medium text-on-accent text-sm hover:bg-accent-hover"
-        href={setupHref}
-        onClick={() => trackBookingSetupCtaClicked("landing")}
-      >
-        {MEET_LANDING_CTA_LABEL}
-      </a>
+      <MeetLandingExample />
     </PublicBookingLayout>
   );
 }
