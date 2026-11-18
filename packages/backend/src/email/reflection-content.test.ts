@@ -51,6 +51,7 @@ const review = (
     historyComplete: true,
     completedWeeks: 1729,
     appUrl: "https://example.com/week/2026-11-09",
+    hasMeetingPage: false,
     unsubscribeUrl: "https://example.com/unsubscribe",
     ...overrides,
   });
@@ -65,7 +66,7 @@ describe("reflection content", () => {
           recurring: true,
           routine: true,
         }),
-        event("Weekly standup", "2026-11-10", {
+        event("Weekly planning block", "2026-11-10", {
           windowKey: "upcoming",
           recurring: true,
           routine: true,
@@ -99,9 +100,56 @@ describe("reflection content", () => {
       ],
     });
     expect(selected.upcoming.map((event) => event.id)).toEqual([
-      "Birthday",
       "Interview",
+      "Birthday",
     ]);
+  });
+
+  it("surfaces every upcoming meeting ahead of solo events, including recurring meetings", () => {
+    const meeting = { windowKey: "upcoming", recurring: true, routine: true };
+    const selected = selectReflectionEvents({
+      ...input,
+      events: [
+        event("Focus time", "2026-11-09", { windowKey: "upcoming" }),
+        event("Design review", "2026-11-14", { ...meeting, hasGuests: true }),
+        event("Design review", "2026-11-14", {
+          ...meeting,
+          calendarId: "another-calendar",
+        }),
+        event("Weekly standup", "2026-11-12", meeting),
+        event("Client call", "2026-11-10", meeting),
+        event("Coffee with Sam", "2026-11-11", meeting),
+      ],
+    });
+    expect(selected.upcoming.map(({ title }) => title)).toEqual([
+      "Design review",
+      "Client call",
+      "Coffee with Sam",
+      "Weekly standup",
+      "Focus time",
+    ]);
+    const rendered = review({ ...selected });
+    expect(rendered.text).toContain("Weekly standup");
+    expect(rendered.text).not.toContain("Focus time");
+  });
+
+  it("groups the two next steps below the upcoming week", () => {
+    const { html, text } = review({ memories: [], completedWeeks: null });
+    expect(text).toContain(
+      "Tue, Nov 10: Walk\n\nNext steps:\nPlan next week: https://example.com/week/2026-11-09\n\nSet up your meeting page: https://example.com/meet\n\n",
+    );
+    expect(text).not.toContain("utm_");
+    expect(html).toContain(
+      '<p><strong>Next steps:</strong><br>Plan next week: <a href="https://example.com/week/2026-11-09?utm_source=email&amp;utm_campaign=weekly_review&amp;utm_content=plan_next_week">example.com/week/2026-11-09</a><br><br>Set up your meeting page: <a href="https://example.com/meet?utm_source=email&amp;utm_campaign=weekly_review&amp;utm_content=meeting_setup">example.com/meet</a></p><p><em>',
+    );
+  });
+
+  it("offers only the calendar link when a meeting page is configured", () => {
+    const { html, text } = review({ hasMeetingPage: true });
+    expect(html).toContain("Plan next week:");
+    expect(text).toContain("Plan next week:");
+    expect(html).not.toContain("Set up your meeting page");
+    expect(text).not.toContain("Set up your meeting page");
   });
 
   it("shows non-overlapping whole-day ranges for the daily trial", () => {
@@ -289,6 +337,7 @@ describe("reflection content", () => {
       historyComplete: true,
       completedWeeks: null,
       appUrl: "https://example.com/week/2026-11-09",
+      hasMeetingPage: false,
       unsubscribeUrl: "https://example.com/unsubscribe",
     });
     expect(rendered.html).toContain("&lt;script&gt;");
@@ -303,7 +352,7 @@ describe("reflection content", () => {
     expect(rendered.subject).toBe("Weekly review (45)");
     expect(rendered.text).not.toContain("Weekly review (45)");
     expect(rendered.html).not.toContain("Weekly review (45)");
-    expect(rendered.text).toContain("Plan next week\nhttps://");
+    expect(rendered.text).toContain("Plan next week: https://");
     expect(rendered.html).toContain("<strong>Next week, Nov 9-15</strong>");
     expect(rendered.text).toContain("Your past week, Nov 2-8");
     expect(rendered.text).toContain("Next week, Nov 9-15");
@@ -329,7 +378,9 @@ describe("reflection content", () => {
     expect(rendered.html).not.toContain("<img");
     expect(rendered.html).not.toContain("cid:");
     expect(
-      REFLECTION_EMAIL_QUOTES.some((quote) => rendered.text.endsWith(quote)),
+      REFLECTION_EMAIL_QUOTES.some((quote) =>
+        rendered.text.includes(`${quote}\n\nUnsubscribe:`),
+      ),
     ).toBe(true);
     // The email's three and the PDF quote must stay part of the Life catalog.
     expect(LIFE_QUOTES).toEqual(
