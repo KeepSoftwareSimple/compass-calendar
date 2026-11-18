@@ -1,7 +1,4 @@
-import { readability } from "@web/common/styles/color.utils";
-import { theme } from "@web/common/styles/theme";
 import { EVENT_COLOR_SLOT_HEX } from "@web/common/styles/theme.util";
-import { useThemeStore } from "@web/settings/theme/theme.store";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
@@ -11,7 +8,6 @@ import {
   eventFocusColor,
   eventFocusOutlineClass,
   joinGridEventBoxShadow,
-  MIN_EVENT_FOCUS_INDICATOR_CONTRAST,
   mergedCalendarStops,
   resolveEventFocusIndicatorColor,
 } from "./calendar-accent.util";
