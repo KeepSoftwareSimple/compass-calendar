@@ -41,6 +41,7 @@ export type GameTaskType =
   | "place"
   | "quickTime"
   | "nudge"
+  | "nudgeHour"
   | "resize"
   | "delete"
   | "undo"
@@ -80,7 +81,7 @@ export type GameTask =
       target: GameSlot;
     })
   | (GameTaskBase & {
-      type: "nudge";
+      type: "nudge" | "nudgeHour";
       targetEventId: string;
       target: GameSlot;
     })
@@ -164,6 +165,17 @@ export const RUN_TASKS: readonly GameTask[] = [
     keycaps: ["Shift", "ArrowDown"],
     targetEventId: "piece-standup",
     target: { dayIndex: 0, startMin: t(9, 15), endMin: t(9, 45) },
+  },
+  {
+    id: "nudge-hour-standup",
+    type: "nudgeHour",
+    title: "Standup pushed an hour",
+    instruction:
+      "Hold Option or Alt with Shift, then tap Down once to reach 10:15.",
+    hint: "Shift moves 15 minutes. Add Option or Alt and each tap jumps a full hour. Hold both, then tap Down once.",
+    keycaps: KEYMAP.moveEvent.coarseKeycaps,
+    targetEventId: "piece-standup",
+    target: { dayIndex: 0, startMin: t(10, 15), endMin: t(10, 45) },
   },
   {
     id: "resize-one-on-one",
@@ -273,6 +285,7 @@ const MOVE_LABELS: Record<GameTaskType, LearnedMove> = {
     keys: ["1", "2", "3", "0"],
   },
   nudge: { label: "Move an event", keys: KEYMAP.moveEvent.keycaps },
+  nudgeHour: { label: "Move an hour", keys: KEYMAP.moveEvent.coarseKeycaps },
   resize: {
     label: "Resize one edge",
     keys: [KEYMAP.edgeFocus.hotkey, ...KEYMAP.moveEvent.timedEdgeKeycaps],

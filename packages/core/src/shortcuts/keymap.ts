@@ -70,6 +70,8 @@ export const KEYMAP = {
       right: "Mod+Alt+Shift+ArrowRight",
     },
     keycaps: ["Shift", "ArrowRight"],
+    // Adding Alt jumps a full hour (or a week sideways).
+    coarseKeycaps: ["Alt", "Shift", "ArrowDown"],
     // Timed start/end edges only move in time. Left/right stay whole-event
     // day shifts; the practice and edge-focus tip teach the vertical axis.
     timedEdgeKeycaps: ["Shift", "ArrowUp", "ArrowDown"],

@@ -16,7 +16,7 @@ const HINTS_FOR_POINTER_INTENT: Record<
   "hover-hunt": ["event-jump", "page-jump"],
   "slot-click": ["create-event"],
   "allday-click": ["create-event"],
-  "card-drag": ["nudge"],
+  "card-drag": ["nudge", "nudge-hour"],
   "grid-scroll": ["grid-scroll"],
   "swipe-next": ["week-nav"],
   "swipe-prev": ["week-nav"],

@@ -40,7 +40,13 @@ export type GameSimOverlay = "legend" | "pagejump" | "palette";
 export type GameKey =
   | { type: "create" }
   | { type: "digit"; digit: string }
-  | { type: "arrow"; direction: PracticeNudgeDirection; shift: boolean }
+  | {
+      type: "arrow";
+      direction: PracticeNudgeDirection;
+      shift: boolean;
+      /** Alt held: Alt+Shift jumps the block an hour. */
+      coarse?: boolean;
+    }
   | { type: "tab"; backward: boolean }
   | { type: "enter" }
   | { type: "delete" }
@@ -223,6 +229,7 @@ export const isTaskComplete = (task: GameTask, state: GameState): boolean => {
       );
     }
     case "nudge":
+    case "nudgeHour":
     case "resize": {
       const block = blockById(practice, task.targetEventId);
       return (
@@ -345,7 +352,11 @@ const applyKey = (state: GameState, key: GameKey): GameState => {
       // Plain arrows move an open piece (like the real grid's draft);
       // Shift+Arrow nudges whatever is focused, placing or locked.
       if (!practice.placingId && !key.shift) return state;
-      const next = nudgeFocused(practice, key.direction);
+      const next = nudgeFocused(
+        practice,
+        key.direction,
+        key.shift && Boolean(key.coarse),
+      );
       return next === practice ? state : { ...state, practice: next };
     }
     case "tab": {
@@ -597,6 +608,9 @@ export const getNextKeycapIndex = (
         task.keycaps.length - 1,
       );
     }
+    // One tap: the held Alt and Shift chips lead to the single arrow chip.
+    case "nudgeHour":
+      return task.keycaps.length - 1;
     case "resize": {
       const tabCount = task.keycaps.indexOf("Shift");
       const tabsDone =

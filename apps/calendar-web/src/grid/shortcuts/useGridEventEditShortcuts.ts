@@ -139,7 +139,8 @@ function useMoveEventShortcut(
 ) {
   useAppShortcut(hotkey, handler, {
     ...WRITE_EDIT_SHORTCUT,
-    telemetryHintId: "nudge",
+    // Alt chords are the hour/week jump, taught by their own tip.
+    telemetryHintId: String(hotkey).includes("Alt") ? "nudge-hour" : "nudge",
     shortcutId,
   });
 }
@@ -608,7 +609,9 @@ export function useGridEventEditShortcuts({
         event,
         keyboardEvent,
         onNudge: (nudgedEvent) => {
-          shortcutHintProgressActions.demonstrate("nudge");
+          shortcutHintProgressActions.demonstrate(
+            keyboardEvent.altKey ? "nudge-hour" : "nudge",
+          );
           commitNudge(keyboardEvent, nudgedEvent);
           followAcrossMidnight(previousStart, nudgedEvent);
           if (crossesWeekWindow && movement.days !== 0 && nudgedEvent._id) {
