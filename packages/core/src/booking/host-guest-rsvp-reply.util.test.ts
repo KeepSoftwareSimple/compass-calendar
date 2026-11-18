@@ -61,6 +61,50 @@ describe("detectHostGuestRsvpReplies", () => {
     );
   });
 
+  it.each(["declined", "tentative"] as const)(
+    "detects a first guest %s",
+    (status) => {
+      const before = slice([
+        {
+          email: "jen@thesteeds.net",
+          displayName: "Jen",
+          responseStatus: "needsAction",
+        },
+      ]);
+      const after = slice([
+        {
+          email: "jen@thesteeds.net",
+          displayName: "Jen",
+          responseStatus: status,
+        },
+      ]);
+
+      expect(
+        detectHostGuestRsvpReplies(before, after, "host@example.com"),
+      ).toEqual([
+        {
+          guestEmailLower: "jen@thesteeds.net",
+          guestName: "Jen",
+          status,
+          slotStart: before.slotStart,
+        },
+      ]);
+    },
+  );
+
+  it("ignores a guest who stays at needsAction", () => {
+    const before = slice([
+      {
+        email: "jen@thesteeds.net",
+        displayName: "Jen",
+        responseStatus: "needsAction",
+      },
+    ]);
+    expect(
+      detectHostGuestRsvpReplies(before, before, "host@example.com"),
+    ).toEqual([]);
+  });
+
   it("ignores events another account organizes", () => {
     const before = slice(
       [

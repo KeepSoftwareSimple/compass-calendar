@@ -330,7 +330,8 @@
       },
       {
         "id": "edit-menu",
-        "keys": ["."],
+        "keys": ["Space", "."],
+        "keyAlternatives": true,
         "label": "Open event menu",
         "section": "edit",
         "requiresWrite": true

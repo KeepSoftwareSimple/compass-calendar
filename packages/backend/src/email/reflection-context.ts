@@ -9,6 +9,7 @@ import {
   type ReflectionWindow,
 } from "@core/types/sync/reflection.contracts";
 import { type Schema_User } from "@core/types/user.types";
+import { bookingPageRepository } from "@backend/booking/booking-page.repository";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
@@ -193,6 +194,7 @@ export async function prepareReflection(
     `/week/${current[1]!.startDate}`,
     CONFIG.FRONTEND_URL,
   ).toString();
+  const bookingPage = await bookingPageRepository.findByUserId(user._id);
   const content = renderReflectionEmail({
     ...selected,
     date: edition.date,
@@ -203,6 +205,7 @@ export async function prepareReflection(
     completedWeeks,
     historyComplete,
     appUrl,
+    hasMeetingPage: bookingPage !== null,
     unsubscribeUrl,
   });
   return {

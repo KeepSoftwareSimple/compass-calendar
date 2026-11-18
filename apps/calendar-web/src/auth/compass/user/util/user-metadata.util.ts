@@ -6,18 +6,19 @@ import { connectionHasReconnectRequired } from "@web/auth/providers/connect.util
 import { syncReconnectRequiredFromConnections } from "@web/auth/providers/reconnect.state";
 import {
   aggregateGoogleConnectionState,
+  findPrimaryGoogleSyncConnection,
   findSyncConnectionsFromMetadata,
   userMetadataActions,
 } from "@web/auth/state/user-metadata.store";
-import {
-  dismissGoogleDelayedToast,
-  showGoogleDelayedToast,
-} from "@web/common/utils/toast/google-delayed.toast";
 import {
   clearGoogleReconnectToastGate,
   dismissGoogleReconnectToast,
   dismissGoogleReconnectToastIfRecovered,
 } from "@web/common/utils/toast/google-reconnect.toast";
+import {
+  dismissProviderDelayedToast,
+  showProviderDelayedToast,
+} from "@web/common/utils/toast/provider-delayed.toast";
 import { mergeHintShortcutCelebrationFromMetadata } from "@web/shortcuts/tips/hint-shortcut-celebration.storage";
 
 let refreshUserMetadataRequest: Promise<void> | null = null;
@@ -50,14 +51,16 @@ export const applyUserMetadataSideEffects = (metadata: UserMetadata): void => {
   if (aggregateGoogleConnectionState(connections) === "ATTENTION") {
     if (!hasShownDelayedToastThisLoad) {
       hasShownDelayedToastThisLoad = true;
-      showGoogleDelayedToast();
+      // Name the Google connection that is in ATTENTION, not whichever
+      // provider ranks first across all accounts.
+      showProviderDelayedToast(findPrimaryGoogleSyncConnection(connections));
     }
   } else if (hasShownDelayedToastThisLoad) {
     // Recovered: a CRITICAL toast (autoClose: false) never closes on its
     // own, so leaving it up would contradict its own "delayed" copy once
     // the connection is healthy again.
     hasShownDelayedToastThisLoad = false;
-    dismissGoogleDelayedToast();
+    dismissProviderDelayedToast();
   }
 };
 

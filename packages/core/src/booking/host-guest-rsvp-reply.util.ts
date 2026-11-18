@@ -1,7 +1,8 @@
-import { type AttendeeResponseStatus } from "@core/types/event-attendance.contracts";
-
-export const HOST_GUEST_RSVP_REPLY_STATUSES: ReadonlySet<AttendeeResponseStatus> =
-  new Set(["accepted", "declined", "tentative"]);
+import {
+  type AttendeeResponseStatus,
+  type RsvpResponseStatus,
+  RsvpResponseStatusSchema,
+} from "@core/types/event-attendance.contracts";
 
 export type HostGuestRsvpAttendeeSlice = {
   email: string;
@@ -18,7 +19,7 @@ export type HostGuestRsvpEventSlice = {
 export type DetectedHostGuestRsvpReply = {
   guestEmailLower: string;
   guestName: string;
-  status: AttendeeResponseStatus;
+  status: RsvpResponseStatus;
   slotStart: string;
 };
 
@@ -62,10 +63,8 @@ export const detectHostGuestRsvpReplies = (
     if (emailLower === accountLower) continue;
 
     const previousStatus = beforeByEmail.get(emailLower) ?? "needsAction";
-    if (
-      attendee.responseStatus === previousStatus ||
-      !HOST_GUEST_RSVP_REPLY_STATUSES.has(attendee.responseStatus)
-    ) {
+    const reply = RsvpResponseStatusSchema.safeParse(attendee.responseStatus);
+    if (attendee.responseStatus === previousStatus || !reply.success) {
       continue;
     }
 
@@ -74,7 +73,7 @@ export const detectHostGuestRsvpReplies = (
     replies.push({
       guestEmailLower: emailLower,
       guestName,
-      status: attendee.responseStatus,
+      status: reply.data,
       slotStart: after.slotStart,
     });
   }

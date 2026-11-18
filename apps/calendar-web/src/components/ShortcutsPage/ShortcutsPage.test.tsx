@@ -67,6 +67,15 @@ describe("public /shortcuts page", () => {
     }
   });
 
+  it("renders or between alternative keys as plain text, not a keycap", () => {
+    render(<ShortcutsCatalogView />);
+
+    const or = screen.getByText("or");
+    expect(or.tagName).toBe("SPAN");
+    expect(or.previousElementSibling?.textContent).toBe("Space");
+    expect(or.nextElementSibling?.textContent).toBe(".");
+  });
+
   it("shows when the public catalog was last updated", () => {
     render(<ShortcutsCatalogView />);
 

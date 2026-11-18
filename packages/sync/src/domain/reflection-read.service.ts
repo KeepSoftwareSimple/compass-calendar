@@ -177,6 +177,11 @@ export async function readReflectionPage(
       )
     )
       continue;
+    const hasGuests = event.content.attendees.some(
+      (attendee) =>
+        !selfEmails.has(attendee.email.toLowerCase()) &&
+        attendee.responseStatus !== "declined",
+    );
     const excluded = (exceptions.get(event._id) ?? []).flatMap((exception) =>
       exception.recurrence.kind === "exception"
         ? [exception.recurrence.recurrenceId as DateTime]
@@ -227,6 +232,7 @@ export async function readReflectionPage(
             event.providerMetadata?.["uid"] ??
             null,
           windowKey: window.key,
+          hasGuests,
         });
       }
     }

@@ -1,7 +1,9 @@
 import {
   EVENT_FORM_TOGGLE_ALL_DAY_HOTKEY,
   EVENT_FORM_TOGGLE_ALL_DAY_KEYCAPS,
+  EVENT_MENU_LEGEND_KEYCAPS,
   EVENT_MENU_LETTER,
+  EVENT_MENU_POINTER_KEYCAPS,
   FOCUS_NOTICE_LETTER,
   HIDE_EVENT_LETTER,
   MONTH_PICKER_CURRENT_HOTKEY,
@@ -86,6 +88,8 @@ export const APP_SHORTCUT_BINDINGS = {
   editCopy: { hotkey: "Mod+C", keycaps: hotkeyKeycaps("Mod+C") },
   editPaste: { hotkey: "Mod+V", keycaps: hotkeyKeycaps("Mod+V") },
   editMenu: { keycaps: [EVENT_MENU_LETTER] },
+  editMenuLegendKeycaps: [...EVENT_MENU_LEGEND_KEYCAPS],
+  editMenuPointerKeycaps: [...EVENT_MENU_POINTER_KEYCAPS],
   editHide: { keycaps: [HIDE_EVENT_LETTER] },
   editSave: { hotkey: "Mod+Enter", keycaps: hotkeyKeycaps("Mod+Enter") },
   editCancelMeeting: {

@@ -31,6 +31,23 @@ describe("ShortcutKeys", () => {
     expect(screen.getByText("K")).toBeInTheDocument();
   });
 
+  it("renders plain-text or between alternative keys, not as a keycap", () => {
+    const { container } = render(
+      <ShortcutKeys keys={["Space", "."]} alternatives />,
+    );
+
+    expect(container.textContent).toBe("Spaceor.");
+    const or = screen.getByText("or");
+    expect(or.className).not.toContain("c-keycap");
+    expect(or.previousElementSibling?.className).toContain("c-keycap");
+    expect(or.nextElementSibling?.className).toContain("c-keycap");
+  });
+
+  it("does not render or for a chord", () => {
+    const { container } = render(<ShortcutKeys keys={["Shift", "w"]} />);
+    expect(container.textContent).not.toContain("or");
+  });
+
   it("renders nothing when there are no keys", () => {
     const { container } = render(<ShortcutKeys keys={[]} />);
     expect(keycaps(container)).toHaveLength(0);

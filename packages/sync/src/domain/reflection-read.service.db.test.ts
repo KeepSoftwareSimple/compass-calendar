@@ -43,8 +43,25 @@ describe("reflection historical reads", () => {
         providerUpdatedAt: now,
         deliveryState: "confirmed",
         providerMetadata: null,
-        content: singleEvent(`archive-${index}`, `Archived event ${index}`)
-          .content,
+        content: {
+          ...singleEvent(`archive-${index}`, `Archived event ${index}`).content,
+          attendees: [
+            {
+              email: "Owner@example.com",
+              displayName: null,
+              responseStatus: "accepted",
+            },
+            ...(index === 17
+              ? [
+                  {
+                    email: "guest@example.com",
+                    displayName: null,
+                    responseStatus: "needsAction",
+                  },
+                ]
+              : []),
+          ],
+        },
         schedule: {
           kind: "timed",
           start: matching ? "2010-11-01T17:00:00Z" : "2018-08-01T16:00:00Z",
@@ -79,7 +96,7 @@ describe("reflection historical reads", () => {
     ]);
     const input = ReflectionReadRequestSchema.parse({
       calendarIds: [calendar._id],
-      selfEmails: [],
+      selfEmails: ["owner@example.com"],
       windows: [
         {
           key: "history:2010",
@@ -118,6 +135,9 @@ describe("reflection historical reads", () => {
       "Archived event 5003",
     ]);
     expect(new Set(events.map((event) => event.id)).size).toBe(5);
+    expect(
+      events.filter((event) => event.hasGuests).map((event) => event.title),
+    ).toEqual(["Archived event 17"]);
     expect(
       events
         .filter((event) => event.title === "Archived event 5003")
