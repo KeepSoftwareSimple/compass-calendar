@@ -55,6 +55,20 @@ export const KEYMAP = {
       left: "Alt+Shift+ArrowLeft",
       right: "Alt+Shift+ArrowRight",
     },
+    // Holding Mod moves only this occurrence of a repeating event, without
+    // the "Apply to series?" ask.
+    thisOnlyHotkeys: {
+      up: "Mod+Shift+ArrowUp",
+      down: "Mod+Shift+ArrowDown",
+      left: "Mod+Shift+ArrowLeft",
+      right: "Mod+Shift+ArrowRight",
+    },
+    thisOnlyCoarseHotkeys: {
+      up: "Mod+Alt+Shift+ArrowUp",
+      down: "Mod+Alt+Shift+ArrowDown",
+      left: "Mod+Alt+Shift+ArrowLeft",
+      right: "Mod+Alt+Shift+ArrowRight",
+    },
     keycaps: ["Shift", "ArrowRight"],
     // Timed start/end edges only move in time. Left/right stay whole-event
     // day shifts; the practice and edge-focus tip teach the vertical axis.

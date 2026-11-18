@@ -85,6 +85,7 @@ import {
   getSpatiallyAdjacentTarget,
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
+import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
@@ -334,7 +335,11 @@ export function useGridEventEditShortcuts({
     if (!event) return;
 
     claimShortcut(keyboardEvent);
-    deleteEventAndDiscardDraft(deleteEvent, event);
+    deleteEventAndDiscardDraft(
+      deleteEvent,
+      event,
+      isModKeyHeld(keyboardEvent) ? "skip" : undefined,
+    );
   };
 
   const duplicateSourceEvent = (sourceEvent: Event, targetDay?: Dayjs) => {
@@ -504,8 +509,13 @@ export function useGridEventEditShortcuts({
     });
   };
 
-  const commitDeferredNudge = (nudgedEvent: GridEvent) => {
-    updateEvent({ event: nudgedEvent, scopeAsk: "deferred" }, true, {
+  // Holding Mod says "this occurrence only": skip the "Apply to series?" ask.
+  const commitNudge = (
+    keyboardEvent: KeyboardEvent,
+    nudgedEvent: GridEvent,
+  ) => {
+    const scopeAsk = isModKeyHeld(keyboardEvent) ? "skip" : "deferred";
+    updateEvent({ event: nudgedEvent, scopeAsk }, true, {
       onOptimisticApplied: () => draftActions.discard(),
     });
   };
@@ -514,7 +524,10 @@ export function useGridEventEditShortcuts({
     keyboardEvent: KeyboardEvent,
     event: GridEvent,
     edge: EventEdge,
-  ) => moveFocusedEdge(keyboardEvent, event, edge, commitDeferredNudge);
+  ) =>
+    moveFocusedEdge(keyboardEvent, event, edge, (nudgedEvent) =>
+      commitNudge(keyboardEvent, nudgedEvent),
+    );
 
   const moveFocusedDraftEdge = (
     keyboardEvent: KeyboardEvent,
@@ -566,7 +579,7 @@ export function useGridEventEditShortcuts({
         const startMinute =
           getVisibleGridStartMinute() ?? DEFAULT_TIMED_START_MINUTE;
         const dates = convertAllDayToTimedDates(event, startMinute);
-        commitDeferredNudge({ ...event, ...dates, isAllDay: false });
+        commitNudge(keyboardEvent, { ...event, ...dates, isAllDay: false });
         refocusEventElement(event._id);
         return;
       }
@@ -596,7 +609,7 @@ export function useGridEventEditShortcuts({
         keyboardEvent,
         onNudge: (nudgedEvent) => {
           shortcutHintProgressActions.demonstrate("nudge");
-          commitDeferredNudge(nudgedEvent);
+          commitNudge(keyboardEvent, nudgedEvent);
           followAcrossMidnight(previousStart, nudgedEvent);
           if (crossesWeekWindow && movement.days !== 0 && nudgedEvent._id) {
             clamp?.onCrossed?.(movement.days, nudgedEvent._id);
@@ -823,6 +836,14 @@ export function useGridEventEditShortcuts({
     stopPropagation: false,
     shortcutId: "edit-delete",
   });
+  // Mod+Delete deletes only this occurrence of a repeating event, no ask.
+  useAppShortcut("Mod+Delete", deleteFocusedCalendarEvent, {
+    ...WRITE_EDIT_SHORTCUT,
+    ignoreInputs: false,
+    preventDefault: false,
+    stopPropagation: false,
+    shortcutId: "edit-delete-this-only",
+  });
   useAppShortcut("Mod+D", duplicateFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: false,
@@ -857,6 +878,17 @@ export function useGridEventEditShortcuts({
   useMoveEventShortcut(coarse.down, "edit-move-hour-later", onMove);
   useMoveEventShortcut(coarse.left, "edit-move-week-earlier", onMove);
   useMoveEventShortcut(coarse.right, "edit-move-week-later", onMove);
+  // Mod variants change only this occurrence of a repeating event.
+  const { thisOnlyHotkeys: only, thisOnlyCoarseHotkeys: onlyCoarse } =
+    KEYMAP.moveEvent;
+  useMoveEventShortcut(only.up, "edit-move-this-only", onMove);
+  useMoveEventShortcut(only.down, "edit-move-this-only", onMove);
+  useMoveEventShortcut(only.left, "edit-move-this-only", onMove);
+  useMoveEventShortcut(only.right, "edit-move-this-only", onMove);
+  useMoveEventShortcut(onlyCoarse.up, "edit-move-this-only", onMove);
+  useMoveEventShortcut(onlyCoarse.down, "edit-move-this-only", onMove);
+  useMoveEventShortcut(onlyCoarse.left, "edit-move-this-only", onMove);
+  useMoveEventShortcut(onlyCoarse.right, "edit-move-this-only", onMove);
 
   useAppShortcut(KEYMAP.edgeFocus.hotkey, cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,

@@ -59,6 +59,12 @@
   padding: 0.75rem 1rem;
 }
 
+.compass-bottom-notice-stack .Toastify__toast.recurrence-scope-toast-host {
+  width: max-content;
+  max-width: 100%;
+  align-self: flex-start;
+}
+
 @media (min-width: 1280px) {
   .compass-bottom-notice-stack
     .Toastify__toast.app-update-available-toast-host {
