@@ -4,7 +4,6 @@ import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { trackSignupStartedAtClick } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
-import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
 import {
   CONTINUE_WITH_LABEL,
   SIGN_IN_SHORTCUT_KEY,
@@ -18,6 +17,10 @@ import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { useAuthModal } from "@web/components/AuthModal/hooks/useAuthModal";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { hasPlayDeepLink } from "@web/components/ShortcutShowcase/play-link";
+import {
+  hasSeenShortcutShowcase,
+  markShowcaseInProgress,
+} from "@web/components/ShortcutShowcase/showcase.storage";
 import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
@@ -36,7 +39,6 @@ import {
 } from "./welcome.modal.util";
 import {
   welcomeTrialCardTermsLine,
-  welcomeTrialPrimaryLabel,
   welcomeTrialPrimaryProvider,
 } from "./welcome-account-choice.util";
 import {
@@ -195,10 +197,19 @@ export function WelcomeModal() {
     skipFocusRestoreRef.current = true;
     markWelcomeSeen("explore");
     track("welcome_modal_dismissed", { cta: "explore" });
+    // The welcome backdrop settles into the takeover's solid background, and
+    // both surfaces swap in one render, so the week never shows in between.
     beginDismiss(() => {
       shortcutShowcaseActions.startFromWelcome();
+      welcomeGuideActions.setFirstVisitOpen(false);
       setIsOpen(false);
     });
+  };
+
+  // New accounts learn the keys in Block Party before they see their week:
+  // the game resumes once sign-up returns to the calendar.
+  const queueShowcaseAfterSignup = () => {
+    if (!hasSeenShortcutShowcase()) markShowcaseInProgress();
   };
 
   const beginAuthHandoff = () => {
@@ -214,6 +225,7 @@ export function WelcomeModal() {
     beginAuthHandoff();
     markWelcomeSeen(cta);
     if (cta === "sign_up") {
+      queueShowcaseAfterSignup();
       void trackSignupStartedAtClick("welcome_modal");
     }
     track("welcome_modal_dismissed", { cta });
@@ -228,6 +240,7 @@ export function WelcomeModal() {
     providerHandoffRef.current = true;
     setHandingOff(true);
     cancelDismiss();
+    queueShowcaseAfterSignup();
     markWelcomeSeen(`sign_up_${kind}`);
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
     void trackSignupStartedAtClick(`welcome_modal_${kind}`);
@@ -290,9 +303,11 @@ export function WelcomeModal() {
   return (
     <OverlayPanel
       align="start"
+      anchor="top"
       ariaLabel="Welcome to Compass Calendar"
       backdropClassName="overflow-y-auto py-8"
       closing={closing}
+      closeToSolid
       initialFocusRef={primaryRef}
       onDismiss={goBack}
       onKeyDown={handleShortcutKey}
@@ -344,7 +359,7 @@ export function WelcomeModal() {
         </div>
 
         {step === 1 && (
-          <>
+          <div className="c-welcome-step-in flex w-full flex-col gap-6">
             <div className="flex w-full flex-col gap-2">
               <h1 className="font-[VT323,monospace] text-4xl text-text leading-none">
                 The Keyboard Calendar
@@ -374,11 +389,11 @@ export function WelcomeModal() {
                 No account needed.
               </p>
             </div>
-          </>
+          </div>
         )}
 
         {step === 2 && (
-          <>
+          <div className="c-welcome-step-in flex w-full flex-col gap-6">
             <div className="flex w-full flex-col gap-2">
               <h2 className="font-[VT323,monospace] text-4xl text-text leading-none">
                 How Compass works
@@ -401,11 +416,11 @@ export function WelcomeModal() {
                 <ShortcutHint className="ml-2">Enter</ShortcutHint>
               </button>
             </div>
-          </>
+          </div>
         )}
 
         {step === 3 && (
-          <>
+          <div className="c-welcome-step-in flex w-full flex-col gap-6">
             <div className="flex w-full flex-col gap-2">
               <h2 className="font-[VT323,monospace] text-4xl text-text leading-none">
                 Let's get started
@@ -424,7 +439,7 @@ export function WelcomeModal() {
                     className={PRIMARY_CTA_CLASS}
                     {...authBusyProps}
                   >
-                    {welcomeTrialPrimaryLabel(trialPrimaryProvider)}
+                    {CONTINUE_WITH_LABEL[trialPrimaryProvider]}
                     <ShortcutHint className="ml-2">Enter</ShortcutHint>
                   </button>
                   <p className="text-center text-text-muted text-xs">
@@ -439,7 +454,7 @@ export function WelcomeModal() {
                   className={PRIMARY_CTA_CLASS}
                   {...authBusyProps}
                 >
-                  Sign up
+                  Continue with email
                   <ShortcutHint className="ml-2">Enter</ShortcutHint>
                 </button>
               )}
@@ -465,7 +480,7 @@ export function WelcomeModal() {
                     onClick={() => handOffToAuth("sign_up")}
                     {...authBusyProps}
                   >
-                    {CONNECT_CALENDAR_LABEL.microsoft}
+                    {CONTINUE_WITH_LABEL.microsoft}
                     <ShortcutHint className="ml-2">M</ShortcutHint>
                   </button>
                   <p className="text-center text-text-muted text-xs">
@@ -480,7 +495,7 @@ export function WelcomeModal() {
                   className={SECONDARY_CTA_CLASS}
                   {...authBusyProps}
                 >
-                  Sign up with email
+                  Continue with email
                   <ShortcutHint className="ml-2">U</ShortcutHint>
                 </button>
               ) : null}
@@ -490,15 +505,11 @@ export function WelcomeModal() {
                 className={QUIET_TEXT_CTA_CLASS}
                 {...navigationBusyProps}
               >
-                Start without an account
+                Continue as guest
                 <ShortcutHint className="ml-2">S</ShortcutHint>
               </button>
-              <p className="text-center text-text-muted text-xs">
-                Learn the keys in Block Party, then use your own calendar. Your
-                events stay on this device.
-              </p>
             </div>
-          </>
+          </div>
         )}
 
         <WelcomeSteps step={step} />

@@ -19,7 +19,7 @@ const dismissWelcomeWithExplore = async (page: Page) => {
   ).toBeVisible();
   await page.keyboard.press("Enter");
   await expect(
-    welcomeDialog.getByRole("button", { name: "Start without an account" }),
+    welcomeDialog.getByRole("button", { name: "Continue as guest" }),
   ).toBeVisible();
   await page.keyboard.press("s");
   await expect(welcomeDialog).toBeHidden();

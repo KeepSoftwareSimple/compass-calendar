@@ -1,8 +1,5 @@
 import { BILLING_PLAN } from "@core/constants/billing.constants";
-import {
-  type ProviderKind,
-  providerDisplayName,
-} from "@core/types/sync/identity.contracts";
+import { type ProviderKind } from "@core/types/sync/identity.contracts";
 
 /** OAuth provider that gets the trial primary CTA on welcome screen 3. */
 export function welcomeTrialPrimaryProvider(
@@ -10,10 +7,6 @@ export function welcomeTrialPrimaryProvider(
 ): ProviderKind | null {
   if (available.includes("google")) return "google";
   return available[0] ?? null;
-}
-
-export function welcomeTrialPrimaryLabel(kind: ProviderKind): string {
-  return `Start free trial with ${providerDisplayName(kind)}`;
 }
 
 /** Short trial terms for welcome screen 3 (same facts as `formatTrialStartPriceLine`). */
