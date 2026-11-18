@@ -41,6 +41,7 @@ const IDLE_POOL = [
 const FOCUSED_POOL = [
   "edit-sequence",
   "nudge",
+  "nudge-hour",
   "edge-focus",
   ...IDLE_POOL,
 ] as const satisfies readonly ShortcutHintId[];

@@ -113,9 +113,14 @@ const nudgeFocusedEdge = (
   return { ...event, endMin };
 };
 
+/** Coarse (Alt+Shift) step for a whole block, matching the real grid. */
+export const PRACTICE_COARSE_NUDGE_MIN = 60;
+
+/** `coarse` jumps a whole block an hour; edges and day moves ignore it. */
 export const nudgeFocused = (
   state: PracticeState,
   direction: PracticeNudgeDirection,
+  coarse = false,
 ): PracticeState => {
   const focused = ensureFocused(state);
   if (!focused.focusedId) return state;
@@ -142,8 +147,8 @@ export const nudgeFocused = (
       return { ...event, dayIndex };
     }
     const duration = event.endMin - event.startMin;
-    const delta =
-      direction === "down" ? PRACTICE_NUDGE_MIN : -PRACTICE_NUDGE_MIN;
+    const step = coarse ? PRACTICE_COARSE_NUDGE_MIN : PRACTICE_NUDGE_MIN;
+    const delta = direction === "down" ? step : -step;
     const startMin = Math.max(
       PRACTICE_GRID_START_MIN,
       Math.min(PRACTICE_GRID_END_MIN - duration, event.startMin + delta),

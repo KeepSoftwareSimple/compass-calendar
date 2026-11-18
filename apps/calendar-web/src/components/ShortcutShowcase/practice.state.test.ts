@@ -6,6 +6,7 @@ import {
   focusEvent,
   lockPlacing,
   nudgeFocused,
+  PRACTICE_COARSE_NUDGE_MIN,
   PRACTICE_GRID_END_MIN,
   PRACTICE_GRID_START_MIN,
   PRACTICE_NUDGE_MIN,
@@ -82,6 +83,25 @@ describe("spawning and locking pieces", () => {
     state = nudgeFocused(state, "left");
     expect(state.events.find((e) => e.id === "piece")?.dayIndex).toBe(0);
     expect(nudgeFocused(state, "left")).toBe(state);
+  });
+
+  it("jumps a whole block an hour when coarse, like Alt+Shift on the grid", () => {
+    const state = spawnPiece(
+      baseState(),
+      block({
+        id: "piece",
+        startMin: PRACTICE_GRID_START_MIN,
+        endMin: PRACTICE_GRID_START_MIN + 30,
+      }),
+    );
+    const moved = nudgeFocused(state, "down", true);
+    const piece = moved.events.find((e) => e.id === "piece");
+    expect(piece?.startMin).toBe(
+      PRACTICE_GRID_START_MIN + PRACTICE_COARSE_NUDGE_MIN,
+    );
+    expect(piece?.endMin).toBe(
+      PRACTICE_GRID_START_MIN + PRACTICE_COARSE_NUDGE_MIN + 30,
+    );
   });
 });
 

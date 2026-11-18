@@ -68,6 +68,8 @@ const playWinningRun = async () => {
   pressKey("Enter");
   // nudge-standup
   pressKey("ArrowDown", { shiftKey: true });
+  // nudge-hour-standup
+  pressKey("ArrowDown", { shiftKey: true, altKey: true });
   // resize-one-on-one
   pressKey("Tab");
   pressKey("ArrowUp", { shiftKey: true });
@@ -197,7 +199,7 @@ describe("ShortcutShowcase", () => {
 
     // Esc-skip to the jump task. With every board task skipped, letters run
     // over the three seed events alone, so kickoff's chip is a here.
-    for (let i = 0; i < 7; i += 1) pressKey("Escape");
+    for (let i = 0; i < 8; i += 1) pressKey("Escape");
     expect(screen.getByText("Fly across the board")).toBeTruthy();
     expect(screen.getByText("a")).toBeTruthy();
     pressKey("f");
@@ -399,7 +401,7 @@ describe("ShortcutShowcase", () => {
     act(() => shortcutShowcaseActions.replay());
     pressKey("Enter");
     // Esc through the board tasks until the legend task is up.
-    for (let i = 0; i < 6; i += 1) pressKey("Escape");
+    for (let i = 0; i < 7; i += 1) pressKey("Escape");
     expect(screen.getByText("Blanking on a move?")).toBeTruthy();
 
     pressKey("?", { shiftKey: true });
