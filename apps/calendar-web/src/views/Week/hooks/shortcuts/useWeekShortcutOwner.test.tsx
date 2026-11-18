@@ -1340,6 +1340,58 @@ describe("useWeekShortcutOwner shift+arrow event moves", () => {
     );
   });
 
+  it("moves only this occurrence without a series ask on Mod+Shift+ArrowUp", async () => {
+    const button = addCalendarTarget(recurringOccurrence.id);
+    button.focus();
+    const { queryClient } = renderShortcuts({
+      extraEvents: [recurringOccurrence],
+    });
+
+    pressKey("ArrowUp", {
+      keyDownInit: { ctrlKey: true, shiftKey: true },
+      keyUpInit: { ctrlKey: true, shiftKey: true },
+    });
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    expect(
+      (
+        getEditMutation(queryClient)!.state.variables as {
+          input: { scope: string };
+        }
+      ).input.scope,
+    ).toBe("this");
+    expect(useRecurrenceScopeOpportunityStore.getState().opportunity).toBe(
+      null,
+    );
+  });
+
+  it("deletes only this occurrence without a series ask on Mod+Delete", () => {
+    const button = addCalendarTarget(recurringOccurrence.id);
+    button.focus();
+    const { queryClient } = renderShortcuts({
+      extraEvents: [recurringOccurrence],
+    });
+
+    pressKey("Delete", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const deletion = queryClient
+      .getMutationCache()
+      .getAll()
+      .find((mutation) => mutation.options.mutationKey?.[2] === "delete");
+    expect(deletion?.state.variables).toMatchObject({
+      id: RECURRING_EVENT_ID,
+      scope: "this",
+    });
+    expect(useRecurrenceScopeOpportunityStore.getState().opportunity).toBe(
+      null,
+    );
+  });
+
   it("carries the focused event across the window edge with Shift+ArrowLeft on the first visible day", () => {
     const button = addCalendarTarget(leftmostEvent.id);
     button.focus();

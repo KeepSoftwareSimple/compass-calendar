@@ -5,7 +5,7 @@ import {
   getToastDefaultOptions,
 } from "@web/common/constants/toast.constants";
 import { getToast } from "@web/common/utils/toast/toast.port";
-import { NoticePrimaryButton } from "@web/components/BottomNoticeStack/NoticePrimaryButton";
+import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { type RecurrenceScopePromotion } from "@web/events/recurrence/recurrence-scope";
 import {
   type RecurrenceScopeOpportunity,
@@ -14,6 +14,9 @@ import {
 } from "@web/events/recurrence/recurrence-scope-opportunity.store";
 
 export const RECURRENCE_SCOPE_TOAST_ID = "recurrence-scope-opportunity";
+
+// Sized to its content instead of the full notice-stack width.
+const RECURRENCE_SCOPE_TOAST_CLASS = "recurrence-scope-toast-host";
 
 const MAX_EVENT_NAME_LENGTH = 28;
 
@@ -38,6 +41,20 @@ const eventNameForToast = (opportunity: RecurrenceScopeOpportunity) => {
   return truncateEventName(content.kind === "details" ? content.title : "");
 };
 
+// Neutral (not accent) so the ask stays quiet; justify-between keeps every
+// keycap in one column on the right.
+const SCOPE_OPTION_BUTTON_CLASS =
+  "c-button-compact c-button-secondary flex w-full items-center justify-between gap-4 rounded-xs px-3 py-1.5 text-sm";
+
+const SCOPE_OPTIONS: ReadonlyArray<{
+  scope: RecurrenceScopePromotion;
+  label: string;
+  key: string;
+}> = [
+  { scope: "thisAndFollowing", label: "Following", key: "1" },
+  { scope: "all", label: "All", key: "2" },
+];
+
 function ScopeToastContent({
   opportunity,
 }: {
@@ -52,31 +69,23 @@ function ScopeToastContent({
         {verb} “{eventName}”
       </p>
       <p className="mt-1 text-sm text-text-muted">Apply to series?</p>
-      <div className="mt-2 grid gap-2">
-        <NoticePrimaryButton
-          className="w-full justify-between self-stretch"
-          onClick={() =>
-            recurrenceScopeOpportunityActions.requestPromotion(
-              opportunity.id,
-              "thisAndFollowing",
-            )
-          }
-          shortcutKeys="1"
-        >
-          Following
-        </NoticePrimaryButton>
-        <NoticePrimaryButton
-          className="w-full justify-between self-stretch"
-          onClick={() =>
-            recurrenceScopeOpportunityActions.requestPromotion(
-              opportunity.id,
-              "all",
-            )
-          }
-          shortcutKeys="2"
-        >
-          All
-        </NoticePrimaryButton>
+      <div className="mt-2 grid min-w-40 gap-1.5">
+        {SCOPE_OPTIONS.map(({ scope, label, key }) => (
+          <button
+            className={SCOPE_OPTION_BUTTON_CLASS}
+            key={scope}
+            onClick={() =>
+              recurrenceScopeOpportunityActions.requestPromotion(
+                opportunity.id,
+                scope,
+              )
+            }
+            type="button"
+          >
+            {label}
+            <ShortcutKeys keys={key} />
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -92,6 +101,7 @@ const show = (content: ReactNode, toastId: Id, onClose?: () => void) => {
   toast(content, {
     ...getToastDefaultOptions(),
     toastId,
+    className: RECURRENCE_SCOPE_TOAST_CLASS,
     closeButton: false,
     closeOnClick: false,
     onClose,
@@ -99,6 +109,7 @@ const show = (content: ReactNode, toastId: Id, onClose?: () => void) => {
   toast.update(toastId, {
     render: content,
     autoClose: getToastDefaultOptions().autoClose,
+    className: RECURRENCE_SCOPE_TOAST_CLASS,
     closeButton: false,
     closeOnClick: false,
     onClose,

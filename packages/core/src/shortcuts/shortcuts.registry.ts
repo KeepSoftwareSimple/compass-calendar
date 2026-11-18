@@ -284,6 +284,13 @@ export const SHORTCUTS_REGISTRY = [
     requiresWrite: true,
   },
   {
+    id: "edit-delete-this-only",
+    keys: hotkeyKeycaps("Mod+Delete"),
+    label: "Delete only this occurrence, no series prompt",
+    section: "edit",
+    requiresWrite: true,
+  },
+  {
     id: "edit-duplicate",
     keys: [...B.editDuplicate.keycaps],
     label: "Duplicate focused event",
@@ -471,6 +478,13 @@ export const SHORTCUTS_REGISTRY = [
     id: "edit-move-later",
     keys: hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.down),
     label: "Move event 15 min later",
+    section: "edit",
+    requiresWrite: true,
+  },
+  {
+    id: "edit-move-this-only",
+    keys: hotkeyKeycaps(KEYMAP.moveEvent.thisOnlyHotkeys.down),
+    label: "Move only this occurrence, no series prompt",
     section: "edit",
     requiresWrite: true,
   },
