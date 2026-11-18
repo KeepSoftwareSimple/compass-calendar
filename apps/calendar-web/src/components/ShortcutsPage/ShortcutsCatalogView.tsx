@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { useCanonicalPath } from "@web/common/hooks/useCanonicalPath";
 import {
@@ -119,9 +119,12 @@ export const ShortcutsCatalogView = () => {
                     <span className="inline-flex shrink-0 items-center gap-1">
                       {shortcut.keys.map((key, keyIndex) => (
                         // biome-ignore lint/suspicious/noArrayIndexKey: keycap sequences repeat keys; position is the identity
-                        <kbd key={`${key}-${keyIndex}`} className="c-keycap">
-                          {key}
-                        </kbd>
+                        <Fragment key={`${key}-${keyIndex}`}>
+                          {shortcut.keyAlternatives && keyIndex > 0 ? (
+                            <span className="text-text-muted text-xs">or</span>
+                          ) : null}
+                          <kbd className="c-keycap">{key}</kbd>
+                        </Fragment>
                       ))}
                     </span>
                   </li>
