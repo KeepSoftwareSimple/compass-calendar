@@ -9,7 +9,7 @@
     "@googleapis/calendar": "^20.1.0",
     "@googleapis/people": "^8.0.0",
     "express": "^5.3.0",
-    "express-rate-limit": "^8.7.1",
+    "express-rate-limit": "^8.7.4",
     "fast-xml-parser": "^5.11.2",
     "google-auth-library": "^11.3.3",
     "ical.js": "^2.2.1",
