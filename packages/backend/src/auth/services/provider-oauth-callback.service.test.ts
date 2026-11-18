@@ -43,6 +43,30 @@ describe("provider-oauth-callback.service", () => {
     capture.mockRestore();
   });
 
+  it("records nothing for a whitespace-only state instead of missing_code", async () => {
+    const capture = spyOn(
+      analytics.providerOAuthSignupAnalytics,
+      "captureCallbackQuery",
+    ).mockResolvedValue(true);
+
+    // A blank param is junk traffic, not a real callback: before the emptiness
+    // rule trimmed, this captured an `oauth_callback` failure of missing_code.
+    const result = await handleProviderOAuthCallback({
+      provider: "google",
+      query: { state: " " },
+      telemetryOnly: false,
+      frontendUrl: "http://localhost:9080",
+    });
+
+    expect(capture).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      mode: "redirect",
+      location: "http://localhost:9080/",
+    });
+
+    capture.mockRestore();
+  });
+
   it("still records failures when state is present without a code", async () => {
     const capture = spyOn(
       analytics.providerOAuthSignupAnalytics,

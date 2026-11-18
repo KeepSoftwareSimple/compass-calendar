@@ -1,25 +1,27 @@
-import { OAUTH_CALLBACK_RECEIVED_EVENT } from "@core/analytics/oauth-signup.events";
+import {
+  isOAuthCallbackQueryEmpty,
+  OAUTH_CALLBACK_RECEIVED_EVENT,
+} from "@core/analytics/oauth-signup.events";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { relayProviderOAuthCallbackTelemetry } from "@web/auth/providers/authorization/relay-provider-oauth-callback-telemetry";
 
-function oauthCallbackSearchHasParams(search: string): boolean {
-  const query = search.startsWith("?") ? search.slice(1) : search;
-  const params = new URLSearchParams(query);
-  return Boolean(
-    params.get("state")?.trim() ||
-      params.get("code")?.trim() ||
-      params.get("error")?.trim(),
-  );
-}
-
 function shouldRelayProviderOAuthCallbackTelemetry(
   provider: ProviderKind,
   search: string,
 ): boolean {
+  // Apple records on the form POST instead, so a relay here would double-count.
   if (provider === "apple") return false;
-  return oauthCallbackSearchHasParams(search);
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  const params = new URLSearchParams(query);
+  // Emptiness is core's rule, not this file's: the backend callback service
+  // gates on the same function, so both doors agree on what is junk.
+  return !isOAuthCallbackQueryEmpty({
+    state: params.get("state"),
+    code: params.get("code"),
+    providerError: params.get("error"),
+  });
 }
 
 /**
