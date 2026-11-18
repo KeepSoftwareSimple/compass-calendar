@@ -11,6 +11,61 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-18
+
+Swept the six merges that landed after the 2026-11-17 ledger (#5280, #5282,
+#5283, #5285, #5286, #5287); #5279 was that sweep's own output and is
+excluded. Gate step 1 was clean on the three named detectors: `bun knip`
+reports no unused files or exports (the three standing config hints), `bun
+lint` passes every rule, `bun type-check` passes. One finding, shipped as the
+single `isOAuthCallbackQueryEmpty` rule that both OAuth callback doors now
+gate on. Everything below was examined and kept.
+
+- **#5283's 6,058-line Mac removal.** Checked for residue the detectors
+  cannot see: dead branches and expired conditions rather than unused
+  exports. The surviving trims are complete and deliberate.
+  `oauth-state.ts` keeps a documented tolerance for legacy `d: true` so
+  OAuth state tokens minted by the archived app still verify in flight, and
+  `connection.routes.ts` drops the `desktop=1` redirect param with it. No
+  orphaned branch found.
+
+- **`BillingCheckoutRequestSchema` going `.strict()`** (#5283). The schema
+  went from `{ returnTo: z.literal("desktop").optional() }` to
+  `z.object({}).strict().default({})`, so a body carrying any property now
+  fails parsing where it used to be ignored. That reads like a
+  compatibility break next to the deliberate legacy tolerance kept in
+  `oauth-state.ts` ten files away, but only the archived Mac app ever set
+  `returnTo`, and the embedded web panels post no body at all. Nothing live
+  can send a property for `.strict()` to reject.
+
+- **`DESKTOP_QUICK_ADD_PALETTE_PLACEHOLDER`** (`more.cmd.constants.ts`). The
+  name survives the Mac archival and reads like residue, but its only gate is
+  `selectIsCmdPaletteCreateMode`, a live web palette feature. Renaming for
+  consistency absent a correctness or discoverability problem is explicitly
+  inadmissible. Left alone.
+
+- **#5286's ring-color fix.** Replaced `gridEventSidebarEditingBoxShadow(indicatorColor)`
+  with the `GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW` constant and dropped the
+  `theme.getContrastText` fallback for `var(--text)`, net 33 lines removed
+  across six files. A function collapsing to a constant once its only
+  argument stopped varying is finished work, not a lead.
+
+- **The `apple` early return in `shouldRelayProviderOAuthCallbackTelemetry`**
+  (#5282). Sits one line above this sweep's finding and was deliberately not
+  folded into it. `provider === "apple"` skips the relay because the form POST
+  already recorded the callback, which is a fact about Apple's `response_mode`,
+  not about whether the query carries anything. Emptiness is core's rule;
+  double-count avoidance is this file's. They change for different reasons,
+  so only the emptiness half moved.
+
+- **`asNonEmptyString`** (`oauth-callback.analytics.ts`). A third private
+  `length > 0` check over the same callback fields, which looks like the
+  copy to fold next. It is not: it narrows four `unknown` values straight off
+  the request (including `oauthErrorDescription`, which the emptiness rule has
+  no opinion about) and it agrees with core's semantics rather than diverging
+  from them. Noted here because if it ever starts trimming independently, the
+  right move is to have it call the owning rule, not to add a fourth copy.
+
 ## 2026-11-17
 
 Swept the five merges that landed after the 2026-11-16 ledger (#5271, #5273,

@@ -22,6 +22,33 @@ describe("oauth-signup.events", () => {
     ).toBeUndefined();
   });
 
+  it("treats whitespace-only callback params as empty, not missing_code", () => {
+    // A crawler GET of `?state=%20` must be ignored like a bare callback. The
+    // backend service and the web landing recorder both gate on this rule, so
+    // if it stopped trimming here the two would disagree about the same query.
+    expect(
+      isOAuthCallbackQueryEmpty({
+        state: " ",
+        code: null,
+        providerError: null,
+      }),
+    ).toBe(true);
+    expect(
+      isOAuthCallbackQueryEmpty({
+        state: "  ",
+        code: "\t",
+        providerError: "\n",
+      }),
+    ).toBe(true);
+    expect(
+      oauthFailedReasonFromCallbackQuery({
+        state: " ",
+        code: null,
+        providerError: null,
+      }),
+    ).toBeUndefined();
+  });
+
   it("derives callback failure reasons from query params", () => {
     expect(
       oauthFailedReasonFromCallbackQuery({

@@ -17,13 +17,20 @@ export type OAuthFailedReason =
   | "user_create_failed"
   | "other";
 
+/**
+ * The single rule for "this callback carries nothing": no state, no code, no
+ * provider error. Whitespace-only values count as absent, so a crawler GET
+ * with a blank param is ignored the same way a bare one is. The backend
+ * callback service and the web landing recorder both gate on this function so
+ * they cannot disagree about what counts as junk traffic.
+ */
 export function isOAuthCallbackQueryEmpty(input: {
   state: string | null | undefined;
   code: string | null | undefined;
   providerError: string | null | undefined;
 }): boolean {
   const hasValue = (value: string | null | undefined) =>
-    typeof value === "string" && value.length > 0;
+    typeof value === "string" && value.trim().length > 0;
   return (
     !hasValue(input.state) &&
     !hasValue(input.code) &&
