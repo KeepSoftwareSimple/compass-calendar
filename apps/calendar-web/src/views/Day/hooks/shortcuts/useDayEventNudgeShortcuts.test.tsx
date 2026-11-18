@@ -585,10 +585,14 @@ describe("useDayEventNudgeShortcuts", () => {
     expect(document.activeElement).toBe(earlier);
   });
 
-  it("focuses the chronologically next event with ArrowRight", () => {
-    const earlier = focusCalendarTarget(TIMED_EVENT_ID, "timed");
-    const later = focusCalendarTarget(LATER_TIMED_EVENT_ID, "timed");
-    earlier.focus();
+  it("moves focus across side-by-side columns with ArrowRight and ArrowLeft", () => {
+    const left = focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const right = focusCalendarTarget(LATER_TIMED_EVENT_ID, "timed");
+    const rect = (x: number) =>
+      ({ top: 100, bottom: 200, left: x, right: x + 100 }) as DOMRect;
+    left.getBoundingClientRect = () => rect(0);
+    right.getBoundingClientRect = () => rect(200);
+    left.focus();
     const navigateToDate = mock(() => {});
     renderEditShortcuts({
       navigateToDate,
@@ -596,24 +600,10 @@ describe("useDayEventNudgeShortcuts", () => {
     });
 
     pressKey("ArrowRight");
-
-    expect(document.activeElement).toBe(later);
-    expect(navigateToDate).not.toHaveBeenCalled();
-  });
-
-  it("focuses the chronologically previous event with ArrowLeft", () => {
-    const earlier = focusCalendarTarget(TIMED_EVENT_ID, "timed");
-    const later = focusCalendarTarget(LATER_TIMED_EVENT_ID, "timed");
-    later.focus();
-    const navigateToDate = mock(() => {});
-    renderEditShortcuts({
-      navigateToDate,
-      timedEvents: [timedEvent, laterTimedEvent],
-    });
+    expect(document.activeElement).toBe(right);
 
     pressKey("ArrowLeft");
-
-    expect(document.activeElement).toBe(earlier);
+    expect(document.activeElement).toBe(left);
     expect(navigateToDate).not.toHaveBeenCalled();
   });
 
@@ -634,7 +624,7 @@ describe("useDayEventNudgeShortcuts", () => {
     expect(document.activeElement).toBe(earlier);
     expect(navigateToDate).not.toHaveBeenCalled();
 
-    pressKey("ArrowRight");
+    pressKey("ArrowDown");
 
     expect(document.activeElement).toBe(later);
     expect(navigateToDate).not.toHaveBeenCalled();

@@ -392,13 +392,16 @@ describe("getHorizontallyAdjacentTarget", () => {
   const solo = target("solo", "timed");
   const write = target("write", "timed");
   const visible = [write, dev, admin, solo];
-  const rects = new Map([
-    [dev, { top: 460, bottom: 540, left: 115, right: 1180 }],
-    [admin, { top: 505, bottom: 585, left: 275, right: 1180 }],
-    [solo, { top: 460, bottom: 585, left: 1195, right: 1835 }],
-    [write, { top: 85, bottom: 250, left: 115, right: 755 }],
-  ]);
-  const rectOf = (t: (typeof visible)[number]) => rects.get(t)!;
+  const rects: Record<
+    string,
+    Pick<DOMRect, "top" | "bottom" | "left" | "right">
+  > = {
+    dev: { top: 460, bottom: 540, left: 115, right: 1180 },
+    admin: { top: 505, bottom: 585, left: 275, right: 1180 },
+    solo: { top: 460, bottom: 585, left: 1195, right: 1835 },
+    write: { top: 85, bottom: 250, left: 115, right: 755 },
+  };
+  const rectOf = (t: { eventId: string }) => rects[t.eventId]!;
 
   it("moves right through each overlap column", () => {
     expect(
