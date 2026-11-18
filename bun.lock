@@ -203,7 +203,7 @@
       "dependencies": {
         "@compass/core": "1.0.0",
         "@googleapis/calendar": "^20.1.0",
-        "@googleapis/people": "^8.0.0",
+        "@googleapis/people": "^12.0.1",
         "express": "^5.3.0",
         "express-rate-limit": "^8.7.1",
         "fast-xml-parser": "^5.11.2",
@@ -375,7 +375,7 @@
 
     "@googleapis/calendar": ["@googleapis/calendar@20.1.0", "", { "dependencies": { "googleapis-common": "^9.0.0" } }, "sha512-bPO9wts48OAEhJn5UfgPC4FuyW/D6ufUzdXx0JHfeJIqg+O5bHvX/TenaAdbJuGhluhn5FLlyl6HzuhE4rFJqw=="],
 
-    "@googleapis/people": ["@googleapis/people@8.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-YGdkT345sCCGhPYbwaM9D9lBsuWqzLs2EIba1DU0lpKPjNTrpT5amWCA0V781pgBtmhuygGZA1pz6MdUyzwQuw=="],
+    "@googleapis/people": ["@googleapis/people@12.0.1", "", { "dependencies": { "googleapis-common": "^9.0.0" } }, "sha512-8I5c9wfiPUxxbaPIyOQUG3MkTviyKWsnj4uYBgCcS5y0PY3q2xjjQlnCem72m6DMn3EVjUoD+MxdHE8cEmmA/g=="],
 
     "@inquirer/ansi": ["@inquirer/ansi@2.0.8", "", {}, "sha512-WpQM+Ti6Z40EFwwt+uL2p4UabT+W179zHp6HhLVOzfbwnVn05IPO/eXIZXGNqcT1jbQ15SujNLzQ39k4QPPxBQ=="],
 
@@ -1906,8 +1906,6 @@
     "@floating-ui/dom/@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@floating-ui/react-dom/@floating-ui/dom": ["@floating-ui/dom@1.8.0", "", { "dependencies": { "@floating-ui/core": "^1.8.0", "@floating-ui/utils": "^0.2.12" } }, "sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg=="],
-
-    "@googleapis/people/googleapis-common": ["googleapis-common@8.0.1", "", { "dependencies": { "extend": "^3.0.2", "gaxios": "^7.0.0-rc.4", "google-auth-library": "^10.1.0", "qs": "^6.7.0", "url-template": "^2.0.8" } }, "sha512-eCzNACUXPb1PW5l0ULTzMHaL/ltPRADoPgjBlT8jWsTbxkCp6siv+qKJ/1ldaybCthGwsYFYallF7u9AkU4L+A=="],
 
     "@jest/types/chalk": ["chalk@4.1.2", "", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA=="],
 
