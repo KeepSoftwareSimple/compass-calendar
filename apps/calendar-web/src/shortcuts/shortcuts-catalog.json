@@ -343,6 +343,12 @@
         "section": "edit"
       },
       {
+        "id": "edit-open-location",
+        "keys": ["Mod", "Shift", "M"],
+        "label": "Open location in Google Maps",
+        "section": "edit"
+      },
+      {
         "id": "edit-pick-by-number",
         "keys": ["1-9", "0", "-", "="],
         "label": "Pick focused color or calendar",

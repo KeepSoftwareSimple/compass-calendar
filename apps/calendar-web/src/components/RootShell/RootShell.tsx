@@ -78,6 +78,7 @@ import {
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { useFocusNoticeShortcut } from "@web/shortcuts/notice-focus/useFocusNoticeShortcut";
+import { useOpenLocationShortcut } from "@web/shortcuts/open-location/useOpenLocationShortcut";
 import {
   useCalendarShellShortcuts,
   useNavigationShortcuts,
@@ -134,6 +135,7 @@ export function RootShell() {
   useFocusNoticeShortcut();
   useEventContextMenuShortcut();
   useHideEventShortcut();
+  useOpenLocationShortcut();
   useGoToDateShortcut();
   // Must stay mounted on every route, including Life, so the 5-minute
   // heads-up still fires while the calendar grid is not on screen.
