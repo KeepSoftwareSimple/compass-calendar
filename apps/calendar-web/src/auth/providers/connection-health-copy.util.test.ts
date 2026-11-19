@@ -61,7 +61,7 @@ describe("connectionHealthCopy", () => {
           state: "actionRequired",
           stateReason,
           credentialKind: "oauthRedirect",
-          }),
+        }),
       ).toBe(OAUTH_RECONNECT_COPY);
     }
   });
@@ -101,7 +101,6 @@ describe("connectionHealthCopy", () => {
       "Couldn't update your calendar. Last updated 15 min ago. Try Refresh, or reconnect if this continues.",
     );
   });
-
 });
 
 describe("connectionHealthNextAction", () => {

@@ -558,7 +558,7 @@ export const getSidebarSyncStatus = ({
             state: connection.state,
             stateReason: connection.stateReason,
             credentialKind: credentialKindForConnection(connection),
-                }) ?? OAUTH_RECONNECT_COPY)
+          }) ?? OAUTH_RECONNECT_COPY)
         : OAUTH_RECONNECT_COPY;
     return reconnectStatusFor(connection?.accountEmail, copy);
   }
@@ -610,7 +610,7 @@ export const getSidebarSyncStatus = ({
             state: connection.state,
             stateReason: connection.stateReason,
             credentialKind: credentialKindForConnection(connection),
-                }) ?? OAUTH_RECONNECT_COPY;
+          }) ?? OAUTH_RECONNECT_COPY;
         return reconnectStatusFor(connection.accountEmail, copy);
       }
       case "connecting":
