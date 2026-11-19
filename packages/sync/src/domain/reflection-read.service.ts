@@ -20,8 +20,8 @@ import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
 /**
- * Records per page. Small enough that one page stays well inside the caller's
- * deadline; the caller pages until `nextCursor` is null.
+ * Bound record/window projections per page, not just records. Reading eight
+ * anniversary windows must not multiply a page's recurrence expansion work.
  */
 const PAGE_SIZE = 25;
 
@@ -31,6 +31,10 @@ export async function readReflectionPage(
   scope: { tenantId: TenantId; principalId: PrincipalId },
   input: ReflectionReadRequest,
 ): Promise<ReflectionReadResponse> {
+  const pageSize = Math.max(
+    1,
+    Math.floor(PAGE_SIZE / Math.max(1, input.windows.length)),
+  );
   const calendars = await new ProviderCalendarRepository(db).listByPrincipal(
     scope.tenantId,
     scope.principalId,
@@ -127,18 +131,18 @@ export async function readReflectionPage(
           })
           .hint("reflection_principal_kind_start")
           .sort({ _id: 1 })
-          .limit(PAGE_SIZE)
+          .limit(pageSize)
           .toArray(),
       ),
     );
     // Both disjoint streams share the same exclusive cursor, so their first
-    // PAGE_SIZE rows each contain the union's first PAGE_SIZE. UTF-8
+    // pageSize rows each contain the union's first pageSize. UTF-8
     // comparison matches Mongo's ID order.
     rows.push(
       ...pages
         .flat()
         .sort((a, b) => Buffer.compare(Buffer.from(a._id), Buffer.from(b._id)))
-        .slice(0, PAGE_SIZE),
+        .slice(0, pageSize),
     );
   }
   const records = rows.map((row) => EventReadSchema.parse(row));
@@ -240,7 +244,7 @@ export async function readReflectionPage(
   const last = records.at(-1);
   return {
     events,
-    nextCursor: records.length === PAGE_SIZE && last ? last._id : null,
+    nextCursor: records.length === pageSize && last ? last._id : null,
     oldestYear: oldest ? Number(oldest.schedule.start.slice(0, 4)) : null,
     historyComplete,
     truncated,

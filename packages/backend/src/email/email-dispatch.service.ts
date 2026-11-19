@@ -34,7 +34,10 @@ import {
   type EmailProvider,
   type EmailSendInput,
 } from "@backend/email/providers/email.port";
-import { dispatchReflection } from "@backend/email/reflection-dispatch";
+import {
+  dispatchReflection,
+  dispatchReflectionBatch,
+} from "@backend/email/reflection-dispatch";
 import {
   enqueueDueReflections,
   isReflectionTrialUser,
@@ -171,14 +174,15 @@ export class EmailDispatchService {
       EMAIL_SEND_CLAIM_LEASE_MS,
     );
 
+    const reflections: EmailSendRecord[] = [];
     for (const row of claimed) {
       switch (row.sequence) {
         case "booking-host":
           await this.#dispatchBookingHostRow(row);
           break;
         case "reflection":
-          await dispatchReflection(row, this.getProvider());
-          break;
+          reflections.push(row);
+          continue;
         case "welcome":
           await this.#dispatchWelcomeRow(row);
           break;
@@ -190,6 +194,8 @@ export class EmailDispatchService {
       await sleep(EMAIL_SEND_PROVIDER_SPACING_MS);
     }
 
+    if (reflections.length)
+      await dispatchReflectionBatch(reflections, this.getProvider());
     await ensurePreviewLoopEnrollments(now);
   };
 

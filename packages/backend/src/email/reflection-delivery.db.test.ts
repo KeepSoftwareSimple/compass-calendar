@@ -13,7 +13,11 @@ import { EmailDispatchService } from "@backend/email/email-dispatch.service";
 import { EmailSendRecordSchema } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import * as emailClient from "@backend/email/providers/email.client";
-import { dispatchReflection } from "@backend/email/reflection-dispatch";
+import * as reflectionContext from "@backend/email/reflection-context";
+import {
+  dispatchReflection,
+  dispatchReflectionBatch,
+} from "@backend/email/reflection-dispatch";
 import {
   enqueueDueReflections,
   reflectionRolloutActive,
@@ -333,6 +337,76 @@ describe("private reflection delivery", () => {
     expect(
       (await mongoService.emailSend.findOne({ _id: row._id }))?.status,
     ).toBe("skipped");
+  });
+
+  it("prepares four reviews at a time while serializing provider sends and recovering after an error", async () => {
+    CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
+    for (let index = 0; index < 5; index++)
+      await mongoService.user.insertOne({
+        _id: new ObjectId(),
+        email: `batch-${index}@example.com`,
+        firstName: "Batch",
+        lastName: "",
+        name: "Batch",
+        locale: "en",
+        reflectionPreferences: {
+          enabled: true,
+          timeZone: "America/Denver",
+          excludedCalendarIds: [],
+        },
+      });
+    await enqueueDueReflections(now);
+    const rows = await mongoService.emailSend.find({}).toArray();
+    expect(rows).toHaveLength(6);
+    let preparing = 0;
+    let maxPreparing = 0;
+    let preparedCount = 0;
+    let releaseFirstBatch!: () => void;
+    const firstBatch = new Promise<void>((resolve) => {
+      releaseFirstBatch = resolve;
+    });
+    spyOn(reflectionContext, "prepareReflection").mockImplementation(
+      async (_row, user) => {
+        maxPreparing = Math.max(maxPreparing, ++preparing);
+        if (++preparedCount <= 4) {
+          if (preparedCount === 4) releaseFirstBatch();
+          await firstBatch;
+        }
+        preparing--;
+        return {
+          subject: "Your weekly review",
+          html: "<p>Review</p>",
+          text: "Review",
+          pdfBase64: null,
+          memoryIds: [],
+          calendarIds: [],
+          lifeRevision: user.lifePreferences?.revision ?? 0,
+        };
+      },
+    );
+    let sending = 0;
+    let maxSending = 0;
+    let attempts = 0;
+    const send = mock(async () => {
+      maxSending = Math.max(maxSending, ++sending);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      sending--;
+      if (++attempts === 1) throw new Error("temporary provider failure");
+      return { messageId: `batch-${attempts}` };
+    });
+    await dispatchReflectionBatch(rows, { send, verifyWebhook: () => [] });
+    expect(maxPreparing).toBe(4);
+    expect(maxSending).toBe(1);
+    expect(send).toHaveBeenCalledTimes(6);
+    expect(
+      await mongoService.emailSend.countDocuments({ status: "sent" }),
+    ).toBe(5);
+    expect(
+      await mongoService.emailSend.countDocuments({
+        status: "queued",
+        attemptCount: 1,
+      }),
+    ).toBe(1);
   });
 
   const onboardingRow = () =>

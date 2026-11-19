@@ -201,6 +201,34 @@ No production variables or secrets were changed. Set the rollout flags only
 with deployment of the build containing the date gate; older builds ignore
 the new date and must not be activated for general delivery.
 
+### November 19 release preparation evidence
+
+- User approved the latest inbox presentation and authorized release, readiness
+  work, deployment, and activation ahead of December 6.
+- Production inventory: 986 non-synthetic accounts, 985 eligible for initial
+  enrollment, one welcome unsubscribe excluded. One account has a saved
+  reflection timezone; remaining accounts use the documented UTC fallback.
+- Initial coverage scan: 176 complete, 809 incomplete, no service errors,
+  2,246 selected calendars. Metadata reads were 95 ms median and 663 ms maximum.
+  Missing supported history is being enqueued through the existing Sync jobs;
+  this inventory is not proof that the backfill has completed.
+- Staging rehearsal used an isolated, cleaned-up Mongo database and the release
+  scheduler code. November 29 queued only the private recipient; December 6 and
+  December 13 each queued both eligible fixture recipients. Concurrent cycles
+  produced no duplicate editions. Paused, suppressed, and unsubscribed fixtures
+  received no queued editions. No provider sends were made.
+- Dense-history reads formerly expanded up to 25 records across eight windows
+  in one page. The page now bounds total record/window projections to 25 and
+  preserves cursor completeness. Regression coverage drains 200 occurrences
+  across eight windows without loss or duplicates. No API timeout was widened.
+- Regular reviews prepare at most four recipients concurrently. Provider sends
+  remain sequential with the existing pacing, and a failed provider request
+  does not block later recipients. Welcome and booking dispatch remain serial.
+
+This section records preparation evidence. The release issue records the final
+verification, deployed tag, completed coverage scan, and activation read-back:
+[#5317](https://github.com/KeepSoftwareSimple/compass-calendar/issues/5317).
+
 ### Preparation and verification
 
 1. Run `bun run verify --strict`. Rehearse the generated config on staging with
