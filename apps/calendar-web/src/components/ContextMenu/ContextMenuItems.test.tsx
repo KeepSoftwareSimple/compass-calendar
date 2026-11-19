@@ -8,6 +8,7 @@ import {
 } from "@core/types/calendar.contracts";
 import { CalendarIdSchema, EventIdSchema } from "@core/types/domain-primitives";
 import { EventScheduleSchema } from "@core/types/event.contracts";
+import { EventColorSlotSchema } from "@core/types/event-color.contracts";
 import { createMockStandaloneEvent } from "@core/util/test/ccal.event.factory";
 import { render, screen, within } from "@web/__tests__/__mocks__/mock.render";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
@@ -272,6 +273,37 @@ describe("ContextMenuItems", () => {
     fireEvent.keyDown(anyFocusedSwatch, { code: "Digit1", key: "1" });
 
     expect(setColor).toHaveBeenCalledWith(null);
+    expect(mockClose).toHaveBeenCalled();
+  });
+
+  it("picks a color by digit while focus is on a menu action", () => {
+    const event = createMockGridEvent({ title: "Test Event" });
+    const setColor = mock();
+
+    const { ContextMenuItemsView } =
+      require("./ContextMenuItems") as typeof import("./ContextMenuItems");
+
+    renderWithTheme(
+      <ContextMenuItemsView
+        event={event}
+        close={mockClose}
+        actions={{
+          delete: mock(),
+          duplicate: mock(),
+          edit: mock(),
+          setColor,
+          toggleHidden: mock(),
+        }}
+      />,
+      { event },
+    );
+
+    fireEvent.keyDown(screen.getByRole("menuitem", { name: /Edit/ }), {
+      code: "Digit2",
+      key: "2",
+    });
+
+    expect(setColor).toHaveBeenCalledWith(EventColorSlotSchema.options[0]);
     expect(mockClose).toHaveBeenCalled();
   });
 

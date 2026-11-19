@@ -166,6 +166,18 @@ export function ContextMenuItemsView({
       id={ID_CONTEXT_MENU_ITEMS}
       role="none"
       onKeyDown={(keyEvent) => {
+        // Color pick keys work from anywhere in the menu, so the chips
+        // shown on each swatch are usable right after Space opens it.
+        const pickIndex = isReadOnly ? null : digitPickIndex(keyEvent);
+        const pickedColor =
+          pickIndex === null ? undefined : COLOR_OPTIONS[pickIndex];
+        if (pickedColor !== undefined) {
+          keyEvent.preventDefault();
+          keyEvent.stopPropagation();
+          pickColor(pickedColor);
+          recordHandledShortcutInvocation("edit-pick-by-number");
+          return;
+        }
         if (!isBareLetterKey(keyEvent.nativeEvent, HIDE_EVENT_LETTER)) {
           return;
         }
@@ -223,20 +235,7 @@ export function ContextMenuItemsView({
         );
       })}
       {!isReadOnly && (
-        <fieldset
-          className="group/menu-colors m-0 min-w-0 border-border border-t px-3 py-2"
-          onKeyDown={(keyEvent) => {
-            const pickIndex = digitPickIndex(keyEvent);
-            const pickedColor =
-              pickIndex === null ? undefined : COLOR_OPTIONS[pickIndex];
-            if (pickedColor !== undefined) {
-              keyEvent.preventDefault();
-              keyEvent.stopPropagation();
-              pickColor(pickedColor);
-              recordHandledShortcutInvocation("edit-pick-by-number");
-            }
-          }}
-        >
+        <fieldset className="m-0 min-w-0 border-border border-t px-3 py-2">
           <legend className="sr-only">Event color</legend>
           <div className="grid grid-cols-6 gap-1.5">
             {COLOR_OPTIONS.map((slot, colorIndex) => {
@@ -285,7 +284,7 @@ export function ContextMenuItemsView({
                   {PICK_KEY_LABELS[colorIndex] && (
                     <span
                       aria-hidden
-                      className="pointer-events-none invisible absolute inset-0 flex items-center justify-center rounded-sm bg-bg-primary/70 font-semibold text-[10px] text-text group-focus-within/menu-colors:visible"
+                      className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-sm bg-bg-primary/70 font-semibold text-[10px] text-text"
                     >
                       {PICK_KEY_LABELS[colorIndex]}
                     </span>
