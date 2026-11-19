@@ -1,12 +1,12 @@
 # Compass Calendar
 
-A keyboard calendar that makes scheduling a breeze.
+A keyboard calendar that makes scheduling almost fun.
 
 ## Why try compass?
 
 ### You'll get more done
 
-- The **first-class shortcuts** make updating your calendar a joy.
+- The **keyboard design** keeps your hands on the keyboard and your head in the zone.
 - The **minimal UI** will help you focus on what matters: your events.
 
 ### You'll get less done
@@ -21,13 +21,13 @@ Cool things you can do with in Compass
 - Move your focus to perfect spot (no more TABing endlessly)
 - Find the perfect slot for an event with your keyboard
 - Do everything from the keyboard
-- Google Calendar and Microsoft (Outlook) calendar sync
+- Google Calendar and Microsoft calendar sync
 - Create a public booking page at `/meet/:username`
 
 Things you can't do in Compass Calendar:
 
 - Click
-- Connect iCloud Calendars (WIP).
+- Connect iCloud calendars.
 
 ## Tech stack
 
