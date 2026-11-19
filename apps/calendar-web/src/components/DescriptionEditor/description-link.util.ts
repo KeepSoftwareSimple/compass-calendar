@@ -102,6 +102,7 @@ export const withEditorDomObserverPaused = (
   editor: Editor,
   mutate: () => void,
 ): void => {
+  if (editor.isDestroyed) return;
   const domObserver = (
     editor.view as unknown as {
       domObserver: { stop: () => void; start: () => void };

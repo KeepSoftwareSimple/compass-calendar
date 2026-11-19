@@ -17,7 +17,7 @@ export function useDescriptionLinkPresentation(
   const presentationAppliedRef = useRef(false);
 
   useEffect(() => {
-    if (!editor || !editorRoot) return;
+    if (!editor || !editorRoot || editor.isDestroyed) return;
 
     if (isFocused) {
       if (presentationAppliedRef.current) {
