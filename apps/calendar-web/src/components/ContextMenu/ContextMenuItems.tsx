@@ -20,6 +20,7 @@ import {
   eventColorLabel,
 } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { getGridCardTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { promptContextMenuKeyboardOnly } from "@web/common/utils/toast/context-menu-keyboard-only.toast";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
@@ -151,6 +152,13 @@ export function ContextMenuItemsView({
         ]),
   ];
 
+  // The grid card can be too short to show its time, so the menu repeats it
+  // for a quick look without opening the form.
+  const timeRange =
+    !event.isAllDay && event.startDate && event.endDate
+      ? getGridCardTimesLabel(event.startDate, event.endDate, event.timeZone)
+      : null;
+
   const nav = useContext(ContextMenuNavContext);
   const selectedColor = event.color ?? null;
   const pickColor = (color: EventColorSlot | null) => {
@@ -187,6 +195,11 @@ export function ContextMenuItemsView({
         close();
       }}
     >
+      {timeRange && (
+        <div className="border-border border-b px-3 py-2 text-s text-text-muted">
+          {timeRange}
+        </div>
+      )}
       {menuActions.map((item, index) => {
         // A real pointer click reports a positive `detail`; Enter/Space
         // activation of a focused button reports 0 (same signal

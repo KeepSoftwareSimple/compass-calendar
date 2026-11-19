@@ -22,6 +22,7 @@ import * as Track from "@web/auth/posthog/track";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { ID_CONTEXT_MENU_ITEMS } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { getGridCardTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { CONTEXT_MENU_KEYBOARD_ONLY_TOAST_ID } from "@web/common/utils/toast/context-menu-keyboard-only.toast";
@@ -274,6 +275,54 @@ describe("ContextMenuItems", () => {
 
     expect(setColor).toHaveBeenCalledWith(null);
     expect(mockClose).toHaveBeenCalled();
+  });
+
+  it("shows the event time for a timed event, but not for all-day", () => {
+    const { ContextMenuItemsView } =
+      require("./ContextMenuItems") as typeof import("./ContextMenuItems");
+    const actions = {
+      delete: mock(),
+      duplicate: mock(),
+      edit: mock(),
+      setColor: mock(),
+      toggleHidden: mock(),
+    };
+
+    const timed = createMockGridEvent({
+      isAllDay: false,
+      startDate: "2026-11-19T09:00:00",
+      endDate: "2026-11-19T10:30:00",
+    });
+    const expected = getGridCardTimesLabel(
+      timed.startDate,
+      timed.endDate,
+      timed.timeZone,
+    );
+    const { unmount } = renderWithTheme(
+      <ContextMenuItemsView
+        event={timed}
+        close={mockClose}
+        actions={actions}
+      />,
+      { event: timed },
+    );
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    unmount();
+
+    const allDay = createMockGridEvent({
+      isAllDay: true,
+      startDate: "2026-11-19",
+      endDate: "2026-11-20",
+    });
+    renderWithTheme(
+      <ContextMenuItemsView
+        event={allDay}
+        close={mockClose}
+        actions={actions}
+      />,
+      { event: allDay },
+    );
+    expect(screen.queryByText(expected)).not.toBeInTheDocument();
   });
 
   it("picks a color by digit while focus is on a menu action", () => {
