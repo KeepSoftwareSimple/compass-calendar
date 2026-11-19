@@ -328,6 +328,13 @@ export const SHORTCUTS_REGISTRY = [
     label: "Hide or show focused event",
     section: "edit",
   },
+  // Not form-gated: works on the focused grid event and in the open form.
+  {
+    id: "edit-open-location",
+    keys: [...B.editOpenLocation.keycaps],
+    label: "Open location in Google Maps",
+    section: "edit",
+  },
   {
     id: "edit-save",
     keys: [...B.editSave.keycaps],
