@@ -36,6 +36,20 @@ const unique = (events: ReflectionEvent[]) => {
     return !duplicate;
   });
 };
+const highlightTitle = (event: ReflectionEvent) =>
+  event.title.trim().replace(/\s+/g, " ").toLowerCase();
+
+// Repeated calendar entries can be distinct facts but make redundant highlights.
+const distinctTitles = (events: ReflectionEvent[]) => {
+  const titles = new Set<string>();
+  return events.filter((event) => {
+    const title = highlightTitle(event);
+    if (titles.has(title)) return false;
+    titles.add(title);
+    return true;
+  });
+};
+
 const rank = (event: ReflectionEvent) =>
   (event.recurring ? 0 : 10) + (event.schedule.kind === "allDay" ? 2 : 0);
 
@@ -117,16 +131,16 @@ export function selectReflectionEvents(input: {
     const shiftedEnd = dayjs(date).add(offset, "day").format("YYYY-MM-DD");
     return localDate(event) >= shiftedStart && localDate(event) <= shiftedEnd;
   };
-  const memories = history
-    .sort(
+  const memories = distinctTitles(
+    history.sort(
       (a, b) =>
         Number(historicalWeekMatch(b)) - Number(historicalWeekMatch(a)) ||
         Number(input.previousMemoryIds.has(a.id)) -
           Number(input.previousMemoryIds.has(b.id)) ||
         rank(b) - rank(a) ||
         digest(`${date}:${a.id}`).localeCompare(digest(`${date}:${b.id}`)),
-    )
-    .slice(0, 3);
+    ),
+  ).slice(0, 3);
   return { recent, upcoming, memories, weekMatch: historicalWeekMatch };
 }
 
@@ -152,7 +166,7 @@ export function renderReflectionEmail(input: {
   const reviewDate = dayjs(input.date);
   // The Thursday determines the ISO week, including December/January boundaries.
   const thursday = reviewDate.add(3 - ((reviewDate.day() + 6) % 7), "day");
-  const subject = `Weekly review (${Math.ceil(thursday.dayOfYear() / 7)})`;
+  const subject = `Your weekly review (${Math.ceil(thursday.dayOfYear() / 7)})`;
   const dateRange = (startDate: string, endDate: string) => {
     const start = dayjs(startDate),
       end = dayjs(endDate);
@@ -166,6 +180,54 @@ export function renderReflectionEmail(input: {
     event.schedule.kind === "allDay"
       ? dayjs(event.schedule.start)
       : dayjs(event.schedule.start).tz(input.timeZone);
+  const chronological = (a: ReflectionEvent, b: ReflectionEvent) => {
+    const start = (event: ReflectionEvent) =>
+      event.schedule.kind === "allDay"
+        ? dayjs.tz(`${event.schedule.start} 00:00`, input.timeZone).valueOf()
+        : Date.parse(event.schedule.start);
+    return start(a) - start(b) || a.id.localeCompare(b.id);
+  };
+  const highlights = (
+    events: ReflectionEvent[],
+    spreadAcrossDays = false,
+    limit = 3,
+  ) => {
+    if (!limit) return [];
+    let candidates = distinctTitles(events);
+    if (spreadAcrossDays) {
+      const byDay = new Map<string, ReflectionEvent[]>();
+      for (const event of events) {
+        const date = calendarDate(event).format("YYYY-MM-DD");
+        const day = byDay.get(date) ?? [];
+        day.push(event);
+        byDay.set(date, day);
+      }
+      const selected = new Map<string, ReflectionEvent>();
+      const dayForTitle = new Map<string, string>();
+      // Reassign an earlier day's choice when its title is another day's only
+      // option. At most three selected days participate in this search.
+      const chooseForDay = (date: string, tried: Set<string>): boolean => {
+        for (const event of byDay.get(date) ?? []) {
+          const title = highlightTitle(event);
+          if (tried.has(title)) continue;
+          tried.add(title);
+          const previousDay = dayForTitle.get(title);
+          if (previousDay && !chooseForDay(previousDay, tried)) continue;
+          selected.set(date, event);
+          dayForTitle.set(title, date);
+          return true;
+        }
+        return false;
+      };
+      for (const date of byDay.keys()) {
+        chooseForDay(date, new Set());
+        if (selected.size === limit) break;
+      }
+      // Fill sparse weeks from the original priority order, without repeats.
+      candidates = distinctTitles([...selected.values(), ...events]);
+    }
+    return candidates.slice(0, limit).sort(chronological);
+  };
   const label = (event: ReflectionEvent) => {
     const date = calendarDate(event);
     return `${date.format("ddd, MMM D")}${event.schedule.kind === "timed" ? ` at ${date.format("h:mm a")}` : ""}: ${event.title}`;
@@ -190,10 +252,28 @@ export function renderReflectionEmail(input: {
       ),
     );
   }
-  const upcomingCount = Math.max(
-    3,
-    input.upcoming.filter((event) => meetingPriority(event) > 0).length,
+  const upcomingMeetings = distinctTitles(
+    input.upcoming.filter((event) => meetingPriority(event) > 0),
   );
+  const meetingTitles = new Set(upcomingMeetings.map(highlightTitle));
+  const meetingDays = new Set(
+    upcomingMeetings.map((event) => calendarDate(event).format("YYYY-MM-DD")),
+  );
+  const soloCandidates = input.upcoming
+    .filter((event) => !meetingTitles.has(highlightTitle(event)))
+    .sort(
+      (a, b) =>
+        Number(meetingDays.has(calendarDate(a).format("YYYY-MM-DD"))) -
+        Number(meetingDays.has(calendarDate(b).format("YYYY-MM-DD"))),
+    );
+  const upcomingHighlights = [
+    ...upcomingMeetings,
+    ...highlights(
+      soloCandidates,
+      true,
+      Math.max(0, 3 - upcomingMeetings.length),
+    ),
+  ].sort(chronological);
   const sections: (
     | { heading: string; lines: string[] }
     | { heading: string; links: typeof nextSteps }
@@ -201,7 +281,7 @@ export function renderReflectionEmail(input: {
     {
       heading: `Your past week, ${dateRange(input.recentStartDate, input.cadence === "daily" ? dayjs(input.upcomingStartDate).subtract(1, "day").format("YYYY-MM-DD") : input.date)}`,
       lines: input.recent.length
-        ? input.recent.slice(0, 3).map(label)
+        ? highlights(input.recent, true).map(label)
         : ["No completed events in your calendar this week."],
     },
     {
@@ -210,7 +290,7 @@ export function renderReflectionEmail(input: {
         dayjs(input.upcomingStartDate).add(6, "day").format("YYYY-MM-DD"),
       )}`,
       lines: input.upcoming.length
-        ? input.upcoming.slice(0, upcomingCount).map(label)
+        ? upcomingHighlights.map(label)
         : ["No upcoming highlights in your calendar."],
     },
     { heading: "Next steps:", links: nextSteps },
@@ -218,7 +298,7 @@ export function renderReflectionEmail(input: {
   if (input.memories.length)
     sections.push({
       heading: "This time in your life",
-      lines: input.memories.map(
+      lines: highlights(input.memories).map(
         (event) => `${calendarDate(event).year()}: ${event.title}`,
       ),
     });

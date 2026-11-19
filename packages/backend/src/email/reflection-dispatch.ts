@@ -50,6 +50,10 @@ export async function dispatchReflection(
     await cancel("Missing reflection edition");
     return;
   }
+  if (!options.onboarding && edition.cadence !== "weekly") {
+    await cancel("Reflection cadence changed to weekly");
+    return;
+  }
   if (
     !options.onboarding &&
     new Date() >= reflectionExpiresAt(edition.date, edition.timeZone)

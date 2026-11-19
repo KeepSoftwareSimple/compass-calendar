@@ -23,6 +23,8 @@ async function runEmailBlockScript(
         ...process.env,
         REFLECTION_ENABLED: "",
         REFLECTION_ROLLOUT_ENABLED: "",
+        REFLECTION_ROLLOUT_START_DATE: "",
+        REFLECTION_ENROLL_EXISTING: "",
         REFLECTION_TRIAL_USER_ID: "",
         REFLECTION_TRIAL_EMAIL: "",
         ...env,
@@ -122,6 +124,7 @@ describe("deploy write email block", () => {
     expect(parse(result.stdout).email.reflection).toEqual({
       enabled: true,
       rolloutEnabled: false,
+      enrollExisting: false,
       trialUserId: userId,
       trialEmail: email,
     });
@@ -145,6 +148,33 @@ describe("deploy write email block", () => {
     );
   });
 
+  it("persists the dated population rollout through deploy generation", async () => {
+    const result = await runWriteEmailBlock({
+      ...completeEmailConfig,
+      REFLECTION_ENABLED: "true",
+      REFLECTION_ROLLOUT_ENABLED: "true",
+      REFLECTION_ROLLOUT_START_DATE: "2026-12-06",
+      REFLECTION_ENROLL_EXISTING: "true",
+    });
+    expect(result.exitCode).toBe(0);
+    expect(parse(result.stdout).email.reflection).toEqual({
+      enabled: true,
+      rolloutEnabled: true,
+      rolloutStartDate: "2026-12-06",
+      enrollExisting: true,
+    });
+    const workflow = readFileSync(
+      ".github/workflows/_deploy-environment.yml",
+      "utf8",
+    );
+    expect(workflow).toContain(
+      "REFLECTION_ROLLOUT_START_DATE: ${{ vars.REFLECTION_ROLLOUT_START_DATE }}",
+    );
+    expect(workflow).toContain(
+      "REFLECTION_ENROLL_EXISTING: ${{ vars.REFLECTION_ENROLL_EXISTING }}",
+    );
+  });
+
   it("retains an explicit reflection kill switch and rejects invalid flag values", async () => {
     const stopped = await runWriteEmailBlock({
       ...completeEmailConfig,
@@ -154,6 +184,7 @@ describe("deploy write email block", () => {
     expect(parse(stopped.stdout).email.reflection).toEqual({
       enabled: false,
       rolloutEnabled: false,
+      enrollExisting: false,
     });
     const invalid = await runWriteEmailBlock({
       ...completeEmailConfig,

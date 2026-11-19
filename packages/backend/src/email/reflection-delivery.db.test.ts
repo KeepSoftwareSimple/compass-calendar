@@ -14,7 +14,10 @@ import { EmailSendRecordSchema } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import * as emailClient from "@backend/email/providers/email.client";
 import { dispatchReflection } from "@backend/email/reflection-dispatch";
-import { enqueueDueReflections } from "@backend/email/reflection-enrollment";
+import {
+  enqueueDueReflections,
+  reflectionRolloutActive,
+} from "@backend/email/reflection-enrollment";
 import { createUnsubscribeToken } from "@backend/email/unsubscribe-token";
 import {
   afterAll,
@@ -41,6 +44,8 @@ describe("private reflection delivery", () => {
     Object.assign(CONFIG, {
       REFLECTION_ENABLED: true,
       REFLECTION_ROLLOUT_ENABLED: false,
+      REFLECTION_ROLLOUT_START_DATE: undefined,
+      REFLECTION_ENROLL_EXISTING: false,
       REFLECTION_TRIAL_USER_ID: userId.toHexString(),
       REFLECTION_TRIAL_EMAIL: "trial@example.com",
       EMAIL_PROVIDER: "log",
@@ -94,7 +99,7 @@ describe("private reflection delivery", () => {
     setSystemTime();
   });
 
-  it("enqueues exactly one daily edition across concurrent cycles and never enrolls another account", async () => {
+  it("enqueues exactly one weekly edition across concurrent cycles and never enrolls another account", async () => {
     await mongoService.user.insertOne({
       _id: new ObjectId(),
       email: "other@example.com",
@@ -112,13 +117,222 @@ describe("private reflection delivery", () => {
     const rows = await mongoService.emailSend.find({}).toArray();
     expect(rows).toHaveLength(1);
     expect(rows[0]?.recipientEmail).toBe("trial@example.com");
-    expect(rows[0]?.reflection?.cadence).toBe("daily");
+    expect(rows[0]?.reflection?.cadence).toBe("weekly");
     expect(rows[0]?.sendAt.toISOString()).toBe("2026-11-01T17:30:00.000Z");
     expect(
       (
         await mongoService.user.findOne({ _id: userId })
       )?.reflectionNextSendAt?.toISOString(),
-    ).toBe("2026-11-02T17:30:00.000Z");
+    ).toBe("2026-11-08T17:30:00.000Z");
+  });
+
+  it("opens on the local launch date across the international date line and honors rollback", () => {
+    Object.assign(CONFIG, {
+      REFLECTION_ROLLOUT_ENABLED: true,
+      REFLECTION_ROLLOUT_START_DATE: "2026-12-06",
+    });
+    const instant = new Date("2026-12-05T20:30:00Z");
+    expect(reflectionRolloutActive("Pacific/Kiritimati", instant)).toBe(true);
+    expect(reflectionRolloutActive("America/Denver", instant)).toBe(false);
+    expect(reflectionRolloutActive("Pacific/Honolulu", instant)).toBe(false);
+    expect(
+      reflectionRolloutActive(
+        "America/Denver",
+        new Date("2026-12-06T06:59:59Z"),
+      ),
+    ).toBe(false);
+    expect(
+      reflectionRolloutActive(
+        "America/Denver",
+        new Date("2026-12-06T07:00:00Z"),
+      ),
+    ).toBe(true);
+    CONFIG.REFLECTION_ROLLOUT_ENABLED = false;
+    expect(reflectionRolloutActive("Pacific/Kiritimati", instant)).toBe(false);
+  });
+
+  it("does not duplicate a Sunday edition already sent by the daily trial", async () => {
+    await enqueueDueReflections(now);
+    await mongoService.emailSend.updateMany(
+      {},
+      { $set: { status: "sent", "reflection.cadence": "daily" } },
+    );
+    await mongoService.user.updateOne(
+      { _id: userId },
+      { $unset: { reflectionNextSendAt: "" } },
+    );
+    await enqueueDueReflections(now);
+    expect(await mongoService.emailSend.countDocuments({})).toBe(1);
+  });
+
+  it("does not send a private edition on weekdays", async () => {
+    const monday = new Date("2026-11-23T17:31:00Z");
+    setSystemTime(monday);
+    await enqueueDueReflections(monday);
+    expect(await mongoService.emailSend.countDocuments({})).toBe(0);
+    expect(
+      (
+        await mongoService.user.findOne({ _id: userId })
+      )?.reflectionNextSendAt?.toISOString(),
+    ).toBe("2026-11-29T17:30:00.000Z");
+  });
+
+  it("prepares existing accounts, preserves opt-outs, and opens on December 6", async () => {
+    Object.assign(CONFIG, {
+      REFLECTION_ROLLOUT_ENABLED: true,
+      REFLECTION_ROLLOUT_START_DATE: "2026-12-06",
+      REFLECTION_ENROLL_EXISTING: true,
+    });
+    const base = {
+      firstName: "Existing",
+      lastName: "User",
+      name: "Existing User",
+      locale: "en",
+    };
+    const legacy = new ObjectId();
+    const excluded = [
+      new ObjectId(),
+      new ObjectId(),
+      new ObjectId(),
+      new ObjectId(),
+      new ObjectId(),
+    ];
+    await mongoService.user.insertMany([
+      { ...base, _id: legacy, email: "existing@example.com" },
+      {
+        ...base,
+        _id: excluded[0],
+        email: "paused@example.com",
+        reflectionPreferences: {
+          enabled: false,
+          timeZone: "America/Denver",
+          excludedCalendarIds: ["hidden"],
+        },
+      },
+      {
+        ...base,
+        _id: excluded[1],
+        email: "unsubscribed@example.com",
+        emailPreferences: { unsubscribedAt: now },
+      },
+      {
+        ...base,
+        _id: excluded[2],
+        email: "suppressed@example.com",
+        emailPreferences: { suppressedAt: now },
+      },
+      {
+        ...base,
+        _id: excluded[3],
+        email: "synthetic@example.com",
+        isSynthetic: true,
+      },
+      {
+        ...base,
+        _id: excluded[4],
+        email: "disabled@example.com",
+        emailPreferences: { reflectionDisabledAt: now },
+      },
+    ]);
+    const before = new Date("2026-11-29T17:31:00Z");
+    setSystemTime(before);
+    await enqueueDueReflections(before);
+    const rows = await mongoService.emailSend.find({}).toArray();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.userId.equals(userId)).toBe(true);
+    const prepared = await mongoService.user.findOne({ _id: legacy });
+    expect(prepared?.reflectionPreferences?.enabled).toBe(true);
+    expect(prepared?.reflectionNextSendAt?.toISOString()).toBe(
+      "2026-12-06T10:30:00.000Z",
+    );
+    for (const id of excluded) {
+      expect(
+        (await mongoService.user.findOne({ _id: id }))?.reflectionPreferences
+          ?.enabled,
+      ).not.toBe(true);
+    }
+    expect(
+      (await mongoService.user.findOne({ _id: excluded[0] }))
+        ?.reflectionPreferences?.excludedCalendarIds,
+    ).toEqual(["hidden"]);
+    const launch = new Date("2026-12-06T10:31:00Z");
+    setSystemTime(launch);
+    await Promise.all([
+      enqueueDueReflections(launch),
+      enqueueDueReflections(launch),
+    ]);
+    const publicRows = await mongoService.emailSend
+      .find({ userId: legacy })
+      .toArray();
+    expect(publicRows).toHaveLength(1);
+    expect(publicRows[0]?.reflection).toMatchObject({
+      date: "2026-12-06",
+      cadence: "weekly",
+      trial: false,
+    });
+    const localLaunch = new Date("2026-12-06T17:31:00Z");
+    setSystemTime(localLaunch);
+    await enqueueDueReflections(localLaunch);
+    expect(
+      await mongoService.emailSend.countDocuments({
+        userId,
+        "reflection.date": "2026-12-06",
+        "reflection.trial": false,
+      }),
+    ).toBe(1);
+    const followingUtcSunday = new Date("2026-12-13T10:31:00Z");
+    setSystemTime(followingUtcSunday);
+    await enqueueDueReflections(followingUtcSunday);
+    const followingSunday = new Date("2026-12-13T17:31:00Z");
+    setSystemTime(followingSunday);
+    await enqueueDueReflections(followingSunday);
+    expect(
+      await mongoService.emailSend.countDocuments({
+        "reflection.date": "2026-12-13",
+        "reflection.cadence": "weekly",
+        "reflection.trial": false,
+      }),
+    ).toBe(2);
+  });
+
+  it.each([false, true])(
+    "checks the launch date at dispatch, including onboarding=%s",
+    async (onboarding) => {
+      await enqueueDueReflections(now);
+      const row = (await mongoService.emailSend.findOne({}))!;
+      await mongoService.emailSend.updateOne(
+        { _id: row._id },
+        { $set: { "reflection.trial": false } },
+      );
+      Object.assign(CONFIG, {
+        REFLECTION_ROLLOUT_ENABLED: true,
+        REFLECTION_ROLLOUT_START_DATE: "2026-12-06",
+      });
+      const send = mock(async () => ({ messageId: "unexpected" }));
+      await dispatchReflection(
+        { ...row, reflection: { ...row.reflection!, trial: false } },
+        { send, verifyWebhook: () => [] },
+        { onboarding },
+      );
+      expect(send).not.toHaveBeenCalled();
+      expect(
+        (await mongoService.emailSend.findOne({ _id: row._id }))?.status,
+      ).toBe("skipped");
+    },
+  );
+
+  it("cancels queued legacy daily editions", async () => {
+    await enqueueDueReflections(now);
+    const row = (await mongoService.emailSend.findOne({}))!;
+    const send = mock(async () => ({ messageId: "unexpected" }));
+    await dispatchReflection(
+      { ...row, reflection: { ...row.reflection!, cadence: "daily" } },
+      { send, verifyWebhook: () => [] },
+    );
+    expect(send).not.toHaveBeenCalled();
+    expect(
+      (await mongoService.emailSend.findOne({ _id: row._id }))?.status,
+    ).toBe("skipped");
   });
 
   const onboardingRow = () =>
@@ -347,7 +561,7 @@ describe("private reflection delivery", () => {
     expect(payload?.html).not.toContain("<img");
     expect(payload?.html).not.toContain("cid:");
     expect(payload?.personal).toBe(true);
-    expect(payload?.text).toContain("/week/2026-11-01");
+    expect(payload?.text).toContain("/week/2026-11-02");
     const sent = await mongoService.emailSend.findOne({ _id: row._id });
     expect(sent?.status).toBe("sent");
     expect(sent?.reflection?.prepared).toBeUndefined();
