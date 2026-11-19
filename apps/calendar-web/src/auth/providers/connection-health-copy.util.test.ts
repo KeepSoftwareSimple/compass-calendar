@@ -27,7 +27,6 @@ describe("connectionHealthCopy", () => {
         state: "actionRequired",
         stateReason,
         credentialKind: "oauthRedirect",
-        surface: "settings",
       });
       expect(copy).toBeTruthy();
       expect(copy).not.toContain("—");
@@ -44,7 +43,6 @@ describe("connectionHealthCopy", () => {
         state: "actionRequired",
         stateReason,
         credentialKind: "credentialForm",
-        surface: "settings",
       });
       expect(copy).toBeTruthy();
       expect(copy).not.toMatch(/reconnect google/i);
@@ -63,8 +61,7 @@ describe("connectionHealthCopy", () => {
           state: "actionRequired",
           stateReason,
           credentialKind: "oauthRedirect",
-          surface: "settings",
-        }),
+          }),
       ).toBe(OAUTH_RECONNECT_COPY);
     }
   });
@@ -75,7 +72,6 @@ describe("connectionHealthCopy", () => {
         state: "actionRequired",
         stateReason: "consentRequired",
         credentialKind: "oauthRedirect",
-        surface: "settings",
       }),
     ).toBe(CONSENT_REQUIRED_COPY);
   });
@@ -86,7 +82,6 @@ describe("connectionHealthCopy", () => {
         state: "delayed",
         stateReason: "workOverdue",
         credentialKind: "oauthRedirect",
-        surface: "settings",
         lastUpdatedSuffix: " Last updated 15 min ago.",
       }),
     ).toBe(
@@ -100,7 +95,6 @@ describe("connectionHealthCopy", () => {
         state: "delayed",
         stateReason: "providerErrors",
         credentialKind: "oauthRedirect",
-        surface: "settings",
         lastUpdatedSuffix: " Last updated 15 min ago.",
       }),
     ).toBe(
@@ -108,27 +102,6 @@ describe("connectionHealthCopy", () => {
     );
   });
 
-  it("renders delayed workOverdue sidebar copy whole", () => {
-    expect(
-      connectionHealthCopy({
-        state: "delayed",
-        stateReason: "workOverdue",
-        credentialKind: "oauthRedirect",
-        surface: "sidebarShort",
-      }),
-    ).toBe("Calendar updates are delayed");
-  });
-
-  it("renders delayed providerErrors sidebar copy whole", () => {
-    expect(
-      connectionHealthCopy({
-        state: "delayed",
-        stateReason: "providerErrors",
-        credentialKind: "credentialForm",
-        surface: "sidebarShort",
-      }),
-    ).toBe("Couldn't update your calendar");
-  });
 });
 
 describe("connectionHealthNextAction", () => {

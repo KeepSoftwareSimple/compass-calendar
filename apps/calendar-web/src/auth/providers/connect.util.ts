@@ -257,6 +257,9 @@ export const calendarReconnectBannerMessage = (
   return RECONNECT_BANNER_MESSAGE[provider];
 };
 
+/** Delayed title when no connection is named, so every surface says it once. */
+export const CALENDAR_DELAYED_FALLBACK_TITLE = "Calendar updates are delayed";
+
 const delayedTitle = (provider: ProviderKind): string =>
   `${calendarProductName(provider)} updates are delayed`;
 
@@ -304,7 +307,6 @@ const delayedSettingsStatus = (
       state: connection.state,
       stateReason: connection.stateReason,
       credentialKind: credentialKindForConnection(connection),
-      surface: "settings",
       lastUpdatedSuffix: lastUpdatedSuffix(connection.lastSyncedAt, nowMs),
     }) ?? attentionFallbackCopy();
   return { variant: "warning", text };
@@ -318,7 +320,6 @@ const reauthSettingsStatus = (
       state: connection.state,
       stateReason: connection.stateReason,
       credentialKind: credentialKindForConnection(connection),
-      surface: "settings",
     }) ?? OAUTH_RECONNECT_COPY;
   return { variant: "error", text };
 };
@@ -557,8 +558,7 @@ export const getSidebarSyncStatus = ({
             state: connection.state,
             stateReason: connection.stateReason,
             credentialKind: credentialKindForConnection(connection),
-            surface: "settings",
-          }) ?? OAUTH_RECONNECT_COPY)
+                }) ?? OAUTH_RECONNECT_COPY)
         : OAUTH_RECONNECT_COPY;
     return reconnectStatusFor(connection?.accountEmail, copy);
   }
@@ -573,7 +573,7 @@ export const getSidebarSyncStatus = ({
         text: calendarDelayedSidebarMessage(connectionProviderKind(connection)),
       };
     }
-    return { variant: "error", text: "Calendar updates are delayed" };
+    return { variant: "error", text: CALENDAR_DELAYED_FALLBACK_TITLE };
   }
 
   // Align with the Syncing… status while we wait for delayed to clear —
@@ -610,8 +610,7 @@ export const getSidebarSyncStatus = ({
             state: connection.state,
             stateReason: connection.stateReason,
             credentialKind: credentialKindForConnection(connection),
-            surface: "settings",
-          }) ?? OAUTH_RECONNECT_COPY;
+                }) ?? OAUTH_RECONNECT_COPY;
         return reconnectStatusFor(connection.accountEmail, copy);
       }
       case "connecting":

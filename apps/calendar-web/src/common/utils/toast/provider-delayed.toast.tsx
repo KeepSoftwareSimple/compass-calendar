@@ -1,7 +1,10 @@
 import { createElement } from "react";
 import { type Id } from "react-toastify";
 import { type SyncConnectionSummary } from "@core/types/user.types";
-import { calendarDelayedToastMessage } from "@web/auth/providers/connect.util";
+import {
+  CALENDAR_DELAYED_FALLBACK_TITLE,
+  calendarDelayedToastMessage,
+} from "@web/auth/providers/connect.util";
 import { useConnectGoogle } from "@web/auth/providers/useConnectProvider";
 import {
   rememberPendingDelayed,
@@ -31,7 +34,7 @@ export const ProviderDelayedToast = ({
   const { title, body } = connection
     ? calendarDelayedToastMessage(connection)
     : {
-        title: "Calendar updates are delayed",
+        title: CALENDAR_DELAYED_FALLBACK_TITLE,
         body: "Updates are taking longer than expected. Compass will keep trying.",
       };
 
