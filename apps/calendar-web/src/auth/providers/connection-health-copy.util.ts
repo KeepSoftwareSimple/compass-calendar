@@ -54,16 +54,10 @@ const ATTENTION_FALLBACK_COPY =
 const DELAYED_WORK_OVERDUE_SETTINGS =
   "Calendar updates are taking longer than usual.";
 const DELAYED_PROVIDER_ERRORS_SETTINGS = "Couldn't update your calendar.";
-const DELAYED_WORK_OVERDUE_SIDEBAR = "Calendar updates are delayed";
-const DELAYED_PROVIDER_ERRORS_SIDEBAR = "Couldn't update your calendar";
-
-export type HealthCopySurface = "settings" | "sidebarShort";
-
 export type HealthCopyContext = {
   state: ConnectionState | string;
   stateReason: ConnectionStateReason | string | null;
   credentialKind: ConnectFlowKind;
-  surface: HealthCopySurface;
   lastUpdatedSuffix?: string;
 };
 
@@ -97,13 +91,7 @@ export function isRefreshReason(
 
 /** Full user-facing status string for a state + reason + credential kind. */
 export function connectionHealthCopy(ctx: HealthCopyContext): string | null {
-  const {
-    state,
-    stateReason,
-    credentialKind,
-    surface,
-    lastUpdatedSuffix = "",
-  } = ctx;
+  const { state, stateReason, credentialKind, lastUpdatedSuffix = "" } = ctx;
 
   if (stateReason === "consentRequired") {
     return CONSENT_REQUIRED_COPY;
@@ -112,23 +100,13 @@ export function connectionHealthCopy(ctx: HealthCopyContext): string | null {
   if (state === "delayed" || stateReason === "workOverdue") {
     const base =
       stateReason === "providerErrors"
-        ? surface === "sidebarShort"
-          ? DELAYED_PROVIDER_ERRORS_SIDEBAR
-          : DELAYED_PROVIDER_ERRORS_SETTINGS
-        : surface === "sidebarShort"
-          ? DELAYED_WORK_OVERDUE_SIDEBAR
-          : DELAYED_WORK_OVERDUE_SETTINGS;
-    if (surface === "sidebarShort") return base;
+        ? DELAYED_PROVIDER_ERRORS_SETTINGS
+        : DELAYED_WORK_OVERDUE_SETTINGS;
     return `${base}${lastUpdatedSuffix} Try Refresh, or reconnect if this continues.`;
   }
 
   if (stateReason === "providerErrors") {
-    const base =
-      surface === "sidebarShort"
-        ? DELAYED_PROVIDER_ERRORS_SIDEBAR
-        : DELAYED_PROVIDER_ERRORS_SETTINGS;
-    if (surface === "sidebarShort") return base;
-    return `${base}${lastUpdatedSuffix} Try Refresh, or reconnect if this continues.`;
+    return `${DELAYED_PROVIDER_ERRORS_SETTINGS}${lastUpdatedSuffix} Try Refresh, or reconnect if this continues.`;
   }
 
   if (

@@ -1,5 +1,6 @@
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
+  CALENDAR_DELAYED_FALLBACK_TITLE,
   calendarDelayedSidebarMessage,
   calendarDelayedToastMessage,
   formatLastSyncedLabel,
@@ -358,6 +359,21 @@ describe("getSidebarSyncStatus", () => {
     ).toEqual({
       variant: "warning",
       text: "Google Calendar updates are delayed",
+    });
+  });
+
+  it("falls back to the unnamed delayed title when no connection is known", () => {
+    expect(
+      getSidebarSyncStatus({
+        connection: null,
+        isConnecting: false,
+        state: "ATTENTION",
+        nowMs,
+        refreshGaveUp: true,
+      }),
+    ).toEqual({
+      variant: "error",
+      text: CALENDAR_DELAYED_FALLBACK_TITLE,
     });
   });
 

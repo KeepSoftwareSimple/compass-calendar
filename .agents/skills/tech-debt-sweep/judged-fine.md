@@ -11,6 +11,75 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-19
+
+Swept the merges that landed after the 2026-11-18 ledger (#5281, #5284,
+#5289, #5290, #5291, #5292, #5293, #5299, #5312, plus dependency bumps);
+#5288 and #5201 were prior sweeps' own output and are excluded. Gate step 1
+was clean on the three named detectors: `bun knip` reports no unused files or
+exports (the three standing config hints), `bun lint` passes every rule, `bun
+type-check` passes. One finding, shipped as the removal of the dead
+`sidebarShort` surface in `connection-health-copy.util.ts`. Everything below
+was examined and kept.
+
+- **`"edit-delete-this-only": hotkeyKeycaps("Mod+Delete")`** in
+  `REGISTRY_RUNTIME_KEY_SOURCES` (#5289). The only row in that table that
+  spells a hotkey inline instead of naming an `APP_SHORTCUT_BINDINGS` entry,
+  which reads like the `WEEKS_PER_ROW` shape. It is not: only 7 of the ~60
+  bindings have their `.hotkey` read by a handler at all, and the grid's
+  runtime literals (`"Delete"`, `"Mod+D"`, `"Mod+C"`, `"Mod+V"`,
+  `"Shift+Tab"`) predate this window. Folding one row would be a cosmetic
+  half-fix of a file-wide convention. What the table owns, legend keycaps or
+  runtime hotkeys, is a decision for a human; `shortcuts.registry.bindings`
+  already pins registry rows to the table either way.
+
+- **`useOpenLocationShortcut` importing `mapsUrlForLocation` from the event
+  form** (#5312). One import edge from `@web/shortcuts` into
+  `@web/views/Forms`, not a second copy: the shortcut and the form's link
+  build the URL from the same function, so the Maps query string cannot
+  drift. Moving the helper to a neutral module is a rename with no
+  correctness or discoverability gain.
+
+- **`upcomingCount = Math.max(3, meetings.length)`** in
+  `reflection-content.ts` (#5290). The upcoming list is uncapped once
+  meetings are present, so a heavy week prints every meeting. That is the
+  stated point of the feature (highlight meetings), and bounding it is a
+  product decision, not debt.
+
+- **`nextStep`'s `plainUrl`** (#5290). Computed before the `utm_*` params are
+  set, so the text email's link is untracked while the HTML href is tracked.
+  Reads like an ordering slip; it is the normal split between a clickable
+  href and a URL a reader retypes. Behavior change either way, so not a
+  sweep's call.
+
+- **`MeetLandingExample`** (#5292). 179 new lines next to the real guest
+  flow, but it renders `PublicBookingPicker`, `PublicBookingSlotSummary` and
+  `public-booking.format` directly; only the fixture availability and the
+  demo host copy are local. Nothing to drift.
+
+- **`getHorizontallyAdjacentTarget`'s caller** (#5299). The day/week branch
+  is now a nested ternary three levels deep. Taste, and the three arms are
+  the three real cases.
+
+- **`ProviderDelayedToast` calling `useConnectGoogle()`** (#5284). The toast
+  names the connection's own product ("Apple Calendar updates are delayed")
+  while its Refresh button runs the Google refresh. Not a provider-name
+  branch introduced here: `useConnectProvider` ignores `kind` for refresh and
+  calls `refreshGoogleSync()` for every provider, so the toast matches the
+  banner and the sidebar. Making refresh provider-aware changes behavior
+  across every connection surface and belongs to a human.
+
+- **Escalated, not swept: the shadowed `actionRequired` branches** in
+  `connectionHealthCopy` (`connection-health-copy.util.ts`, from #5241). The
+  `state === "actionRequired" || state === "disconnected" ||
+  isReauthReason(...)` block always returns, so the later
+  `actionRequired && consentRequired` and `actionRequired &&
+  isRefreshReason(...)` blocks cannot run: an `actionRequired` connection
+  whose reason is `workOverdue` or `providerErrors` is told "Calendar needs
+  reconnecting" instead of the refresh copy the author wrote for it. Deleting
+  the blocks would hide an intent; reordering them changes what users read.
+  Left in place and reported.
+
 ## 2026-11-18
 
 Swept the six merges that landed after the 2026-11-17 ledger (#5280, #5282,
