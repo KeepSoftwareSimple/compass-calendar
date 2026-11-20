@@ -1,9 +1,7 @@
 import { useLayoutEffect } from "react";
-import { flushPendingShellToast } from "@web/common/utils/toast/pending-shell-toast";
+import { registerPendingShellToastHost } from "@web/common/utils/toast/pending-shell-toast";
 
-/** Delivers OAuth and shell toasts once the bottom notice toast host is mounted. */
+/** Delivers shell toasts before and after the notification host mounts. */
 export function useFlushPendingShellToast(): void {
-  useLayoutEffect(() => {
-    flushPendingShellToast();
-  }, []);
+  useLayoutEffect(registerPendingShellToastHost, []);
 }
