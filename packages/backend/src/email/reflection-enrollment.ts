@@ -17,7 +17,20 @@ export function isReflectionTrialUser(userId: string): boolean {
   );
 }
 
-export function reflectionEligible(user: WithId<Schema_User>, trial: boolean) {
+export function reflectionRolloutActive(timeZone = "UTC", now = new Date()) {
+  return (
+    CONFIG.REFLECTION_ROLLOUT_ENABLED &&
+    (!CONFIG.REFLECTION_ROLLOUT_START_DATE ||
+      dayjs(now).tz(timeZone).format("YYYY-MM-DD") >=
+        CONFIG.REFLECTION_ROLLOUT_START_DATE)
+  );
+}
+
+export function reflectionEligible(
+  user: WithId<Schema_User>,
+  trial: boolean,
+  now = new Date(),
+) {
   return (
     CONFIG.REFLECTION_ENABLED &&
     !!CONFIG.EMAIL_PROVIDER &&
@@ -27,12 +40,51 @@ export function reflectionEligible(user: WithId<Schema_User>, trial: boolean) {
     !user.emailPreferences?.reflectionDisabledAt &&
     (trial
       ? isReflectionTrialUser(user._id.toHexString())
-      : CONFIG.REFLECTION_ROLLOUT_ENABLED)
+      : reflectionRolloutActive(user.reflectionPreferences?.timeZone, now))
   );
 }
 
 export async function enqueueDueReflections(now = new Date()) {
   if (!CONFIG.REFLECTION_ENABLED || !CONFIG.EMAIL_PROVIDER) return;
+  // Explicitly authorized population enrollment, without overwriting pauses or
+  // saved timezone/calendar choices. Legacy accounts without a timezone use UTC.
+  if (CONFIG.REFLECTION_ROLLOUT_ENABLED && CONFIG.REFLECTION_ENROLL_EXISTING) {
+    // New onboarding accounts receive their introductory review before the
+    // regular Sunday cadence; population enrollment must not bypass that step.
+    const awaitingIntroduction = await mongoService.emailSend
+      .find(
+        { sequence: "welcome", stepKey: "weekly-review", status: "queued" },
+        { projection: { userId: 1 } },
+      )
+      .toArray();
+    const start = CONFIG.REFLECTION_ROLLOUT_START_DATE
+      ? reflectionSendAt(CONFIG.REFLECTION_ROLLOUT_START_DATE, "UTC")
+      : now;
+    await mongoService.user.updateMany(
+      {
+        reflectionPreferences: { $exists: false },
+        _id: { $nin: awaitingIntroduction.map((send) => send.userId) },
+        isSynthetic: { $ne: true },
+        "emailPreferences.suppressedAt": { $exists: false },
+        "emailPreferences.unsubscribedAt": { $exists: false },
+        "emailPreferences.reflectionDisabledAt": { $exists: false },
+      },
+      {
+        $set: {
+          reflectionPreferences: {
+            enabled: true,
+            timeZone: "UTC",
+            excludedCalendarIds: [],
+          },
+          reflectionNextSendAt: nextReflectionSend(
+            start > now ? start : now,
+            "UTC",
+            "weekly",
+          ),
+        },
+      },
+    );
+  }
   // Trial configuration is fail-closed. General enrollment requires a separate gate.
   if (
     !CONFIG.REFLECTION_ROLLOUT_ENABLED &&
@@ -57,29 +109,66 @@ export async function enqueueDueReflections(now = new Date()) {
     .limit(25)
     .toArray();
   for (const user of users) {
-    const trial = isReflectionTrialUser(user._id.toHexString());
-    if (!reflectionEligible(user, trial)) continue;
     const timeZone = user.reflectionPreferences!.timeZone;
-    const cadence = trial ? ("daily" as const) : ("weekly" as const);
+    const trial =
+      isReflectionTrialUser(user._id.toHexString()) &&
+      !reflectionRolloutActive(timeZone, now);
+    if (!reflectionEligible(user, trial, now)) {
+      // Park prelaunch accounts at their first eligible Sunday so the bounded
+      // query cannot repeatedly select them and starve the private recipient.
+      if (CONFIG.REFLECTION_ROLLOUT_START_DATE && !trial) {
+        const start = reflectionSendAt(
+          CONFIG.REFLECTION_ROLLOUT_START_DATE,
+          timeZone,
+        );
+        await mongoService.user.updateOne(
+          {
+            _id: user._id,
+            "reflectionPreferences.timeZone": timeZone,
+          },
+          {
+            $set: {
+              reflectionNextSendAt: nextReflectionSend(
+                start,
+                timeZone,
+                "weekly",
+              ),
+            },
+          },
+        );
+      }
+      continue;
+    }
+    const cadence = "weekly" as const;
     const sendAt = nextReflectionSend(now, timeZone, cadence);
     if (sendAt <= now) {
       const date = dayjs(sendAt).tz(timeZone).format("YYYY-MM-DD");
       const recipientEmail = trial
         ? CONFIG.REFLECTION_TRIAL_EMAIL!
         : user.email;
-      await emailSendRepository.insertMany([
-        {
-          _id: `reflection:${user._id.toHexString()}:${cadence}:${date}`,
-          userId: user._id,
-          sequence: "reflection",
-          stepKey: cadence,
-          sendAt: reflectionSendAt(date, timeZone),
-          nextAttemptAt: now,
-          status: "queued",
-          recipientEmail,
-          reflection: { date, timeZone, cadence, trial },
-        },
-      ]);
+      const existing = await mongoService.emailSend.findOne({
+        userId: user._id,
+        sequence: "reflection",
+        "reflection.date": date,
+        $or: [
+          { status: "sent" },
+          { status: "queued", "reflection.cadence": "weekly" },
+        ],
+      });
+      if (!existing)
+        await emailSendRepository.insertMany([
+          {
+            _id: `reflection:${user._id.toHexString()}:${cadence}:${date}`,
+            userId: user._id,
+            sequence: "reflection",
+            stepKey: cadence,
+            sendAt: reflectionSendAt(date, timeZone),
+            nextAttemptAt: now,
+            status: "queued",
+            recipientEmail,
+            reflection: { date, timeZone, cadence, trial },
+          },
+        ]);
     }
     const next =
       sendAt > now

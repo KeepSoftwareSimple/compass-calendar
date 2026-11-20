@@ -9,13 +9,16 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import { reflectionCalendarContext } from "@backend/email/reflection-context";
-import { isReflectionTrialUser } from "@backend/email/reflection-enrollment";
+import {
+  isReflectionTrialUser,
+  reflectionRolloutActive,
+} from "@backend/email/reflection-enrollment";
 import { initializeReflectionPreferences } from "@backend/email/reflection-initialization";
 
-const available = (id: string) =>
+const available = (id: string, timeZone?: string) =>
   !!CONFIG.EMAIL_PROVIDER &&
   CONFIG.REFLECTION_ENABLED &&
-  (CONFIG.REFLECTION_ROLLOUT_ENABLED || isReflectionTrialUser(id));
+  (reflectionRolloutActive(timeZone) || isReflectionTrialUser(id));
 
 export async function getReflectionPreferences(req: Request, res: Response) {
   const id = zObjectId.parse(req.session?.getUserId());
@@ -33,7 +36,10 @@ export async function getReflectionPreferences(req: Request, res: Response) {
     : null;
   res.json({
     preferences: saved?.success ? saved.data : null,
-    available: available(id.toHexString()),
+    available: available(
+      id.toHexString(),
+      user.reflectionPreferences?.timeZone,
+    ),
     trial: isReflectionTrialUser(id.toHexString()),
   });
 }
@@ -52,7 +58,7 @@ export async function putReflectionPreferences(req: Request, res: Response) {
   }
   if (input.data.enabled) {
     if (
-      !available(id.toHexString()) ||
+      !available(id.toHexString(), input.data.timeZone) ||
       user.isSynthetic ||
       user.emailPreferences?.suppressedAt
     ) {
@@ -104,7 +110,7 @@ export async function putReflectionPreferences(req: Request, res: Response) {
   await emailSendRepository.cancelQueuedReflection(id, !input.data.enabled);
   res.json({
     preferences: input.data,
-    available: available(id.toHexString()),
+    available: available(id.toHexString(), input.data.timeZone),
     trial: isReflectionTrialUser(id.toHexString()),
   });
 }

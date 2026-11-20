@@ -3,7 +3,10 @@ import { type ReflectionPreferences } from "@core/types/life-preferences.contrac
 import dayjs from "@core/util/date/dayjs";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
-import { isReflectionTrialUser } from "@backend/email/reflection-enrollment";
+import {
+  isReflectionTrialUser,
+  reflectionRolloutActive,
+} from "@backend/email/reflection-enrollment";
 import { reflectionSendAt } from "@backend/email/reflection-schedule";
 
 /** Initialize only the new onboarding cohort; an explicit pause always wins. */
@@ -14,7 +17,7 @@ export async function initializeReflectionPreferences(
   if (
     !CONFIG.EMAIL_PROVIDER ||
     !CONFIG.REFLECTION_ENABLED ||
-    (!CONFIG.REFLECTION_ROLLOUT_ENABLED &&
+    (!reflectionRolloutActive(input.timeZone) &&
       !isReflectionTrialUser(userId.toHexString()))
   )
     return;

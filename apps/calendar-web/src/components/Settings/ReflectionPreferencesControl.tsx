@@ -100,10 +100,7 @@ export function ReflectionPreferencesControl() {
         Email me calendar reflections
       </label>
       <p id={descriptionId}>
-        {state.data.trial
-          ? "Daily trial at 10:30 a.m."
-          : "Sundays at 10:30 a.m."}{" "}
-        (
+        Sundays at 10:30 a.m. (
         {preferences?.timeZone ??
           Intl.DateTimeFormat().resolvedOptions().timeZone}
         )

@@ -363,6 +363,25 @@ email:
     expect(config.email?.allowlist).toEqual(["qa@example.com"]);
   });
 
+  it("validates the scheduled reflection rollout date and explicit population enrollment", () => {
+    const prefix = `${validYaml}${fullResendBlock}  reflection:\n    enabled: true\n    rolloutEnabled: true\n    enrollExisting: true\n    rolloutStartDate: `;
+    const config = parseCompassConfigText(
+      `${prefix}2026-12-06\n`,
+      "compass.yaml",
+    );
+    expect(config.email?.reflection).toMatchObject({
+      enabled: true,
+      rolloutEnabled: true,
+      enrollExisting: true,
+      rolloutStartDate: "2026-12-06",
+    });
+    for (const date of ["tomorrow", "2026-02-30", "2026-12-06T00:00:00Z"]) {
+      expect(() =>
+        parseCompassConfigText(`${prefix}${date}\n`, "compass.yaml"),
+      ).toThrow();
+    }
+  });
+
   it("leaves email unconfigured when the block is omitted", () => {
     const config = parseCompassConfigText(validYaml, "compass.yaml");
     expect(config.email).toBeUndefined();

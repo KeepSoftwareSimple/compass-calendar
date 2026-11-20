@@ -2,6 +2,16 @@
 
 Status: implementation plan, November 2, 2026. No delivery is enabled by this document.
 
+## Scheduled rollout update, November 16, 2026
+
+The requested launch is December 6, 2026. The private trial now follows the same
+Sunday 10:30 a.m. cadence as general reviews. Explicit population enrollment
+includes existing accounts while preserving pauses, unsubscribes, suppression,
+timezones, and calendar exclusions. A configured local start date gates both
+scheduling and dispatch. This supersedes the daily trial and onboarding-only
+cohort described below. Operational steps, exact deployment inputs, readiness
+checks, and rollback are in the [trial and rollout runbook](../development/weekly-reflection-trial.md#december-6-2026-population-rollout).
+
 ## Private-trial presentation update, November 5, 2026
 
 The current trial uses a plain email titled `Weekly review (ISO week)`, compact

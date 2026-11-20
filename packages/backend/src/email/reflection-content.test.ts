@@ -4,6 +4,7 @@ import {
   REFLECTION_EMAIL_QUOTES,
 } from "@core/life/life-quotes";
 import { ReflectionEventSchema } from "@core/types/sync/reflection.contracts";
+import dayjs from "@core/util/date/dayjs";
 import {
   renderReflectionEmail,
   selectReflectionEvents,
@@ -152,6 +153,167 @@ describe("reflection content", () => {
     expect(text).not.toContain("Set up your meeting page");
   });
 
+  it("orders selected highlights by local date and time and shows repeated titles only once per group", () => {
+    const rest = event("rest-one", "2026-11-03", { title: "Rest" });
+    const timed = (id: string, start: string) =>
+      event(id, "2026-11-03", {
+        schedule: {
+          kind: "timed",
+          start,
+          end: dayjs(start).add(1, "hour").toISOString(),
+          timeZone: "America/Denver",
+        },
+      });
+    const rendered = review({
+      recent: [
+        event("Later", "2026-11-05"),
+        rest,
+        { ...rest, id: "rest-two", title: "  REST  " },
+        timed("Early", "2026-11-03T12:00:00Z"),
+      ],
+      upcoming: [
+        event("Later plan", "2026-11-12"),
+        event("First plan", "2026-11-09"),
+        event("Same day plan", "2026-11-09"),
+      ],
+      memories: [
+        event("2011 memory", "2011-11-04"),
+        event("2023 memory", "2023-11-04"),
+        event("2016 memory", "2016-11-04"),
+      ],
+    });
+    for (const content of [rendered.text, rendered.html]) {
+      expect(content.indexOf(": Rest")).toBeLessThan(
+        content.indexOf(": Early"),
+      );
+      expect(content.indexOf(": Early")).toBeLessThan(
+        content.indexOf(": Later"),
+      );
+      expect(content.indexOf(": First plan")).toBeLessThan(
+        content.indexOf(": Same day plan"),
+      );
+      expect(content.indexOf(": Same day plan")).toBeLessThan(
+        content.indexOf(": Later plan"),
+      );
+      expect(content.indexOf("2011: 2011 memory")).toBeLessThan(
+        content.indexOf("2016: 2016 memory"),
+      );
+      expect(content.indexOf("2016: 2016 memory")).toBeLessThan(
+        content.indexOf("2023: 2023 memory"),
+      );
+      expect(content.match(/: Rest/g)).toHaveLength(1);
+      expect(content).not.toContain(":   REST");
+    }
+  });
+
+  it.each(["recent", "upcoming"] as const)(
+    "spreads %s highlights across local dates before selecting another event from the same day",
+    (section) => {
+      const candidates = [
+        event("First priority", "2026-11-09"),
+        event("Another same day", "2026-11-09"),
+        event("Third same day", "2026-11-09"),
+        event("Next day", "2026-11-10"),
+        event("Later day", "2026-11-12"),
+      ];
+      const rendered = review({ [section]: candidates });
+      for (const content of [rendered.text, rendered.html]) {
+        expect(content).toContain(": First priority");
+        expect(content).toContain(": Next day");
+        expect(content).toContain(": Later day");
+        expect(content).not.toContain(": Another same day");
+        expect(content).not.toContain(": Third same day");
+        expect(content.indexOf(": First priority")).toBeLessThan(
+          content.indexOf(": Next day"),
+        );
+        expect(content.indexOf(": Next day")).toBeLessThan(
+          content.indexOf(": Later day"),
+        );
+      }
+    },
+  );
+
+  it("moves a repeated title to a sparse day so another busy-day event can represent the first day", () => {
+    const rendered = review({
+      recent: [
+        event("rest-first-day", "2026-11-03", { title: "Rest" }),
+        event("Kiln", "2026-11-03"),
+        event("rest-second-day", "2026-11-04", { title: " REST " }),
+        event("Trip", "2026-11-05"),
+      ],
+    });
+    expect(rendered.text).toContain("Tue, Nov 3: Kiln");
+    expect(rendered.text).toContain("Wed, Nov 4:  REST ");
+    expect(rendered.text).toContain("Thu, Nov 5: Trip");
+    expect(rendered.text).not.toContain("Tue, Nov 3: Rest");
+  });
+
+  it("uses the recipient's local date when mixing timed and all-day highlights", () => {
+    const rendered = review({
+      upcoming: [
+        event("First local day", "2026-11-09"),
+        event("Still the same local day", "2026-11-10", {
+          schedule: {
+            kind: "timed",
+            start: "2026-11-10T00:30:00Z",
+            end: "2026-11-10T01:30:00Z",
+            timeZone: "UTC",
+          },
+        }),
+        event("Next local day", "2026-11-10"),
+        event("Third local day", "2026-11-11"),
+      ],
+    });
+    expect(rendered.text).not.toContain(": Still the same local day");
+    expect(rendered.text).toContain("Mon, Nov 9: First local day");
+    expect(rendered.text).toContain("Tue, Nov 10: Next local day");
+    expect(rendered.text).toContain("Wed, Nov 11: Third local day");
+  });
+
+  it("fills remaining slots from the same day in sparse weeks without repeating titles", () => {
+    const rendered = review({
+      recent: [
+        event("First", "2026-11-03"),
+        event("Second", "2026-11-03"),
+        event("repeat-first", "2026-11-03", { title: " FIRST " }),
+        event("Other day", "2026-11-05"),
+      ],
+      upcoming: [
+        event("Only day first", "2026-11-09"),
+        event("Only day second", "2026-11-09"),
+        event("Only day third", "2026-11-09"),
+      ],
+    });
+    for (const title of [
+      "First",
+      "Second",
+      "Other day",
+      "Only day first",
+      "Only day second",
+      "Only day third",
+    ])
+      expect(rendered.text).toContain(`: ${title}`);
+    expect(rendered.text).not.toContain(":  FIRST");
+  });
+
+  it("fills memory highlights with distinct titles even when repeated events have different dates", () => {
+    const selected = selectReflectionEvents({
+      ...input,
+      events: [
+        event("rest-one", "2020-11-03", { title: "Rest" }),
+        event("rest-two", "2020-11-04", { title: " rest " }),
+        event("Trip", "2020-11-05"),
+        event("Visit", "2020-11-06"),
+      ],
+    });
+    expect(selected.memories).toHaveLength(3);
+    expect(
+      new Set(
+        selected.memories.map((memory) => memory.title.trim().toLowerCase()),
+      ).size,
+    ).toBe(3);
+  });
+
   it("shows non-overlapping whole-day ranges for the daily trial", () => {
     const rendered = review({
       date: "2026-11-07",
@@ -218,7 +380,10 @@ describe("reflection content", () => {
       events: [weekly, oneOff, moved],
     });
     expect(ranked.memories[0]?.id).toBe("one-off");
-    expect(ranked.memories).toHaveLength(3);
+    expect(ranked.memories.map((memory) => memory.id)).toEqual([
+      "one-off",
+      "moved",
+    ]);
   });
   it("hides series exceptions and deduplicates shared UIDs at equivalent instants", () => {
     const schedule = {
@@ -349,9 +514,9 @@ describe("reflection content", () => {
   });
   it("reads like a plain review with upcoming plans immediately after the past week", () => {
     const rendered = review();
-    expect(rendered.subject).toBe("Weekly review (45)");
-    expect(rendered.text).not.toContain("Weekly review (45)");
-    expect(rendered.html).not.toContain("Weekly review (45)");
+    expect(rendered.subject).toBe("Your weekly review (45)");
+    expect(rendered.text).not.toContain("Your weekly review (45)");
+    expect(rendered.html).not.toContain("Your weekly review (45)");
     expect(rendered.text).toContain("Plan next week: https://");
     expect(rendered.html).toContain("<strong>Next week, Nov 9-15</strong>");
     expect(rendered.text).toContain("Your past week, Nov 2-8");
@@ -393,7 +558,7 @@ describe("reflection content", () => {
     ["2024-12-30", 1],
     ["2026-11-05", 45],
   ] as const)("uses the ISO week for %s", (date, number) => {
-    expect(review({ date }).subject).toBe(`Weekly review (${number})`);
+    expect(review({ date }).subject).toBe(`Your weekly review (${number})`);
   });
 
   it("formats cross-month ranges, local event times and month fallback memories naturally", () => {
