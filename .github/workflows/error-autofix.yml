@@ -3,16 +3,16 @@ name: Error autofix
 # Reacts to GitHub issues that PostHog's error-tracking integration files
 # automatically (author posthog[bot]), plus an hourly sweep that feeds
 # production recurrences back into this same agent, and an hourly watchdog
-# that escalates any autofix PR stuck without automerge-candidate or
-# autofix:needs-human. See .github/prompts/error-autofix.md and
+# that re-runs the merge guard on any autofix PR stuck without auto-merge.
+# See .github/prompts/error-autofix.md and
 # docs/CI-CD/error-autofix-routine.md.
 #
 # Kill switch: repo variable ERROR_AUTOFIX_ENABLED (default false/unset).
 # Mode: repo variable AUTOFIX_MODE — triage | pr | merge.
 #   triage: comment diagnosis only, no PR.
 #   pr:     open a fix PR, human merges.
-#   merge:  open a fix PR and auto-merge it when the agent is confident and
-#           the deterministic gate below agrees.
+#   merge:  open a fix PR only when it meets the ship bar, and auto-merge it
+#           when the deterministic gate below agrees. No human review.
 # Manual re-runs: "Re-run jobs" on a failed run reuses the workflow file
 # snapshot from that run, so fixes to this file never apply — dispatch a
 # fresh run instead, passing the PostHog issue number. A failed agent run
@@ -64,11 +64,11 @@ jobs:
         run: .github/scripts/autofix-sweep.sh
 
   pr-watchdog:
-    # Catches an autofix PR that never got `automerge-candidate` (or a human
-    # `autofix:needs-human` escalation) from autofix-merge-guard.sh, which
-    # only runs once, reactively, right after the triggering workflow run.
-    # See docs/CI-CD/error-autofix-routine.md#pr-watchdog (PR #3655, issue
-    # #2901).
+    # Catches an autofix PR that autofix-merge-guard.sh missed: it only runs
+    # once, right after the triggering workflow run. In merge mode the
+    # watchdog runs the guard again, so it needs the same token as
+    # gate-and-merge. See docs/CI-CD/error-autofix-routine.md#pr-watchdog
+    # (PR #3655, PR #5323).
     if: >-
       vars.ERROR_AUTOFIX_ENABLED == 'true' &&
       github.event_name == 'schedule'
@@ -84,9 +84,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Watch for autofix PRs stuck without a terminal label
+      - name: Re-run the merge guard on stuck autofix PRs
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.AGENT_LOOP_GITHUB_TOKEN || secrets.AUTOFIX_GITHUB_TOKEN }}
           DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
           AUTOFIX_MODE: ${{ vars.AUTOFIX_MODE }}
         run: .github/scripts/autofix-pr-watchdog.sh
