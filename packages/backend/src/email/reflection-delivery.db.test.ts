@@ -1,6 +1,10 @@
 import { type Request, type Response } from "express";
 import { ObjectId } from "mongodb";
 import {
+  ProviderCalendarSchema,
+  ProviderConnectionSchema,
+} from "@core/types/sync/connection.contracts";
+import {
   cleanupCollections,
   cleanupTestDb,
   setupTestDb,
@@ -338,6 +342,87 @@ describe("private reflection delivery", () => {
       (await mongoService.emailSend.findOne({ _id: row._id }))?.status,
     ).toBe("skipped");
   });
+
+  it.each([
+    "actionRequired",
+    "disconnected",
+    "revokedDuringPreparation",
+  ] as const)(
+    "withholds public reviews from unavailable calendar connections: %s",
+    async (state) => {
+      CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
+      const connectionId = new ObjectId().toHexString();
+      const calendarId = new ObjectId().toHexString();
+      const scope = {
+        tenantId: userId.toHexString(),
+        principalId: userId.toHexString(),
+      };
+      const createdAt = now.toISOString();
+      const calendar = ProviderCalendarSchema.parse({
+        ...scope,
+        id: calendarId,
+        connectionId,
+        providerCalendarId: "primary",
+        displayName: "Calendar",
+        color: null,
+        active: true,
+        primary: true,
+        accessRole: "owner",
+        capabilities: {
+          canReadEvents: true,
+          canWriteEvents: true,
+          canReadBusy: true,
+          canInviteAttendees: true,
+        },
+        createdAt,
+        updatedAt: createdAt,
+      });
+      let reads = 0;
+      const client = getSyncServiceClient();
+      spyOn(client, "listCalendars").mockResolvedValue({
+        ok: true,
+        value: { calendars: [calendar] },
+      });
+      spyOn(client, "listConnections").mockImplementation(async () => {
+        const healthy = state === "revokedDuringPreparation" && reads++ === 0;
+        const currentState = healthy
+          ? "healthy"
+          : state === "disconnected"
+            ? "disconnected"
+            : "actionRequired";
+        const connection = ProviderConnectionSchema.parse({
+          ...scope,
+          id: connectionId,
+          provider: "google",
+          account: {
+            providerAccountId: "account",
+            email: "trial@example.com",
+            displayName: "Trial",
+          },
+          capabilities: ["readEvents"],
+          state: currentState,
+          stateReason:
+            currentState === "actionRequired" ? "authorizationRevoked" : null,
+          lastSyncedAt: createdAt,
+          lastHealthyAt: createdAt,
+          createdAt,
+          updatedAt: createdAt,
+        });
+        return { ok: true, value: { connections: [connection] } };
+      });
+      await enqueueDueReflections(now);
+      const row = (await mongoService.emailSend.findOne({}))!;
+      expect(row.reflection?.trial).toBe(false);
+      const send = mock(async () => ({ messageId: "unexpected" }));
+      await dispatchReflection(row, { send, verifyWebhook: () => [] });
+      expect(send).not.toHaveBeenCalled();
+      const result = await mongoService.emailSend.findOne({ _id: row._id });
+      expect(result?.reflection?.prepared).toBeUndefined();
+      expect(result?.status).toBe(
+        state === "revokedDuringPreparation" ? "skipped" : "queued",
+      );
+    },
+  );
 
   it("prepares four reviews at a time while serializing provider sends and recovering after an error", async () => {
     CONFIG.REFLECTION_ROLLOUT_ENABLED = true;

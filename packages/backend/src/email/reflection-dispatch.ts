@@ -137,6 +137,7 @@ export async function dispatchReflection(
       ? CONFIG.REFLECTION_TRIAL_EMAIL
       : fresh.email;
     if (
+      (!edition.trial && !context.connectionsReady) ||
       freshRecipient !== recipient ||
       fresh.reflectionPreferences?.timeZone !== edition.timeZone ||
       JSON.stringify([...context.calendarIds].sort()) !==

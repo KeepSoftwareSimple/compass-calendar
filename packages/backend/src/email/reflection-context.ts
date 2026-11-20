@@ -45,12 +45,21 @@ export async function reflectionCalendarContext(user: WithId<Schema_User>) {
   const excluded = new Set(
     user.reflectionPreferences?.excludedCalendarIds ?? [],
   );
-  const calendarIds: SyncEventCalendarId[] = remote.value.calendars
-    .filter(
-      (calendar) =>
-        calendar.accessRole !== "busyOnly" && !excluded.has(calendar.id),
-    )
-    .map((calendar) => calendar.id);
+  const selectedCalendars = remote.value.calendars.filter(
+    (calendar) =>
+      calendar.accessRole !== "busyOnly" && !excluded.has(calendar.id),
+  );
+  const connectionsReady = selectedCalendars.every((calendar) =>
+    connections.value.connections.some(
+      (connection) =>
+        connection.id === calendar.connectionId &&
+        connection.state !== "actionRequired" &&
+        connection.state !== "disconnected",
+    ),
+  );
+  const calendarIds: SyncEventCalendarId[] = selectedCalendars.map(
+    (calendar) => calendar.id,
+  );
   // Holidays are common knowledge, so they never count as personal memories.
   const holidayCalendarIds = new Set<string>(
     remote.value.calendars
@@ -71,7 +80,14 @@ export async function reflectionCalendarContext(user: WithId<Schema_User>) {
       ),
     ]),
   ];
-  return { calendarIds, holidayCalendarIds, selfEmails, client, principal };
+  return {
+    calendarIds,
+    holidayCalendarIds,
+    selfEmails,
+    client,
+    principal,
+    connectionsReady,
+  };
 }
 
 export async function prepareReflection(
@@ -83,6 +99,8 @@ export async function prepareReflection(
   const edition = row.reflection;
   if (!edition) throw new Error("Missing reflection edition");
   const context = await reflectionCalendarContext(user);
+  if (!edition.trial && !context.connectionsReady)
+    throw new Error("Calendar connection needs attention");
   const metadata = await context.client.readReflection(context.principal, {
     calendarIds: context.calendarIds,
     selfEmails: context.selfEmails,

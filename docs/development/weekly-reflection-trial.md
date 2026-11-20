@@ -211,7 +211,10 @@ the new date and must not be activated for general delivery.
 - Initial coverage scan: 176 complete, 809 incomplete, no service errors,
   2,246 selected calendars. Metadata reads were 95 ms median and 663 ms maximum.
   Missing supported history is being enqueued through the existing Sync jobs;
-  this inventory is not proof that the backfill has completed.
+  this inventory is not proof that the backfill has completed. The first applied
+  pass enqueued 1,105 supported history jobs, with two request errors and no
+  unsupported calendars. A follow-up pass only enqueues calendars whose
+  connections are usable.
 - Staging rehearsal used an isolated, cleaned-up Mongo database and the release
   scheduler code. November 29 queued only the private recipient; December 6 and
   December 13 each queued both eligible fixture recipients. Concurrent cycles
@@ -221,6 +224,12 @@ the new date and must not be activated for general delivery.
   in one page. The page now bounds total record/window projections to 25 and
   preserves cursor completeness. Regression coverage drains 200 occurrences
   across eight windows without loss or duplicates. No API timeout was widened.
+- Production Sync inventory separately found 744 Google connections requiring
+  reauthorization. This is a connection count across all Sync principals, not a
+  count of eligible accounts. Owners must reconnect; imports cannot restore
+  revoked OAuth grants. Public preparation and final dispatch recheck the
+  availability of selected calendar connections. Keep unavailable accounts
+  behind the delivery gate. The OAuth follow-up is tracked separately.
 - Regular reviews prepare at most four recipients concurrently. Provider sends
   remain sequential with the existing pacing, and a failed provider request
   does not block later recipients. Welcome and booking dispatch remain serial.
