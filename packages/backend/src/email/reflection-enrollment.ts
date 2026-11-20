@@ -49,12 +49,21 @@ export async function enqueueDueReflections(now = new Date()) {
   // Explicitly authorized population enrollment, without overwriting pauses or
   // saved timezone/calendar choices. Legacy accounts without a timezone use UTC.
   if (CONFIG.REFLECTION_ROLLOUT_ENABLED && CONFIG.REFLECTION_ENROLL_EXISTING) {
+    // New onboarding accounts receive their introductory review before the
+    // regular Sunday cadence; population enrollment must not bypass that step.
+    const awaitingIntroduction = await mongoService.emailSend
+      .find(
+        { sequence: "welcome", stepKey: "weekly-review", status: "queued" },
+        { projection: { userId: 1 } },
+      )
+      .toArray();
     const start = CONFIG.REFLECTION_ROLLOUT_START_DATE
       ? reflectionSendAt(CONFIG.REFLECTION_ROLLOUT_START_DATE, "UTC")
       : now;
     await mongoService.user.updateMany(
       {
         reflectionPreferences: { $exists: false },
+        _id: { $nin: awaitingIntroduction.map((send) => send.userId) },
         isSynthetic: { $ne: true },
         "emailPreferences.suppressedAt": { $exists: false },
         "emailPreferences.unsubscribedAt": { $exists: false },

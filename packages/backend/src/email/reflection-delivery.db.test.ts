@@ -26,6 +26,7 @@ import {
   enqueueDueReflections,
   reflectionRolloutActive,
 } from "@backend/email/reflection-enrollment";
+import { initializeReflectionPreferences } from "@backend/email/reflection-initialization";
 import { createUnsubscribeToken } from "@backend/email/unsubscribe-token";
 import {
   afterAll,
@@ -492,6 +493,66 @@ describe("private reflection delivery", () => {
         attemptCount: 1,
       }),
     ).toBe(1);
+  });
+
+  it("preserves the introductory onboarding review before regular Sunday enrollment", async () => {
+    Object.assign(CONFIG, {
+      REFLECTION_ROLLOUT_ENABLED: true,
+      REFLECTION_ENROLL_EXISTING: true,
+    });
+    const newId = new ObjectId();
+    await mongoService.user.insertOne({
+      _id: newId,
+      email: "new@example.com",
+      firstName: "New",
+      lastName: "",
+      name: "New",
+      locale: "en",
+    });
+    await mongoService.emailSend.insertOne(
+      EmailSendRecordSchema.parse({
+        _id: `${newId.toHexString()}:weekly-review`,
+        userId: newId,
+        sequence: "welcome",
+        stepKey: "weekly-review",
+        status: "queued",
+        sendAt: new Date("2026-11-03T17:30:00Z"),
+        nextAttemptAt: new Date("2026-11-03T17:30:00Z"),
+        attemptCount: 0,
+        lastError: null,
+        providerMessageId: null,
+        sentAt: null,
+        deliveredAt: null,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+    await enqueueDueReflections(now);
+    expect(
+      (await mongoService.user.findOne({ _id: newId }))?.reflectionPreferences,
+    ).toBeUndefined();
+    expect(
+      await mongoService.emailSend.countDocuments({
+        userId: newId,
+        sequence: "reflection",
+      }),
+    ).toBe(0);
+    await initializeReflectionPreferences(newId, {
+      timeZone: "America/Denver",
+      excludedCalendarIds: [],
+    });
+    await enqueueDueReflections(now);
+    expect(
+      (
+        await mongoService.user.findOne({ _id: newId })
+      )?.reflectionNextSendAt?.toISOString(),
+    ).toBe("2026-11-08T17:30:00.000Z");
+    expect(
+      await mongoService.emailSend.countDocuments({
+        userId: newId,
+        sequence: "reflection",
+      }),
+    ).toBe(0);
   });
 
   const onboardingRow = () =>
