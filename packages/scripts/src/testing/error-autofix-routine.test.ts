@@ -49,6 +49,24 @@ describe("error-autofix Routine contract", () => {
     expect(guard).toMatch(/merge_error=\$\(gh pr merge[^\n]*--auto 2>&1\)/);
   });
 
+  it("never parks an autofix PR for a human in merge mode", () => {
+    // PR #5323 sat behind autofix:needs-human because the agent withheld
+    // automerge-candidate. Opening the PR is now the ship decision.
+    const guard = readFileSync(
+      ".github/scripts/autofix-merge-guard.sh",
+      "utf8",
+    );
+    expect(guard).not.toContain("needs-human");
+    expect(guard).not.toContain("automerge-candidate");
+    const prompt = readFileSync(".github/prompts/error-autofix.md", "utf8");
+    expect(prompt).not.toContain("automerge-candidate");
+    const watchdog = readFileSync(
+      ".github/scripts/autofix-pr-watchdog.sh",
+      "utf8",
+    );
+    expect(watchdog).toContain("autofix-merge-guard.sh");
+  });
+
   it("does not refuse auto-merge by path prefix", () => {
     const guard = readFileSync(
       ".github/scripts/autofix-merge-guard.sh",

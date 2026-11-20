@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Deterministic re-check before enabling auto-merge on an agent-authored fix
-# PR. The agent's own confidence judgment (the `automerge-candidate` label,
-# applied per the rubric in .github/prompts/error-autofix.md) is necessary
-# but not sufficient — this script independently re-verifies the hard safety
-# rails so a mistaken or prompt-injected agent run can never merge past them.
+# PR. In merge mode the agent opening a PR is its decision to ship (see
+# .github/prompts/error-autofix.md); this script re-verifies the hard size
+# rails so a mistaken or prompt-injected run can never merge past them, and
+# required CI checks in the merge queue do the rest. Nothing here waits on a
+# human: a PR over the rails is closed, not parked.
 # Path prefixes are not a merge gate: size rails are the remaining check.
 #
 # Only runs when AUTOFIX_MODE=merge (see .github/workflows/error-autofix.yml).
@@ -16,16 +17,26 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/autofix-lib.sh"
 MAX_FILES=8
 MAX_LINES=250
 
-downgrade() {
+# Too big for an unattended fix: close it so it never sits waiting on a human.
+reject() {
   local pr_number=$1
   local reason=$2
-  notify "Autofix PR #${pr_number} (issue #${ISSUE_NUMBER}) ${reason}; leaving for human review — https://github.com/${REPO}/pull/${pr_number}"
-  gh pr edit "$pr_number" --repo "$REPO" \
-    --remove-label automerge-candidate --add-label "autofix:needs-human" 2>/dev/null || true
+  notify "Autofix PR #${pr_number} (issue #${ISSUE_NUMBER}) ${reason}; closed — https://github.com/${REPO}/pull/${pr_number}"
+  gh pr close "$pr_number" --repo "$REPO" \
+    --comment "Closed by autofix-merge-guard: ${reason}. Too large for an unattended fix." || true
+}
+
+# A gh failure is not a verdict on the PR: leave it open and unmerged, and
+# the hourly watchdog runs this guard again.
+retry_later() {
+  local pr_number=$1
+  local reason=$2
+  notify "Autofix PR #${pr_number} (issue #${ISSUE_NUMBER}) ${reason}; the watchdog retries next hour — https://github.com/${REPO}/pull/${pr_number}"
+  return 1
 }
 
 find_pr() {
-  gh pr list --repo "$REPO" --label automerge-candidate --state open \
+  gh pr list --repo "$REPO" --label autofix --state open \
     --search "Fixes #${ISSUE_NUMBER} in:body" \
     --json number --jq '.[0].number' 2>/dev/null
 }
@@ -35,7 +46,7 @@ main() {
   pr_number=$(find_pr)
 
   if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then
-    printf 'no automerge-candidate PR found for issue #%s\n' "$ISSUE_NUMBER"
+    printf 'no open autofix PR found for issue #%s\n' "$ISSUE_NUMBER"
     return 0
   fi
 
@@ -45,23 +56,23 @@ main() {
   # would silently defeat the one gate that's supposed to be non-bypassable.
   local changed_files_list changed_files total_lines
   if ! changed_files_list=$(gh pr diff "$pr_number" --repo "$REPO" --name-only); then
-    downgrade "$pr_number" "could not verify changed files (gh pr diff failed) — treating as unsafe"
-    return 0
+    retry_later "$pr_number" "could not verify changed files (gh pr diff failed)"
+    return 1
   fi
   changed_files=$(printf '%s\n' "$changed_files_list" | grep -c . || true)
 
   if [ "$changed_files" -gt "$MAX_FILES" ]; then
-    downgrade "$pr_number" "touches ${changed_files} files (limit ${MAX_FILES})"
+    reject "$pr_number" "touches ${changed_files} files (limit ${MAX_FILES})"
     return 0
   fi
 
   if ! total_lines=$(gh pr view "$pr_number" --repo "$REPO" --json additions,deletions \
     --jq '.additions + .deletions') || [ -z "$total_lines" ]; then
-    downgrade "$pr_number" "could not verify line count (gh pr view failed) — treating as unsafe"
-    return 0
+    retry_later "$pr_number" "could not verify line count (gh pr view failed)"
+    return 1
   fi
   if [ "$total_lines" -gt "$MAX_LINES" ]; then
-    downgrade "$pr_number" "changes ${total_lines} lines (limit ${MAX_LINES})"
+    reject "$pr_number" "changes ${total_lines} lines (limit ${MAX_LINES})"
     return 0
   fi
 
@@ -71,8 +82,8 @@ main() {
   local merge_error
   if ! merge_error=$(gh pr merge "$pr_number" --repo "$REPO" --auto 2>&1); then
     printf '%s\n' "$merge_error" >&2
-    notify "Autofix PR #${pr_number} (issue #${ISSUE_NUMBER}) passed the merge guard but \`gh pr merge --auto\` failed (${merge_error%%$'\n'*}); needs a human to enable merge manually: https://github.com/${REPO}/pull/${pr_number}"
-    return 0
+    retry_later "$pr_number" "passed the merge guard but \`gh pr merge --auto\` failed (${merge_error%%$'\n'*})"
+    return 1
   fi
   # Do not watch CI here: this job runs under a cancel-in-progress:false
   # queue, so a runner sitting in `gh pr checks --watch` blocked the next
