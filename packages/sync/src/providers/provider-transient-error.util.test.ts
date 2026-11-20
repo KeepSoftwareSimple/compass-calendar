@@ -70,6 +70,34 @@ describe("isTransientSyncJobError", () => {
     expect(isTransientSyncJobError(wrapped)).toBe(true);
   });
 
+  it("returns true when a transaction exceeded its lifetime limit", () => {
+    const server = Object.assign(
+      new Error(
+        "operation was interrupted because the transaction exceeded the configured 'transactionLifetimeLimitSeconds'",
+      ),
+      { name: "MongoServerError", code: 290 },
+    );
+    const wrapped = new Error("Sync job repair (job-id) attempt 1 failed", {
+      cause: server,
+    });
+    expect(isTransientSyncJobError(wrapped)).toBe(true);
+    expect(
+      isTransientSyncJobError(
+        new Error(
+          "Sync job repair attempt 1 failed: operation was interrupted because the transaction exceeded the configured 'transactionLifetimeLimitSeconds'",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("returns true for a TransientTransactionError labelled failure", () => {
+    const labelled = Object.assign(new Error("write conflict"), {
+      name: "MongoServerError",
+      errorLabels: ["TransientTransactionError"],
+    });
+    expect(isTransientSyncJobError(labelled)).toBe(true);
+  });
+
   it("returns false for a durable failure", () => {
     expect(isTransientSyncJobError(new Error("mongo down"))).toBe(false);
   });
