@@ -16,6 +16,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { compactListItemHtml } from "@web/components/DescriptionEditor/compact-list-item-html";
 import { DescriptionEditorLinkChrome } from "@web/components/DescriptionEditor/DescriptionEditorLinkChrome";
 import { DescriptionToolbarButton } from "@web/components/DescriptionEditor/DescriptionToolbarButton";
 import {
@@ -137,8 +138,10 @@ export const DescriptionEditor = ({
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on resetKey only, see the comment above
   const initialContent = useMemo(
     () =>
-      sanitizeDescriptionHtml(
-        looksLikeHtml(value) ? value : plainTextToDescriptionHtml(value),
+      compactListItemHtml(
+        sanitizeDescriptionHtml(
+          looksLikeHtml(value) ? value : plainTextToDescriptionHtml(value),
+        ),
       ),
     [resetKey],
   );
@@ -196,7 +199,7 @@ export const DescriptionEditor = ({
       // TipTap's empty document is still `<p></p>` from getHTML(); normalize
       // to "" so DirtyParser and persistence treat "cleared" like never set.
       onUpdate: ({ editor: updated }) =>
-        onChange(updated.isEmpty ? "" : updated.getHTML()),
+        onChange(updated.isEmpty ? "" : compactListItemHtml(updated.getHTML())),
       onFocus: () => setIsFocused(true),
       onBlur: () => setIsFocused(false),
     },
