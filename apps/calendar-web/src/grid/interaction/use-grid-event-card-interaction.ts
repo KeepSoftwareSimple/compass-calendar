@@ -35,10 +35,12 @@ export const useGridEventCardInteraction = ({
         ? interaction.getInteractionTargetAttributes({
             eventId,
             eventType,
-            isReadOnly,
+            // Hidden strips stay out of the registry (no drag/resize) but
+            // arrow keys still need to reach them, same as read-only cards.
+            isReadOnly: isReadOnly || isHidden,
           })
         : undefined,
-    [eventId, eventType, hasEventIdentity, interaction, isReadOnly],
+    [eventId, eventType, hasEventIdentity, interaction, isHidden, isReadOnly],
   );
 
   return { interactionAttributes, registrationRef };

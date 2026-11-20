@@ -124,6 +124,8 @@ export function getChronologicallyAdjacentTarget({
  * Week-view spatial focus: Up/Down stay on the focused day; Left/Right jump to
  * the time-nearest event on the next/previous non-empty day (skip empty days).
  * All-day counts as the first position on its day. No wrap at day or week ends.
+ * Hidden all-day strips packed side by side in one lane take Left/Right among
+ * themselves first, so arrows follow what the user sees.
  */
 export function getSpatiallyAdjacentTarget({
   allDayEvents,
@@ -132,6 +134,7 @@ export function getSpatiallyAdjacentTarget({
   timedEvents,
   visible,
   weekDays,
+  rectOf,
 }: {
   allDayEvents: GridEvent[];
   direction: "up" | "down" | "left" | "right";
@@ -139,6 +142,7 @@ export function getSpatiallyAdjacentTarget({
   timedEvents: GridEvent[];
   visible: FocusableGridEventTarget[];
   weekDays: Dayjs[];
+  rectOf?: (target: FocusableGridEventTarget) => Box;
 }): FocusableGridEventTarget | null {
   if (visible.length === 0 || !focused) return null;
 
@@ -156,6 +160,21 @@ export function getSpatiallyAdjacentTarget({
     if (index < 0) return null;
     const nextIndex = direction === "up" ? index - 1 : index + 1;
     return sorted[nextIndex] ?? null;
+  }
+
+  // Same-day all-day chips only share a lane when they are packed strips.
+  if (focused.eventType === "all-day") {
+    const packedNeighbor = getHorizontallyAdjacentTarget({
+      direction,
+      focused,
+      rectOf,
+      visible: visible.filter(
+        (target) =>
+          target.eventType === "all-day" &&
+          scheduleById.get(target.eventId)?.dayKey === focusedSchedule.dayKey,
+      ),
+    });
+    if (packedNeighbor) return packedNeighbor;
   }
 
   const weekDayKeys = weekDays.map((day) => day.format("YYYY-MM-DD"));

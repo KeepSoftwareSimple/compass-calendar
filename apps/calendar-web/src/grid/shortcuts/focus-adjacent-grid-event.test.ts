@@ -191,6 +191,53 @@ describe("getSpatiallyAdjacentTarget", () => {
 
     expect(next?.eventId).toBe("wed-noon");
   });
+
+  it("moves Left/Right between hidden strips packed in one lane first", () => {
+    const stripA = target("strip-a", "all-day");
+    const stripB = target("strip-b", "all-day");
+    const thursday = target("thu-noon", "timed");
+    const rects: Record<
+      string,
+      Pick<DOMRect, "top" | "bottom" | "left" | "right">
+    > = {
+      "strip-a": { top: 4, bottom: 24, left: 300, right: 308 },
+      "strip-b": { top: 4, bottom: 24, left: 312, right: 320 },
+      "thu-noon": { top: 200, bottom: 260, left: 420, right: 520 },
+    };
+    const input = {
+      allDayEvents: [
+        event("strip-a", "2026-05-20", true),
+        event("strip-b", "2026-05-20", true),
+      ],
+      rectOf: (t: { eventId: string }) => rects[t.eventId]!,
+      timedEvents: [event("thu-noon", "2026-05-21T12:00:00.000")],
+      visible: [stripA, stripB, thursday],
+      weekDays,
+    };
+
+    expect(
+      getSpatiallyAdjacentTarget({
+        ...input,
+        direction: "right",
+        focused: stripA,
+      })?.eventId,
+    ).toBe("strip-b");
+    expect(
+      getSpatiallyAdjacentTarget({
+        ...input,
+        direction: "left",
+        focused: stripB,
+      })?.eventId,
+    ).toBe("strip-a");
+    // Past the last strip, Right still jumps to the next day.
+    expect(
+      getSpatiallyAdjacentTarget({
+        ...input,
+        direction: "right",
+        focused: stripB,
+      })?.eventId,
+    ).toBe("thu-noon");
+  });
 });
 
 describe("getNearestTargetToNow", () => {

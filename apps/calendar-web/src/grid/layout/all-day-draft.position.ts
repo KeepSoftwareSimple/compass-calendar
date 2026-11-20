@@ -9,6 +9,7 @@ import {
   getGridDraftId,
   gridEventDraftToGridEvent,
 } from "@web/events/grid-event-draft.adapter";
+import { withoutHiddenEventId } from "@web/events/hidden/hidden-event-id";
 import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 
 export const isDraftRenderedInAllDayRow = (draft: GridEventDraft): boolean => {
@@ -48,9 +49,11 @@ export const draftToAllDayRowGridEvent = (draft: GridEventDraft): GridEvent => {
 export const positionAllDayDraftEvent = ({
   draft,
   events,
+  hiddenEventIds,
 }: {
   draft: GridEventDraft | null;
   events: GridEvent[];
+  hiddenEventIds?: ReadonlySet<string>;
 }): {
   activeDraftEvent: GridEvent | null;
   events: GridEvent[];
@@ -78,7 +81,10 @@ export const positionAllDayDraftEvent = ({
       : events.map((event, index) =>
           index === existingIndex ? eventForRows : event,
         );
-  const positionedEvents = assignEventsToRow(eventsWithDraft).allDayEvents;
+  const positionedEvents = assignEventsToRow(
+    eventsWithDraft,
+    hiddenEventIds && withoutHiddenEventId(hiddenEventIds, draftId),
+  ).allDayEvents;
   const activeDraftIndex =
     existingIndex === -1 ? positionedEvents.length - 1 : existingIndex;
 

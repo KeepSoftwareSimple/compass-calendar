@@ -1,10 +1,17 @@
 import dayjs from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type EventWithDates } from "@web/common/utils/event/event.util";
+import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { findRowForEvent } from "./grid.util";
 
+/**
+ * Packs all-day events into lanes. Hidden events render as slim strips on
+ * their start day, so every hidden event starting the same day shares one
+ * lane side by side (`hiddenStripIndex`) instead of taking a lane each.
+ */
 export const assignEventsToRow = (
   allDayEvents: EventWithDates[],
+  hiddenEventIds: ReadonlySet<string> = new Set(),
 ): {
   rowsCount: number;
   allDayEvents: GridEvent[];
@@ -16,7 +23,17 @@ export const assignEventsToRow = (
     ...e,
   })) as GridEvent[];
 
+  const hiddenByStartDay = new Map<number, GridEvent[]>();
+
   orderedAllDayEvents?.forEach((event) => {
+    if (isEventIdHidden(event._id, hiddenEventIds)) {
+      const startDay = _getEventDayNumbers(event)[0] ?? 0;
+      hiddenByStartDay.set(startDay, [
+        ...(hiddenByStartDay.get(startDay) ?? []),
+        event,
+      ]);
+      return;
+    }
     const eventDays = _getEventDayNumbers(event);
     const rowNum = findRowForEvent(eventDays, rows);
 
@@ -31,6 +48,19 @@ export const assignEventsToRow = (
     // nothing can fit it.
     rows.push(eventDays);
     event["row"] = rows.length;
+  });
+
+  hiddenByStartDay.forEach((strips, startDay) => {
+    let rowNum = findRowForEvent([startDay], rows);
+    if (rowNum === null) {
+      rows.push([]);
+      rowNum = rows.length - 1;
+    }
+    rows[rowNum] = [...rows[rowNum], startDay];
+    strips.forEach((event, index) => {
+      event["row"] = (rowNum as number) + 1;
+      event["hiddenStripIndex"] = index;
+    });
   });
 
   return { rowsCount: rows.length, allDayEvents: orderedAllDayEvents };

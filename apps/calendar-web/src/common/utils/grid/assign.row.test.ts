@@ -1,5 +1,6 @@
 import { mar13To19 } from "@core/__mocks__/v1/events/events.allday.3";
 import { type CompassEvent } from "@core/types/compass-event.contracts";
+import { type EventWithDates } from "@web/common/utils/event/event.util";
 import { assignEventsToRow } from "@web/common/utils/grid/assign.row";
 import { randomUUID } from "node:crypto";
 
@@ -149,5 +150,46 @@ describe("case: leap year (2024) + year change", () => {
     expect(allDayEvents[2].row).toBe(1);
     expect(allDayEvents[3].row).toBe(1);
     expect(allDayEvents[4].row).toBe(3);
+  });
+});
+
+describe("case: hidden events", () => {
+  const allDay = (_id: string, startDate: string, endDate: string) =>
+    ({ _id, startDate, endDate, isAllDay: true }) as EventWithDates;
+
+  it("packs hidden events starting the same day into one lane", () => {
+    const { rowsCount, allDayEvents } = assignEventsToRow(
+      [
+        allDay("h1", "2026-11-19", "2026-11-20"),
+        allDay("rest", "2026-11-18", "2026-11-19"),
+        allDay("h2", "2026-11-19", "2026-11-20"),
+        allDay("h3", "2026-11-19", "2026-11-20"),
+      ],
+      new Set(["h1", "h2", "h3"]),
+    );
+
+    expect(rowsCount).toBe(1);
+    expect(allDayEvents.map((e) => [e._id, e.row, e.hiddenStripIndex])).toEqual(
+      [
+        ["h1", 1, 0],
+        ["rest", 1, undefined],
+        ["h2", 1, 1],
+        ["h3", 1, 2],
+      ],
+    );
+  });
+
+  it("puts hidden strips below visible events on their start day", () => {
+    const { rowsCount, allDayEvents } = assignEventsToRow(
+      [
+        allDay("h1", "2026-11-19", "2026-11-20"),
+        allDay("visible", "2026-11-19", "2026-11-20"),
+      ],
+      new Set(["h1"]),
+    );
+
+    expect(rowsCount).toBe(2);
+    expect(allDayEvents[0].row).toBe(2);
+    expect(allDayEvents[1].row).toBe(1);
   });
 });
