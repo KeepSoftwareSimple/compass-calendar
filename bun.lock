@@ -164,7 +164,7 @@
         "logform": "^2.7.0",
         "posthog-node": "^5.56.2",
         "rrule": "^2.7.2",
-        "snappy": "^7.3.2",
+        "snappy": "^7.4.4",
         "tslib": "^2.4.0",
         "winston": "^3.8.1",
         "winston-transport": "^4.7.0",
@@ -415,39 +415,39 @@
 
     "@mswjs/interceptors": ["@mswjs/interceptors@0.41.9", "", { "dependencies": { "@open-draft/deferred-promise": "^2.2.0", "@open-draft/logger": "^0.3.0", "@open-draft/until": "^2.0.0", "is-node-process": "^1.2.0", "outvariant": "^1.4.3", "strict-event-emitter": "^0.5.1" } }, "sha512-VVPPgHyQ6ShqnrmDWuxjmUIsO9gWyOZFmuOfLd9LfBGQJwZfy0gvv9pbHSJuoFNIYC7ZDX9aoFwowjcdSC4E8w=="],
 
-    "@napi-rs/snappy-android-arm-eabi": ["@napi-rs/snappy-android-arm-eabi@7.4.3", "", { "os": "android", "cpu": "arm" }, "sha512-IUcqhinktWCfA3Cu/PaDNjixAt5hAn1sQlnl03qpQWNuv2PLju6LQqOa5kDoXnTFrLzu1/jpRexjR/KR8+ERog=="],
+    "@napi-rs/snappy-android-arm-eabi": ["@napi-rs/snappy-android-arm-eabi@7.4.4", "", { "os": "android", "cpu": "arm" }, "sha512-up9144dDJuOTvUMIlXoD2XtIHsXavz2FNZtCkEDzgdiMVKPEO4/KexfqVBQSgx2C0AxQ4OuLycEwEbx2v73/Bw=="],
 
-    "@napi-rs/snappy-android-arm64": ["@napi-rs/snappy-android-arm64@7.4.3", "", { "os": "android", "cpu": "arm64" }, "sha512-AlbjST9D7qtZS0cUKVauyO2xtGawh20n/Z1cE3Zmurgl6HBInsvO14wMxsneFfNH7WXqphu2ZbXAul+sCDMhOA=="],
+    "@napi-rs/snappy-android-arm64": ["@napi-rs/snappy-android-arm64@7.4.4", "", { "os": "android", "cpu": "arm64" }, "sha512-r+cUVi5iwXhfhYGJz2hKomkNvgUQfnaYW0dz0EiQKtVXpBt5m1PSXWDCZ12YK1Qi4eM3Vi5kwdgABr/lvIaNrw=="],
 
-    "@napi-rs/snappy-darwin-arm64": ["@napi-rs/snappy-darwin-arm64@7.4.3", "", { "os": "darwin", "cpu": "arm64" }, "sha512-eTPH4pSnuDOGi8wuKVFykZvcRlxAT3NNDeJkNWpiw+lzKLr7zmEdZqmTtTJDyzJR4zyV/kIV193JT3oDRlRE3Q=="],
+    "@napi-rs/snappy-darwin-arm64": ["@napi-rs/snappy-darwin-arm64@7.4.4", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Xo8QW7E3SEt0WdXaK9Wy1uLwH31W/g88OZapHNmDqVI9Ip61DGKEi9ic06ZTu4pLWIHF/iwN4183HXPv4IMMUg=="],
 
-    "@napi-rs/snappy-darwin-x64": ["@napi-rs/snappy-darwin-x64@7.4.3", "", { "os": "darwin", "cpu": "x64" }, "sha512-siDEFDaia02JxigbS4ST6GtgiRXJk4knGLPAVwsPerulMgwonas7djhaX5EOR/LntdZp8K4q9wdftUB7pUJaeA=="],
+    "@napi-rs/snappy-darwin-x64": ["@napi-rs/snappy-darwin-x64@7.4.4", "", { "os": "darwin", "cpu": "x64" }, "sha512-1+JJXYmyTpbTGwnLOAXfSy1x0Su9m4J1cRQ5NOnC211cbl7WUDqTlYU0XGQ3LbvoI8QRg0V+UAUnESSkdPcNXQ=="],
 
-    "@napi-rs/snappy-freebsd-x64": ["@napi-rs/snappy-freebsd-x64@7.4.3", "", { "os": "freebsd", "cpu": "x64" }, "sha512-LAj4AwbDWWKLprUJ2gl0h55imFpCzIDELms3wMAu2Jo+MF0GRKSY4bx8Yb5OWhh30OSMSq9bnKQvoEIAsS8uIw=="],
+    "@napi-rs/snappy-freebsd-x64": ["@napi-rs/snappy-freebsd-x64@7.4.4", "", { "os": "freebsd", "cpu": "x64" }, "sha512-NB9vVOHh8hjq8e6EXldI2v6tyr1kMvcyTHm1rmjGuSh6PADFGG8hjifGnkvb0rgwrPrTP1PDpo9gIyfIBfk7xw=="],
 
-    "@napi-rs/snappy-linux-arm-gnueabihf": ["@napi-rs/snappy-linux-arm-gnueabihf@7.4.3", "", { "os": "linux", "cpu": "arm" }, "sha512-bUTs+JWl7kwYM1RPBBY0JLQ06+iVgRS81yVwMGtpD3C12tWKtoeTKM4ai33ySc+wnKvcpqhlHz2ZufcCESQHvg=="],
+    "@napi-rs/snappy-linux-arm-gnueabihf": ["@napi-rs/snappy-linux-arm-gnueabihf@7.4.4", "", { "os": "linux", "cpu": "arm" }, "sha512-50CrPIQbJvrZrUerufDD05cYFZO7RRZ1mmYSgTpOkhQNRGR7QmIMTKC0VAoPpWP1tZPIRRVnbFC8yYn+Y4XK6w=="],
 
-    "@napi-rs/snappy-linux-arm64-gnu": ["@napi-rs/snappy-linux-arm64-gnu@7.4.3", "", { "os": "linux", "cpu": "arm64" }, "sha512-NOCDEWRhgnyffjUpgYy7kdUmFwtMILkQV9+n9CvnshxXsiJwTDLMkeDXWagcVBQheCnfUPLIEl1vHk71lQBANw=="],
+    "@napi-rs/snappy-linux-arm64-gnu": ["@napi-rs/snappy-linux-arm64-gnu@7.4.4", "", { "os": "linux", "cpu": "arm64" }, "sha512-Y3hQ/LnoxxutFvTzxGomZOw+ckue3E01ORS22YaWZqPel7vJLhIrIrtqiVB/6D5fhc1CqeCJ2vYAa39bBF8YIg=="],
 
-    "@napi-rs/snappy-linux-arm64-musl": ["@napi-rs/snappy-linux-arm64-musl@7.4.3", "", { "os": "linux", "cpu": "arm64" }, "sha512-+Lcf3PUrTE55MhCEp2FaEil8X5J68v8Y8DC1AvYmS0oODCDU2TUbn/cR6+ib1fTBjRz/b9G+NokW0bK/uE1vwA=="],
+    "@napi-rs/snappy-linux-arm64-musl": ["@napi-rs/snappy-linux-arm64-musl@7.4.4", "", { "os": "linux", "cpu": "arm64" }, "sha512-K8EeL5uFcgWeCWEMVQwf/GgPxIQ8yPMGxVvTsspqauwHF0ysjTUhOvkyF+1vqjt0zPsg37SzYlsMjeIn3cH2OA=="],
 
-    "@napi-rs/snappy-linux-ppc64-gnu": ["@napi-rs/snappy-linux-ppc64-gnu@7.4.3", "", { "os": "linux", "cpu": "ppc64" }, "sha512-FjY2TncYM75uwSt+jQ6QeWX0rN56QWL2nTDLlKp30mCz4xjJ9XbnwCNOtxdQ92lKDOH5SC88c41uq4zv0F+ldQ=="],
+    "@napi-rs/snappy-linux-ppc64-gnu": ["@napi-rs/snappy-linux-ppc64-gnu@7.4.4", "", { "os": "linux", "cpu": "ppc64" }, "sha512-OUCBjX4GUv1gQN9hpnHcr92EY7+cQXapyrkGwo3n1PyIRHe9atUVrRCMs3bnI0vf7vRvxR3Cmc92bGtF9DtBsA=="],
 
-    "@napi-rs/snappy-linux-riscv64-gnu": ["@napi-rs/snappy-linux-riscv64-gnu@7.4.3", "", { "os": "linux", "cpu": "none" }, "sha512-RPdXvPOF2oRLiXj6PacW2LihJ9WTqCQyjEpw5W2p4ej3rzp3e0fFaRCOl5OepZEeiPOg0mnzHjzzE7PDEJr47A=="],
+    "@napi-rs/snappy-linux-riscv64-gnu": ["@napi-rs/snappy-linux-riscv64-gnu@7.4.4", "", { "os": "linux", "cpu": "none" }, "sha512-NhPT6eJjJOAuCc+bq61/QhJPNT/BXLlNWejatQPQbXgJkj4wwNLtzTl2ehMOruraSlekYztrOkhSQjUqYGOwdA=="],
 
-    "@napi-rs/snappy-linux-s390x-gnu": ["@napi-rs/snappy-linux-s390x-gnu@7.4.3", "", { "os": "linux", "cpu": "s390x" }, "sha512-UeJSlY2lOe6dKwhXf2CCHYWOSPkSIEb32tW7nmfTo/CwLfMe6TA3pAdczH/NtElu0V/lKVva1vnQCiMywLVtVw=="],
+    "@napi-rs/snappy-linux-s390x-gnu": ["@napi-rs/snappy-linux-s390x-gnu@7.4.4", "", { "os": "linux", "cpu": "s390x" }, "sha512-20EBvyxIbX0E99VF0Tto/t10c9qX4IxXfaBhTNGwAULR0+8jDouw9rVRWu1aKXnQHm7DGK8lCXsIhC3cMXQu0w=="],
 
-    "@napi-rs/snappy-linux-x64-gnu": ["@napi-rs/snappy-linux-x64-gnu@7.4.3", "", { "os": "linux", "cpu": "x64" }, "sha512-6fnGsH0yb48+PCYnKc6E5U1zUFXUpLtmyz8TnMstIBuiS7w1pf7e8GWN8GO//kz7+9E9jfD1/+8BZrp0FDOOqw=="],
+    "@napi-rs/snappy-linux-x64-gnu": ["@napi-rs/snappy-linux-x64-gnu@7.4.4", "", { "os": "linux", "cpu": "x64" }, "sha512-p+GGeGEu76op0hLrqrOrOhnnJVt/swHwYBwZGkt28XRsuG15+CVR2QyTQqGS3u8LJr5akDoI0JD5CZlEEyJWqA=="],
 
-    "@napi-rs/snappy-linux-x64-musl": ["@napi-rs/snappy-linux-x64-musl@7.4.3", "", { "os": "linux", "cpu": "x64" }, "sha512-ixpPsplb9A3JLjjDC6q7SdOgthsmme20STwW4KMw7ri68QP6cvwmG+Bbt6aWwHS2YJPZ9cwYaXTyNDohcP9Vxg=="],
+    "@napi-rs/snappy-linux-x64-musl": ["@napi-rs/snappy-linux-x64-musl@7.4.4", "", { "os": "linux", "cpu": "x64" }, "sha512-WQl4N9a3CMD5Ws4ViXXc50fXlSHNOLglyfNk3Tpssm/oHe8XEy+2xlBr7TWKmBrJZqObkBM0SMe9F0XmjcBdJg=="],
 
-    "@napi-rs/snappy-openharmony-arm64": ["@napi-rs/snappy-openharmony-arm64@7.4.3", "", { "os": "none", "cpu": "arm64" }, "sha512-GUOv36Of8q8HbTDb4eaj0wpDQS15BsgNz/vVfjjKWJj+YMpnwiTAt1yVjAMCvYwSvLP5k8Xa2oYjuV+ZxazGKA=="],
+    "@napi-rs/snappy-openharmony-arm64": ["@napi-rs/snappy-openharmony-arm64@7.4.4", "", { "os": "none", "cpu": "arm64" }, "sha512-UwwRn0jtKR4aKFV4CXZi+0knc+oAcPlmeaAltVNjY36DiWwvGMbtqBmJtV53qv9HCVcObHwHODJ49zhkUxVGlA=="],
 
-    "@napi-rs/snappy-win32-arm64-msvc": ["@napi-rs/snappy-win32-arm64-msvc@7.4.3", "", { "os": "win32", "cpu": "arm64" }, "sha512-pHR8PD74KBm4hEoxwiwR6jgxo0wPQJVfuv2fwBw7Jv461N+hY5VI9iLZRx3yDWp+Uy4eHWQQsqhjC7JOVjh+1w=="],
+    "@napi-rs/snappy-win32-arm64-msvc": ["@napi-rs/snappy-win32-arm64-msvc@7.4.4", "", { "os": "win32", "cpu": "arm64" }, "sha512-TevJEwlCmGvsC8EC7Bz2gHXDJW2LrU+y179m87iR6JyapVkuI+BkE0HKJdWtkWnrxr1Ed41R4wvH1IZrBvpKig=="],
 
-    "@napi-rs/snappy-win32-ia32-msvc": ["@napi-rs/snappy-win32-ia32-msvc@7.4.3", "", { "os": "win32", "cpu": "ia32" }, "sha512-/LIy2afUxoybWAdathj7GAHAHPT5XKzG3XNzAPBI+BOCmADYsv0ui8vZYHmt0SqoDcEHCifUbUKGFfhqL55hjQ=="],
+    "@napi-rs/snappy-win32-ia32-msvc": ["@napi-rs/snappy-win32-ia32-msvc@7.4.4", "", { "os": "win32", "cpu": "ia32" }, "sha512-aYdxnWHdrFWj15P3UyA4nj1eclXOyZeo2ZpEeMPMM4udgWp1LMINjtzPp1W7+N9haqlj7P91HpMf6fP7nB13Pg=="],
 
-    "@napi-rs/snappy-win32-x64-msvc": ["@napi-rs/snappy-win32-x64-msvc@7.4.3", "", { "os": "win32", "cpu": "x64" }, "sha512-Z0qi4GuqzWLGKa0cK8/kaRIuC78xuu1IfjYcOYDvSWd8uBFu3f+GaKdpl1YmXz+YJykCH1iBShie0PC6pzqI/g=="],
+    "@napi-rs/snappy-win32-x64-msvc": ["@napi-rs/snappy-win32-x64-msvc@7.4.4", "", { "os": "win32", "cpu": "x64" }, "sha512-r6pdAUOrnSYxa/NLscQrFzBD+9lRzMcDkPpDFaczY07YwDNOsKHhzXtLhwBkaU0KYnFl3pznUnDj0GjLOOrZow=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.2.1", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1 || ^2.0.0-alpha.3", "@emnapi/runtime": "^1.7.1 || ^2.0.0-alpha.3" } }, "sha512-KjZdi8Q1wh89gsVmghvbrMgWl6ZWmRmHV6wjB7/g4Zf0dyO+hH3neZUtuDNPO00qq5YE5RITVWvrIZKRaAmzGQ=="],
 
@@ -1703,7 +1703,7 @@
 
     "smol-toml": ["smol-toml@1.9.0", "", {}, "sha512-hpd+HLON7HdZXqYchMM/+LaTTbdK0AU3NngIJ4KVyWbY9bfQqdL9cD+4yf6dUoU2Ap4VsU0JkQi6FxAI1B2mXQ=="],
 
-    "snappy": ["snappy@7.4.3", "", { "optionalDependencies": { "@napi-rs/snappy-android-arm-eabi": "7.4.3", "@napi-rs/snappy-android-arm64": "7.4.3", "@napi-rs/snappy-darwin-arm64": "7.4.3", "@napi-rs/snappy-darwin-x64": "7.4.3", "@napi-rs/snappy-freebsd-x64": "7.4.3", "@napi-rs/snappy-linux-arm-gnueabihf": "7.4.3", "@napi-rs/snappy-linux-arm64-gnu": "7.4.3", "@napi-rs/snappy-linux-arm64-musl": "7.4.3", "@napi-rs/snappy-linux-ppc64-gnu": "7.4.3", "@napi-rs/snappy-linux-riscv64-gnu": "7.4.3", "@napi-rs/snappy-linux-s390x-gnu": "7.4.3", "@napi-rs/snappy-linux-x64-gnu": "7.4.3", "@napi-rs/snappy-linux-x64-musl": "7.4.3", "@napi-rs/snappy-openharmony-arm64": "7.4.3", "@napi-rs/snappy-win32-arm64-msvc": "7.4.3", "@napi-rs/snappy-win32-ia32-msvc": "7.4.3", "@napi-rs/snappy-win32-x64-msvc": "7.4.3" } }, "sha512-oP0N73t0urt9niE9PAoj8eV7SDXkCWB76oWkPbGmIJ70L4nBes66hZxRhVtOBQG1uJXkmLhs6yTxyW/I8XAeHQ=="],
+    "snappy": ["snappy@7.4.4", "", { "optionalDependencies": { "@napi-rs/snappy-android-arm-eabi": "7.4.4", "@napi-rs/snappy-android-arm64": "7.4.4", "@napi-rs/snappy-darwin-arm64": "7.4.4", "@napi-rs/snappy-darwin-x64": "7.4.4", "@napi-rs/snappy-freebsd-x64": "7.4.4", "@napi-rs/snappy-linux-arm-gnueabihf": "7.4.4", "@napi-rs/snappy-linux-arm64-gnu": "7.4.4", "@napi-rs/snappy-linux-arm64-musl": "7.4.4", "@napi-rs/snappy-linux-ppc64-gnu": "7.4.4", "@napi-rs/snappy-linux-riscv64-gnu": "7.4.4", "@napi-rs/snappy-linux-s390x-gnu": "7.4.4", "@napi-rs/snappy-linux-x64-gnu": "7.4.4", "@napi-rs/snappy-linux-x64-musl": "7.4.4", "@napi-rs/snappy-openharmony-arm64": "7.4.4", "@napi-rs/snappy-win32-arm64-msvc": "7.4.4", "@napi-rs/snappy-win32-ia32-msvc": "7.4.4", "@napi-rs/snappy-win32-x64-msvc": "7.4.4" } }, "sha512-F9BsNSAePMi9lloD5+T6TdhnQ9Z4xwH0wf8Hd4Rk3NavI4A5dc/1LV71qF6sxfbeeHq4tWY+VFWfqSND74EZFQ=="],
 
     "solid-js": ["solid-js@1.9.15", "", { "dependencies": { "csstype": "^3.1.0", "seroval": "~1.5.4", "seroval-plugins": "~1.5.4" } }, "sha512-EeiY2xfpZJqPLjXspVEKjAII4yv8NyG//NxZ3IpOFHdUNnnTyL0uJOeS9LWGvA7cFCz5y94cjFwYlmw5Luncsg=="],
 
