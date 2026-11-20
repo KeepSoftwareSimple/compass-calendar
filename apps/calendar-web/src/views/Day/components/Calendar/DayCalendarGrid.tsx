@@ -25,6 +25,8 @@ import {
   createGridEventDraftFromGridEvent,
   getGridDraftId,
 } from "@web/events/grid-event-draft.adapter";
+import { withoutHiddenEventId } from "@web/events/hidden/hidden-event-id";
+import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { useDayEventViewModel } from "@web/events/queries/useDayEventsQuery";
 import {
   draftActions,
@@ -156,6 +158,7 @@ export function DayCalendarGrid() {
     visibleDateCount: visibleDates.length,
   });
   const gridDraft = useDraftStore(selectGridDraft);
+  const hiddenEventIds = useHiddenEventIds();
   // Strip height must include the all-day draft: layer rendering used to
   // re-stack with the draft while EventGrid still sized from saved events only.
   const savedAllDayEventIds = useMemo(
@@ -170,9 +173,17 @@ export function DayCalendarGrid() {
         isAllDay: true,
         visibleDates,
       }).filter(isDisplayedEvent);
-      return assignDayAllDayEventRows(withDraft, getCalendarColumnIndex);
+      return assignDayAllDayEventRows(
+        withDraft,
+        getCalendarColumnIndex,
+        withoutHiddenEventId(
+          hiddenEventIds,
+          gridDraft ? getGridDraftId(gridDraft) : undefined,
+        ),
+      );
     }, [
       displayedAllDayEvents,
+      hiddenEventIds,
       getCalendarColumnIndex,
       gridDraft,
       isDisplayedEvent,

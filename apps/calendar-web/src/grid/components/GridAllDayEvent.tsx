@@ -6,7 +6,11 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
 import { type GridEventCardActivationOptions } from "@web/grid/components/event-card-activation";
 import { withGridEventKeyboardFocusZIndex } from "@web/grid/components/grid-event-focus-z-index";
-import { applyHiddenEventStripWidth } from "@web/grid/grid.constants";
+import {
+  applyHiddenEventStripWidth,
+  HIDDEN_EVENT_STRIP_GAP,
+  HIDDEN_EVENT_STRIP_WIDTH,
+} from "@web/grid/grid.constants";
 import { getAllDayEventPosition } from "@web/grid/layout/event.position";
 import {
   type GridMeasurements,
@@ -57,7 +61,17 @@ const GridAllDayEventBase = (
     measurements,
     visibleDates,
   });
-  const displayPosition = applyHiddenEventStripWidth(position, isHidden);
+  const stripPosition = applyHiddenEventStripWidth(position, isHidden);
+  // Hidden strips sharing a lane sit side by side.
+  const displayPosition = isHidden
+    ? {
+        ...stripPosition,
+        left:
+          stripPosition.left +
+          (event.hiddenStripIndex ?? 0) *
+            (HIDDEN_EVENT_STRIP_WIDTH + HIDDEN_EVENT_STRIP_GAP),
+      }
+    : stripPosition;
   const stackZIndex = isActiveDraft ? ZIndex.MAX : displayPosition.zIndex;
   const [isFocused, setIsFocused] = useState(false);
   const positionWithStack = {

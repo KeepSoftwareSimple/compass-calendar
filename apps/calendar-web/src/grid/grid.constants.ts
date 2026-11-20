@@ -54,6 +54,8 @@ export const DECK_CASCADE_INDENT_RATIO = 0.15;
 export const TIMED_EVENT_WIDTH_RATIO = 0.6;
 export const TIMED_EVENT_MIN_WIDTH = 280;
 export const HIDDEN_EVENT_STRIP_WIDTH = 8;
+/** Space between hidden all-day strips that share a lane. */
+export const HIDDEN_EVENT_STRIP_GAP = 4;
 
 export function applyHiddenEventStripWidth<T extends { width: number }>(
   position: T,

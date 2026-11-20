@@ -1,6 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { type Dayjs } from "@core/util/date/dayjs";
 import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
+import { assignEventsToRow } from "@web/common/utils/grid/assign.row";
+import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { deriveOverlappingEventQueryData } from "@web/events/queries/event.query.cache";
 import { weekEventsViewQueryOptions } from "@web/events/queries/event.query.options";
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
@@ -51,5 +54,15 @@ export function useWeekEventsQuery({
 export function useWeekEventViewModel(args: WeekEventsQueryArgs) {
   const query = useWeekEventsQuery(args);
   const viewModel = useCalendarEventViewModel(query.data);
-  return { ...query, ...viewModel };
+  // Hidden events are slim strips: re-pack so same-day strips share a lane.
+  const hiddenEventIds = useHiddenEventIds();
+  const allDayEvents = useMemo(
+    () =>
+      hiddenEventIds.size === 0
+        ? viewModel.allDayEvents
+        : assignEventsToRow(viewModel.allDayEvents, hiddenEventIds)
+            .allDayEvents,
+    [hiddenEventIds, viewModel.allDayEvents],
+  );
+  return { ...query, ...viewModel, allDayEvents };
 }

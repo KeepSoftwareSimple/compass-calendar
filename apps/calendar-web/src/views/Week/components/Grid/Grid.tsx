@@ -2,6 +2,7 @@ import { type FC, useMemo } from "react";
 import { type Dayjs } from "@core/util/date/dayjs";
 import { shouldShowContextualLoadError } from "@web/api/util/api.util";
 import { useConnectGoogle } from "@web/auth/providers/useConnectProvider";
+import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { selectGridDraft, useDraftStore } from "@web/events/stores/draft.store";
 import { EventGrid, isEventGridLoading } from "@web/grid/components/EventGrid";
@@ -73,12 +74,17 @@ export const Grid: FC<Props> = ({
   });
 
   const gridDraft = useDraftStore(selectGridDraft);
+  const hiddenEventIds = useHiddenEventIds();
   // Include the live all-day draft so create/edit chips tint columns before save.
   const { events: allDayEventsForTint, activeDraftEvent: allDayDraftEvent } =
     useMemo(
       () =>
-        positionAllDayDraftEvent({ draft: gridDraft, events: allDayEvents }),
-      [allDayEvents, gridDraft],
+        positionAllDayDraftEvent({
+          draft: gridDraft,
+          events: allDayEvents,
+          hiddenEventIds,
+        }),
+      [allDayEvents, gridDraft, hiddenEventIds],
     );
   const allDayRowsCount = useMemo(
     () => allDayLaneCountFromEvents(allDayEventsForTint),

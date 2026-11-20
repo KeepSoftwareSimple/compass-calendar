@@ -106,4 +106,27 @@ describe("assignDayAllDayEventRows", () => {
     expect(allDayEvents.find((event) => event._id === "a2")?.row).toBe(2);
     expect(allDayEvents.find((event) => event._id === "b1")?.row).toBe(1);
   });
+
+  it("puts a column's hidden events side by side in one row", () => {
+    const { allDayEvents, rowsCount } = assignDayAllDayEventRows(
+      [
+        allDay("h1", "a"),
+        allDay("a1", "a"),
+        allDay("h2", "a"),
+        allDay("b1", "b"),
+      ],
+      (event) => (event.calendarId === "a" ? 0 : 1),
+      new Set(["h1", "h2"]),
+    );
+
+    expect(rowsCount).toBe(2);
+    expect(allDayEvents.map((e) => [e._id, e.row, e.hiddenStripIndex])).toEqual(
+      [
+        ["h1", 2, 0],
+        ["a1", 1, undefined],
+        ["h2", 2, 1],
+        ["b1", 1, undefined],
+      ],
+    );
+  });
 });
