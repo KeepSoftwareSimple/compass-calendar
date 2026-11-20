@@ -221,8 +221,9 @@ the new date and must not be activated for general delivery.
   produced no duplicate editions. Paused, suppressed, and unsubscribed fixtures
   received no queued editions. No provider sends were made.
 - Dense-history reads formerly expanded up to 25 records across eight windows
-  in one page. The page now bounds total record/window projections to 25 and
-  preserves cursor completeness. Regression coverage drains 200 occurrences
+  in one page. The page now bounds weighted work to 25: each series consumes
+  one unit per requested window, and single/exception facts consume one unit.
+  This keeps ordinary fact pages full and preserves the existing ID cursor. Regression coverage drains 200 occurrences
   across eight windows without loss or duplicates. No API timeout was widened.
 - Production Sync inventory separately found 744 Google connections requiring
   reauthorization. This is a connection count across all Sync principals, not a
