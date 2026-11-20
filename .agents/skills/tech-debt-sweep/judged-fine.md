@@ -11,6 +11,69 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-20
+
+Swept the merges that landed after the 2026-11-19 ledger (#5306, #5311, #5314,
+#5315, #5316, #5321); #5313 was that sweep's own output and is excluded. Gate
+step 1 was clean on the three named detectors: `bun knip` reports no unused
+files or exports (the three standing config hints), `bun lint` passes every
+rule, `bun type-check` passes. One finding, shipped as the single
+`isEmailSequenceStopped` rule the reflection gate now consults. Everything
+below was examined and kept.
+
+- **`distinctTitles` applied twice to memories** (`reflection-content.ts`,
+  #5321). `selectReflectionEvents` dedupes titles and slices to 3, then
+  `highlights(input.memories)` dedupes again. The second pass is a no-op on
+  the selector's output, but `highlights` is the renderer's own guarantee
+  across all four sections and must not depend on which caller fed it.
+  Removing it would couple the renderer to the selector's cap.
+
+- **`chooseForDay`'s recursive reassignment** (`reflection-content.ts`,
+  #5321). A backtracking search with a shared `tried` set, inside a closure,
+  to spread highlights across days when one title is another day's only
+  option. Intricate, but the comment states the bound (at most three selected
+  days participate) and the window is bounded by `limit`. Taste, and the new
+  tests cover the sparse-week and reassignment cases.
+
+- **`Math.min(4, rows.length)`** in `dispatchReflectionBatch`
+  (`reflection-dispatch.ts`, #5321). A bare concurrency literal in a file
+  whose neighbours are named in `email.constants.ts`. Naming it is a rename
+  with no correctness or discoverability gain; the provider spacing that
+  actually matters already goes through `EMAIL_SEND_PROVIDER_SPACING_MS`.
+
+- **The weighted page budget** in `readReflectionPage`
+  (`reflection-read.service.ts`, #5321). The `floor(PAGE_SIZE / seriesWork) + 1`
+  / `PAGE_SIZE + 1` limits plus a greedy weighted prefix read like an
+  off-by-one waiting to happen. Checked: `windows` is capped at 8 by
+  `ReflectionReadRequestSchema`, so `seriesWork <= 8 < PAGE_SIZE`, and the
+  first row can therefore never exceed the budget and strand the page with an
+  empty `rows` and a null `nextCursor`. Correct as written; the cap is what
+  makes it correct, so leave both alone together.
+
+- **`"daily"` cadence after the weekly-only switch** (#5321). Enrollment now
+  always mints `"weekly"` and `dispatchReflection` cancels any non-weekly
+  edition, which makes the `cadence === "daily"` branches in
+  `reflection-schedule.ts` and `reflection-content.ts` look unreachable. They
+  are not: `welcome-review.content.ts`, the preview loop in
+  `email-dispatch.service.ts`, and the `reflection` CLI all still mint daily
+  editions down the onboarding path, which passes `options.onboarding`.
+
+- **"Sundays at 10:30 a.m." spelled in copy** (`ReflectionPreferencesControl.tsx`,
+  `welcome-sequence.content.ts`). The schedule is owned by `reflectionSendAt`
+  and `nextReflectionSend`; two user-facing strings restate it, so changing
+  the send hour would leave both promising the old time. Real, but the fix is
+  larger than the problem: the web cannot import `@backend/*`, and prose like
+  "every Sunday at 10:30 a.m." is not mechanically derivable from `"10:30"`
+  and `day() !== 0` without a new core formatter. Revisit if the send time
+  ever actually moves.
+
+- **The reflection config propagation path** (`deploy-write-email-block.sh`,
+  `_deploy-environment.yml`, `config.constants.ts`, `compass.config.ts`,
+  #5321). Four sites must list each new key, which is the classic drift
+  shape. Already closed mechanically: `deploy-email-config.test.ts` asserts
+  the generated block *and* greps the workflow for both new `vars.` lines.
+  Both of #5321's new keys were added to every site.
+
 ## 2026-11-19
 
 Swept the merges that landed after the 2026-11-18 ledger (#5281, #5284,

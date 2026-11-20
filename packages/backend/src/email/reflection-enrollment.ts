@@ -4,6 +4,7 @@ import dayjs from "@core/util/date/dayjs";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { emailSendRepository } from "@backend/email/email-send.repository";
+import { isEmailSequenceStopped } from "@backend/email/email-unsubscribe";
 import {
   nextReflectionSend,
   reflectionSendAt,
@@ -36,7 +37,9 @@ export function reflectionEligible(
     !!CONFIG.EMAIL_PROVIDER &&
     !user.isSynthetic &&
     user.reflectionPreferences?.enabled === true &&
-    !user.emailPreferences?.suppressedAt &&
+    // One owning rule for "this account has opted out of email", so a global
+    // unsubscribe stops reviews the way `reflectionDisabledAt` does.
+    !isEmailSequenceStopped(user.emailPreferences) &&
     !user.emailPreferences?.reflectionDisabledAt &&
     (trial
       ? isReflectionTrialUser(user._id.toHexString())
@@ -95,6 +98,7 @@ export async function enqueueDueReflections(now = new Date()) {
     .find({
       "reflectionPreferences.enabled": true,
       "emailPreferences.suppressedAt": { $exists: false },
+      "emailPreferences.unsubscribedAt": { $exists: false },
       "emailPreferences.reflectionDisabledAt": { $exists: false },
       isSynthetic: { $ne: true },
       ...(!CONFIG.REFLECTION_ROLLOUT_ENABLED

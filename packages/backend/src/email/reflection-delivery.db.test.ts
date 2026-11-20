@@ -174,6 +174,50 @@ describe("private reflection delivery", () => {
     expect(await mongoService.emailSend.countDocuments({})).toBe(1);
   });
 
+  // A welcome-email unsubscribe stamps `unsubscribedAt`, not
+  // `reflectionDisabledAt`. Enrollment must not re-queue a review afterwards.
+  it("stops weekly reviews after an unscoped unsubscribe", async () => {
+    Object.assign(CONFIG, {
+      REFLECTION_ROLLOUT_ENABLED: true,
+      REFLECTION_TRIAL_USER_ID: undefined,
+      REFLECTION_TRIAL_EMAIL: undefined,
+    });
+    await enqueueDueReflections(now);
+    expect(
+      await mongoService.emailSend.countDocuments({ status: "queued" }),
+    ).toBe(1);
+
+    const token = createUnsubscribeToken(
+      userId.toHexString(),
+      CONFIG.EMAIL_UNSUBSCRIBE_SECRET!,
+    );
+    const res = {
+      status: mock(() => res),
+      type: mock(() => res),
+      send: mock(() => {}),
+    };
+    await emailUnsubscribeController.confirmUnsubscribe(
+      { body: { token } } as Request,
+      res as unknown as Response,
+    );
+    expect(
+      (await mongoService.user.findOne({ _id: userId }))?.emailPreferences
+        ?.unsubscribedAt,
+    ).toBeDefined();
+    expect(
+      await mongoService.emailSend.countDocuments({ status: "queued" }),
+    ).toBe(0);
+
+    await mongoService.user.updateOne(
+      { _id: userId },
+      { $unset: { reflectionNextSendAt: "" } },
+    );
+    await enqueueDueReflections(now);
+    expect(
+      await mongoService.emailSend.countDocuments({ status: "queued" }),
+    ).toBe(0);
+  });
+
   it("does not send a private edition on weekdays", async () => {
     const monday = new Date("2026-11-23T17:31:00Z");
     setSystemTime(monday);
