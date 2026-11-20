@@ -16,9 +16,9 @@ import {
   useMemo,
   useState,
 } from "react";
+import { compactListItemHtml } from "@web/components/DescriptionEditor/compact-list-item-html";
 import { DescriptionEditorLinkChrome } from "@web/components/DescriptionEditor/DescriptionEditorLinkChrome";
 import { DescriptionToolbarButton } from "@web/components/DescriptionEditor/DescriptionToolbarButton";
-import { compactListItemHtml } from "@web/components/DescriptionEditor/compact-list-item-html";
 import {
   DESCRIPTION_HTML_ALLOWED_ATTR,
   DESCRIPTION_HTML_ALLOWED_TAGS,
