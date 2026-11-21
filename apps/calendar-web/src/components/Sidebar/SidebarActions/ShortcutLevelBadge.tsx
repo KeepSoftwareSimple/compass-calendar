@@ -171,6 +171,7 @@ export function ShortcutLevelBadge({ sections }: Props) {
                   {shortcut.label}
                 </span>
                 <ShortcutKeys
+                  alternatives={shortcut.keyAlternatives}
                   className="ml-auto shrink-0"
                   keys={shortcut.keys}
                 />

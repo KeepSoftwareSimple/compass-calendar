@@ -88,7 +88,16 @@ export const EventFormDateField = ({
     dayjs(selected).startOf("month"),
   );
 
-  const shownDateRef = useRef<number | null>(null);
+  const [draftDate, setDraftDate] = useState<{
+    text: string;
+    selectedTime: number;
+  } | null>(null);
+  const selectedTime = selected.getTime();
+  const typedValue =
+    draftDate?.selectedTime === selectedTime ? draftDate.text : null;
+  if (draftDate && draftDate.selectedTime !== selectedTime) {
+    setDraftDate(null);
+  }
   const [captionView, setCaptionView] = useState<CaptionPickerView>("day");
 
   const inputPhrase = sideLabel === "start" ? "start date" : "end date";
@@ -124,24 +133,6 @@ export const EventFormDateField = ({
     return () => window.cancelAnimationFrame(id);
   }, [isOpen, pickerCursor, calendarClassName]);
 
-  useEffect(() => {
-    if (isOpen) return;
-    const input = containerRef.current?.querySelector("input");
-    if (!input) return;
-    // Closing the calendar (outside click, Escape) must not wipe a date the
-    // user is still typing; blur commits or reverts it.
-    const isDraft =
-      input === document.activeElement &&
-      shownDateRef.current === selected.getTime();
-    if (isDraft) return;
-    shownDateRef.current = selected.getTime();
-    input.value = formatEventFormDateLabel(selected);
-  }, [isOpen, selected]);
-
-  const revertInput = (target: HTMLInputElement) => {
-    target.value = formatEventFormDateLabel(selectedRef.current);
-  };
-
   const stepCalendarMonth = (deltaMonths: number) => {
     if (!calendarClassName) return;
     clickDatePickerMonthNav(calendarClassName, deltaMonths);
@@ -159,9 +150,10 @@ export const EventFormDateField = ({
    * already the committed one opens the calendar instead of committing.
    */
   const commitOrRevert = (
-    target: HTMLInputElement,
+    text: string,
   ): "committed" | "unchanged" | "rejected" => {
-    const value = target.value.trim();
+    setDraftDate(null);
+    const value = text.trim();
     const parsed = value ? parseUserDate(value, dayjs()) : null;
     if (parsed && !parsed.isSame(selectedRef.current, "day")) {
       const date = parsed.startOf("day").toDate();
@@ -176,7 +168,6 @@ export const EventFormDateField = ({
         `Sorry, IDK what to do with a ${sideLabel} date of '${value}'. Try 10.17.26, 17.10.26, 10/17/2026, or 2026-10-17.`,
       );
     }
-    revertInput(target);
     return parsed ? "unchanged" : "rejected";
   };
 
@@ -187,7 +178,7 @@ export const EventFormDateField = ({
   const pickFromOpenCalendar = (input: HTMLInputElement) => {
     const trimmed = input.value.trim();
     if (!trimmed && !pickerCursorRef.current) {
-      revertInput(input);
+      setDraftDate(null);
       requestCalendarClose();
       return;
     }
@@ -201,6 +192,7 @@ export const EventFormDateField = ({
     )
       .startOf("day")
       .toDate();
+    setDraftDate(null);
     selectedRef.current = picked;
     onCommit(picked);
     requestCalendarClose();
@@ -217,7 +209,7 @@ export const EventFormDateField = ({
       target.classList.contains("react-datepicker__day");
 
     if (event.key === "Tab") {
-      if (input instanceof HTMLInputElement) commitOrRevert(input);
+      if (input instanceof HTMLInputElement) commitOrRevert(input.value);
       setGridFocused(false);
       skipBlurCloseRef.current = true;
       requestCalendarClose();
@@ -315,10 +307,11 @@ export const EventFormDateField = ({
 
     if (!isDatePickerClosedFieldKey(event.key)) {
       if (event.key === "Escape") {
-        revertInput(target);
+        setDraftDate(null);
         event.stopPropagation();
       } else if (event.key === "Tab") {
-        if (commitOrRevert(target) !== "committed") requestCalendarClose();
+        if (commitOrRevert(target.value) !== "committed")
+          requestCalendarClose();
       }
       return;
     }
@@ -334,7 +327,7 @@ export const EventFormDateField = ({
     if (closedAction.kind === "ignore") {
       if (event.key === "Enter" && !modKey) {
         consumeDatePickerKey(event);
-        commitOrRevert(target);
+        commitOrRevert(target.value);
       }
       return;
     }
@@ -357,8 +350,7 @@ export const EventFormDateField = ({
       className={`${DATE_FIELD_CLASSNAME} group/control ${isOpen ? "" : "group-focus-within/control:[&_.c-event-form-date-field__input]:pr-8"}`}
       id={jumpId}
       onBlur={(event) => {
-        // react-datepicker skips onBlur while its calendar is open, so listen
-        // on the wrapper. Moving into the calendar is not leaving the field.
+        // An outside click can reset the picker's input before blur runs.
         const next = event.relatedTarget;
         if (next instanceof Element && next.closest(".react-datepicker"))
           return;
@@ -371,7 +363,7 @@ export const EventFormDateField = ({
           }
         }
         if (event.target instanceof HTMLInputElement) {
-          commitOrRevert(event.target);
+          commitOrRevert(typedValue ?? event.target.value);
         }
       }}
       onMouseDown={stopPropagation}
@@ -394,6 +386,14 @@ export const EventFormDateField = ({
         }}
         onCalendarOpen={onCalendarOpen}
         onChange={() => null}
+        onChangeRaw={(event) => {
+          if (
+            event?.type !== "change" ||
+            !(event.currentTarget instanceof HTMLInputElement)
+          )
+            return;
+          setDraftDate({ text: event.currentTarget.value, selectedTime });
+        }}
         onCaptionViewChange={setCaptionView}
         onPickerInputFocus={onPickerInputFocus}
         onPickerInputBlur={onPickerInputBlur}
@@ -406,6 +406,7 @@ export const EventFormDateField = ({
         }}
         onSelect={(date) => {
           if (!date) return;
+          setDraftDate(null);
           onCommit(date);
         }}
         openToDate={pickerMonth.toDate()}
@@ -423,6 +424,7 @@ export const EventFormDateField = ({
         preventOpenOnFocus
         selected={selected}
         title={title}
+        value={typedValue ?? formatEventFormDateLabel(selected)}
         view="grid"
         withUnderline={false}
       />

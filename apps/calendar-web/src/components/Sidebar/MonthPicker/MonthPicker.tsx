@@ -12,7 +12,10 @@ import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { TrialBadge } from "@web/billing/TrialBadge";
 import { ID_DATEPICKER_SIDEBAR } from "@web/common/constants/web.constants";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
-import { restoreSidebarPickerReturnFocus } from "@web/components/Sidebar/util/sidebarFocus.util";
+import {
+  focusSidebarPickerAfterMount,
+  restoreSidebarPickerReturnFocus,
+} from "@web/components/Sidebar/util/sidebarFocus.util";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { SidebarMonthPickerHintEffect } from "@web/shortcuts/tips/useDatePickerSidebarHints";
@@ -105,6 +108,10 @@ export const MonthPicker: FC<Props> = ({
   const [jumpGeneration, setJumpGeneration] = useState(0);
   const fieldsetRef = useRef<HTMLFieldSetElement>(null);
   const restoreFocusRef = useRef<{ buttonLabel: string | null } | null>(null);
+
+  useEffect(() => {
+    if (fieldsetRef.current) focusSidebarPickerAfterMount(fieldsetRef.current);
+  }, []);
 
   const jumpToMonth = useCallback(
     (targetMonth: Dayjs) => {

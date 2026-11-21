@@ -4,6 +4,7 @@ import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
   getChronologicallyAdjacentTarget,
+  getHorizontallyAdjacentTarget,
   getNearestTargetToNow,
   getSpatiallyAdjacentTarget,
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
@@ -189,6 +190,53 @@ describe("getSpatiallyAdjacentTarget", () => {
     });
 
     expect(next?.eventId).toBe("wed-noon");
+  });
+
+  it("moves Left/Right between hidden strips packed in one lane first", () => {
+    const stripA = target("strip-a", "all-day");
+    const stripB = target("strip-b", "all-day");
+    const thursday = target("thu-noon", "timed");
+    const rects: Record<
+      string,
+      Pick<DOMRect, "top" | "bottom" | "left" | "right">
+    > = {
+      "strip-a": { top: 4, bottom: 24, left: 300, right: 308 },
+      "strip-b": { top: 4, bottom: 24, left: 312, right: 320 },
+      "thu-noon": { top: 200, bottom: 260, left: 420, right: 520 },
+    };
+    const input = {
+      allDayEvents: [
+        event("strip-a", "2026-05-20", true),
+        event("strip-b", "2026-05-20", true),
+      ],
+      rectOf: (t: { eventId: string }) => rects[t.eventId]!,
+      timedEvents: [event("thu-noon", "2026-05-21T12:00:00.000")],
+      visible: [stripA, stripB, thursday],
+      weekDays,
+    };
+
+    expect(
+      getSpatiallyAdjacentTarget({
+        ...input,
+        direction: "right",
+        focused: stripA,
+      })?.eventId,
+    ).toBe("strip-b");
+    expect(
+      getSpatiallyAdjacentTarget({
+        ...input,
+        direction: "left",
+        focused: stripB,
+      })?.eventId,
+    ).toBe("strip-a");
+    // Past the last strip, Right still jumps to the next day.
+    expect(
+      getSpatiallyAdjacentTarget({
+        ...input,
+        direction: "right",
+        focused: stripB,
+      })?.eventId,
+    ).toBe("thu-noon");
   });
 });
 
@@ -380,5 +428,74 @@ describe("getNearestTargetToNow", () => {
     });
 
     expect(picked?.eventId).toBe("all");
+  });
+});
+
+describe("getHorizontallyAdjacentTarget", () => {
+  // Day view with overlap columns: "dev" spans two columns, "admin" is
+  // nested inside it, "solo" sits in its own column, "write" is alone above.
+  const dev = target("dev", "timed");
+  const admin = target("admin", "timed");
+  const solo = target("solo", "timed");
+  const write = target("write", "timed");
+  const visible = [write, dev, admin, solo];
+  const rects: Record<
+    string,
+    Pick<DOMRect, "top" | "bottom" | "left" | "right">
+  > = {
+    dev: { top: 460, bottom: 540, left: 115, right: 1180 },
+    admin: { top: 505, bottom: 585, left: 275, right: 1180 },
+    solo: { top: 460, bottom: 585, left: 1195, right: 1835 },
+    write: { top: 85, bottom: 250, left: 115, right: 755 },
+  };
+  const rectOf = (t: { eventId: string }) => rects[t.eventId]!;
+
+  it("moves right through each overlap column", () => {
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "right",
+        focused: dev,
+        visible,
+        rectOf,
+      })?.eventId,
+    ).toBe("admin");
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "right",
+        focused: admin,
+        visible,
+        rectOf,
+      })?.eventId,
+    ).toBe("solo");
+  });
+
+  it("moves left back to the nearest column", () => {
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "left",
+        focused: solo,
+        visible,
+        rectOf,
+      })?.eventId,
+    ).toBe("admin");
+  });
+
+  it("stays put when nothing sits beside the event", () => {
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "right",
+        focused: write,
+        visible,
+        rectOf,
+      }),
+    ).toBeNull();
+    expect(
+      getHorizontallyAdjacentTarget({
+        direction: "left",
+        focused: dev,
+        visible,
+        rectOf,
+      }),
+    ).toBeNull();
   });
 });

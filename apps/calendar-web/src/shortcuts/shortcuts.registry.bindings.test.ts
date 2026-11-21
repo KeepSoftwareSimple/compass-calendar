@@ -1,4 +1,5 @@
 import {
+  APP_SHORTCUT_BINDINGS,
   editSequenceRegistryKeys,
   REGISTRY_RUNTIME_KEY_SOURCES,
 } from "@core/shortcuts/app-shortcut-bindings";
@@ -13,6 +14,11 @@ const LEGEND_ONLY_IDS = new Set([
   "edit-move-edge",
   "edit-pick-by-number",
 ]);
+
+/** Registry rows whose legend keycaps differ from the runtime binding list. */
+const DISPLAY_KEY_OVERRIDES: Record<string, readonly string[]> = {
+  "edit-menu": APP_SHORTCUT_BINDINGS.editMenuLegendKeycaps,
+};
 
 const isEditSequenceLegendRow = (id: string) => {
   if (!id.startsWith("edit-focus-")) return false;
@@ -32,6 +38,12 @@ describe("shortcuts.registry bindings", () => {
         );
         expect(entry).toBeDefined();
         expect(shortcut.keys).toEqual(editSequenceRegistryKeys(entry!.key));
+        continue;
+      }
+
+      const display = DISPLAY_KEY_OVERRIDES[shortcut.id];
+      if (display) {
+        expect(shortcut.keys).toEqual([...display]);
         continue;
       }
 

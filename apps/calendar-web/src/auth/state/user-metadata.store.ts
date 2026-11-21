@@ -160,7 +160,7 @@ export const selectContactsOfferConnection = (
       offersContactsFeature(connectionProvider(connection)),
   ) ?? null;
 
-function findPrimaryGoogleSyncConnection(
+export function findPrimaryGoogleSyncConnection(
   connections: readonly SyncConnectionSummary[],
 ): SyncConnectionSummary | null {
   const googleConnections = googleConnectionsFrom(connections);

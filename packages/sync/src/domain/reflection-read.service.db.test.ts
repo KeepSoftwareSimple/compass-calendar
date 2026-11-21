@@ -43,8 +43,25 @@ describe("reflection historical reads", () => {
         providerUpdatedAt: now,
         deliveryState: "confirmed",
         providerMetadata: null,
-        content: singleEvent(`archive-${index}`, `Archived event ${index}`)
-          .content,
+        content: {
+          ...singleEvent(`archive-${index}`, `Archived event ${index}`).content,
+          attendees: [
+            {
+              email: "Owner@example.com",
+              displayName: null,
+              responseStatus: "accepted",
+            },
+            ...(index === 17
+              ? [
+                  {
+                    email: "guest@example.com",
+                    displayName: null,
+                    responseStatus: "needsAction",
+                  },
+                ]
+              : []),
+          ],
+        },
         schedule: {
           kind: "timed",
           start: matching ? "2010-11-01T17:00:00Z" : "2018-08-01T16:00:00Z",
@@ -79,7 +96,7 @@ describe("reflection historical reads", () => {
     ]);
     const input = ReflectionReadRequestSchema.parse({
       calendarIds: [calendar._id],
-      selfEmails: [],
+      selfEmails: ["owner@example.com"],
       windows: [
         {
           key: "history:2010",
@@ -118,6 +135,9 @@ describe("reflection historical reads", () => {
       "Archived event 5003",
     ]);
     expect(new Set(events.map((event) => event.id)).size).toBe(5);
+    expect(
+      events.filter((event) => event.hasGuests).map((event) => event.title),
+    ).toEqual(["Archived event 17"]);
     expect(
       events
         .filter((event) => event.title === "Archived event 5003")
@@ -167,6 +187,85 @@ describe("reflection historical reads", () => {
     } while (staleCursor);
     expect(stalePages).toBe(3);
   });
+
+  it.each([false, true])(
+    "bounds eight-window history work without dropping facts, mixed=%s",
+    async (mixed) => {
+      const db = storage.db();
+      const calendar = await seedProviderCalendar(
+        new ProviderCalendarRepository(db),
+      );
+      const records = Array.from({ length: 25 }, (_, index) => ({
+        ...singleEvent(`daily-${index}`),
+        schedule: {
+          kind: "timed" as const,
+          start: "2010-11-01T17:00:00Z",
+          end: "2010-11-01T18:00:00Z",
+          timeZone: "America/Denver",
+        },
+        recurrence:
+          mixed && index % 2 === 0
+            ? { kind: "single" as const }
+            : {
+                kind: "seriesMaster" as const,
+                rules: ["RRULE:FREQ=DAILY;COUNT=8"],
+              },
+      }));
+      await importCalendarEvents(
+        {
+          events: new EventRepository(db),
+          occurrences: new EventOccurrenceRepository(db, storage.client()),
+          resources: new SyncResourceRepository(db),
+          custody: fakeTokenSource,
+          reader: {
+            listEventPage: async (input) =>
+              input.window
+                ? pageOf([])
+                : pageOf(records, { nextSyncToken: "daily" }),
+          },
+        },
+        calendar,
+        () => new Date("2026-11-02T00:00:00Z"),
+      );
+      const windows = Array.from({ length: 8 }, (_, index) => {
+        const startDate = `2010-11-${String(index + 1).padStart(2, "0")}`;
+        const endDate = `2010-11-${String(index + 2).padStart(2, "0")}`;
+        return {
+          key: `day-${index}`,
+          start: `${startDate}T00:00:00Z`,
+          end: `${endDate}T00:00:00Z`,
+          startDate,
+          endDate,
+        };
+      });
+      const input = ReflectionReadRequestSchema.parse({
+        calendarIds: [calendar._id],
+        selfEmails: [],
+        windows,
+      });
+      const ids = new Set<string>();
+      let cursor: string | undefined;
+      let pages = 0;
+      do {
+        const page = await readReflectionPage(db, calendar, {
+          ...input,
+          ...(cursor ? { cursor } : {}),
+        });
+        expect(page.truncated).toBe(false);
+        expect(page.events.length).toBeLessThanOrEqual(mixed ? 25 : 24);
+        for (const event of page.events) {
+          expect(ids.has(event.id)).toBe(false);
+          ids.add(event.id);
+        }
+        expect(page.nextCursor).not.toBe(cursor);
+        cursor = page.nextCursor ?? undefined;
+        expect(++pages).toBeLessThan(10);
+      } while (cursor);
+      expect(ids.size).toBe(mixed ? 109 : 200);
+      if (mixed) expect(pages).toBeLessThan(9);
+      else expect(pages).toBe(9);
+    },
+  );
 
   it("paginates interleaved masters and scheduled facts without gaps or duplicates", async () => {
     const db = storage.db();

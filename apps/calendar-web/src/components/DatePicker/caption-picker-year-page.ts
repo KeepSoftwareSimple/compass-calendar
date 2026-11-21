@@ -1,4 +1,4 @@
-/** Keep in sync with `DatePickerCaption.yearsPerPage` on macOS. */
+/** Years per page in the caption year picker grid. */
 export const CAPTION_YEARS_PER_PAGE = 20;
 
 export type YearPageBounds = { readonly start: number; readonly end: number };

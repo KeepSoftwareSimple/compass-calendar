@@ -1,8 +1,6 @@
 import { type Calendar } from "@core/types/calendar.contracts";
-import { EventIdSchema } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
-import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { roundToNext } from "@web/common/utils/round/round.util";
 import {
   type GridEventDraft,
@@ -23,10 +21,7 @@ export function duplicateDraftForPastePlacement(
   const duplicate = duplicateGridEventDraft(source, calendars);
   if (!duplicate) return null;
 
-  const schedule = initialPasteSchedule(source);
-  const clientId = EventIdSchema.parse(createObjectIdString());
-  const placed = replaceGridDraftSchedule({ ...duplicate, clientId }, schedule);
-  return placed;
+  return replaceGridDraftSchedule(duplicate, initialPasteSchedule(source));
 }
 
 function initialPasteSchedule(source: Event): GridScheduleDraft {

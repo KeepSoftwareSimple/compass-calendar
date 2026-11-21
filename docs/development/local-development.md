@@ -283,6 +283,3 @@ Keep `backend.apiUrl` local so the browser and Server-Sent Events continue using
 
 Stop the tunnel when testing is complete. Do not use personal calendars with sensitive data for manual tunnel tests.
 
-## macOS development
-
-See [compass-calendar-mac](https://github.com/KeepSoftwareSimple/compass-calendar-mac) and the [export boundary](macos-repository-boundary.md).

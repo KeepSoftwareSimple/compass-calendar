@@ -1,7 +1,6 @@
 import { EVENT_MENU_LETTER } from "@core/shortcuts/binding-keycaps.constants";
 import { getFocusedCalendarEvent } from "@web/common/utils/event/event.util";
-import { cardContextMenuPoint } from "@web/components/ContextMenu/contextMenu.anchor";
-import { markKeyboardContextMenuDispatch } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
+import { dispatchGridEventContextMenuFromElement } from "@web/shortcuts/context-menu/dispatch-grid-event-context-menu";
 import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
 
 export { EVENT_MENU_LETTER };
@@ -22,18 +21,7 @@ export function useEventContextMenuShortcut() {
       const focused = getFocusedCalendarEvent();
       if (!focused) return false;
 
-      const { clientX, clientY } = cardContextMenuPoint(
-        focused.element.getBoundingClientRect(),
-      );
-      markKeyboardContextMenuDispatch();
-      focused.element.dispatchEvent(
-        new MouseEvent("contextmenu", {
-          bubbles: true,
-          cancelable: true,
-          clientX,
-          clientY,
-        }),
-      );
+      dispatchGridEventContextMenuFromElement(focused.element);
       return true;
     },
     "edit-menu",

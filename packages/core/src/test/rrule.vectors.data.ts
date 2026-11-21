@@ -1,5 +1,5 @@
 /**
- * Shared RRULE vector inputs for desktop-export JSON (macOS RecurrenceParityTests),
+ * Shared RRULE vector inputs for core tests and fixture emitters,
  * core CompassEventRRule parity tests, and sync occurrence-projection cases.
  */
 export type RruleVectorInput = {

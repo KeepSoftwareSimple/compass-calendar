@@ -20,6 +20,10 @@ export const MOD_CHORD_MAX_KEYCAPS = 3 as const;
 
 /** Opens the focused event's context menu. `.` keeps bare `m` for Monday jumps. */
 export const EVENT_MENU_LETTER = ".";
+/** Legend overlay: Space and period, shown with `keyAlternatives` (not a chord). */
+export const EVENT_MENU_LEGEND_KEYCAPS = ["Space", "."] as const;
+/** Pointer hints name Space only; period is taught elsewhere. */
+export const EVENT_MENU_POINTER_KEYCAPS = ["Space"] as const;
 /** Sidebar meeting-page nudge CTA. `/` matches meet URLs; frees `m` for Monday. */
 export const MEETING_PAGE_NUDGE_LETTER = "/";
 export const HIDE_EVENT_LETTER = "x";

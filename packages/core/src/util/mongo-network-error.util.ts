@@ -40,7 +40,13 @@ const TRANSIENT_MONGO_MESSAGE_PATTERNS = [
   // from Connection#readMany when a tightly-bounded op (e.g. the health
   // check's ping) hits its timeoutMS mid-read on a slow/blipping socket.
   /timed out during socket read/i,
+  // Server code 290: a transaction outlived transactionLifetimeLimitSeconds
+  // (Atlas default 60s), usually under load. The job retries from scratch.
+  /transaction exceeded the configured 'transactionLifetimeLimitSeconds'/i,
 ];
+
+const TRANSACTION_LIFETIME_EXCEEDED_CODE = 290;
+const TRANSIENT_TRANSACTION_LABEL = "TransientTransactionError";
 
 type MongoNetworkLogger = {
   error: (message: string, meta?: unknown) => void;
@@ -72,6 +78,17 @@ export function isTransientMongoNetworkError(error: unknown): boolean {
     seen.add(current);
 
     if (TRANSIENT_MONGO_ERROR_NAMES.has(current.name)) return true;
+    const { code, errorLabels } = current as {
+      code?: unknown;
+      errorLabels?: unknown;
+    };
+    if (code === TRANSACTION_LIFETIME_EXCEEDED_CODE) return true;
+    if (
+      Array.isArray(errorLabels) &&
+      errorLabels.includes(TRANSIENT_TRANSACTION_LABEL)
+    ) {
+      return true;
+    }
     const message = current.message;
     if (
       message.length > 0 &&

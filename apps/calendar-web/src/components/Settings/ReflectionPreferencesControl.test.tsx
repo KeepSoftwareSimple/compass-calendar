@@ -51,7 +51,7 @@ describe("reflection preference control", () => {
     });
     await user.tab();
     expect(checkbox).toHaveFocus();
-    expect(checkbox).toHaveAccessibleDescription(/Daily trial at 10:30 a.m./);
+    expect(checkbox).toHaveAccessibleDescription(/Sundays at 10:30 a.m./);
     await user.keyboard(" ");
     const error = await screen.findByRole("alert");
     expect(error).toHaveTextContent("not saved");

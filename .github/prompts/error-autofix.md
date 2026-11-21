@@ -9,11 +9,10 @@ on the `Mode` you were given:
 - **triage** — investigate and report. Never open a PR.
 - **pr** — investigate, and for genuine code bugs open a fix PR. Never merge
   it; a human merges.
-- **merge** — same as `pr`, plus: label the PR `automerge-candidate` if (and
-  only if) it meets every criterion in "Confidence rubric" below. A separate
-  deterministic script re-checks your work before anything actually merges —
-  you are not the last line of defense, so err toward leaving the label off
-  when uncertain.
+- **merge** — same as `pr`, except opening the PR is your decision to ship
+  it: it auto-merges once required CI passes and a deterministic size check
+  agrees. No human reviews it. Open a PR only if it meets every criterion
+  in "Ship bar" below; otherwise comment on the issue and open no PR.
 
 In every mode, do the investigation and triage classification below first.
 
@@ -36,8 +35,8 @@ MCP tools to pull the actual signal before doing anything else:
   namespace, result, errorType, `$exception_fingerprint`). Some historical issues predate these and
   will be generic.
 - Whether this is `staging` or `production` (staging and prod currently
-  share one PostHog project — a staging-only error is not urgent and should
-  never justify an `automerge-candidate` label)
+  share one PostHog project — a staging-only error is not urgent: in
+  `merge` mode, comment on the issue and open no PR)
 
 The backend and sync services set those keys as custom event properties (see
 `POSTHOG_ERROR_TRACKING_PROPERTY` in
@@ -109,8 +108,8 @@ full picture. Specifically:
 2. Branch name: `fix/<slug>-<issue-number>` (matches `type/action[-issue]`).
 3. Commits: conventional, lowercase, e.g. `fix(sync): ...`.
 4. Write a regression test that fails without your fix and passes with it.
-   A fix without a new/updated test is not confidence-eligible in `merge`
-   mode (see rubric below) and should be flagged as such even in `pr` mode.
+   A fix without a new/updated test does not meet the `merge` mode ship bar
+   (see below) and should be flagged as such even in `pr` mode.
 5. Open the PR using `.github/PULL_REQUEST_TEMPLATE.md`'s sections (Summary,
    Simplicity, Automated validation, Independent review, Test plan) — fill
    them honestly; you are your own "independent review" here, so say so.
@@ -125,16 +124,18 @@ full picture. Specifically:
    `query-error-tracking-issue`. Do **not** resolve ops/transient or unknown
    buckets. Do **not** suppress.
 
-## Confidence rubric — when to add `automerge-candidate` (mode `merge` only)
+## Ship bar — when to open a PR (mode `merge` only)
 
-Add the label only when **every** one of these holds. If any is doubtful,
-leave it off — the PR still exists for human review, which is a fine outcome.
+Open a PR only when **every** one of these holds. If any is doubtful, open
+no PR: comment on the issue with what you found and what the fix would be.
+Never open a PR for a human to decide on; nobody will review it.
 
 - Root cause is pinned to a specific line/function, and the stack trace
   directly confirms it (not "this seems related").
 - The diff is ≤ 250 changed lines and ≤ 8 files.
 - A regression test was added and it fails on the pre-fix code.
-- `bun run verify` is green.
+- `bun run verify` reports no NEW failures: rerun failing tests against
+  `origin/main`, and failures that also happen there do not count.
 - The change does not alter behavior beyond the specific failure path (no
   drive-by refactors, no "while I'm here" cleanups).
 

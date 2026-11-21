@@ -2,7 +2,6 @@ import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { repositionDraftByKeyboard } from "@web/common/utils/draft/reposition-draft-by-keyboard.util";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
-import { useEventPastePreviewEscape } from "@web/events/paste-preview/useEventPastePreviewEscape";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
 import { dayEventTargeting } from "@web/grid/interaction/view-event-registry";
 import { useGridEventEditShortcuts } from "@web/grid/shortcuts/useGridEventEditShortcuts";
@@ -107,8 +106,6 @@ export function useDayEventNudgeShortcuts({
     timedEvents,
     visibleDays,
   });
-
-  useEventPastePreviewEscape();
 
   return { getEditSequenceAnchor, shiftHints };
 }

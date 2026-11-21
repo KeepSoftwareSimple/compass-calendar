@@ -102,7 +102,7 @@ export function LifeBirthDateField({
     setPickerCursor(next);
   };
 
-  const [draftText, setDraftText] = useState("");
+  const [draftText, setDraftText] = useState<string>();
   const shownDateRef = useRef<number | null>(null);
   const draftParseKeyRef = useRef("");
   const [monthNudgeTick, setMonthNudgeTick] = useState(0);
@@ -174,7 +174,7 @@ export function LifeBirthDateField({
     if (isDraft) return;
     shownDateRef.current = committed?.getTime() ?? null;
     input.value = committed ? formatLifeBirthDatePreview(committed) : "";
-    setDraftText("");
+    setDraftText(undefined);
   }, [isOpen]);
 
   const parseOptions = {
@@ -183,7 +183,7 @@ export function LifeBirthDateField({
     maxDate,
   };
 
-  const draftParse = parseLifeBirthDateInput(draftText, parseOptions);
+  const draftParse = parseLifeBirthDateInput(draftText ?? "", parseOptions);
 
   const applyGridAnchor = (anchor: { month: Dayjs; cursor: Dayjs }) => {
     setPickerCursorSync(anchor.cursor);
@@ -248,7 +248,7 @@ export function LifeBirthDateField({
   const revertInput = (target: HTMLInputElement) => {
     const committed = committedRef.current;
     target.value = committed ? formatLifeBirthDatePreview(committed) : "";
-    setDraftText("");
+    setDraftText(undefined);
     draftParseKeyRef.current = "";
   };
 
@@ -256,7 +256,7 @@ export function LifeBirthDateField({
     committedRef.current = date;
     shownDateRef.current = date.getTime();
     onCommit(date);
-    setDraftText("");
+    setDraftText(undefined);
     draftParseKeyRef.current = "";
   };
 
@@ -298,7 +298,7 @@ export function LifeBirthDateField({
 
     if (parsed.kind === "empty") {
       onCommit(null);
-      setDraftText("");
+      setDraftText(undefined);
       draftParseKeyRef.current = "";
       return "committed";
     }
@@ -497,17 +497,16 @@ export function LifeBirthDateField({
     }
   };
 
-  const draftTrimmed = draftText.trim();
+  const draftTrimmed = draftText?.trim() ?? "";
   const previewLine = lifeBirthDateDraftPreview(draftParse, draftTrimmed);
 
   const previewIsError = draftParse.kind === "invalid" && draftTrimmed !== "";
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: keyboard routing for the birth-date field matches EventFormDateField.
     <div
       ref={containerRef}
       className="c-life-birth-date-field flex w-full max-w-44 flex-col items-center gap-1"
-      onBlur={(event) => {
+      onBlurCapture={(event) => {
         const next = event.relatedTarget;
         if (
           next instanceof Element &&
@@ -581,9 +580,11 @@ export function LifeBirthDateField({
             commitParsedDate(date);
           }}
           onChangeRaw={(event) => {
-            if (event.type === "click") return;
+            if (event?.type === "click") return;
+            const input = event?.currentTarget;
+            if (!(input instanceof HTMLInputElement)) return;
             setGridFocused(false);
-            setDraftText(event.currentTarget.value);
+            setDraftText(input.value);
           }}
           openToDate={pickerMonth.toDate()}
           highlightDates={
@@ -600,6 +601,7 @@ export function LifeBirthDateField({
           placeholderText="Select date"
           preventOpenOnFocus
           selected={committedDate ?? undefined}
+          value={isOpen ? draftText : undefined}
           title="Date of birth"
           view="grid"
           withTodayButton={false}

@@ -301,6 +301,13 @@
         "requiresWrite": true
       },
       {
+        "id": "edit-delete-this-only",
+        "keys": ["Mod", "Delete"],
+        "label": "Delete only this occurrence, no series prompt",
+        "section": "edit",
+        "requiresWrite": true
+      },
+      {
         "id": "edit-duplicate",
         "keys": ["Mod", "D"],
         "label": "Duplicate focused event",
@@ -323,7 +330,8 @@
       },
       {
         "id": "edit-menu",
-        "keys": ["."],
+        "keys": ["Space", "."],
+        "keyAlternatives": true,
         "label": "Open event menu",
         "section": "edit",
         "requiresWrite": true
@@ -332,6 +340,12 @@
         "id": "edit-hide",
         "keys": ["x"],
         "label": "Hide or show focused event",
+        "section": "edit"
+      },
+      {
+        "id": "edit-open-location",
+        "keys": ["Mod", "Shift", "M"],
+        "label": "Open location in Google Maps",
         "section": "edit"
       },
       {
@@ -397,6 +411,13 @@
         "id": "edit-move-later",
         "keys": ["Shift", "ArrowDown"],
         "label": "Move event 15 min later",
+        "section": "edit",
+        "requiresWrite": true
+      },
+      {
+        "id": "edit-move-this-only",
+        "keys": ["Mod", "Shift", "ArrowDown"],
+        "label": "Move only this occurrence, no series prompt",
         "section": "edit",
         "requiresWrite": true
       },

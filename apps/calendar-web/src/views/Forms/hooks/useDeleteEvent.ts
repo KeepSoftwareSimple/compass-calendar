@@ -9,13 +9,19 @@ import { draftActions } from "@web/events/stores/draft.store";
 // No confirmation prompt: deletes are undoable via Cmd/Ctrl+Z (the mutation
 // layer records a snapshot and shows a "Deleted" toast with the undo hint).
 export function deleteEventAndDiscardDraft(
-  deleteEvent?: (payload: { id: EventId; scope: RecurrenceScope }) => void,
+  deleteEvent?: (payload: {
+    id: EventId;
+    scope: RecurrenceScope;
+    scopeAsk?: "skip";
+  }) => void,
   existingEvent?: CompassEvent | null,
+  scopeAsk?: "skip",
 ) {
   if (existingEvent?._id) {
     deleteEvent?.({
       id: existingEvent._id as EventId,
       scope: "this",
+      scopeAsk,
     });
   }
 

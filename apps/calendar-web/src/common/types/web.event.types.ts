@@ -53,6 +53,8 @@ const GridEventSchema = WebEventSchema.extend({
   hasFlipped: z.boolean().optional(),
   isOpen: z.boolean().optional(),
   row: z.number().optional(),
+  /** Hidden all-day strips sharing a lane: offset from the left, 0-based. */
+  hiddenStripIndex: z.number().optional(),
   position: z.object({
     isOverlapping: z.boolean(),
     totalEventsInGroup: z.number().default(1),

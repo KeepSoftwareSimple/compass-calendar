@@ -40,7 +40,7 @@ test("exploring without an account returns focus to the week view without trappi
     .click();
   await welcomeDialog.getByRole("button", { name: "Next" }).click();
   await welcomeDialog
-    .getByRole("button", { name: "Start without an account" })
+    .getByRole("button", { name: "Continue as guest" })
     .click();
   await expect(
     page.getByRole("region", { name: "Shortcut practice" }),

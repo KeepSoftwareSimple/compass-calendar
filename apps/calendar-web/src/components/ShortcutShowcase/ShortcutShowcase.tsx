@@ -495,7 +495,12 @@ const ShowcaseTakeover: FC = () => {
     const direction = arrowDirection(event.key);
     if (direction) {
       claim(event);
-      dispatchKey({ type: "arrow", direction, shift: event.shiftKey });
+      dispatchKey({
+        type: "arrow",
+        direction,
+        shift: event.shiftKey,
+        coarse: event.altKey,
+      });
       return;
     }
 

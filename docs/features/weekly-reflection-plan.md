@@ -2,6 +2,16 @@
 
 Status: implementation plan, November 2, 2026. No delivery is enabled by this document.
 
+## Scheduled rollout update, November 16, 2026
+
+The requested launch is December 6, 2026. The private trial now follows the same
+Sunday 10:30 a.m. cadence as general reviews. Explicit population enrollment
+includes existing accounts while preserving pauses, unsubscribes, suppression,
+timezones, and calendar exclusions. A configured local start date gates both
+scheduling and dispatch. This supersedes the daily trial and onboarding-only
+cohort described below. Operational steps, exact deployment inputs, readiness
+checks, and rollback are in the [trial and rollout runbook](../development/weekly-reflection-trial.md#december-6-2026-population-rollout).
+
 ## Private-trial presentation update, November 5, 2026
 
 The current trial uses a plain email titled `Weekly review (ISO week)`, compact
@@ -74,10 +84,9 @@ must be stable across retries of the same edition.
   12 months ago through 18 months ahead. A full canonical import does not make
   old recurring occurrences available through this read model.
 - Web Life View preferences are browser-local in
-  `apps/calendar-web/src/views/Life/life-preferences.storage.ts`. Native has
-  its own persisted `CompassData/.../Stores/LifeStore.swift`.
+  `apps/calendar-web/src/views/Life/life-preferences.storage.ts`.
 - Life math, quote collection, and visual layout currently live under the web
-  Life view; native has a corresponding `LifeMath.swift` and snapshot fixtures.
+  Life view.
 - Backend email delivery already has durable rows, claims, retries, suppression,
   unsubscribe handling, and webhooks. Its provider interface has no attachments;
   dispatch routes every sequence other than `booking-host` to welcome handling,
@@ -293,10 +302,9 @@ enabling general enrollment; the private trial has its explicit history exceptio
 
 Run focused core/web/backend/sync/scripts suites for the changed boundaries,
 including Mongo-backed import, preferences, and queue tests. Keep regression
-tests. Run `bun run verify --strict` before shipping. Native changes also require
-`bun cli contracts:swift --check`, `bun cli desktop:export --check`, and the
-focused LifeStore/LifeMath tests. Perform visual image/email QA separately from
-automated checks. Rehearse on staging before any production activation.
+tests. Run `bun run verify --strict` before shipping. Perform visual image/email
+QA separately from automated checks. Rehearse on staging before any production
+activation.
 
 ## External references
 

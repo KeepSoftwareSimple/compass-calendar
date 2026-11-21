@@ -6,8 +6,8 @@ Compass uses GitHub Actions for continuous integration, Docker Hub for image dis
 |---|---|---|
 | Unit (`test-unit.yml`) | Push / PR / merge_group to `main` | Runs `static` (lint, knip, type-check) and unit tests. PRs run only the packages they touched (`packages/core`, root `package.json` / `bun.lock` / `tsconfig*` still turn every leg on). Boot-size runs only when `detect-code-changes.sh` sets `static_web`. Merge queue and `main` always run every leg. |
 | E2E (`test-e2e.yml`) | Push / PR / merge_group to `main` | Playwright e2e in five shards behind one required `e2e` gate (PRs that touch only docs, only `apps/booking-web/**`, or only `packages/backend` / `packages/sync` / `packages/scripts`, skip the shards; merge queue and `main` always run them) |
-| Repository boundary (`test-repository-boundary.yml`) | PR / merge_group / push to `main` | Ubuntu-only `macos` context required by the organization ruleset. Ensures native code and Mac runners remain in compass-calendar-mac. |
-| CodeQL (`codeql.yml`) | PR / merge_group / push to `main` | `actions` + `javascript-typescript` on Ubuntu. Native Swift analysis runs in compass-calendar-mac. |
+| Repository boundary (`test-repository-boundary.yml`) | PR / merge_group / push to `main` | Ubuntu job `repository-boundary`. Fails if Swift sources or Mac runner jobs reappear in this repo. |
+| CodeQL (`codeql.yml`) | PR / merge_group / push to `main` | `actions` + `javascript-typescript` on Ubuntu. |
 | Performance budget | Push to `main` (web/core/lock/budget), nightly schedule, `workflow_dispatch`; PR only when `.github/perf/**` or the workflow file changes | Lighthouse budget (not a required merge check). Desktop script transfer is calibrated to 1,060 KB as of 2026-09-07 (main measured 1,034,338 bytes). |
 | Error autofix (`error-autofix.yml`) | `posthog[bot]` issue opened/reopened, hourly sweep, `workflow_dispatch` | Governed Routine: triage or fix PostHog error issues; sweep re-enters missed recurrences |
 | Error autofix post-deploy (`error-autofix-postdeploy.yml`) | `Release on main` completed | Notifies Discord/GitHub of autofix release outcome |
@@ -33,6 +33,23 @@ hourly/`workflow_dispatch` kick, and `launch-next` on automerge merge.
 `post-deploy` smokes only.
 
 ---
+
+## Dependency maintenance
+
+Dependabot opens weekly Bun and GitHub Actions updates. Bun groups cover
+packages that need to move together. Each other version update gets its own
+PR, up to five open Bun version PRs. Security updates have a separate queue.
+
+The daily **Compass dependency maintenance** Codex automation checks
+[open Dependabot alerts](https://github.com/KeepSoftwareSimple/compass-calendar/security/dependabot),
+runs `bun audit --json` against current `main`, and triages open update PRs.
+It prioritizes confirmed advisories and opens a focused patch PR if Dependabot
+has no suitable update. For passing updates it verifies the diff, including
+manifest and lockfile consistency, and submits through the normal merge queue.
+For failing updates it checks the same tests on the base commit and prepares
+the required migration in a focused PR. Link superseded bot PRs to their
+replacement PR or a tracking issue so the work is picked up on the next run.
+Record evidence and any decision needed on the relevant PR or issue.
 
 ## Unit workflow
 

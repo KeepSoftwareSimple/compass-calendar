@@ -23,10 +23,7 @@ import {
   selectIsEventFormOpen,
   useDraftStore,
 } from "@web/events/stores/draft.store";
-import {
-  selectEventPastePreviewActive,
-  useEventPastePreviewStore,
-} from "@web/events/stores/event-paste-preview.store";
+import { useEventPastePreviewStore } from "@web/events/stores/event-paste-preview.store";
 import { EdgeFocusIndicator } from "@web/grid/shortcuts/EdgeFocusIndicator";
 import {
   selectEdgeFocusActive,
@@ -91,10 +88,11 @@ export const SidebarStatusBar: FC = () => {
     gridModeHintsEligible &&
     draftActivity === "keyboardPlace" &&
     !isDraftFormOpen;
-  const pastePreviewActive = useEventPastePreviewStore(
-    selectEventPastePreviewActive,
-  );
-  const isPastePreview = gridModeHintsEligible && pastePreviewActive;
+  const pastePlacement = useEventPastePreviewStore((state) => state.placement);
+  const pasteSchedule =
+    gridModeHintsEligible && !isDraftFormOpen
+      ? pastePlacement?.values.schedule
+      : undefined;
   const timeTravelZone = useTimeTravelZone();
   const isTimeTraveling =
     isCalendarGridPathname(pathname) && timeTravelZone !== null;
@@ -132,8 +130,6 @@ export const SidebarStatusBar: FC = () => {
   const showQuickTime = gridModeHintsEligible && Boolean(quickTimeDigits);
   const indicator = showQuickTime ? (
     <QuickTimeIndicator />
-  ) : isPastePreview ? (
-    <EventPastePreviewIndicator />
   ) : showEventJump ? (
     <EventJumpIndicator />
   ) : showEdgeFocus ? (
@@ -152,7 +148,10 @@ export const SidebarStatusBar: FC = () => {
 
   return (
     <div className="flex min-h-6 shrink-0 items-center justify-center px-4 py-0.5">
-      {indicator ? (
+      <EventPastePreviewIndicator
+        schedule={showQuickTime ? undefined : pasteSchedule}
+      />
+      {!showQuickTime && pasteSchedule ? null : indicator ? (
         <div className="flex min-w-0 flex-1 items-center justify-center">
           {indicator}
         </div>

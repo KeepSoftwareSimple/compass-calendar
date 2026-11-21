@@ -4,8 +4,9 @@ import { type ReplaceEventInput } from "@core/types/event-command.contracts";
 import { type RecurrenceScopePromotion } from "@web/events/recurrence/recurrence-scope";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 
-// Keyboard nudges hold the ask silent until Shift is released.
-export type RecurrenceScopeAskTiming = "deferred";
+// "deferred": keyboard nudges hold the ask silent until Shift is released.
+// "skip": the user held Mod to change only this occurrence, so never ask.
+export type RecurrenceScopeAskTiming = "deferred" | "skip";
 
 type RecurrenceScopeOpportunityStatus =
   | "pending"

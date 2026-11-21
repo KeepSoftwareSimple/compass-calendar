@@ -284,6 +284,13 @@ export const SHORTCUTS_REGISTRY = [
     requiresWrite: true,
   },
   {
+    id: "edit-delete-this-only",
+    keys: hotkeyKeycaps("Mod+Delete"),
+    label: "Delete only this occurrence, no series prompt",
+    section: "edit",
+    requiresWrite: true,
+  },
+  {
     id: "edit-duplicate",
     keys: [...B.editDuplicate.keycaps],
     label: "Duplicate focused event",
@@ -307,10 +314,10 @@ export const SHORTCUTS_REGISTRY = [
   {
     // Shift+F10 also opens this menu on platforms that have a context-menu key
     // (the browser turns it into a contextmenu event). It is deliberately not
-    // listed here: it would be a second row
-    // with this exact label, and m already teaches the capability.
+    // listed here: it would be a second row with this exact label.
     id: "edit-menu",
-    keys: [...B.editMenu.keycaps],
+    keys: [...B.editMenuLegendKeycaps],
+    keyAlternatives: true,
     label: "Open event menu",
     section: "edit",
     requiresWrite: true,
@@ -319,6 +326,13 @@ export const SHORTCUTS_REGISTRY = [
     id: "edit-hide",
     keys: [...B.editHide.keycaps],
     label: "Hide or show focused event",
+    section: "edit",
+  },
+  // Not form-gated: works on the focused grid event and in the open form.
+  {
+    id: "edit-open-location",
+    keys: [...B.editOpenLocation.keycaps],
+    label: "Open location in Google Maps",
     section: "edit",
   },
   {
@@ -471,6 +485,13 @@ export const SHORTCUTS_REGISTRY = [
     id: "edit-move-later",
     keys: hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.down),
     label: "Move event 15 min later",
+    section: "edit",
+    requiresWrite: true,
+  },
+  {
+    id: "edit-move-this-only",
+    keys: hotkeyKeycaps(KEYMAP.moveEvent.thisOnlyHotkeys.down),
+    label: "Move only this occurrence, no series prompt",
     section: "edit",
     requiresWrite: true,
   },

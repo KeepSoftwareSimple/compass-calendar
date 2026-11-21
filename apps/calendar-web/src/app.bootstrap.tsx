@@ -2,8 +2,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import { createRoot } from "react-dom/client";
 import "react-toastify/dist/ReactToastify.css";
 import "./common/styles/toastify-theme.css";
-import { buildDesktopConnectRelayUrl } from "@core/desktop/desktop-oauth-state.util";
-import { shouldRelayDesktopConnectRedirect } from "@web/auth/callback/desktop-oauth-callback-relay";
 import { sessionInit } from "@web/auth/compass/session/SessionProvider";
 import {
   applyConnectRedirect,
@@ -14,6 +12,7 @@ import {
   initializeDatabaseWithErrorHandling,
   showDbInitErrorToast,
 } from "@web/common/utils/app-init.util";
+import { captureBootShell } from "@web/common/utils/boot/boot-shell.util";
 import { mountCompassE2EHelpers } from "@web/common/utils/toast/mount-compass-e2e-helpers";
 import { App } from "@web/components/App/App";
 import { router } from "@web/routers";
@@ -27,27 +26,14 @@ export async function bootstrapApp(): Promise<void> {
   repairAccidentalUtcTimeTravelZone();
   configureGoogleRevocationApiHandler();
 
-  // Read before the router mounts: validateAuthSearch strips unrecognized
-  // query params (like these) on the first navigation.
   const connectStatus = readConnectStatus();
-  if (
-    connectStatus &&
-    shouldRelayDesktopConnectRedirect(window.location.search, false)
-  ) {
-    window.location.replace(
-      buildDesktopConnectRelayUrl(
-        connectStatus.provider,
-        window.location.search,
-      ),
-    );
-    return;
-  }
 
   const container = document.getElementById("root");
   if (!container) {
     throw new Error("Root container with id 'root' not found in index.html");
   }
 
+  captureBootShell();
   const root = createRoot(container);
   const dbInitPromise = initializeDatabaseWithErrorHandling();
   sessionInit();

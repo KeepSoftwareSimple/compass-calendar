@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Hourly watchdog: an autofix-authored PR can sit open forever with no
-# distinguishing signal if the agent never applies `automerge-candidate`
-# (see .github/prompts/error-autofix.md's confidence rubric, which tells the
-# agent to err toward leaving the label off) — autofix-merge-guard.sh only
-# runs once, reactively, right after the same workflow run that opened the
-# PR, and finds nothing to merge in that case. This script re-lists all open
-# `autofix`-labeled PRs on every hourly tick and escalates any that are past
-# a grace period with neither `automerge-candidate` nor `autofix:needs-human`
-# already applied. Motivated by PR #3655 (issue #2901), which sat unmerged
-# and unlabeled with nothing surfacing that fact anywhere.
+# Hourly watchdog: autofix-merge-guard.sh only runs once, right after the
+# workflow run that opened the PR, so a PR it missed (agent pushed late, a gh
+# blip, a failed `gh pr merge --auto`) could sit open forever. PR #3655 and
+# PR #5323 both did. This script re-lists open `autofix` PRs past a grace
+# period every hour.
+#
+# merge mode: any such PR without auto-merge goes back through the merge
+# guard. Nothing waits on a human, including PRs an older version of this
+# pipeline parked with `autofix:needs-human`.
+# pr mode: a human merges by design, so a stale PR is flagged once with
+# `autofix:needs-human`.
 set -uo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/autofix-lib.sh"
@@ -21,17 +22,21 @@ GRACE_MINUTES=${AUTOFIX_WATCHDOG_GRACE_MINUTES:-60}
 DRY_RUN=${AUTOFIX_WATCHDOG_DRY_RUN:-}
 AUTOFIX_MODE=${AUTOFIX_MODE:-}
 
-# Open autofix PRs that carry neither terminal label, so escalation is the
-# only thing left for them. `labels` has to be in `--json`: gh returns only
-# the fields asked for, so leaving it out made the filter read an absent
-# `.labels`, pass every PR, and re-notify already-escalated ones hourly.
+# Open autofix PRs still needing action. Every field the filter reads has to
+# be in `--json`: gh returns only the fields asked for, so a missing
+# `labels` once made the filter pass every PR and re-notify hourly.
 list_unterminated_prs() {
-  gh pr list --repo "$REPO" --label autofix --state open \
-    --json number,createdAt,url,labels \
-    --jq '[.[] | select(
-      ([.labels[]?.name] | index("automerge-candidate") | not) and
-      ([.labels[]?.name] | index("autofix:needs-human") | not)
-    )] | .[] | tojson'
+  if [ "$AUTOFIX_MODE" = "merge" ]; then
+    gh pr list --repo "$REPO" --label autofix --state open \
+      --json number,createdAt,url,body,autoMergeRequest \
+      --jq '[.[] | select(.autoMergeRequest == null)] | .[] | tojson'
+  else
+    gh pr list --repo "$REPO" --label autofix --state open \
+      --json number,createdAt,url,labels \
+      --jq '[.[] | select(
+        [.labels[]?.name] | index("autofix:needs-human") | not
+      )] | .[] | tojson'
+  fi
 }
 
 is_stale() {
@@ -47,19 +52,33 @@ age_human() {
   printf '%dh %dm' "$((minutes / 60))" "$((minutes % 60))"
 }
 
+# merge mode: hand the PR back to the merge guard, keyed by its issue.
+remerge() {
+  local pr_number=$1
+  local body=$2
+  local issue
+  issue=$(printf '%s' "$body" | grep -oiE 'fixes #[0-9]+' | head -n1 | grep -oE '[0-9]+' || true)
+  if [ -z "$issue" ]; then
+    notify "Autofix PR #${pr_number} has no 'Fixes #N' line, so the merge guard cannot find it; closing"
+    [ -n "$DRY_RUN" ] && return 0
+    gh pr close "$pr_number" --repo "$REPO" \
+      --comment "Closed by autofix-pr-watchdog: no 'Fixes #N' line." || return 1
+    return 0
+  fi
+  printf 're-running merge guard for PR #%s (issue #%s)\n' "$pr_number" "$issue"
+  [ -n "$DRY_RUN" ] && return 0
+  "$AUTOFIX_SCRIPT_DIR/autofix-merge-guard.sh" "$issue"
+}
+
+# pr mode: flag a stale PR once for the human who merges in that mode.
 escalate() {
   local pr_number=$1
   local created_at=$2
   local pr_url=$3
-  local age tail msg edit_error
+  local age msg edit_error
 
   age=$(age_human "$created_at")
-  if [ "$AUTOFIX_MODE" = "merge" ]; then
-    tail="needs a merge decision"
-  else
-    tail="waiting for manual merge; flagging since it's stale"
-  fi
-  msg="Autofix PR #${pr_number} has been open ${age} with no automerge-candidate or autofix:needs-human label (mode: ${AUTOFIX_MODE:-unknown}) — ${tail}: ${pr_url}"
+  msg="Autofix PR #${pr_number} has been open ${age} (mode: ${AUTOFIX_MODE:-unknown}), waiting for manual merge; flagging since it's stale: ${pr_url}"
 
   if [ -n "$DRY_RUN" ]; then
     printf '%s\n' "$msg"
@@ -79,7 +98,7 @@ escalate() {
 }
 
 main() {
-  local prs pr_json number created url failures=0 escalated=0
+  local prs pr_json number created url failures=0 handled=0
 
   if ! prs=$(list_unterminated_prs); then
     notify "Error autofix PR watchdog could not list open autofix PRs (gh pr list failed)"
@@ -92,15 +111,21 @@ main() {
     created=$(jq -r '.createdAt' <<<"$pr_json")
     url=$(jq -r '.url' <<<"$pr_json")
     if is_stale "$created"; then
-      if escalate "$number" "$created" "$url"; then
-        escalated=$((escalated + 1))
+      if [ "$AUTOFIX_MODE" = "merge" ]; then
+        if remerge "$number" "$(jq -r '.body // ""' <<<"$pr_json")"; then
+          handled=$((handled + 1))
+        else
+          failures=$((failures + 1))
+        fi
+      elif escalate "$number" "$created" "$url"; then
+        handled=$((handled + 1))
       else
         failures=$((failures + 1))
       fi
     fi
   done <<<"$prs"
 
-  printf 'checked open autofix PRs; escalated %s (failed %s)\n' "$escalated" "$failures"
+  printf 'checked open autofix PRs; handled %s (failed %s)\n' "$handled" "$failures"
   [ "$failures" -eq 0 ]
 }
 

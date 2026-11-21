@@ -69,8 +69,9 @@ test("a card click teaches Enter and Enter opens the event", async ({
 
   const hint = pointerHint(page);
   await expect(hint).toBeVisible();
-  await expect(hint).toContainText("Press");
+  await expect(hint).toContainText("open");
   await expect(hint.getByText("Enter", { exact: true })).toBeVisible();
+  await expect(hint.getByText("Space", { exact: true })).toBeVisible();
 
   await page.keyboard.press("Enter");
   await expect(getFormTitleInput(page)).toHaveValue(title);

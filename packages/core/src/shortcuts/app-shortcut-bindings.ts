@@ -1,7 +1,9 @@
 import {
   EVENT_FORM_TOGGLE_ALL_DAY_HOTKEY,
   EVENT_FORM_TOGGLE_ALL_DAY_KEYCAPS,
+  EVENT_MENU_LEGEND_KEYCAPS,
   EVENT_MENU_LETTER,
+  EVENT_MENU_POINTER_KEYCAPS,
   FOCUS_NOTICE_LETTER,
   HIDE_EVENT_LETTER,
   MONTH_PICKER_CURRENT_HOTKEY,
@@ -86,6 +88,8 @@ export const APP_SHORTCUT_BINDINGS = {
   editCopy: { hotkey: "Mod+C", keycaps: hotkeyKeycaps("Mod+C") },
   editPaste: { hotkey: "Mod+V", keycaps: hotkeyKeycaps("Mod+V") },
   editMenu: { keycaps: [EVENT_MENU_LETTER] },
+  editMenuLegendKeycaps: [...EVENT_MENU_LEGEND_KEYCAPS],
+  editMenuPointerKeycaps: [...EVENT_MENU_POINTER_KEYCAPS],
   editHide: { keycaps: [HIDE_EVENT_LETTER] },
   editSave: { hotkey: "Mod+Enter", keycaps: hotkeyKeycaps("Mod+Enter") },
   editCancelMeeting: {
@@ -107,6 +111,10 @@ export const APP_SHORTCUT_BINDINGS = {
   editOpenDescriptionLink: {
     hotkey: KEYMAP.openDescriptionLinkAtCaret.hotkey,
     keycaps: [...KEYMAP.openDescriptionLinkAtCaret.keycaps],
+  },
+  editOpenLocation: {
+    hotkey: "Mod+Shift+M",
+    keycaps: hotkeyKeycaps("Mod+Shift+M"),
   },
   editFieldLeaderInForm: { hotkey: "Mod+E", keycaps: ["Mod+E"] },
   editFormActions: { hotkey: "Mod+0", keycaps: hotkeyKeycaps("Mod+0") },
@@ -159,6 +167,7 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "focus-find-event": KEYMAP.commandPalette.keycaps,
   "edit-open": APP_SHORTCUT_BINDINGS.editOpen.keycaps,
   "edit-delete": APP_SHORTCUT_BINDINGS.editDelete.keycaps,
+  "edit-delete-this-only": hotkeyKeycaps("Mod+Delete"),
   "edit-duplicate": APP_SHORTCUT_BINDINGS.editDuplicate.keycaps,
   "edit-copy": APP_SHORTCUT_BINDINGS.editCopy.keycaps,
   "edit-paste": APP_SHORTCUT_BINDINGS.editPaste.keycaps,
@@ -173,6 +182,7 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "edit-copy-meeting-link": APP_SHORTCUT_BINDINGS.editCopyMeetingLink.keycaps,
   "edit-open-description-link":
     APP_SHORTCUT_BINDINGS.editOpenDescriptionLink.keycaps,
+  "edit-open-location": APP_SHORTCUT_BINDINGS.editOpenLocation.keycaps,
   "edit-field-leader-in-form": [
     ...APP_SHORTCUT_BINDINGS.editFieldLeaderInForm.keycaps,
   ],
@@ -187,6 +197,7 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "edit-move-next-day": hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.right),
   "edit-move-earlier": hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.up),
   "edit-move-later": hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.down),
+  "edit-move-this-only": hotkeyKeycaps(KEYMAP.moveEvent.thisOnlyHotkeys.down),
   "edit-move-hour-earlier": hotkeyKeycaps(KEYMAP.moveEvent.coarseHotkeys.up),
   "edit-move-hour-later": hotkeyKeycaps(KEYMAP.moveEvent.coarseHotkeys.down),
   "edit-move-week-earlier": hotkeyKeycaps(KEYMAP.moveEvent.coarseHotkeys.left),

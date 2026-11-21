@@ -1,7 +1,10 @@
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { emailAnalytics } from "@backend/email/email.analytics";
-import { emailSendBackoffMs } from "@backend/email/email.constants";
+import {
+  EMAIL_SEND_PROVIDER_SPACING_MS,
+  emailSendBackoffMs,
+} from "@backend/email/email.constants";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
@@ -48,6 +51,10 @@ export async function dispatchReflection(
   };
   if (!edition) {
     await cancel("Missing reflection edition");
+    return;
+  }
+  if (!options.onboarding && edition.cadence !== "weekly") {
+    await cancel("Reflection cadence changed to weekly");
     return;
   }
   if (
@@ -130,6 +137,7 @@ export async function dispatchReflection(
       ? CONFIG.REFLECTION_TRIAL_EMAIL
       : fresh.email;
     if (
+      (!edition.trial && !context.connectionsReady) ||
       freshRecipient !== recipient ||
       fresh.reflectionPreferences?.timeZone !== edition.timeZone ||
       JSON.stringify([...context.calendarIds].sort()) !==
@@ -208,4 +216,37 @@ export async function dispatchReflection(
         properties: { sequence: row.sequence },
       });
   }
+}
+
+/** Prepare independent reviews concurrently; keep provider requests sequential. */
+export async function dispatchReflectionBatch(
+  rows: EmailSendRecord[],
+  provider: EmailProvider,
+) {
+  const pause = () =>
+    new Promise<void>((resolve) =>
+      setTimeout(resolve, EMAIL_SEND_PROVIDER_SPACING_MS),
+    );
+  let sendQueue = Promise.resolve();
+  const pacedProvider: EmailProvider = {
+    ...provider,
+    send(input) {
+      const result = sendQueue.then(() => provider.send(input));
+      // A provider failure must not poison the queue for later recipients.
+      sendQueue = result.then(pause, pause);
+      return result;
+    },
+  };
+  let next = 0;
+  const outcomes = await Promise.allSettled(
+    Array.from({ length: Math.min(4, rows.length) }, async () => {
+      while (next < rows.length) {
+        const row = rows[next++]!;
+        await dispatchReflection(row, pacedProvider);
+      }
+    }),
+  );
+  await sendQueue;
+  const failed = outcomes.find((outcome) => outcome.status === "rejected");
+  if (failed?.status === "rejected") throw failed.reason;
 }

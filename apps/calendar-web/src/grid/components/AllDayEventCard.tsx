@@ -11,9 +11,8 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
   eventCardFill,
-  gridEventSidebarEditingBoxShadow,
+  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   joinGridEventBoxShadow,
-  resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
 import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
 import {
@@ -92,10 +91,6 @@ const AllDayEventCardBase = (
   // fill/darken tweak can't quietly drop the title below 4.5:1.
   const titleColor = theme.getContrastText(fill.fillStops);
 
-  const focusIndicatorColor = resolveEventFocusIndicatorColor(
-    focusColor,
-    fill.fillStops,
-  );
   const { focusedEdge, focusColorCss, edgeFocusShadow } = useGridEventEdgeFocus(
     event._id,
     focusColor,
@@ -132,7 +127,7 @@ const AllDayEventCardBase = (
       })}
       style={gridEventCardStyle({
         boxShadow: joinGridEventBoxShadow(
-          isSelected && gridEventSidebarEditingBoxShadow(focusIndicatorColor),
+          isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
           edgeFocusShadow,
         ),
         fill,

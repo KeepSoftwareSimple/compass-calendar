@@ -11,7 +11,6 @@ import {
 } from "@web/common/utils/event/event-nudge.util";
 import { assignEventsToRow } from "@web/common/utils/grid/assign.row";
 import { gridRecurrenceFromEvent } from "@web/events/grid-event-recurrence";
-import { allDayLaneCountFromEvents } from "@web/grid/utils/allDayRowHeight.util";
 import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 import { type NormalizedEventQueryData } from "./event.query.types";
 
@@ -209,7 +208,6 @@ export type CalendarEventViewModel = {
   events: Event[];
   timedEvents: GridEvent[];
   allDayEvents: GridEvent[];
-  rowCount: number;
   demoEventIds?: readonly EventId[];
 };
 
@@ -244,7 +242,6 @@ const computeCalendarEventViewModel = (
     events,
     timedEvents,
     allDayEvents,
-    rowCount: allDayLaneCountFromEvents(allDayEvents),
     demoEventIds,
   };
 };

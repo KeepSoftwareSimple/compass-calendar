@@ -14,7 +14,8 @@ export const GOOGLE_CONNECT_FAILED_TOAST_ID: Id = "google-connect-failed";
 export const GOOGLE_REFRESH_FAILED_TOAST_ID: Id = "google-refresh-failed";
 export const GOOGLE_REFRESH_ALREADY_IN_FLIGHT_TOAST_ID: Id =
   "google-refresh-already-in-flight";
-export const GOOGLE_DELAYED_TOAST_ID: Id = "google-delayed";
+/** Provider-neutral delayed-sync toast id (historically `google-delayed`). */
+export const PROVIDER_DELAYED_TOAST_ID: Id = "google-delayed";
 export const ACCOUNT_DISCONNECTED_TOAST_ID: Id = "account-disconnected";
 export const EXPORT_MY_DATA_TOAST_ID: Id = "export-my-data";
 export const LOGGED_OUT_TOAST_ID: Id = "logged-out";
@@ -31,7 +32,6 @@ export const NEW_MEETINGS_TOAST_ID: Id = "new-meetings";
 export const GUEST_RSVP_TOAST_ID: Id = "guest-rsvp";
 export const SHORTCUT_LEVEL_UP_TOAST_ID: Id = "shortcut-level-up";
 export const CONFERENCE_LINK_ADDED_TOAST_ID: Id = "conference-link-added";
-export const DESKTOP_UPDATE_READY_TOAST_ID: Id = "desktop-update-ready";
 export const APP_UPDATE_AVAILABLE_TOAST_ID: Id = "app-update-available";
 
 /**

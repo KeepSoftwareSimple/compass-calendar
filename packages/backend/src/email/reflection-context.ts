@@ -9,6 +9,7 @@ import {
   type ReflectionWindow,
 } from "@core/types/sync/reflection.contracts";
 import { type Schema_User } from "@core/types/user.types";
+import { bookingPageRepository } from "@backend/booking/booking-page.repository";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
@@ -44,12 +45,21 @@ export async function reflectionCalendarContext(user: WithId<Schema_User>) {
   const excluded = new Set(
     user.reflectionPreferences?.excludedCalendarIds ?? [],
   );
-  const calendarIds: SyncEventCalendarId[] = remote.value.calendars
-    .filter(
-      (calendar) =>
-        calendar.accessRole !== "busyOnly" && !excluded.has(calendar.id),
-    )
-    .map((calendar) => calendar.id);
+  const selectedCalendars = remote.value.calendars.filter(
+    (calendar) =>
+      calendar.accessRole !== "busyOnly" && !excluded.has(calendar.id),
+  );
+  const connectionsReady = selectedCalendars.every((calendar) =>
+    connections.value.connections.some(
+      (connection) =>
+        connection.id === calendar.connectionId &&
+        connection.state !== "actionRequired" &&
+        connection.state !== "disconnected",
+    ),
+  );
+  const calendarIds: SyncEventCalendarId[] = selectedCalendars.map(
+    (calendar) => calendar.id,
+  );
   // Holidays are common knowledge, so they never count as personal memories.
   const holidayCalendarIds = new Set<string>(
     remote.value.calendars
@@ -70,7 +80,14 @@ export async function reflectionCalendarContext(user: WithId<Schema_User>) {
       ),
     ]),
   ];
-  return { calendarIds, holidayCalendarIds, selfEmails, client, principal };
+  return {
+    calendarIds,
+    holidayCalendarIds,
+    selfEmails,
+    client,
+    principal,
+    connectionsReady,
+  };
 }
 
 export async function prepareReflection(
@@ -82,6 +99,8 @@ export async function prepareReflection(
   const edition = row.reflection;
   if (!edition) throw new Error("Missing reflection edition");
   const context = await reflectionCalendarContext(user);
+  if (!edition.trial && !context.connectionsReady)
+    throw new Error("Calendar connection needs attention");
   const metadata = await context.client.readReflection(context.principal, {
     calendarIds: context.calendarIds,
     selfEmails: context.selfEmails,
@@ -193,6 +212,7 @@ export async function prepareReflection(
     `/week/${current[1]!.startDate}`,
     CONFIG.FRONTEND_URL,
   ).toString();
+  const bookingPage = await bookingPageRepository.findByUserId(user._id);
   const content = renderReflectionEmail({
     ...selected,
     date: edition.date,
@@ -203,6 +223,7 @@ export async function prepareReflection(
     completedWeeks,
     historyComplete,
     appUrl,
+    hasMeetingPage: bookingPage !== null,
     unsubscribeUrl,
   });
   return {

@@ -338,7 +338,8 @@ export type EventMutations = {
   create: (input: CreateEventInput, callbacks?: EventMutationCallbacks) => void;
   replace: (
     // `scopeAsk: "deferred"` holds the "Apply to series?" ask until the
-    // keyboard burst that is producing these writes ends (Shift released).
+    // keyboard burst that is producing these writes ends (Shift released);
+    // "skip" means the user already chose this occurrence only.
     payload: {
       id: EventId;
       input: ReplaceEventInput;
@@ -346,7 +347,11 @@ export type EventMutations = {
     },
     callbacks?: EventMutationCallbacks,
   ) => boolean;
-  delete: (payload: { id: EventId; scope: RecurrenceScope }) => void;
+  delete: (payload: {
+    id: EventId;
+    scope: RecurrenceScope;
+    scopeAsk?: "skip";
+  }) => void;
   rsvp: (payload: RsvpPayload) => void;
   promoteRecurring: (
     opportunity: RecurrenceScopeOpportunity,
@@ -1060,6 +1065,7 @@ export function useEventMutations(
         const opportunityId =
           isOccurrenceThisScopeAsk(original, payload.input.scope) &&
           payload.input.recurrence.kind === "preserve" &&
+          payload.scopeAsk !== "skip" &&
           !isRecurrenceScopeEditAskDeclined(original.id)
             ? recurrenceScopeOpportunityActions.begin(
                 {
@@ -1095,7 +1101,14 @@ export function useEventMutations(
         );
         return true;
       },
-      delete: (payload: { id: EventId; scope: RecurrenceScope }) => {
+      delete: ({
+        scopeAsk,
+        ...payload
+      }: {
+        id: EventId;
+        scope: RecurrenceScope;
+        scopeAsk?: "skip";
+      }) => {
         if (
           !isRestoringHistory() &&
           blockAwaitingCheckoutEventWrite("delete")
@@ -1115,13 +1128,15 @@ export function useEventMutations(
         ) {
           return;
         }
-        const opportunityId = isOccurrenceThisScopeAsk(original, payload.scope)
-          ? recurrenceScopeOpportunityActions.begin({
-              kind: "delete",
-              original,
-              source,
-            })
-          : undefined;
+        const opportunityId =
+          scopeAsk !== "skip" &&
+          isOccurrenceThisScopeAsk(original, payload.scope)
+            ? recurrenceScopeOpportunityActions.begin({
+                kind: "delete",
+                original,
+                source,
+              })
+            : undefined;
         const { existing, entry, deletedToast } = snapshotEventDeleteHistory({
           id: payload.id,
           scope: payload.scope,

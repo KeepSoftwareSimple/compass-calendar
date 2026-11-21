@@ -11,6 +11,326 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-21
+
+Swept the merges that landed after the 2026-11-20 ledger (#5322, #5323, #5325,
+#5326, #5327, #5328, #5329); #5324 was that sweep's own output and is excluded.
+Gate step 1 was clean on the three named detectors: `bun knip` reports no
+unused files or exports (the three standing config hints), `bun lint` passes
+every rule, `bun type-check` passes. One finding, shipped as the removal of the
+dead `rowCount` field on `CalendarEventViewModel`. Everything below was
+examined and kept.
+
+- **The two hidden-strip packers** (`assign.row.ts`, `dayAllDayRows.util.ts`,
+  #5322). Both assign `hiddenStripIndex` to same-day hidden all-day events, so
+  one rule now looks implemented twice. It is not one rule: the week packer
+  must find a lane free across an event's whole day span via
+  `findRowForEvent`, while the day packer knows every chip in a column covers
+  the same day and stacks in encounter order below that column's visible
+  count. Folding them would recouple the day view to week day-span packing,
+  which is what the file's own comment says it deliberately avoids.
+
+- **Re-packing `allDayEvents` twice** (`useWeekEventsQuery.ts`, #5322). The
+  pipeline packs without hidden ids, then `useWeekEventViewModel` packs again
+  with them. The second pass is the fix, not leftover work: the hidden-event
+  set lives in its own query and must not key the shared pipeline memo, which
+  many consumers hit. The `hiddenEventIds.size === 0` guard keeps the common
+  case at one pass.
+
+- **The strip offset formula** (`GridAllDayEvent.tsx`, #5322).
+  `hiddenStripIndex * (HIDDEN_EVENT_STRIP_WIDTH + HIDDEN_EVENT_STRIP_GAP)` is
+  spelled at exactly one site, and both constants are owned by
+  `grid.constants.ts`. Nothing to converge.
+
+- **Regex HTML rewriting in `compactListItemHtml`** (#5329). Three chained
+  regexes over `<li>` markup is the shape that usually wants a DOM parse, but
+  the function runs on every editor keystroke through `onUpdate`, the comment
+  states the provider behavior it repairs, and the three cases are pinned by
+  tests. A `DOMParser` rewrite would be slower on the hot path and risks
+  changing what TipTap round-trips. Touch only for a real formatting defect.
+
+- **Code 290 overlapping its message pattern**
+  (`mongo-network-error.util.ts`, #5323). The numeric code, the
+  `TransientTransactionError` label, and the
+  `transactionLifetimeLimitSeconds` message regex all match the same Atlas
+  failure, which reads like three detectors for one condition. All three are
+  load-bearing: the job wrapper sometimes flattens a cause into its own
+  message string, where no `code` or `errorLabels` survive, and the second
+  assertion in the new test pins exactly that case.
+
+- **`LIFE_QUOTES` as a flat literal array** (#5328). A one-line data append to
+  a 70-entry `as const` list. Data, not structure.
+
+- **#5325, #5316 (README prose), #5327 (snappy bump), #5326 (autofix merge
+  guard and watchdog).** Docs, a dependency version, and CI workflow config.
+  Per the 2026-11-09 precedent on the macOS CI queue, workflow config is not
+  domain duplication.
+
+## 2026-11-20
+
+Swept the merges that landed after the 2026-11-19 ledger (#5306, #5311, #5314,
+#5315, #5316, #5321); #5313 was that sweep's own output and is excluded. Gate
+step 1 was clean on the three named detectors: `bun knip` reports no unused
+files or exports (the three standing config hints), `bun lint` passes every
+rule, `bun type-check` passes. One finding, shipped as the single
+`isEmailSequenceStopped` rule the reflection gate now consults. Everything
+below was examined and kept.
+
+- **`distinctTitles` applied twice to memories** (`reflection-content.ts`,
+  #5321). `selectReflectionEvents` dedupes titles and slices to 3, then
+  `highlights(input.memories)` dedupes again. The second pass is a no-op on
+  the selector's output, but `highlights` is the renderer's own guarantee
+  across all four sections and must not depend on which caller fed it.
+  Removing it would couple the renderer to the selector's cap.
+
+- **`chooseForDay`'s recursive reassignment** (`reflection-content.ts`,
+  #5321). A backtracking search with a shared `tried` set, inside a closure,
+  to spread highlights across days when one title is another day's only
+  option. Intricate, but the comment states the bound (at most three selected
+  days participate) and the window is bounded by `limit`. Taste, and the new
+  tests cover the sparse-week and reassignment cases.
+
+- **`Math.min(4, rows.length)`** in `dispatchReflectionBatch`
+  (`reflection-dispatch.ts`, #5321). A bare concurrency literal in a file
+  whose neighbours are named in `email.constants.ts`. Naming it is a rename
+  with no correctness or discoverability gain; the provider spacing that
+  actually matters already goes through `EMAIL_SEND_PROVIDER_SPACING_MS`.
+
+- **The weighted page budget** in `readReflectionPage`
+  (`reflection-read.service.ts`, #5321). The `floor(PAGE_SIZE / seriesWork) + 1`
+  / `PAGE_SIZE + 1` limits plus a greedy weighted prefix read like an
+  off-by-one waiting to happen. Checked: `windows` is capped at 8 by
+  `ReflectionReadRequestSchema`, so `seriesWork <= 8 < PAGE_SIZE`, and the
+  first row can therefore never exceed the budget and strand the page with an
+  empty `rows` and a null `nextCursor`. Correct as written; the cap is what
+  makes it correct, so leave both alone together.
+
+- **`"daily"` cadence after the weekly-only switch** (#5321). Enrollment now
+  always mints `"weekly"` and `dispatchReflection` cancels any non-weekly
+  edition, which makes the `cadence === "daily"` branches in
+  `reflection-schedule.ts` and `reflection-content.ts` look unreachable. They
+  are not: `welcome-review.content.ts`, the preview loop in
+  `email-dispatch.service.ts`, and the `reflection` CLI all still mint daily
+  editions down the onboarding path, which passes `options.onboarding`.
+
+- **"Sundays at 10:30 a.m." spelled in copy** (`ReflectionPreferencesControl.tsx`,
+  `welcome-sequence.content.ts`). The schedule is owned by `reflectionSendAt`
+  and `nextReflectionSend`; two user-facing strings restate it, so changing
+  the send hour would leave both promising the old time. Real, but the fix is
+  larger than the problem: the web cannot import `@backend/*`, and prose like
+  "every Sunday at 10:30 a.m." is not mechanically derivable from `"10:30"`
+  and `day() !== 0` without a new core formatter. Revisit if the send time
+  ever actually moves.
+
+- **The reflection config propagation path** (`deploy-write-email-block.sh`,
+  `_deploy-environment.yml`, `config.constants.ts`, `compass.config.ts`,
+  #5321). Four sites must list each new key, which is the classic drift
+  shape. Already closed mechanically: `deploy-email-config.test.ts` asserts
+  the generated block *and* greps the workflow for both new `vars.` lines.
+  Both of #5321's new keys were added to every site.
+
+## 2026-11-19
+
+Swept the merges that landed after the 2026-11-18 ledger (#5281, #5284,
+#5289, #5290, #5291, #5292, #5293, #5299, #5312, plus dependency bumps);
+#5288 and #5201 were prior sweeps' own output and are excluded. Gate step 1
+was clean on the three named detectors: `bun knip` reports no unused files or
+exports (the three standing config hints), `bun lint` passes every rule, `bun
+type-check` passes. One finding, shipped as the removal of the dead
+`sidebarShort` surface in `connection-health-copy.util.ts`. Everything below
+was examined and kept.
+
+- **`"edit-delete-this-only": hotkeyKeycaps("Mod+Delete")`** in
+  `REGISTRY_RUNTIME_KEY_SOURCES` (#5289). The only row in that table that
+  spells a hotkey inline instead of naming an `APP_SHORTCUT_BINDINGS` entry,
+  which reads like the `WEEKS_PER_ROW` shape. It is not: only 7 of the ~60
+  bindings have their `.hotkey` read by a handler at all, and the grid's
+  runtime literals (`"Delete"`, `"Mod+D"`, `"Mod+C"`, `"Mod+V"`,
+  `"Shift+Tab"`) predate this window. Folding one row would be a cosmetic
+  half-fix of a file-wide convention. What the table owns, legend keycaps or
+  runtime hotkeys, is a decision for a human; `shortcuts.registry.bindings`
+  already pins registry rows to the table either way.
+
+- **`useOpenLocationShortcut` importing `mapsUrlForLocation` from the event
+  form** (#5312). One import edge from `@web/shortcuts` into
+  `@web/views/Forms`, not a second copy: the shortcut and the form's link
+  build the URL from the same function, so the Maps query string cannot
+  drift. Moving the helper to a neutral module is a rename with no
+  correctness or discoverability gain.
+
+- **`upcomingCount = Math.max(3, meetings.length)`** in
+  `reflection-content.ts` (#5290). The upcoming list is uncapped once
+  meetings are present, so a heavy week prints every meeting. That is the
+  stated point of the feature (highlight meetings), and bounding it is a
+  product decision, not debt.
+
+- **`nextStep`'s `plainUrl`** (#5290). Computed before the `utm_*` params are
+  set, so the text email's link is untracked while the HTML href is tracked.
+  Reads like an ordering slip; it is the normal split between a clickable
+  href and a URL a reader retypes. Behavior change either way, so not a
+  sweep's call.
+
+- **`MeetLandingExample`** (#5292). 179 new lines next to the real guest
+  flow, but it renders `PublicBookingPicker`, `PublicBookingSlotSummary` and
+  `public-booking.format` directly; only the fixture availability and the
+  demo host copy are local. Nothing to drift.
+
+- **`getHorizontallyAdjacentTarget`'s caller** (#5299). The day/week branch
+  is now a nested ternary three levels deep. Taste, and the three arms are
+  the three real cases.
+
+- **`ProviderDelayedToast` calling `useConnectGoogle()`** (#5284). The toast
+  names the connection's own product ("Apple Calendar updates are delayed")
+  while its Refresh button runs the Google refresh. Not a provider-name
+  branch introduced here: `useConnectProvider` ignores `kind` for refresh and
+  calls `refreshGoogleSync()` for every provider, so the toast matches the
+  banner and the sidebar. Making refresh provider-aware changes behavior
+  across every connection surface and belongs to a human.
+
+- **Escalated, not swept: the shadowed `actionRequired` branches** in
+  `connectionHealthCopy` (`connection-health-copy.util.ts`, from #5241). The
+  `state === "actionRequired" || state === "disconnected" ||
+  isReauthReason(...)` block always returns, so the later
+  `actionRequired && consentRequired` and `actionRequired &&
+  isRefreshReason(...)` blocks cannot run: an `actionRequired` connection
+  whose reason is `workOverdue` or `providerErrors` is told "Calendar needs
+  reconnecting" instead of the refresh copy the author wrote for it. Deleting
+  the blocks would hide an intent; reordering them changes what users read.
+  Left in place and reported.
+
+## 2026-11-18
+
+Swept the six merges that landed after the 2026-11-17 ledger (#5280, #5282,
+#5283, #5285, #5286, #5287); #5279 was that sweep's own output and is
+excluded. Gate step 1 was clean on the three named detectors: `bun knip`
+reports no unused files or exports (the three standing config hints), `bun
+lint` passes every rule, `bun type-check` passes. One finding, shipped as the
+single `isOAuthCallbackQueryEmpty` rule that both OAuth callback doors now
+gate on. Everything below was examined and kept.
+
+- **#5283's 6,058-line Mac removal.** Checked for residue the detectors
+  cannot see: dead branches and expired conditions rather than unused
+  exports. The surviving trims are complete and deliberate.
+  `oauth-state.ts` keeps a documented tolerance for legacy `d: true` so
+  OAuth state tokens minted by the archived app still verify in flight, and
+  `connection.routes.ts` drops the `desktop=1` redirect param with it. No
+  orphaned branch found.
+
+- **`BillingCheckoutRequestSchema` going `.strict()`** (#5283). The schema
+  went from `{ returnTo: z.literal("desktop").optional() }` to
+  `z.object({}).strict().default({})`, so a body carrying any property now
+  fails parsing where it used to be ignored. That reads like a
+  compatibility break next to the deliberate legacy tolerance kept in
+  `oauth-state.ts` ten files away, but only the archived Mac app ever set
+  `returnTo`, and the embedded web panels post no body at all. Nothing live
+  can send a property for `.strict()` to reject.
+
+- **`DESKTOP_QUICK_ADD_PALETTE_PLACEHOLDER`** (`more.cmd.constants.ts`). The
+  name survives the Mac archival and reads like residue, but its only gate is
+  `selectIsCmdPaletteCreateMode`, a live web palette feature. Renaming for
+  consistency absent a correctness or discoverability problem is explicitly
+  inadmissible. Left alone.
+
+- **#5286's ring-color fix.** Replaced `gridEventSidebarEditingBoxShadow(indicatorColor)`
+  with the `GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW` constant and dropped the
+  `theme.getContrastText` fallback for `var(--text)`, net 33 lines removed
+  across six files. A function collapsing to a constant once its only
+  argument stopped varying is finished work, not a lead.
+
+- **The `apple` early return in `shouldRelayProviderOAuthCallbackTelemetry`**
+  (#5282). Sits one line above this sweep's finding and was deliberately not
+  folded into it. `provider === "apple"` skips the relay because the form POST
+  already recorded the callback, which is a fact about Apple's `response_mode`,
+  not about whether the query carries anything. Emptiness is core's rule;
+  double-count avoidance is this file's. They change for different reasons,
+  so only the emptiness half moved.
+
+- **`asNonEmptyString`** (`oauth-callback.analytics.ts`). A third private
+  `length > 0` check over the same callback fields, which looks like the
+  copy to fold next. It is not: it narrows four `unknown` values straight off
+  the request (including `oauthErrorDescription`, which the emptiness rule has
+  no opinion about) and it agrees with core's semantics rather than diverging
+  from them. Noted here because if it ever starts trimming independently, the
+  right move is to have it call the owning rule, not to add a fourth copy.
+
+## 2026-11-17
+
+Swept the five merges that landed after the 2026-11-16 ledger (#5271, #5273,
+#5274, #5275, #5276); #5270 was that sweep's own output and is excluded. Gate
+step 1 was clean on the three named detectors: `bun knip` reports no unused
+files or exports (the three standing config hints), `bun lint` passes every
+rule, `bun type-check` passes. One finding, shipped as the removal of both
+stale `patchedDependencies` entries, which `bun install` reports on every run
+in every worktree. Everything below was examined and kept.
+
+- **`SettingsModal.tsx`'s `useState`-wrapped getter ref** (#5276). A
+  `useState(() => ({ get current() { ... } }))` object standing in for a ref,
+  so `OverlayPanel` reads `skipFocusRestoreRef.current ||
+  closedForGuestAuthHandoff` at unmount rather than at render. It reads as a
+  fake ref and is the kind of seam that spreads, but it cannot misbehave:
+  `usePaletteAwareOverlayDismiss` returns a `useRef`, so the identity the
+  getter closes over is stable for the component's life, and
+  `closedForGuestAuthHandoff` is read through `getState()` precisely because
+  unmount is after the store settled. Declined as taste: there is no mechanism
+  by which it produces a wrong focus target. If a second overlay host needs
+  the same unmount-time read, that is the point to name a
+  `useLatchedSkipFocusRestore` hook, not now with one caller.
+
+- **`closedForGuestAuthHandoff` not reset by `closeSettings`** (#5276). The
+  flag latches true on the guest hand-off and is cleared by
+  `openSettings`, `toggleSettings` and `beginGuestMeetingSetup`, but not by
+  the plain `closeSettings`. Looks like a leak; is not one. Every path that
+  mounts Settings again clears it first, and the flag is only ever read while
+  Settings is unmounting, so a stale true can never reach a second dismiss.
+  Resetting it in `closeSettings` too would be harmless but would also be a
+  change with no failure behind it.
+
+- **`isTransientSyncJobError` composing two predicates** (#5275).
+  `RETRYABLE_NETWORK_CODES` in `provider-transient-error.util.ts` and
+  `TRANSIENT_MONGO_MESSAGE_PATTERNS` in `mongo-network-error.util.ts` overlap
+  on `ETIMEDOUT` and `ECONNRESET`, so the two look like one list split in
+  half. They are not: the provider side matches an `error.code` property on
+  HTTP/port failures, the Mongo side matches driver message text and error
+  names, and `core` deliberately holds no mongodb runtime dependency. They
+  change for different reasons, and the new function composes them by name
+  rather than merging the tables. Correct as written.
+
+- **The `FormCardIconRow` 20px line box** (#5271). The file now writes the
+  `text-sm` line height five ways: `FORM_CARD_FIELD_LINE_HEIGHT = "1.25rem"`,
+  `FORM_CARD_ICON_ROW_LINE_CLASSNAME = "h-5 leading-5"`, `leading-5` inside
+  `FORM_CARD_FIELD_INPUT_CLASSNAME`, and the bare `leading-5` that #5271 put
+  on the row when it dropped the `h-5` that was clipping multi-line guest
+  content. That is the closest thing in this window to a class-2 divergence,
+  and #5111 and #5271 are both evidence this alignment does break in
+  practice. Declined anyway: all five literals sit in one 48-line file where
+  they are read together, so there is no distant site that can drift
+  unnoticed, and the row genuinely cannot reuse the constant because the
+  `h-5` half is what it had to remove. Splitting a `leading-5`-only constant
+  out would add an export to spare one literal. Revisit only if a sixth copy
+  appears outside this file.
+
+- **The gamebook `[[Key]]` markup** (#5274). `KEY_MARK = /\[\[(.+?)\]\]/`
+  with `split` and an odd-index-is-a-key convention is a miniature parser in a
+  static page, and `.filter((part) => part.text)` quietly drops empty
+  segments. It is contained in one 40-line function, the story file is its
+  only input, and a mis-marked line degrades to visible brackets rather than
+  breaking the page. Not worth a PR.
+
+- **The guest-overflow and holiday-memory fixes** (#5271). The holiday
+  detection in `reflection-context.ts` matches
+  `providerCalendarId.includes("#holiday@")` or `/\bholidays\b/i` on the
+  display name, which is provider-shaped string matching in domain code and
+  sits near the "never branch on a provider name" rule. It is a heuristic over
+  calendar identity, not a provider capability branch, and tightening it is a
+  product decision about what counts as a personal memory. Escalate rather
+  than sweep if it ever misclassifies.
+
+- **#5273's idempotency prefix bump.** `CHECKOUT_IDEMPOTENCY_PREFIX` went
+  `v10` to `v11` because the create params changed, which is exactly what the
+  comment above it tells you to do. A hand-maintained version counter looks
+  like debt but is the cheapest correct mechanism here; deriving it from a
+  hash of the params would be a fix larger than the problem.
+
 ## 2026-11-16
 
 Swept the two merges that landed after the 2026-11-15 second sweep's ledger:
@@ -346,6 +666,59 @@ examined and kept.
   against `@floating-ui` and browser overflow. Load-bearing mess of the
   `date-picker-keyboard-dom.util.ts` kind: ugly because clipping is ugly.
   Touch only for a real defect.
+
+## 2026-11-10
+
+Swept merges after #5187 (2026-11-09 afternoon through #5197). One finding,
+shipped as #5201 (`HostGuestRsvpSummarizeReplySchema` and the detector now
+use `RsvpResponseStatusSchema` instead of a parallel three-value enum and
+Set). Everything below was examined and kept.
+
+- **Date-picker hint cluster** (`EventFormDateField.tsx`,
+  `LifeBirthDateField.tsx`, `date-picker-keyboard-dom.util.ts`,
+  `contextual-hint-tiers.ts`, sidebar month-picker hints from #5195). Off
+  limits under the 30-day churn guard. Prior sweeps already split key
+  semantics from form closed-field behavior and named the keyboard-DOM
+  helper as load-bearing mess.
+
+- **Timezone city search** (`city-timezone-search.ts`, web catalog, macOS
+  `CityTimezoneSearch.swift`). Web imports the core search; native consumes
+  the exported JSON index. Swift's Florida-only multi-zone caption is a
+  platform port, not a silent copy of `US_STATE_NAMES`. Widening it would
+  change macOS copy.
+
+- **Event color merge** (`merge-editable-content-color.ts`). #5189 already
+  owns the rule in core; web optimistic merge and sync `mergeUpdateContent`
+  call it. Native draft mapping is a generated-payload port, not a second
+  TypeScript copy.
+
+- **Focus chrome contrast** (`calendar-accent.util.ts`,
+  `GridEventFocusChrome.swift`). `LIGHT_PAGE_PAPER` and the two `3` floors
+  sit in the owning web module next to each other; Swift reimplements WCAG
+  math because it cannot import the web helper. Folding the two `3`s is
+  taste. Touch only for a real contrast defect.
+
+- **Reflection send time vs copy.** `reflectionSendAt` uses `10:30`;
+  Settings and welcome copy say "10:30 a.m." Schedule time and user-facing
+  cadence copy can change independently, same as the section-cap judgment
+  on 2026-11-09.
+
+- **Copy/paste placement** (#5194). Web `paste-placement.util.ts` and macOS
+  paste-preview stores are platform parallels with different draft models.
+
+- **Booking claim limiter** (#5193 / #5196). `scope` is already gone;
+  guest RSVP and new-meetings keep separate limiter instances because a
+  claim on one must not suppress the other.
+
+- **Guest RSVP observation record** uses `AttendeeResponseStatusSchema` on
+  purpose: storage is the detector's output plus identity fields. Tightening
+  it to RSVP-only would be a schema change without a current write that
+  needs it. The HTTP claim schema stays aligned with that stored shape.
+
+- **CI macOS queue** (#5197). Workflow config, not domain duplication.
+
+- **Prior sweep output.** #5184, #5186, #5187, #5191, #5196 are finished
+  work, not leads.
 
 ## 2026-11-10
 

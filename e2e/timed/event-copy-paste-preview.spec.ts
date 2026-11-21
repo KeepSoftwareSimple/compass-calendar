@@ -5,10 +5,9 @@ import {
   getSavedEventsByTitle,
   openTimedEventFormWithKeyboard,
   prepareTimedCalendarPage,
-  pressShortcut,
 } from "../utils/event-test-utils";
 
-test("Mod+C shows a paste placement outline and Esc cancels without pasting", async ({
+test("Mod+C confirms the copy and Escape dismisses the paste hints", async ({
   page,
 }) => {
   await prepareTimedCalendarPage(page);
@@ -20,15 +19,17 @@ test("Mod+C shows a paste placement outline and Esc cancels without pasting", as
     .locator("#mainGrid")
     .getByRole("button", { name: title });
   await eventButton.focus();
-  await pressShortcut(page, "c", { ctrlKey: true });
+  await page.keyboard.press("ControlOrMeta+c");
 
   await expect(
-    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
-  ).toHaveCount(1);
+    page.getByText("Event copied to clipboard", { exact: true }),
+  ).toBeVisible();
+  await expect(eventButton).toBeFocused();
+  await expect(eventButton).toHaveCount(1);
 
   await page.keyboard.press("Escape");
   await expect(
-    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
+    page.getByText("Event copied to clipboard", { exact: true }),
   ).toHaveCount(0);
   await expect
     .poll(async () => (await getSavedEventsByTitle(page, title)).length)
@@ -50,12 +51,19 @@ test("Mod+V after ArrowLeft lands the duplicate on the moved day", async ({
   const [before] = await getSavedEventsByTitle(page, title);
   const sourceDay = before.startDate.slice(0, 10);
 
-  await pressShortcut(page, "c", { ctrlKey: true });
+  await page.keyboard.press("ControlOrMeta+c");
   await expect(
-    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
-  ).toHaveCount(1);
+    page.getByText("Event copied to clipboard", { exact: true }),
+  ).toBeVisible();
+  await expect(eventButton).toBeFocused();
+  await expect(eventButton).toHaveCount(1);
+  const destination = page.getByText(/^Paste to /);
+  const initialDestination = await destination.textContent();
   await page.keyboard.press("ArrowLeft");
-  await pressShortcut(page, "v", { ctrlKey: true });
+  await expect(destination).not.toHaveText(initialDestination!);
+  await expect(eventButton).toBeFocused();
+  await expect(eventButton).toHaveCount(1);
+  await page.keyboard.press("ControlOrMeta+v");
 
   await expect
     .poll(async () => (await getSavedEventsByTitle(page, title)).length)
@@ -79,14 +87,16 @@ test("Mod+V pastes a duplicate without opening the form", async ({ page }) => {
     .locator("#mainGrid")
     .getByRole("button", { name: title });
   await eventButton.focus();
-  await pressShortcut(page, "c", { ctrlKey: true });
+  await page.keyboard.press("ControlOrMeta+c");
   await expect(
-    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
-  ).toHaveCount(1);
+    page.getByText("Event copied to clipboard", { exact: true }),
+  ).toBeVisible();
+  await expect(eventButton).toBeFocused();
+  await expect(eventButton).toHaveCount(1);
 
-  await pressShortcut(page, "v", { ctrlKey: true });
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(
-    page.locator('#mainGrid [data-grid-event-surface="draft"]'),
+    page.getByText("Event copied to clipboard", { exact: true }),
   ).toHaveCount(0);
   await expect
     .poll(async () => (await getSavedEventsByTitle(page, title)).length)

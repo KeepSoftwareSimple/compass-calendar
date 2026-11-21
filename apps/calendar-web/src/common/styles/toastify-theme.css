@@ -12,9 +12,16 @@
   box-shadow: var(--shadow-xl);
 }
 
-.Toastify__progress-bar-theme--light,
-.Toastify__progress-bar-theme--dark {
-  background: var(--text-muted);
+/* Quiet neutral gradient instead of the library's rainbow. Scoped under
+   .Toastify so it beats react-toastify's runtime-injected styles. */
+.Toastify .Toastify__progress-bar-theme--light,
+.Toastify .Toastify__progress-bar-theme--dark {
+  background: linear-gradient(
+    to right,
+    var(--border),
+    var(--text-subtle),
+    var(--text-muted)
+  );
 }
 
 /* Shared bottom-left notice stack (cards + react-toastify). */
@@ -57,6 +64,12 @@
 
 .compass-bottom-notice-stack .Toastify__toast-body {
   padding: 0.75rem 1rem;
+}
+
+.compass-bottom-notice-stack .Toastify__toast.recurrence-scope-toast-host {
+  width: max-content;
+  max-width: 100%;
+  align-self: flex-start;
 }
 
 @media (min-width: 1280px) {

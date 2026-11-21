@@ -28,8 +28,6 @@ Playwright. Docs index: `docs/README.md`.
 - Failing tests are rerun against `origin/main`: only NEW failures fail the
   verdict. Paste its PRE-EXISTING and FLAKY lists into the PR body.
   Screenshot-only `@artifact` specs: `bun run test:e2e:artifacts`.
-- Native macOS code and CI live in `KeepSoftwareSimple/compass-calendar-mac`.
-  Shared exports: `docs/development/macos-repository-boundary.md`.
 - Focused suites: `bun test:core|web|backend|sync|scripts|self-host`
   (`:fast` tiers skip Mongo). Avoid bare `bun test`. Also `bun type-check`,
   `bun lint`, `bun knip`.

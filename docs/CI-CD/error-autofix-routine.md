@@ -12,13 +12,13 @@ SKILL/PROMPT: .github/prompts/error-autofix.md
 OUTPUT: issue comment and/or PR with Fixes #<n>
 IDEMPOTENCY: one PR per issue; preflight skips labeled/already-handled unless retry
 RETRY: one automatic workflow_dispatch after agent failure; then autofix:needs-human
-APPROVAL: AUTOFIX_MODE=triage|pr|merge; automerge-candidate + merge-guard
+APPROVAL: AUTOFIX_MODE=triage|pr|merge; in merge mode no human: ship bar + merge-guard + CI
 STOP: repo var ERROR_AUTOFIX_ENABLED
 HEARTBEAT: Discord via existing notify scripts on skip/fail/needs-human
 VERIFIER: .github/scripts/autofix-merge-guard.sh (not the LLM)
-PR_WATCHDOG: hourly, escalates open autofix-labeled PRs with neither
-  automerge-candidate nor autofix:needs-human after
-  AUTOFIX_WATCHDOG_GRACE_MINUTES
+PR_WATCHDOG: hourly; merge mode re-runs merge-guard on open autofix PRs
+  without auto-merge after AUTOFIX_WATCHDOG_GRACE_MINUTES; pr mode flags
+  them autofix:needs-human once
 ```
 
 Sources of truth:
@@ -32,7 +32,7 @@ Sources of truth:
 | Failed-run unstick + one-shot retry | `.github/scripts/autofix-unstick.sh` |
 | Hourly production sweep (no LLM) | `.github/scripts/autofix-sweep.sh` |
 | Merge-guard Verifier (size) | `.github/scripts/autofix-merge-guard.sh` |
-| Stuck-PR watchdog (no automerge-candidate escalation) | `.github/scripts/autofix-pr-watchdog.sh` |
+| Stuck-PR watchdog (re-runs merge-guard) | `.github/scripts/autofix-pr-watchdog.sh` |
 | Shared notify helpers | `.github/scripts/autofix-lib.sh` |
 
 PostHog (project 165441) GitHub HogFunctions that feed this workflow:
@@ -58,11 +58,13 @@ issue so the next burst becomes `reopened`.
 - `AUTOFIX_MODE`:
   - `triage` — comment only, no PR
   - `pr` — may open a PR; a human merges
-  - `merge` — may open a PR and label `automerge-candidate`; merge-guard
-    is the Verifier and may strip that label / add `autofix:needs-human`
-    when the size rails fail.
-- Production deploy is never automatic. Staging-only PostHog errors must
-  never receive `automerge-candidate`. The sweep queries production
+  - `merge` — opens a PR only when the fix meets the prompt's ship bar,
+    and every PR it opens auto-merges. Nobody reviews it: merge-guard
+    checks the size rails and enables auto-merge, then required CI in the
+    merge queue decides. A PR over the size rails is closed, never parked
+    for a human. A gh failure leaves the PR for the watchdog to retry.
+- Production deploy is never automatic. Staging-only PostHog errors get a
+  comment, never a PR, in `merge` mode. The sweep queries production
   exceptions only.
 
 ## Idempotency
@@ -117,28 +119,23 @@ the next hour.
 ## PR watchdog
 
 `.github/scripts/autofix-pr-watchdog.sh` runs hourly, as a job sibling to
-`sweep` sharing the same `17 * * * *` cron (no new schedule entry). Motivated
-by PR #3655 / issue #2901: the agent opened a clean, mergeable PR in
-`AUTOFIX_MODE=merge` but never applied `automerge-candidate`, and nothing —
-not `autofix-merge-guard.sh` (single-shot, reactive, tied to that one
-triggering run) nor the sweep (issue-level only, never looks at PRs) — ever
-revisited it. The PR sat open with zero distinguishing signal until a human
-happened to check by hand.
+`sweep` sharing the same `17 * * * *` cron. `autofix-merge-guard.sh` only
+runs once, right after the run that opened the PR, so anything it missed
+(PR #3655, PR #5323: the agent opened a mergeable PR but the guard never
+enabled auto-merge) used to sit open until a human noticed.
 
-The watchdog re-lists every open `autofix`-labeled PR on each tick and
-escalates (adds `autofix:needs-human`, Discord notify) any PR that is past
-`AUTOFIX_WATCHDOG_GRACE_MINUTES` (default 60, anchored to the `autofix` job's
-45-minute timeout plus `gate-and-merge`'s 15-minute timeout) with neither
-`automerge-candidate` nor `autofix:needs-human` already on it. The escalation
-label already present is what prevents re-notification on later runs — no
-extra bookkeeping needed.
+On each tick the watchdog lists open `autofix` PRs older than
+`AUTOFIX_WATCHDOG_GRACE_MINUTES` (default 60, the `autofix` job's 45-minute
+timeout plus `gate-and-merge`'s 15).
 
-The condition to escalate is mode-agnostic (age + missing both labels),
-because the live `AUTOFIX_MODE` variable can drift after a PR opened. Only
-the notify wording depends on the current mode: "needs a merge decision" in
-`merge` mode, or "waiting for manual merge; flagging since it's stale"
-otherwise — a `pr`-mode PR silently waiting for a human is the same
-no-signal problem, just business-as-usual rather than a miss.
+- `merge` mode: every such PR without auto-merge goes back through
+  `autofix-merge-guard.sh`, keyed by its `Fixes #N` issue. That includes
+  PRs an older version of this pipeline parked with `autofix:needs-human`.
+  A PR with no `Fixes #N` line is closed. The job uses the same PAT as
+  `gate-and-merge`, since enabling auto-merge needs contents:write.
+- `pr` mode: a human merges by design, so a stale PR is flagged once with
+  `autofix:needs-human` and a Discord notice. The label prevents
+  re-notification.
 
 ## Drills (documented, not run)
 
@@ -151,13 +148,13 @@ staging drill.
 | Missing PostHog fingerprint / MCP empty | Bucket **unknown / insufficient signal**; issue comment; `autofix:needs-human`; **no PR** |
 | Duplicate open for the same issue | Preflight skip and/or prompt “one PR per issue”; **no second PR** |
 | Second issue while a run is in flight | Queued behind `concurrency.group: error-autofix`; first run not cancelled |
-| Staging-only error | No `automerge-candidate` |
-| Merge-guard size fail | Same downgrade if files &gt; `MAX_FILES=8` or lines &gt; `MAX_LINES=250` in that script |
+| Staging-only error | Issue comment; no PR in `merge` mode |
+| Merge-guard size fail | PR closed with a comment if files &gt; `MAX_FILES=8` or lines &gt; `MAX_LINES=250` in that script |
 | `workflow_dispatch` triage on a safe issue | Comment only; mode unchanged |
 | Failed agent run | Discord; issue comment with run URL; `autofix` removed; `autofix:failed`; one automatic retry; second failure → `autofix:needs-human` |
 | Production recurrence on a closed GitHub issue | Sweep or reopen/spike GitHub alert; preflight reopens; fresh agent run; not skipped as already labeled |
 | Sweep with no GitHub issue | Actions bot opens an issue; `workflow_dispatch`; agent runs |
-| Autofix PR opened but never labeled automerge-candidate, past grace | Watchdog adds `autofix:needs-human` once age &gt; `AUTOFIX_WATCHDOG_GRACE_MINUTES`; Discord notify; no re-notify on subsequent hourly runs |
+| Autofix PR still without auto-merge past grace (`merge` mode) | Watchdog re-runs merge-guard; auto-merge enabled, or PR closed over the size rails |
 
 ## Recovery packet
 
@@ -169,7 +166,7 @@ task_id: <GitHub issue number>
 last_successful_action: <preflight skip | comment | PR opened | merge-guard downgrade | unstick retry>
 writes_after_that_point: <files, labels, comments, Discord>
 external_state: <issue labels, open PRs with Fixes #<n>, Discord message, PostHog issue status>
-rollback: <close stray PR, remove automerge-candidate, leave evidence>
+rollback: <close stray PR or disable its auto-merge, leave evidence>
 human_decision: <re-dispatch | leave | revert>
 ```
 

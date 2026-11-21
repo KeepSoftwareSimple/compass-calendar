@@ -1,3 +1,4 @@
+import { type AuthOAuthFlow } from "@core/analytics/oauth-signup.events";
 import { Status } from "@core/errors/status.codes";
 import { CONFIG } from "@backend/common/constants/config.constants";
 
@@ -11,10 +12,18 @@ const formField = (body: FormPostBody, key: string): string => {
   return typeof value === "string" ? value : "";
 };
 
-export function encodeAppleOAuthState(frontendRedirectURI: string): string {
-  return Buffer.from(JSON.stringify({ frontendRedirectURI }), "utf8").toString(
-    "base64",
-  );
+export function encodeAppleOAuthState(
+  frontendRedirectURI: string,
+  options?: { posthogDistinctId?: string; flow?: AuthOAuthFlow },
+): string {
+  return Buffer.from(
+    JSON.stringify({
+      frontendRedirectURI,
+      ...(options?.posthogDistinctId ? { ph: options.posthogDistinctId } : {}),
+      ...(options?.flow ? { fl: options.flow } : {}),
+    }),
+    "utf8",
+  ).toString("base64");
 }
 
 export function appleSpaCallbackUrl(

@@ -1,7 +1,4 @@
-import { readability } from "@web/common/styles/color.utils";
-import { theme } from "@web/common/styles/theme";
 import { EVENT_COLOR_SLOT_HEX } from "@web/common/styles/theme.util";
-import { useThemeStore } from "@web/settings/theme/theme.store";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
@@ -11,7 +8,6 @@ import {
   eventFocusColor,
   eventFocusOutlineClass,
   joinGridEventBoxShadow,
-  MIN_EVENT_FOCUS_INDICATOR_CONTRAST,
   mergedCalendarStops,
   resolveEventFocusIndicatorColor,
 } from "./calendar-accent.util";
@@ -141,22 +137,14 @@ describe("resolveEventFocusIndicatorColor", () => {
     );
   });
 
-  it("falls back to contrast text on the default fill when calendar gray matches the body", () => {
-    useThemeStore.setState({ theme: "light-beach" });
-    const indicator = resolveEventFocusIndicatorColor("#616161", defaultFill);
-    expect(indicator).toBe(theme.getContrastText(defaultFill));
-    expect(readability(indicator, defaultFill)).toBeGreaterThanOrEqual(
-      MIN_EVENT_FOCUS_INDICATOR_CONTRAST,
+  it("falls back to --text when the calendar color blends into the fill", () => {
+    // The chrome sits outside the card on the page, so the fallback must read
+    // against the page in both themes, not against the fill.
+    expect(resolveEventFocusIndicatorColor("#616161", defaultFill)).toBe(
+      "var(--text)",
     );
-  });
-
-  it("meets the contrast floor for every palette slot on its own fill", () => {
-    useThemeStore.setState({ theme: "light-beach" });
     for (const fill of paletteFills) {
-      const indicator = resolveEventFocusIndicatorColor(fill, fill);
-      expect(readability(indicator, fill)).toBeGreaterThanOrEqual(
-        MIN_EVENT_FOCUS_INDICATOR_CONTRAST,
-      );
+      expect(resolveEventFocusIndicatorColor(fill, fill)).toBe("var(--text)");
     }
   });
 });

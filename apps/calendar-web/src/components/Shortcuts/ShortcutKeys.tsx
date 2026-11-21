@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import { Fragment } from "react";
 import { ShortcutKeycap } from "@web/components/Shortcuts/ShortcutKeycap";
 import { getSpokenShortcutKey } from "@web/shortcuts/shortcut.util";
 
@@ -37,6 +38,8 @@ interface Props {
   className?: string;
   /** Include the keys in the surrounding text for screen readers. */
   announce?: boolean;
+  /** Keys are alternatives (either works): render a plain "or" between them. */
+  alternatives?: boolean;
 }
 
 /**
@@ -46,7 +49,13 @@ interface Props {
  * Hidden on touch-first devices (`pointer: coarse`): a `⌘ Enter` chip on a
  * phone is noise. The shortcut itself and `aria-keyshortcuts` stay wired.
  */
-export function ShortcutKeys({ keys, title, className, announce }: Props) {
+export function ShortcutKeys({
+  keys,
+  title,
+  className,
+  announce,
+  alternatives = false,
+}: Props) {
   const cleaned = toKeyArray(keys)
     .map((key) => key.trim())
     .filter(Boolean)
@@ -65,12 +74,21 @@ export function ShortcutKeys({ keys, title, className, announce }: Props) {
     >
       {announce && (
         <span className="sr-only">
-          {cleaned.map(getSpokenShortcutKey).join(" plus ")}
+          {cleaned
+            .map(getSpokenShortcutKey)
+            .join(alternatives ? " or " : " plus ")}
         </span>
       )}
       {cleaned.map((key, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: keycap sequences repeat keys; position is the identity
-        <ShortcutKeycap key={`${key}-${index}`} keyToken={key} />
+        <Fragment key={`${key}-${index}`}>
+          {alternatives && index > 0 ? (
+            <span aria-hidden="true" className="text-text-muted text-xs">
+              or
+            </span>
+          ) : null}
+          <ShortcutKeycap keyToken={key} />
+        </Fragment>
       ))}
     </span>
   );

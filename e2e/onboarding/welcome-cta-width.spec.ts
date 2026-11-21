@@ -34,13 +34,13 @@ test("keeps Google, email signup, and explore buttons the same width", async ({
   await welcomeDialog.getByRole("button", { name: "Next" }).click();
 
   const trialPrimary = welcomeDialog.getByRole("button", {
-    name: "Start free trial with Google",
+    name: "Continue with Google",
   });
   const email = welcomeDialog.getByRole("button", {
-    name: "Sign up with email",
+    name: "Continue with email",
   });
   const explore = welcomeDialog.getByRole("button", {
-    name: "Start without an account",
+    name: "Continue as guest",
   });
   await expect(trialPrimary).toBeVisible();
   await expect(email).toBeVisible();

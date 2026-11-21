@@ -111,7 +111,7 @@ write_email_block() {
     printf '%s\n' "    maxEmailsPerDay: ${EMAIL_PREVIEW_LOOP_MAX_PER_DAY}"
   fi
 
-  if [ -n "${REFLECTION_ENABLED:-}${REFLECTION_ROLLOUT_ENABLED:-}${REFLECTION_TRIAL_USER_ID:-}${REFLECTION_TRIAL_EMAIL:-}" ]; then
+  if [ -n "${REFLECTION_ENABLED:-}${REFLECTION_ROLLOUT_ENABLED:-}${REFLECTION_ROLLOUT_START_DATE:-}${REFLECTION_ENROLL_EXISTING:-}${REFLECTION_TRIAL_USER_ID:-}${REFLECTION_TRIAL_EMAIL:-}" ]; then
     python3 - <<'PY'
 import json
 import os
@@ -125,8 +125,10 @@ def flag(name):
 reflection = {
     "enabled": flag("REFLECTION_ENABLED"),
     "rolloutEnabled": flag("REFLECTION_ROLLOUT_ENABLED"),
+    "enrollExisting": flag("REFLECTION_ENROLL_EXISTING"),
 }
 for env_name, field in (
+    ("REFLECTION_ROLLOUT_START_DATE", "rolloutStartDate"),
     ("REFLECTION_TRIAL_USER_ID", "trialUserId"),
     ("REFLECTION_TRIAL_EMAIL", "trialEmail"),
 ):

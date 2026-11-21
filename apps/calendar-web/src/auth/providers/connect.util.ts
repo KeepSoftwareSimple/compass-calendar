@@ -1,5 +1,6 @@
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowsClockwise";
 import { CloudArrowUpIcon } from "@phosphor-icons/react/dist/csr/CloudArrowUp";
+import { type ConnectionStateReason } from "@core/types/sync/connection.contracts";
 import {
   type ProviderKind,
   providerDisplayName,
@@ -17,6 +18,7 @@ import {
 import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
 import {
   CONSENT_REQUIRED_COPY,
+  calendarProductName,
   RECONNECT_BANNER_MESSAGE,
 } from "@web/auth/providers/provider-copy.util";
 import {
@@ -255,6 +257,47 @@ export const calendarReconnectBannerMessage = (
   return RECONNECT_BANNER_MESSAGE[provider];
 };
 
+/** Delayed title when no connection is named, so every surface says it once. */
+export const CALENDAR_DELAYED_FALLBACK_TITLE = "Calendar updates are delayed";
+
+const delayedTitle = (provider: ProviderKind): string =>
+  `${calendarProductName(provider)} updates are delayed`;
+
+const delayedProviderErrorBody = (provider: ProviderKind): string =>
+  `${calendarProductName(provider)} is slow to respond. Compass will keep trying.`;
+
+/** Week/day banner when Sync reports delayed or soft ATTENTION for one account. */
+export const calendarDelayedBannerMessage = (
+  provider: ProviderKind,
+  options: {
+    accountEmail?: string | null;
+    stateReason?: ConnectionStateReason | string | null;
+  } = {},
+): string => {
+  const account = options.accountEmail?.trim();
+  const prefix = account ? `${account}: ` : "";
+  const detail =
+    options.stateReason === "providerErrors"
+      ? delayedProviderErrorBody(provider)
+      : "Compass is still syncing in the background.";
+  return `${prefix}${delayedTitle(provider)}. ${detail}`;
+};
+
+/** Sidebar status line for a delayed connection. */
+export const calendarDelayedSidebarMessage = (provider: ProviderKind): string =>
+  delayedTitle(provider);
+
+export const calendarDelayedToastMessage = (
+  connection: SyncConnectionSummary,
+): { title: string; body: string } => {
+  const provider = connectionProviderKind(connection);
+  const body =
+    connection.stateReason === "providerErrors"
+      ? delayedProviderErrorBody(provider)
+      : `${calendarProductName(provider)} is taking longer than usual to sync. Compass will keep trying.`;
+  return { title: delayedTitle(provider), body };
+};
+
 const delayedSettingsStatus = (
   connection: SyncConnectionSummary,
   nowMs: number,
@@ -264,7 +307,6 @@ const delayedSettingsStatus = (
       state: connection.state,
       stateReason: connection.stateReason,
       credentialKind: credentialKindForConnection(connection),
-      surface: "settings",
       lastUpdatedSuffix: lastUpdatedSuffix(connection.lastSyncedAt, nowMs),
     }) ?? attentionFallbackCopy();
   return { variant: "warning", text };
@@ -278,7 +320,6 @@ const reauthSettingsStatus = (
       state: connection.state,
       stateReason: connection.stateReason,
       credentialKind: credentialKindForConnection(connection),
-      surface: "settings",
     }) ?? OAUTH_RECONNECT_COPY;
   return { variant: "error", text };
 };
@@ -517,7 +558,6 @@ export const getSidebarSyncStatus = ({
             state: connection.state,
             stateReason: connection.stateReason,
             credentialKind: credentialKindForConnection(connection),
-            surface: "settings",
           }) ?? OAUTH_RECONNECT_COPY)
         : OAUTH_RECONNECT_COPY;
     return reconnectStatusFor(connection?.accountEmail, copy);
@@ -527,7 +567,13 @@ export const getSidebarSyncStatus = ({
     refreshGaveUp &&
     (state === "ATTENTION" || connection?.state === "delayed")
   ) {
-    return { variant: "error", text: "Calendar updates are delayed" };
+    if (connection) {
+      return {
+        variant: "error",
+        text: calendarDelayedSidebarMessage(connectionProviderKind(connection)),
+      };
+    }
+    return { variant: "error", text: CALENDAR_DELAYED_FALLBACK_TITLE };
   }
 
   // Align with the Syncing… status while we wait for delayed to clear —
@@ -552,13 +598,9 @@ export const getSidebarSyncStatus = ({
         return null;
       }
       case "delayed": {
-        const text =
-          connectionHealthCopy({
-            state: connection.state,
-            stateReason: connection.stateReason,
-            credentialKind: credentialKindForConnection(connection),
-            surface: "sidebarShort",
-          }) ?? "Calendar updates are delayed";
+        const text = calendarDelayedSidebarMessage(
+          connectionProviderKind(connection),
+        );
         return { variant: "warning", text };
       }
       case "actionRequired":
@@ -568,7 +610,6 @@ export const getSidebarSyncStatus = ({
             state: connection.state,
             stateReason: connection.stateReason,
             credentialKind: credentialKindForConnection(connection),
-            surface: "settings",
           }) ?? OAUTH_RECONNECT_COPY;
         return reconnectStatusFor(connection.accountEmail, copy);
       }

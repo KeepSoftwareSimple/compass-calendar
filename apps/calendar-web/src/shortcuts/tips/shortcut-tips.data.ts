@@ -17,6 +17,7 @@ export type ShortcutHintId =
   | "life-this-week"
   | "edit-sequence"
   | "nudge"
+  | "nudge-hour"
   | "edge-focus"
   | "create-event"
   | "page-jump"
@@ -37,6 +38,7 @@ export type ShortcutActionId =
   | "event.edge_focus"
   | "event.edit_title"
   | "event.move"
+  | "event.move_hour"
   | "event_form.actions"
   | "event_form.progress"
   | "life.focus_current_week";
@@ -202,6 +204,13 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     actionId: "event.move",
     featureArea: "event_editing",
     parts: [{ key: nudgeModifier }, " and an arrow moves the event"],
+    suggestionReason: "event_focused",
+  },
+  "nudge-hour": {
+    id: "nudge-hour",
+    actionId: "event.move_hour",
+    featureArea: "event_editing",
+    parts: [{ keys: ["Alt", "Shift"] }, " and up or down moves an hour"],
     suggestionReason: "event_focused",
   },
   "edge-focus": {

@@ -600,22 +600,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     expect(state.gridDraft).toBeNull();
   });
 
-  it("does not open the form when Enter is pressed during paste placement", () => {
-    const button = addCalendarTarget();
-    button.focus();
-    renderShortcuts();
-
-    pressKey("c", {
-      keyDownInit: { ctrlKey: true },
-      keyUpInit: { ctrlKey: true },
-    });
-    pressKey("Enter");
-
-    expect(useDraftStore.getState().status?.activity).toBe("pastePlace");
-    expect(useDraftStore.getState().status?.isFormOpen).toBe(false);
-  });
-
-  it("enters paste placement with a form-closed outline when copying a focused event", () => {
+  it("copies a focused event without rendering a grid draft or moving focus", () => {
     const button = addCalendarTarget();
     button.focus();
     renderShortcuts();
@@ -626,13 +611,12 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     });
 
     expect(useEventClipboardStore.getState().event?.id).toBe(editableEvent.id);
-    expect(useEventPastePreviewStore.getState().isActive).toBe(true);
+    expect(button).toHaveFocus();
+    expect(useDraftStore.getState().gridDraft).toBeNull();
     expect(useEventJumpStore.getState().isActive).toBe(false);
-    const { gridDraft, status } = useDraftStore.getState();
-    expect(status?.activity).toBe("pastePlace");
-    expect(status?.isFormOpen).toBe(false);
-    expect(gridDraft?.values.title).toBe("Editable event");
-    expect(dayjs(gridDraft!.values.schedule.start).format()).toBe(
+    const { placement } = useEventPastePreviewStore.getState();
+    expect(placement?.values.title).toBe("Editable event");
+    expect(dayjs(placement!.values.schedule.start).format()).toBe(
       dayjs("2026-05-20T10:00:00.000Z").format(),
     );
   });
@@ -665,6 +649,10 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     });
     pressKey("ArrowLeft");
 
+    expect(button).toHaveFocus();
+    expect(useDraftStore.getState().gridDraft).toBeNull();
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+
     pressKey("v", {
       keyDownInit: { ctrlKey: true },
       keyUpInit: { ctrlKey: true },
@@ -682,7 +670,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
     expect(input.schedule.start).toMatch(/^2026-05-19T10:00:00/);
   });
 
-  it("copies a focused event with Mod+C and pastes a duplicate at the placement outline with Mod+V", () => {
+  it("copies a focused event with Mod+C and pastes a duplicate at the suggested time with Mod+V", () => {
     const button = addCalendarTarget();
     button.focus();
     const { queryClient } = renderShortcuts();
@@ -1337,6 +1325,58 @@ describe("useWeekShortcutOwner shift+arrow event moves", () => {
     });
     expect(opportunity?.original.schedule).toEqual(
       recurringOccurrence.schedule,
+    );
+  });
+
+  it("moves only this occurrence without a series ask on Mod+Shift+ArrowUp", async () => {
+    const button = addCalendarTarget(recurringOccurrence.id);
+    button.focus();
+    const { queryClient } = renderShortcuts({
+      extraEvents: [recurringOccurrence],
+    });
+
+    pressKey("ArrowUp", {
+      keyDownInit: { ctrlKey: true, shiftKey: true },
+      keyUpInit: { ctrlKey: true, shiftKey: true },
+    });
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    expect(
+      (
+        getEditMutation(queryClient)!.state.variables as {
+          input: { scope: string };
+        }
+      ).input.scope,
+    ).toBe("this");
+    expect(useRecurrenceScopeOpportunityStore.getState().opportunity).toBe(
+      null,
+    );
+  });
+
+  it("deletes only this occurrence without a series ask on Mod+Delete", () => {
+    const button = addCalendarTarget(recurringOccurrence.id);
+    button.focus();
+    const { queryClient } = renderShortcuts({
+      extraEvents: [recurringOccurrence],
+    });
+
+    pressKey("Delete", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const deletion = queryClient
+      .getMutationCache()
+      .getAll()
+      .find((mutation) => mutation.options.mutationKey?.[2] === "delete");
+    expect(deletion?.state.variables).toMatchObject({
+      id: RECURRING_EVENT_ID,
+      scope: "this",
+    });
+    expect(useRecurrenceScopeOpportunityStore.getState().opportunity).toBe(
+      null,
     );
   });
 

@@ -41,9 +41,9 @@ const LABEL_OVERRIDES: Record<string, (options: FilterOptions) => string> = {
   "edit-focus-next": ({ view }) =>
     view === "week" ? "Focus next event on day" : "Focus next event",
   "edit-focus-left": ({ view }) =>
-    view === "day" ? "Focus previous event" : "Focus event on previous day",
+    view === "day" ? "Focus event to the left" : "Focus event on previous day",
   "edit-focus-right": ({ view }) =>
-    view === "day" ? "Focus next event" : "Focus event on next day",
+    view === "day" ? "Focus event to the right" : "Focus event on next day",
 };
 
 /**

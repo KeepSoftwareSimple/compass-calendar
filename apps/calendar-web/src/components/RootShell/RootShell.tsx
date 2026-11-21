@@ -78,6 +78,7 @@ import {
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { useFocusNoticeShortcut } from "@web/shortcuts/notice-focus/useFocusNoticeShortcut";
+import { useOpenLocationShortcut } from "@web/shortcuts/open-location/useOpenLocationShortcut";
 import {
   useCalendarShellShortcuts,
   useNavigationShortcuts,
@@ -134,6 +135,7 @@ export function RootShell() {
   useFocusNoticeShortcut();
   useEventContextMenuShortcut();
   useHideEventShortcut();
+  useOpenLocationShortcut();
   useGoToDateShortcut();
   // Must stay mounted on every route, including Life, so the 5-minute
   // heads-up still fires while the calendar grid is not on screen.
@@ -166,11 +168,13 @@ export function RootShell() {
     !isMobile;
   const showPastDue = access.kind === "server" && access.status === "past_due";
 
+  // Also picks up the Block Party run a welcome sign-up queued, once the
+  // sign-up and trial steps in the auth modal are out of the way.
   useEffect(() => {
-    if (!showCalendarOnboarding || hasPlayDeepLink()) return;
+    if (!showCalendarOnboarding || isAuthModalOpen || hasPlayDeepLink()) return;
     if (!hasSeenWelcome()) return;
     shortcutShowcaseActions.resumeIfInProgress();
-  }, [showCalendarOnboarding]);
+  }, [showCalendarOnboarding, isAuthModalOpen]);
 
   const onboardingFlags = useMemo((): OnboardingSurfaceFlags => {
     const billingGateClear = gateStatus === null;

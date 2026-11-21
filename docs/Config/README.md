@@ -126,5 +126,10 @@ database and must not share the backend's database user/data.
 | `email.from` | Yes when `provider` is `resend` | From address (for example `Compass <hello@mail.compasscalendar.com>`). |
 | `email.webhookSecret` | Yes when `provider` is `resend` | Resend webhook signing secret (Svix). |
 | `email.unsubscribeSecret` | Yes when `provider` is `resend` | HMAC key for one-click unsubscribe links (`openssl rand -base64 32`). Rotating this value invalidates outstanding unsubscribe links. |
+| `email.reflection.enabled` | No | Global reflection delivery switch, default `false`. |
+| `email.reflection.rolloutEnabled` | No | General reflection gate, default `false`; private binding remains separate. |
+| `email.reflection.rolloutStartDate` | No | ISO date, inclusive in the recipient's saved timezone. When present, general scheduling and dispatch wait until this date. December rollout: `2026-12-06`. |
+| `email.reflection.enrollExisting` | No | Default `false`. With rollout enabled, initialize accounts without reflection preferences, preserving pauses, unsubscribes, suppression, and existing settings. Missing timezone uses UTC. |
+| `email.reflection.trialUserId`, `email.reflection.trialEmail` | No | Both required for private weekly delivery before general rollout. Keep these bindings private. |
 | `email.scheduleProfile` | No | `real` (default) or `fast`. `fast` compresses step delays for staging; config refuses `fast` when `runtime.nodeEnv` is `production`. |
 | `email.allowlist` | No | Optional send-time guard. Non-listed addresses still enroll but sends are skipped until the allowlist is cleared. Matched case-insensitively; empty when omitted. |

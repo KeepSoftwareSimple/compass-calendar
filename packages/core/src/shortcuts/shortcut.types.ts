@@ -12,6 +12,8 @@ export interface Shortcut {
   keys: string[];
   label: string;
   section: string;
+  /** True when `keys` are alternatives (either key works), not a chord. */
+  keyAlternatives?: boolean;
   when?: ShortcutContext;
   /**
    * True when this shortcut creates or mutates events. The `?` legend shows a

@@ -56,8 +56,8 @@ export async function runReflectionCommand(args: string[]) {
     throw new Error(
       "Choose setup, status, history, preview, enable, or disable",
     );
-  if (values.all && action !== "history")
-    throw new Error("Only the history command supports --all");
+  if (values.all && action !== "history" && action !== "status")
+    throw new Error("Only the history and status commands support --all");
   if (values.all && values["user-id"])
     throw new Error("Choose --all or --user-id");
   await mongoService.start();

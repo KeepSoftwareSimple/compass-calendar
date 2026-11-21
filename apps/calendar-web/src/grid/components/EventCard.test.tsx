@@ -5,7 +5,7 @@ import { brighten } from "@web/common/styles/color.utils";
 import { getEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
-  gridEventSidebarEditingBoxShadow,
+  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   resolveEventFocusIndicatorColor,
 } from "@web/grid/components/calendar-accent.util";
 import { pastEventFill } from "@web/grid/components/grid-event-card-shell";
@@ -201,9 +201,7 @@ describe("EventCard", () => {
       getEventPalette().base,
     );
     expect(card.style.boxShadow).toContain(
-      gridEventSidebarEditingBoxShadow(
-        resolveEventFocusIndicatorColor(null, getEventPalette().base),
-      ),
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
     );
   });
 
@@ -227,9 +225,7 @@ describe("EventCard", () => {
     });
     expect(card.style.getPropertyValue("--event-bg")).toBe("#c4b5fd");
     expect(card.style.boxShadow).toContain(
-      gridEventSidebarEditingBoxShadow(
-        resolveEventFocusIndicatorColor(null, "#c4b5fd"),
-      ),
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
     );
   });
 
@@ -247,9 +243,7 @@ describe("EventCard", () => {
       name: "All-day event: Conference",
     });
     expect(card.style.boxShadow).toContain(
-      gridEventSidebarEditingBoxShadow(
-        resolveEventFocusIndicatorColor(null, getEventPalette().base),
-      ),
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
     );
   });
 
@@ -413,6 +407,164 @@ describe("EventCard", () => {
 
     expect(onEventKeyDown).toHaveBeenCalledTimes(1);
     expect(onParentKeyDown).not.toHaveBeenCalled();
+  });
+
+  it("dispatches contextmenu on Space and records edit-menu", () => {
+    const track = spyOn(Track, "track");
+    const menuTargets: EventTarget[] = [];
+    const onContextMenu = (event: Event) => {
+      if (event.target) menuTargets.push(event.target);
+      event.preventDefault();
+    };
+    document.addEventListener("contextmenu", onContextMenu);
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button");
+    fireEvent.keyDown(card, { key: " ", code: "Space" });
+
+    expect(menuTargets).toEqual([card]);
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id === "edit-menu",
+    );
+    expect(recorded).toHaveLength(1);
+
+    document.removeEventListener("contextmenu", onContextMenu);
+    track.mockRestore();
+  });
+
+  it("dispatches contextmenu on Space for an all-day event card", () => {
+    let fired = false;
+    document.addEventListener("contextmenu", (event) => {
+      fired = true;
+      event.preventDefault();
+    });
+
+    render(
+      <AllDayEventCard
+        event={createEvent({
+          endDate: "2024-01-16T00:00:00.000Z",
+          isAllDay: true,
+          startDate: "2024-01-15T00:00:00.000Z",
+          title: "All-day offsite",
+        })}
+        isPlaceholder={false}
+        position={{ ...position, height: 28 }}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), { key: " ", code: "Space" });
+    expect(fired).toBe(true);
+  });
+
+  it("ignores repeated Space keydown without opening the menu again", () => {
+    const menuTargets: EventTarget[] = [];
+    document.addEventListener("contextmenu", (event) => {
+      if (event.target) menuTargets.push(event.target);
+      event.preventDefault();
+    });
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button");
+    fireEvent.keyDown(card, { key: " ", code: "Space", repeat: false });
+    fireEvent.keyDown(card, { key: " ", code: "Space", repeat: true });
+    expect(menuTargets).toHaveLength(1);
+  });
+
+  it("does not open the menu on Shift+Space", () => {
+    let fired = false;
+    document.addEventListener("contextmenu", () => {
+      fired = true;
+    });
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), {
+      key: " ",
+      code: "Space",
+      shiftKey: true,
+    });
+    expect(fired).toBe(false);
+  });
+
+  it("prevents page scroll on modified Space without opening the menu", () => {
+    let fired = false;
+    const onContextMenu = () => {
+      fired = true;
+    };
+    document.addEventListener("contextmenu", onContextMenu);
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button");
+    for (const modifier of ["shiftKey", "ctrlKey", "altKey", "metaKey"]) {
+      const notCancelled = fireEvent.keyDown(card, {
+        key: " ",
+        code: "Space",
+        [modifier]: true,
+      });
+      expect(notCancelled).toBe(false);
+    }
+    expect(fired).toBe(false);
+
+    document.removeEventListener("contextmenu", onContextMenu);
+  });
+
+  it("does not record edit-open when Space is pressed on a saved event", () => {
+    const track = spyOn(Track, "track");
+    const onEventKeyDown = mock(() => {});
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        onEventKeyDown={onEventKeyDown}
+        position={position}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), { key: " ", code: "Space" });
+
+    expect(onEventKeyDown).not.toHaveBeenCalled();
+    const editOpen = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id === "edit-open",
+    );
+    expect(editOpen).toHaveLength(0);
+    track.mockRestore();
   });
 
   it("records edit-open when Enter opens a timed event", () => {

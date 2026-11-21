@@ -36,8 +36,34 @@ const unique = (events: ReflectionEvent[]) => {
     return !duplicate;
   });
 };
+const highlightTitle = (event: ReflectionEvent) =>
+  event.title.trim().replace(/\s+/g, " ").toLowerCase();
+
+// Repeated calendar entries can be distinct facts but make redundant highlights.
+const distinctTitles = (events: ReflectionEvent[]) => {
+  const titles = new Set<string>();
+  return events.filter((event) => {
+    const title = highlightTitle(event);
+    if (titles.has(title)) return false;
+    titles.add(title);
+    return true;
+  });
+};
+
 const rank = (event: ReflectionEvent) =>
   (event.recurring ? 0 : 10) + (event.schedule.kind === "allDay" ? 2 : 0);
+
+const meetingPriority = (event: ReflectionEvent) => {
+  if (event.hasGuests) return 2;
+  return /\b(?:meet(?:ings?|[ -]up)?|calls?|sync|1[: -]1|one[- ]on[- ]one|stand[- ]?up|check[- ]in|interview|(?:coffee|lunch|dinner) with)\b/i.test(
+    event.title,
+  )
+    ? 1
+    : 0;
+};
+
+const upcomingMeetingPriority = (event: ReflectionEvent) =>
+  event.windowKey === "upcoming" ? meetingPriority(event) : 0;
 
 export function selectReflectionEvents(input: {
   events: ReflectionEvent[];
@@ -50,13 +76,15 @@ export function selectReflectionEvents(input: {
   previousMemoryIds: Set<string>;
 }) {
   const eligible = unique(
-    input.events.filter(
-      (event) =>
-        event.title.trim() &&
-        !input.hiddenIds.has(event.eventId) &&
-        !input.hiddenIds.has(event.id) &&
-        (!event.seriesId || !input.hiddenIds.has(event.seriesId)),
-    ),
+    input.events
+      .filter(
+        (event) =>
+          event.title.trim() &&
+          !input.hiddenIds.has(event.eventId) &&
+          !input.hiddenIds.has(event.id) &&
+          (!event.seriesId || !input.hiddenIds.has(event.seriesId)),
+      )
+      .sort((a, b) => upcomingMeetingPriority(b) - upcomingMeetingPriority(a)),
   );
   const localDate = (event: ReflectionEvent) =>
     event.schedule.kind === "allDay"
@@ -77,13 +105,17 @@ export function selectReflectionEvents(input: {
     .filter(
       (event) =>
         event.windowKey === "upcoming" &&
-        !event.routine &&
+        (!event.routine || meetingPriority(event) > 0) &&
         (event.schedule.kind === "allDay"
           ? event.schedule.start >= date
           : Date.parse(event.schedule.start) >=
             (input.upcomingCutoff ?? input.cutoff).getTime()),
     )
-    .sort((a, b) => a.schedule.start.localeCompare(b.schedule.start));
+    .sort(
+      (a, b) =>
+        meetingPriority(b) - meetingPriority(a) ||
+        Date.parse(a.schedule.start) - Date.parse(b.schedule.start),
+    );
   const history = eligible.filter(
     (event) =>
       event.windowKey.startsWith("history:") &&
@@ -99,16 +131,16 @@ export function selectReflectionEvents(input: {
     const shiftedEnd = dayjs(date).add(offset, "day").format("YYYY-MM-DD");
     return localDate(event) >= shiftedStart && localDate(event) <= shiftedEnd;
   };
-  const memories = history
-    .sort(
+  const memories = distinctTitles(
+    history.sort(
       (a, b) =>
         Number(historicalWeekMatch(b)) - Number(historicalWeekMatch(a)) ||
         Number(input.previousMemoryIds.has(a.id)) -
           Number(input.previousMemoryIds.has(b.id)) ||
         rank(b) - rank(a) ||
         digest(`${date}:${a.id}`).localeCompare(digest(`${date}:${b.id}`)),
-    )
-    .slice(0, 3);
+    ),
+  ).slice(0, 3);
   return { recent, upcoming, memories, weekMatch: historicalWeekMatch };
 }
 
@@ -128,12 +160,13 @@ export function renderReflectionEmail(input: {
   historyComplete: boolean;
   completedWeeks: number | null;
   appUrl: string;
+  hasMeetingPage: boolean;
   unsubscribeUrl: string;
 }) {
   const reviewDate = dayjs(input.date);
   // The Thursday determines the ISO week, including December/January boundaries.
   const thursday = reviewDate.add(3 - ((reviewDate.day() + 6) % 7), "day");
-  const subject = `Weekly review (${Math.ceil(thursday.dayOfYear() / 7)})`;
+  const subject = `Your weekly review (${Math.ceil(thursday.dayOfYear() / 7)})`;
   const dateRange = (startDate: string, endDate: string) => {
     const start = dayjs(startDate),
       end = dayjs(endDate);
@@ -147,15 +180,108 @@ export function renderReflectionEmail(input: {
     event.schedule.kind === "allDay"
       ? dayjs(event.schedule.start)
       : dayjs(event.schedule.start).tz(input.timeZone);
+  const chronological = (a: ReflectionEvent, b: ReflectionEvent) => {
+    const start = (event: ReflectionEvent) =>
+      event.schedule.kind === "allDay"
+        ? dayjs.tz(`${event.schedule.start} 00:00`, input.timeZone).valueOf()
+        : Date.parse(event.schedule.start);
+    return start(a) - start(b) || a.id.localeCompare(b.id);
+  };
+  const highlights = (
+    events: ReflectionEvent[],
+    spreadAcrossDays = false,
+    limit = 3,
+  ) => {
+    if (!limit) return [];
+    let candidates = distinctTitles(events);
+    if (spreadAcrossDays) {
+      const byDay = new Map<string, ReflectionEvent[]>();
+      for (const event of events) {
+        const date = calendarDate(event).format("YYYY-MM-DD");
+        const day = byDay.get(date) ?? [];
+        day.push(event);
+        byDay.set(date, day);
+      }
+      const selected = new Map<string, ReflectionEvent>();
+      const dayForTitle = new Map<string, string>();
+      // Reassign an earlier day's choice when its title is another day's only
+      // option. At most three selected days participate in this search.
+      const chooseForDay = (date: string, tried: Set<string>): boolean => {
+        for (const event of byDay.get(date) ?? []) {
+          const title = highlightTitle(event);
+          if (tried.has(title)) continue;
+          tried.add(title);
+          const previousDay = dayForTitle.get(title);
+          if (previousDay && !chooseForDay(previousDay, tried)) continue;
+          selected.set(date, event);
+          dayForTitle.set(title, date);
+          return true;
+        }
+        return false;
+      };
+      for (const date of byDay.keys()) {
+        chooseForDay(date, new Set());
+        if (selected.size === limit) break;
+      }
+      // Fill sparse weeks from the original priority order, without repeats.
+      candidates = distinctTitles([...selected.values(), ...events]);
+    }
+    return candidates.slice(0, limit).sort(chronological);
+  };
   const label = (event: ReflectionEvent) => {
     const date = calendarDate(event);
     return `${date.format("ddd, MMM D")}${event.schedule.kind === "timed" ? ` at ${date.format("h:mm a")}` : ""}: ${event.title}`;
   };
-  const sections: { heading: string; lines: string[] }[] = [
+  const nextStep = (label: string, url: URL, content: string) => {
+    const displayUrl = `${url.host}${url.pathname}`;
+    const plainUrl = `${url.origin}${url.pathname}`;
+    url.searchParams.set("utm_source", "email");
+    url.searchParams.set("utm_campaign", "weekly_review");
+    url.searchParams.set("utm_content", content);
+    return { label, href: url.toString(), displayUrl, plainUrl };
+  };
+  const nextSteps = [
+    nextStep("Plan next week", new URL(input.appUrl), "plan_next_week"),
+  ];
+  if (!input.hasMeetingPage) {
+    nextSteps.push(
+      nextStep(
+        "Set up your meeting page",
+        new URL("/meet", input.appUrl),
+        "meeting_setup",
+      ),
+    );
+  }
+  const upcomingMeetings = distinctTitles(
+    input.upcoming.filter((event) => meetingPriority(event) > 0),
+  );
+  const meetingTitles = new Set(upcomingMeetings.map(highlightTitle));
+  const meetingDays = new Set(
+    upcomingMeetings.map((event) => calendarDate(event).format("YYYY-MM-DD")),
+  );
+  const soloCandidates = input.upcoming
+    .filter((event) => !meetingTitles.has(highlightTitle(event)))
+    .sort(
+      (a, b) =>
+        Number(meetingDays.has(calendarDate(a).format("YYYY-MM-DD"))) -
+        Number(meetingDays.has(calendarDate(b).format("YYYY-MM-DD"))),
+    );
+  const upcomingHighlights = [
+    ...upcomingMeetings,
+    ...highlights(
+      soloCandidates,
+      true,
+      Math.max(0, 3 - upcomingMeetings.length),
+    ),
+  ].sort(chronological);
+  const sections: (
+    | { heading: string; lines: string[] }
+    | { heading: string; links: typeof nextSteps }
+  )[] = [
     {
       heading: `Your past week, ${dateRange(input.recentStartDate, input.cadence === "daily" ? dayjs(input.upcomingStartDate).subtract(1, "day").format("YYYY-MM-DD") : input.date)}`,
       lines: input.recent.length
-        ? input.recent.slice(0, 3).map(label)
+        ? highlights(input.recent, true).map(label)
         : ["No completed events in your calendar this week."],
     },
     {
@@ -164,14 +290,15 @@ export function renderReflectionEmail(input: {
         dayjs(input.upcomingStartDate).add(6, "day").format("YYYY-MM-DD"),
       )}`,
       lines: input.upcoming.length
-        ? input.upcoming.slice(0, 3).map(label)
+        ? upcomingHighlights.map(label)
         : ["No upcoming highlights in your calendar."],
     },
+    { heading: "Next steps:", links: nextSteps },
   ];
   if (input.memories.length)
     sections.push({
       heading: "This time in your life",
-      lines: input.memories.map(
+      lines: highlights(input.memories).map(
         (event) => `${calendarDate(event).year()}: ${event.title}`,
       ),
     });
@@ -193,7 +320,31 @@ export function renderReflectionEmail(input: {
       Number.parseInt(digest(input.date).slice(0, 4), 16) %
         REFLECTION_EMAIL_QUOTES.length
     ] ?? "";
-  const text = `${sections.map((section) => `${section.heading}\n${section.lines.join("\n")}`).join("\n\n")}\n\nPlan next week\n${input.appUrl}\n\nUnsubscribe: ${input.unsubscribeUrl}\n\n${quote}`;
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${sections.map((section) => `<p><strong>${escapeHtml(section.heading)}</strong><br>${section.lines.map(escapeHtml).join("<br>")}</p>`).join("")}<p>Plan next week<br><a href="${escapeHtml(input.appUrl)}">${escapeHtml(input.appUrl)}</a></p><p><a href="${escapeHtml(input.unsubscribeUrl)}">Unsubscribe</a></p><p>${escapeHtml(quote)}</p></body></html>`;
+  const textSections = sections.map((section) => {
+    if ("links" in section) {
+      const links = section.links.map(
+        ({ label, plainUrl }) => `${label}: ${plainUrl}`,
+      );
+      return `${section.heading}\n${links.join("\n\n")}`;
+    }
+    return `${section.heading}\n${section.lines.join("\n")}`;
+  });
+  const htmlSections = sections.map((section) => {
+    const heading = `<strong>${escapeHtml(section.heading)}</strong>`;
+    if ("links" in section) {
+      const links = section.links.map(
+        ({ label, href, displayUrl }) =>
+          `${escapeHtml(label)}: <a href="${escapeHtml(href)}">${escapeHtml(displayUrl)}</a>`,
+      );
+      return `<p>${heading}<br>${links.join("<br><br>")}</p>`;
+    }
+    return `<p>${heading}<br>${section.lines.map(escapeHtml).join("<br>")}</p>`;
+  });
+  const text = [
+    ...textSections,
+    quote,
+    `Unsubscribe: ${input.unsubscribeUrl}`,
+  ].join("\n\n");
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${htmlSections.join("")}<p><em>${escapeHtml(quote)}</em></p><p><a href="${escapeHtml(input.unsubscribeUrl)}">Unsubscribe</a></p></body></html>`;
   return { subject, html, text };
 }

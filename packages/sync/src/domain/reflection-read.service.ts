@@ -20,8 +20,8 @@ import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
 /**
- * Records per page. Small enough that one page stays well inside the caller's
- * deadline; the caller pages until `nextCursor` is null.
+ * Bound recurrence work per page. A series consumes one unit per requested
+ * window; single/exception facts consume one unit each.
  */
 const PAGE_SIZE = 25;
 
@@ -31,6 +31,7 @@ export async function readReflectionPage(
   scope: { tenantId: TenantId; principalId: PrincipalId },
   input: ReflectionReadRequest,
 ): Promise<ReflectionReadResponse> {
+  const seriesWork = Math.max(1, input.windows.length);
   const calendars = await new ProviderCalendarRepository(db).listByPrincipal(
     scope.tenantId,
     scope.principalId,
@@ -99,6 +100,7 @@ export async function readReflectionPage(
     .sort()
     .at(-1);
   const rows: EventRecord[] = [];
+  let hasMore = false;
   if (latestEnd) {
     // Separate masters from scheduled facts so each query can bound the
     // kind/start index. One union with a page-index hint scans the whole
@@ -116,7 +118,7 @@ export async function readReflectionPage(
       },
     ];
     const pages = await Promise.all(
-      candidates.map((candidate) =>
+      candidates.map((candidate, index) =>
         collection
           .find({
             ...filter,
@@ -127,19 +129,25 @@ export async function readReflectionPage(
           })
           .hint("reflection_principal_kind_start")
           .sort({ _id: 1 })
-          .limit(PAGE_SIZE)
+          .limit(
+            (index === 0 ? Math.floor(PAGE_SIZE / seriesWork) : PAGE_SIZE) + 1,
+          )
           .toArray(),
       ),
     );
-    // Both disjoint streams share the same exclusive cursor, so their first
-    // PAGE_SIZE rows each contain the union's first PAGE_SIZE. UTF-8
-    // comparison matches Mongo's ID order.
-    rows.push(
-      ...pages
-        .flat()
-        .sort((a, b) => Buffer.compare(Buffer.from(a._id), Buffer.from(b._id)))
-        .slice(0, PAGE_SIZE),
-    );
+    // The extra candidate in each stream bounds the union's weighted prefix,
+    // preserving the existing exclusive ID cursor without skipping either stream.
+    const merged = pages
+      .flat()
+      .sort((a, b) => Buffer.compare(Buffer.from(a._id), Buffer.from(b._id)));
+    let remaining = PAGE_SIZE;
+    for (const row of merged) {
+      const work = row.recurrence.kind === "seriesMaster" ? seriesWork : 1;
+      if (work > remaining) break;
+      rows.push(row);
+      remaining -= work;
+    }
+    hasMore = rows.length < merged.length;
   }
   const records = rows.map((row) => EventReadSchema.parse(row));
   const exceptions = await new EventRepository(
@@ -177,6 +185,11 @@ export async function readReflectionPage(
       )
     )
       continue;
+    const hasGuests = event.content.attendees.some(
+      (attendee) =>
+        !selfEmails.has(attendee.email.toLowerCase()) &&
+        attendee.responseStatus !== "declined",
+    );
     const excluded = (exceptions.get(event._id) ?? []).flatMap((exception) =>
       exception.recurrence.kind === "exception"
         ? [exception.recurrence.recurrenceId as DateTime]
@@ -227,6 +240,7 @@ export async function readReflectionPage(
             event.providerMetadata?.["uid"] ??
             null,
           windowKey: window.key,
+          hasGuests,
         });
       }
     }
@@ -234,7 +248,7 @@ export async function readReflectionPage(
   const last = records.at(-1);
   return {
     events,
-    nextCursor: records.length === PAGE_SIZE && last ? last._id : null,
+    nextCursor: hasMore && last ? last._id : null,
     oldestYear: oldest ? Number(oldest.schedule.start.slice(0, 4)) : null,
     historyComplete,
     truncated,

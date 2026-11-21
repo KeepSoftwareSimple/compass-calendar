@@ -41,7 +41,7 @@ test("welcomes a first-time user and seeds sample events", async ({
 
   // The welcome modal advertises S for this action; prove the shortcut.
   await expect(
-    welcomeDialog.getByRole("button", { name: "Start without an account" }),
+    welcomeDialog.getByRole("button", { name: "Continue as guest" }),
   ).toBeVisible();
   await page.keyboard.press("s");
   await expect(welcomeDialog).toBeHidden();

@@ -1,6 +1,5 @@
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { readability } from "@web/common/styles/color.utils";
-import { theme } from "@web/common/styles/theme";
 
 /**
  * The accent fill for an ordinary card's identity strip: this calendar's
@@ -128,8 +127,9 @@ export function eventFocusColor(focusColor: string | null | undefined): string {
 
 /**
  * Focus-ring and edge-line color for one card. Prefers the calendar focus color
- * when it contrasts with the card fill; otherwise uses the same token chosen for
- * title/time text on that fill.
+ * when it contrasts with the card fill; otherwise uses `--text`. The chrome is
+ * drawn outside the card on the page, so the fallback must contrast with the
+ * page, not the fill: a fill-contrast dark ring vanished on dark mode.
  */
 export function resolveEventFocusIndicatorColor(
   focusColor: string | null | undefined,
@@ -142,15 +142,15 @@ export function resolveEventFocusIndicatorColor(
   ) {
     return focusColor;
   }
-  return theme.getContrastText(fills);
+  return "var(--text)";
 }
 
-/** Sidebar-open editing ring with a fill-aware indicator color. */
-export function gridEventSidebarEditingBoxShadow(
-  indicatorColor: string,
-): string {
-  return `0 0 0 1px var(--background), 0 0 0 3px color-mix(in srgb, ${indicatorColor} 70%, transparent)`;
-}
+/**
+ * Sidebar-open editing ring. Solid `--text` so it reads against the page in
+ * both themes regardless of the card's fill.
+ */
+export const GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW =
+  "0 0 0 1px var(--background), 0 0 0 3px var(--text)";
 
 export function joinGridEventBoxShadow(
   ...parts: Array<string | undefined | null | false>

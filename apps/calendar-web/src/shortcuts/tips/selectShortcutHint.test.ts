@@ -174,7 +174,14 @@ describe("selectShortcutHint", () => {
           isWeekView: true,
           jumpableDayPrefixes: ["m"],
         },
-        ["edit-sequence", "nudge", "edge-focus", "page-jump", "event-jump"],
+        [
+          "edit-sequence",
+          "nudge",
+          "nudge-hour",
+          "edge-focus",
+          "page-jump",
+          "event-jump",
+        ],
       ).id,
     ).toBe("week-day-focus");
   });
@@ -225,11 +232,21 @@ describe("selectShortcutHint", () => {
     ).toBe("nudge");
   });
 
-  it("teaches edge focus after nudge once an event is focused", () => {
+  it("teaches the hour jump right after nudge once an event is focused", () => {
+    const hint = hintFor({ ...afterFirstEvent, eventFocused: true }, [
+      "edit-sequence",
+      "nudge",
+    ]);
+    expect(hint.id).toBe("nudge-hour");
+    expect(getHintPlainText(hint)).toContain("moves an hour");
+  });
+
+  it("teaches edge focus after the hour jump once an event is focused", () => {
     expect(
       hintFor({ ...afterFirstEvent, eventFocused: true }, [
         "edit-sequence",
         "nudge",
+        "nudge-hour",
       ]).id,
     ).toBe("edge-focus");
   });

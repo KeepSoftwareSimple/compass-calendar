@@ -21,7 +21,10 @@ import {
   TASK_BASE_POINTS,
   TIME_BONUS_PER_SECOND,
 } from "@web/components/ShortcutShowcase/game.tasks";
-import { PRACTICE_NUDGE_MIN } from "@web/components/ShortcutShowcase/practice.state";
+import {
+  PRACTICE_COARSE_NUDGE_MIN,
+  PRACTICE_NUDGE_MIN,
+} from "@web/components/ShortcutShowcase/practice.state";
 import { describe, expect, it } from "bun:test";
 
 const T0 = 1_000_000;
@@ -44,10 +47,11 @@ const key = {
   arrow: (
     direction: "up" | "down" | "left" | "right",
     shift = false,
-  ): GameKey => ({ type: "arrow", direction, shift }),
+    coarse = false,
+  ): GameKey => ({ type: "arrow", direction, shift, coarse }),
 };
 
-/** The one keyboard script that clears the whole queue: 11 tasks, 23 keys. */
+/** The one keyboard script that clears the whole queue: 12 tasks, 24 keys. */
 const WINNING_SCRIPT: GameKey[] = [
   // place-standup: spawn Tue 9:00, walk left, lock
   key.create,
@@ -60,6 +64,8 @@ const WINNING_SCRIPT: GameKey[] = [
   key.enter,
   // nudge-standup: 9:00 -> 9:15
   key.arrow("down", true),
+  // nudge-hour-standup: Alt+Shift jumps 9:15 -> 10:15 in one tap
+  key.arrow("down", true, true),
   // resize-one-on-one: Tab to start edge, Shift+Up 10:00 -> 9:45
   key.tab,
   key.arrow("up", true),
@@ -240,7 +246,7 @@ describe("task validation", () => {
 
   it("requires the start edge for the resize task: whole-block moves fail", () => {
     let state = startRun(createInitialGameState(), T0);
-    state = playKeys(state, WINNING_SCRIPT.slice(0, 8), T0);
+    state = playKeys(state, WINNING_SCRIPT.slice(0, 9), T0);
     expect(currentTask(state)?.id).toBe("resize-one-on-one");
 
     // Whole-block Shift+Up moves 10:00-10:30 -> 9:45-10:15; not a resize.
@@ -258,7 +264,7 @@ describe("task validation", () => {
 
   it("restores the scripted delete with undo", () => {
     let state = startRun(createInitialGameState(), T0);
-    state = playKeys(state, WINNING_SCRIPT.slice(0, 10), T0);
+    state = playKeys(state, WINNING_SCRIPT.slice(0, 11), T0);
     expect(currentTask(state)?.id).toBe("delete-gym");
 
     state = handleGameKey(state, key.del, T0);
@@ -276,7 +282,7 @@ describe("discovery tasks", () => {
   const reachLegend = () =>
     playKeys(
       startRun(createInitialGameState(), T0),
-      WINNING_SCRIPT.slice(0, 12),
+      WINNING_SCRIPT.slice(0, 13),
       T0,
     );
 
@@ -368,7 +374,7 @@ describe("keycap progress", () => {
   it("tabs once to the start edge, then pulses Shift+Up on the last chip", () => {
     let state = playKeys(
       startRun(createInitialGameState(), T0),
-      WINNING_SCRIPT.slice(0, 8),
+      WINNING_SCRIPT.slice(0, 9),
       T0,
     );
     const task = currentTask(state) as NonNullable<
@@ -400,7 +406,7 @@ describe("keycap progress", () => {
   it("shows the jump target's live letter on the card and pulses it after F", () => {
     let state = playKeys(
       startRun(createInitialGameState(), T0),
-      WINNING_SCRIPT.slice(0, 14),
+      WINNING_SCRIPT.slice(0, 15),
       T0,
     );
     const task = currentTask(state) as NonNullable<
@@ -418,7 +424,7 @@ describe("keycap progress", () => {
   it("swaps the palette card's hint to Esc while the sim palette is open", () => {
     let state = playKeys(
       startRun(createInitialGameState(), T0),
-      WINNING_SCRIPT.slice(0, 18),
+      WINNING_SCRIPT.slice(0, 19),
       T0,
     );
     const task = currentTask(state) as NonNullable<
@@ -435,7 +441,7 @@ describe("keycap progress", () => {
   it("swaps the legend card's hint to Esc while the sim legend is open", () => {
     let state = playKeys(
       startRun(createInitialGameState(), T0),
-      WINNING_SCRIPT.slice(0, 12),
+      WINNING_SCRIPT.slice(0, 13),
       T0,
     );
     const task = currentTask(state) as NonNullable<
@@ -510,8 +516,8 @@ describe("winning script sanity", () => {
   });
 
   it("never repeats a key and arrow chips match spawn-to-target distance", () => {
-    expect(WINNING_SCRIPT).toHaveLength(23);
-    expect(RUN_TASKS).toHaveLength(11);
+    expect(WINNING_SCRIPT).toHaveLength(24);
+    expect(RUN_TASKS).toHaveLength(12);
 
     for (const task of RUN_TASKS) {
       for (let i = 1; i < task.keycaps.length; i += 1) {
@@ -554,6 +560,22 @@ describe("winning script sanity", () => {
           Math.abs(block.dayIndex - task.target.dayIndex) +
           Math.abs(fromMin - toMin) / PRACTICE_NUDGE_MIN;
         expect(arrowCount).toBe(distance);
+      }
+
+      if (task.type === "nudgeHour") {
+        const block = state.practice.events.find(
+          (event) => event.id === task.targetEventId,
+        );
+        expect(block).toBeTruthy();
+        if (!block) return;
+        // One Alt+Shift tap per hour, and the chips end on one arrow.
+        expect(
+          Math.abs(block.startMin - task.target.startMin) /
+            PRACTICE_COARSE_NUDGE_MIN,
+        ).toBe(1);
+        expect(task.keycaps.filter((cap) => cap.startsWith("Arrow"))).toEqual([
+          "ArrowDown",
+        ]);
       }
 
       const startIndex = state.taskIndex;

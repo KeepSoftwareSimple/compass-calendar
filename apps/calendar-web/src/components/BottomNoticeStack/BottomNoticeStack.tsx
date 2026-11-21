@@ -5,7 +5,6 @@ import { BottomNoticeToastHost } from "@web/components/BottomNoticeStack/BottomN
 import { bottomNoticeStackGateActions } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.store";
 import { flushQueuedBottomNoticeToasts } from "@web/components/BottomNoticeStack/bottom-notice-stack-gate.toast";
 import { useBottomNoticeStackLift } from "@web/components/BottomNoticeStack/useBottomNoticeStackLift";
-import { useFlushPendingShellToast } from "@web/components/BottomNoticeStack/useFlushPendingShellToast";
 import {
   selectIsSidebarOpen,
   useViewStore,
@@ -20,8 +19,6 @@ export function BottomNoticeStack({
   const stackRef = useRef<HTMLElement>(null);
   const { clearsSidebarFooter, upNextBannerClearancePx } =
     useBottomNoticeStackLift(stackRef, isSidebarOpen, !suppressed);
-
-  useFlushPendingShellToast();
 
   useLayoutEffect(() => {
     bottomNoticeStackGateActions.setSuppressed(suppressed);

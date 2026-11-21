@@ -1,11 +1,12 @@
 import { type KeyboardEvent } from "react";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { dispatchGridEventContextMenuFromElement } from "@web/shortcuts/context-menu/dispatch-grid-event-context-menu";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 
 /**
- * Enter and Space open a card, the activation keys its `role="button"`
- * advertises. Shared by TimedEventCard and AllDayEventCard so one card
- * cannot drift into swallowing the keys or skipping the telemetry.
+ * Enter opens the event form; Space opens the context menu, like right-click.
+ * Shared by TimedEventCard and AllDayEventCard so card keyboard behavior
+ * cannot drift.
  */
 export const gridEventCardActivationKeyDown =
   (event: GridEvent, onEventKeyDown?: (event: GridEvent) => void) =>
@@ -18,6 +19,22 @@ export const gridEventCardActivationKeyDown =
     // the row beneath, even when no handler is wired up.
     keyEvent.preventDefault();
     keyEvent.stopPropagation();
+
+    if (keyEvent.key === " ") {
+      // Held (auto-repeat) or modified Space must not open the menu again.
+      const modified =
+        keyEvent.shiftKey ||
+        keyEvent.altKey ||
+        keyEvent.metaKey ||
+        keyEvent.ctrlKey;
+      if (keyEvent.repeat || modified) {
+        return;
+      }
+      dispatchGridEventContextMenuFromElement(keyEvent.currentTarget);
+      recordHandledShortcutInvocation("edit-menu");
+      return;
+    }
+
     if (!onEventKeyDown) {
       return;
     }

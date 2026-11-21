@@ -14,8 +14,8 @@ import {
 } from "@web/billing/EmbeddedCheckoutPanel";
 import { TrialStartAsk } from "@web/billing/TrialStartAsk";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
-import { deferGoogleDelayedToastIfVisible } from "@web/common/utils/toast/google-delayed.toast";
 import { deferGoogleReconnectToastIfVisible } from "@web/common/utils/toast/google-reconnect.toast";
+import { deferProviderDelayedToastIfVisible } from "@web/common/utils/toast/provider-delayed.toast";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { PixelPirateScouting } from "@web/components/WelcomeModal/PixelPirateScouting";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
@@ -57,7 +57,7 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
   useEffect(() => {
     setBillingGateOwnsScreen(true);
     deferGoogleReconnectToastIfVisible();
-    deferGoogleDelayedToastIfVisible();
+    deferProviderDelayedToastIfVisible();
     return () => setBillingGateOwnsScreen(false);
   }, []);
 

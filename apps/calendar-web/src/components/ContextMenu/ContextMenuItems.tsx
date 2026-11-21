@@ -20,6 +20,7 @@ import {
   eventColorLabel,
 } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { getGridCardTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { promptContextMenuKeyboardOnly } from "@web/common/utils/toast/context-menu-keyboard-only.toast";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
@@ -151,6 +152,13 @@ export function ContextMenuItemsView({
         ]),
   ];
 
+  // The grid card can be too short to show its time, so the menu repeats it
+  // for a quick look without opening the form.
+  const timeRange =
+    !event.isAllDay && event.startDate && event.endDate
+      ? getGridCardTimesLabel(event.startDate, event.endDate, event.timeZone)
+      : null;
+
   const nav = useContext(ContextMenuNavContext);
   const selectedColor = event.color ?? null;
   const pickColor = (color: EventColorSlot | null) => {
@@ -166,6 +174,18 @@ export function ContextMenuItemsView({
       id={ID_CONTEXT_MENU_ITEMS}
       role="none"
       onKeyDown={(keyEvent) => {
+        // Color pick keys work from anywhere in the menu, so the chips
+        // shown on each swatch are usable right after Space opens it.
+        const pickIndex = isReadOnly ? null : digitPickIndex(keyEvent);
+        const pickedColor =
+          pickIndex === null ? undefined : COLOR_OPTIONS[pickIndex];
+        if (pickedColor !== undefined) {
+          keyEvent.preventDefault();
+          keyEvent.stopPropagation();
+          pickColor(pickedColor);
+          recordHandledShortcutInvocation("edit-pick-by-number");
+          return;
+        }
         if (!isBareLetterKey(keyEvent.nativeEvent, HIDE_EVENT_LETTER)) {
           return;
         }
@@ -175,6 +195,11 @@ export function ContextMenuItemsView({
         close();
       }}
     >
+      {timeRange && (
+        <div className="border-border border-b px-3 py-2 text-s text-text-muted">
+          {timeRange}
+        </div>
+      )}
       {menuActions.map((item, index) => {
         // A real pointer click reports a positive `detail`; Enter/Space
         // activation of a focused button reports 0 (same signal
@@ -190,7 +215,15 @@ export function ContextMenuItemsView({
           close();
         };
         const itemProps = nav
-          ? nav.getItemProps({ onClick: select })
+          ? nav.getItemProps({
+              onClick: select,
+              onKeyDown: (keyEvent) => {
+                if (keyEvent.key === " " && keyEvent.repeat) {
+                  keyEvent.preventDefault();
+                  keyEvent.stopPropagation();
+                }
+              },
+            })
           : { onClick: select };
         return (
           <button
@@ -215,20 +248,7 @@ export function ContextMenuItemsView({
         );
       })}
       {!isReadOnly && (
-        <fieldset
-          className="group/menu-colors m-0 min-w-0 border-border border-t px-3 py-2"
-          onKeyDown={(keyEvent) => {
-            const pickIndex = digitPickIndex(keyEvent);
-            const pickedColor =
-              pickIndex === null ? undefined : COLOR_OPTIONS[pickIndex];
-            if (pickedColor !== undefined) {
-              keyEvent.preventDefault();
-              keyEvent.stopPropagation();
-              pickColor(pickedColor);
-              recordHandledShortcutInvocation("edit-pick-by-number");
-            }
-          }}
-        >
+        <fieldset className="m-0 min-w-0 border-border border-t px-3 py-2">
           <legend className="sr-only">Event color</legend>
           <div className="grid grid-cols-6 gap-1.5">
             {COLOR_OPTIONS.map((slot, colorIndex) => {
@@ -277,7 +297,7 @@ export function ContextMenuItemsView({
                   {PICK_KEY_LABELS[colorIndex] && (
                     <span
                       aria-hidden
-                      className="pointer-events-none invisible absolute inset-0 flex items-center justify-center rounded-sm bg-bg-primary/70 font-semibold text-[10px] text-text group-focus-within/menu-colors:visible"
+                      className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-sm bg-bg-primary/70 font-semibold text-[10px] text-text"
                     >
                       {PICK_KEY_LABELS[colorIndex]}
                     </span>

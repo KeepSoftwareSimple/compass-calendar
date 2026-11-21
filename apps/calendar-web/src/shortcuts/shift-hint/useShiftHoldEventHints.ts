@@ -8,7 +8,10 @@ import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import { isRecurrenceScopeAskReady } from "@web/events/recurrence/recurrence-scope-opportunity.store";
 import { recurrenceScopeForToastDigit } from "@web/events/recurrence/recurrence-scope-toast-digit";
 import { isEventFormOpen } from "@web/events/stores/draft.store";
-import { isEventPastePreviewActive } from "@web/events/stores/event-paste-preview.store";
+import {
+  eventPastePreviewActions,
+  isEventPastePreviewActive,
+} from "@web/events/stores/event-paste-preview.store";
 import { isAppLocked } from "@web/shortcuts/app-lock";
 import {
   digitPickIndex,
@@ -397,6 +400,7 @@ export function useShiftHoldEventHints({
     // are the whole point of `f` on an empty day.
     const activate = () => {
       if (isAppLocked()) return;
+      eventPastePreviewActions.deactivate();
       const assignments = rebuildAssignments();
       isActiveRef.current = true;
       bufferRef.current = "";
@@ -732,6 +736,7 @@ export function useShiftHoldEventHints({
       const assignment = assignments.find((item) => item.eventId === eventId);
       if (!assignment) return;
 
+      eventPastePreviewActions.deactivate();
       isActiveRef.current = true;
       bufferRef.current = "";
       eventJumpActions.setActive(true);
@@ -750,6 +755,7 @@ export function useShiftHoldEventHints({
     const onPointerGridCreateRequest = (event: Event) => {
       const intent = pointerGridIntent(event);
       if (!intent) return;
+      eventPastePreviewActions.deactivate();
       eventJumpActions.setPointerDraftIntent(intent);
     };
 

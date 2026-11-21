@@ -3,8 +3,6 @@ import { AuthApi } from "@web/api/auth.api";
 import { APPLE_AUTHORIZATION_ERROR_MESSAGE } from "@web/auth/apple/authorization/apple-authorization.constants";
 import { buildAppleAuthCodePayload } from "@web/auth/apple/authorization/apple-authorization.util";
 import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
-import { DesktopOAuthCallbackRelay } from "@web/auth/callback/DesktopOAuthCallbackRelay";
-import { shouldRelayDesktopAppleOAuthCallback } from "@web/auth/callback/desktop-oauth-callback-relay";
 import { reportAuthCallbackCrash } from "@web/auth/callback/report-auth-callback-crash";
 import { resolveStaleProviderOAuthReplay } from "@web/auth/callback/resolve-stale-provider-oauth-replay";
 import { stripOAuthCallbackQueryFromHistory } from "@web/auth/callback/strip-oauth-callback-url";
@@ -103,15 +101,7 @@ export function AppleAuthCallbackView() {
   const location = useLocation();
   const router = useRouter();
   const completeAuthentication = useCompleteAuthentication();
-  const shouldRelay = shouldRelayDesktopAppleOAuthCallback(
-    location.searchStr,
-    false,
-  );
-
   useOneShotAuthCallback(() => {
-    if (shouldRelay) {
-      return;
-    }
     completeAppleAuthCallback({
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
@@ -124,12 +114,6 @@ export function AppleAuthCallbackView() {
       }),
     );
   });
-
-  if (shouldRelay) {
-    return (
-      <DesktopOAuthCallbackRelay provider="apple" search={location.searchStr} />
-    );
-  }
 
   return <AuthCallbackOverlay />;
 }

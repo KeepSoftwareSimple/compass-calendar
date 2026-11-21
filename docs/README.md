@@ -24,18 +24,16 @@ Internal documentation for engineers and agents working in the Compass repo.
 - Trial, pricing, or Stripe: [Billing And Trial](./features/billing.md)
 - Public booking pages or availability rules: [Compass Calendar Booking (v1)](./features/booking.md)
 - Hiding or showing an event on the grid: [Hidden Events](./features/hidden-events.md), [Feature File Map](./development/feature-file-map.md#hidden-events)
-- Native Mac app, deep links, or native menus: [Compass Desktop (macOS)](./features/desktop-client.md), [Desktop web parity checklist](https://github.com/KeepSoftwareSimple/compass-calendar-mac/blob/main/docs/features/desktop-web-parity-checklist.md), [Desktop visual parity screenshots](https://github.com/KeepSoftwareSimple/compass-calendar-mac/blob/main/docs/development/desktop-visual-parity-screenshots.md), [Desktop acceptance](https://github.com/KeepSoftwareSimple/compass-calendar-mac/blob/main/docs/acceptance/desktop.md), [Autonomous macOS acceptance flow](https://github.com/KeepSoftwareSimple/compass-calendar-mac/blob/main/docs/development/macos-parity-flow.md)
 - A new calendar integration or Google-sync behavior: [Calendar providers](./features/calendar-providers.md), [Google Sync And SSE Flow](./features/google-sync-and-sse-flow.md), the `packages/sync` domain code directly
 
 ## Features
 
 - [Weekly reflection email implementation plan](./features/weekly-reflection-plan.md)
-- [Weekly reflection private trial runbook](./development/weekly-reflection-trial.md)
+- [Weekly reflection trial and December rollout runbook](./development/weekly-reflection-trial.md)
 - [Attendees, Contacts, And RSVP](./features/attendees.md)
 - [Billing And Trial](./features/billing.md)
 - [Compass Calendar Booking (v1)](./features/booking.md)
 - [Calendar providers](./features/calendar-providers.md)
-- [Compass Desktop (macOS)](./features/desktop-client.md)
 - [Google Sync And SSE Flow](./features/google-sync-and-sse-flow.md)
 - [Hidden Events](./features/hidden-events.md)
 - [Shortcut Levels](./features/shortcut-levels.md)
@@ -73,7 +71,6 @@ Internal documentation for engineers and agents working in the Compass repo.
 - [Error Autofix Routine](./CI-CD/error-autofix-routine.md)
 - [Agent loop Routine](./CI-CD/agent-loop-routine.md)
 - [Tech-debt sweep Routine](./CI-CD/tech-debt-sweep-routine.md)
-- [macOS parity maintenance loop](https://github.com/KeepSoftwareSimple/compass-calendar-mac/blob/main/docs/CI-CD/macos-parity-loop-routine.md)
 - [CLI And Maintenance Commands](./development/cli.md)
 - [Versioning](./CI-CD/versioning.md)
 
@@ -87,5 +84,4 @@ User-visible behavior runbooks for manual verification and expected outcomes:
 - [Google Sync](./acceptance/google-sync.md)
 - [Recurring Events](./acceptance/recurring-events.md)
 - [Onboarding](./acceptance/onboarding.md)
-- [Compass Desktop (macOS)](https://github.com/KeepSoftwareSimple/compass-calendar-mac/blob/main/docs/acceptance/desktop.md)
 - [Shortcuts](./acceptance/shortcuts.md)

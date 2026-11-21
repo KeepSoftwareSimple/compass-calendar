@@ -72,6 +72,7 @@ export const LIFE_QUOTES = [
   "“I urge you to please notice when you are happy, and exclaim or murmur or think at some point, 'If this isn’t nice, I don’t know what is.'” (Kurt Vonnegut)",
   "“It is good to have an end to journey toward; but it is the journey that matters, in the end.” (Ursula K. Le Guin)",
   "“Life moves pretty fast. If you don’t stop and look around once in a while, you could miss it.” (Ferris Bueller’s Day Off)",
+  "“The way we spend our minutes is the way we spend our decades.” (Derek Thompson)",
 ] as const;
 
 export function getRandomLifeQuote(random = getSecureRandomNumber) {

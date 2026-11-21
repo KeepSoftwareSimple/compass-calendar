@@ -19,7 +19,7 @@ const dismissWelcomeWithExplore = async (page: Page) => {
   ).toBeVisible();
   await page.keyboard.press("Enter");
   await expect(
-    welcomeDialog.getByRole("button", { name: "Start without an account" }),
+    welcomeDialog.getByRole("button", { name: "Continue as guest" }),
   ).toBeVisible();
   await page.keyboard.press("s");
   await expect(welcomeDialog).toBeHidden();
@@ -44,7 +44,7 @@ const startPracticing = async (page: Page) => {
     showcase.getByRole("button", { name: "Start practicing" }),
   ).toBeVisible();
   await page.keyboard.press("Enter");
-  await expect(showcase).toContainText("Task 1/11");
+  await expect(showcase).toContainText("Task 1/12");
   // The first run is untimed practice: no countdown anywhere.
   await expect(showcase.getByRole("timer")).toHaveCount(0);
   await expect(showcase).toContainText("Practice");
@@ -74,38 +74,42 @@ const clearTheQueue = async (page: Page) => {
   await page.keyboard.press("c");
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("Enter");
-  await expect(showcase).toContainText("Task 2/11");
+  await expect(showcase).toContainText("Task 2/12");
 
   // quicktime-coffee: type the time, lock.
   await page.keyboard.type("930");
   await page.keyboard.press("Enter");
-  await expect(showcase).toContainText("Task 3/11");
+  await expect(showcase).toContainText("Task 3/12");
 
   // nudge-standup: 9:00 -> 9:15 in one 15-minute step.
   await page.keyboard.press("Shift+ArrowDown");
-  await expect(showcase).toContainText("Task 4/11");
+  await expect(showcase).toContainText("Task 4/12");
+
+  // nudge-hour-standup: Alt+Shift jumps 9:15 -> 10:15 in one tap.
+  await page.keyboard.press("Alt+Shift+ArrowDown");
+  await expect(showcase).toContainText("Task 5/12");
 
   // resize-one-on-one: Tab to the start edge, Shift+Up 10:00 -> 9:45.
   await page.keyboard.press("Tab");
   await page.keyboard.press("Shift+ArrowUp");
-  await expect(showcase).toContainText("Task 5/11");
+  await expect(showcase).toContainText("Task 6/12");
 
   // delete-gym, undo-gym
   await page.keyboard.press("Delete");
-  await expect(showcase).toContainText("Task 6/11");
+  await expect(showcase).toContainText("Task 7/12");
   await holdModAndPress(page, "z");
-  await expect(showcase).toContainText("Task 7/11");
+  await expect(showcase).toContainText("Task 8/12");
 
   // legend-peek: ? opens the practice legend, Esc closes it.
   await page.keyboard.press("?");
   await expect(showcase).toContainText("Shortcuts");
   await page.keyboard.press("Escape");
-  await expect(showcase).toContainText("Task 8/11");
+  await expect(showcase).toContainText("Task 9/12");
 
   // jump-to-kickoff: F reveals jump letters, S is on Team kickoff.
   await page.keyboard.press("f");
   await page.keyboard.press("s");
-  await expect(showcase).toContainText("Task 9/11");
+  await expect(showcase).toContainText("Task 10/12");
 
   // page-jump-peek: hold Mod alone until the numbers appear, then Mod+1.
   const modHoldStarted = Date.now();
@@ -129,13 +133,13 @@ const clearTheQueue = async (page: Page) => {
   await page.keyboard.up("1");
   await page.keyboard.up("Meta");
   await page.keyboard.up("Control");
-  await expect(showcase).toContainText("Task 10/11");
+  await expect(showcase).toContainText("Task 11/12");
 
   // palette-peek: Mod+K opens the practice palette, Esc closes it.
   await holdModAndPress(page, "k");
   await expect(showcase).toContainText("Type a command...");
   await page.keyboard.press("Escape");
-  await expect(showcase).toContainText("Task 11/11");
+  await expect(showcase).toContainText("Task 12/12");
 
   // place-party: down to 5pm, lock.
   await page.keyboard.press("c");
@@ -185,7 +189,7 @@ test("a full run clears the queue, shows the score, and graduates", async ({
 
   await clearTheQueue(page);
 
-  await expect(showcase).toContainText("11/11 tasks cleared");
+  await expect(showcase).toContainText("12/12 tasks cleared");
   await expect(showcase).toContainText("Moves you learned");
   await expect(
     showcase.getByRole("button", {
@@ -226,11 +230,11 @@ test("the end screen's rematch races the clock with a full timer", async ({
   await startPracticing(page);
 
   // Esc-skip the whole queue: the fastest road to the end screen.
-  await pressTimes(page, "Escape", 11);
+  await pressTimes(page, "Escape", 12);
   await expect(showcase).toContainText("You cleared the week!");
 
   await page.keyboard.press("p");
-  await expect(showcase).toContainText("Task 1/11");
+  await expect(showcase).toContainText("Task 1/12");
   await expect(showcase.getByRole("timer")).toBeVisible();
   await expect(showcase.getByRole("timer")).toContainText("2:00");
 });
@@ -283,7 +287,7 @@ test("Escape mid-run skips one task and keeps the game up", async ({
   const showcase = page.getByRole("region", { name: "Shortcut practice" });
   // Mid-run, Escape skips the current task and the game stays up.
   await page.keyboard.press("Escape");
-  await expect(showcase).toContainText("Task 2/11");
+  await expect(showcase).toContainText("Task 2/12");
   await expect(showcase).toBeVisible();
 });
 
@@ -323,7 +327,7 @@ test("reloading mid-game re-offers a fresh run from the how-to card", async ({
   await page.keyboard.press("c");
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("Enter");
-  await expect(showcase).toContainText("Task 2/11");
+  await expect(showcase).toContainText("Task 2/12");
 
   await page.reload({ waitUntil: "domcontentloaded" });
   const resumed = page.getByRole("region", { name: "Shortcut practice" });

@@ -17,7 +17,7 @@ import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 export const LOCAL_MODE_CONNECT_PROMPT_ARIA_LABEL = "Start your free trial";
 
 export const LOCAL_MODE_CONNECT_PROMPT_MESSAGE =
-  "Start your free trial to save this calendar on every device.";
+  "Start your free trial to save this calendar to your account.";
 
 export const LOCAL_MODE_CONNECT_PROMPT_CONNECT_LABEL = "Start free trial";
 

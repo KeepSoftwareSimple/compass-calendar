@@ -12,8 +12,8 @@ const isViewInteractionEventType = (
 export type ViewEventRegistry = EventRegistry<ViewInteractionEventType>;
 
 /**
- * Marks a card that renders read-only (unwritable calendar or busy content).
- * Those cards never enter the interaction registry - that absence is what
+ * Marks a card that renders read-only (unwritable calendar or busy content)
+ * or as a hidden-event strip. Those cards never enter the interaction registry - that absence is what
  * stops the drag/resize engine from targeting them - so this attribute is the
  * only way targeting can still find them for jump labels and focus.
  */

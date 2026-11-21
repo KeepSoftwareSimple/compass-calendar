@@ -92,6 +92,8 @@ const ConfigSchema = z
     BOOKING_HOST_EMAIL_ENABLED: BooleanFromInput.default(true),
     REFLECTION_ENABLED: BooleanFromInput.default(false),
     REFLECTION_ROLLOUT_ENABLED: BooleanFromInput.default(false),
+    REFLECTION_ROLLOUT_START_DATE: z.iso.date().optional(),
+    REFLECTION_ENROLL_EXISTING: BooleanFromInput.default(false),
     REFLECTION_TRIAL_USER_ID: z
       .string()
       .regex(/^[a-f0-9]{24}$/i)
@@ -295,6 +297,8 @@ export function parseRawConfig(config: CompassConfig): Config {
     BOOKING_HOST_EMAIL_ENABLED: config.email?.bookingHostEmailEnabled ?? true,
     REFLECTION_ENABLED: config.email?.reflection?.enabled,
     REFLECTION_ROLLOUT_ENABLED: config.email?.reflection?.rolloutEnabled,
+    REFLECTION_ROLLOUT_START_DATE: config.email?.reflection?.rolloutStartDate,
+    REFLECTION_ENROLL_EXISTING: config.email?.reflection?.enrollExisting,
     REFLECTION_TRIAL_USER_ID: config.email?.reflection?.trialUserId,
     REFLECTION_TRIAL_EMAIL: config.email?.reflection?.trialEmail,
   });
@@ -383,6 +387,10 @@ export function parseConfigFromEnv(
     BOOKING_HOST_EMAIL_ENABLED: nonEmpty(rawEnv["BOOKING_HOST_EMAIL_ENABLED"]),
     REFLECTION_ENABLED: nonEmpty(rawEnv["REFLECTION_ENABLED"]),
     REFLECTION_ROLLOUT_ENABLED: nonEmpty(rawEnv["REFLECTION_ROLLOUT_ENABLED"]),
+    REFLECTION_ROLLOUT_START_DATE: nonEmpty(
+      rawEnv["REFLECTION_ROLLOUT_START_DATE"],
+    ),
+    REFLECTION_ENROLL_EXISTING: nonEmpty(rawEnv["REFLECTION_ENROLL_EXISTING"]),
     REFLECTION_TRIAL_USER_ID: nonEmpty(rawEnv["REFLECTION_TRIAL_USER_ID"]),
     REFLECTION_TRIAL_EMAIL: nonEmpty(rawEnv["REFLECTION_TRIAL_EMAIL"]),
   });

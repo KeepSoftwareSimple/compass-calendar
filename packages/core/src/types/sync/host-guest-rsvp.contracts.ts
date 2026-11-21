@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { RsvpResponseStatusSchema } from "@core/types/event-attendance.contracts";
 import { zObjectId } from "@core/types/object-id.schema";
 import { PrincipalIdSchema } from "@core/types/sync/identity.contracts";
 import { ObjectIdStringSchema } from "@core/types/type.utils";
@@ -17,7 +18,7 @@ export type HostGuestRsvpSummarizeRequest = z.infer<
 export const HostGuestRsvpSummarizeReplySchema = z.strictObject({
   id: zObjectId,
   guestName: z.string().trim().min(1).max(256),
-  responseStatus: z.enum(["accepted", "declined", "tentative"]),
+  responseStatus: RsvpResponseStatusSchema,
   slotStart: z.iso.datetime({ offset: true }),
   firstObservedAt: z.iso.datetime({ offset: true }),
 });

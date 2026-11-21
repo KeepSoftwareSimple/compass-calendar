@@ -30,6 +30,7 @@ function ShortcutRowContent({ shortcut }: { shortcut: Shortcut }) {
           announce={shortcut.keys.includes("Delete")}
           className="shrink-0"
           keys={shortcut.keys}
+          alternatives={shortcut.keyAlternatives}
         />
         {shortcut.used ? (
           <span className="shrink-0 text-text">

@@ -44,7 +44,7 @@ test("shows a trial nudge after one anonymous write and dismisses permanently", 
   });
   await expect(prompt).toBeVisible();
   await expect(prompt).toContainText(
-    "Start your free trial to save this calendar on every device.",
+    "Start your free trial to save this calendar to your account.",
   );
   await expect(
     prompt.getByRole("button", { name: "Start free trial" }),

@@ -32,11 +32,11 @@ test("local explorers learn shortcuts in Block Party after the account choice", 
     practice.getByRole("heading", { name: "Learn Compass by doing" }),
   ).toBeVisible();
   await practice.getByRole("button", { name: "Start practicing" }).click();
-  await expect(practice).toContainText("Task 1/11");
+  await expect(practice).toContainText("Task 1/12");
   await page.keyboard.press("c");
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("Enter");
-  await expect(practice).toContainText("Task 2/11");
+  await expect(practice).toContainText("Task 2/12");
 });
 
 test("calendar shortcuts work after leaving practice", async ({ page }) => {

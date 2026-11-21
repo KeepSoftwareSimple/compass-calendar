@@ -16,6 +16,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { compactListItemHtml } from "@web/components/DescriptionEditor/compact-list-item-html";
 import { DescriptionEditorLinkChrome } from "@web/components/DescriptionEditor/DescriptionEditorLinkChrome";
 import { DescriptionToolbarButton } from "@web/components/DescriptionEditor/DescriptionToolbarButton";
 import {
@@ -38,17 +39,16 @@ import { useDescriptionLinkPresentation } from "@web/components/DescriptionEdito
 import { Divider } from "@web/components/Divider/Divider";
 import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 
-// The allowlist is shared with the desktop export (description-html.policy),
-// which sanitizes the same untrusted provider HTML before emitting the native
-// parser's parity vectors. TipTap's own schema (StarterKit with
+// Provider HTML is sanitized with description-html.policy before editing.
+// TipTap's own schema (StarterKit with
 // headings/code/blockquote/etc disabled below) is a second filter here: any
 // surviving tag it doesn't recognize as a node/mark just becomes plain text.
 // target/rel are forced by the SafeLink mark below regardless of what (if
 // anything) survived on the source tag.
 const sanitizeDescriptionHtml = (html: string): string =>
   DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: DESCRIPTION_HTML_ALLOWED_TAGS,
-    ALLOWED_ATTR: DESCRIPTION_HTML_ALLOWED_ATTR,
+    ALLOWED_TAGS: [...DESCRIPTION_HTML_ALLOWED_TAGS],
+    ALLOWED_ATTR: [...DESCRIPTION_HTML_ALLOWED_ATTR],
   });
 
 // DOMPurify only runs on the `value` prop at (re)creation - pasting into a
@@ -138,8 +138,10 @@ export const DescriptionEditor = ({
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on resetKey only, see the comment above
   const initialContent = useMemo(
     () =>
-      sanitizeDescriptionHtml(
-        looksLikeHtml(value) ? value : plainTextToDescriptionHtml(value),
+      compactListItemHtml(
+        sanitizeDescriptionHtml(
+          looksLikeHtml(value) ? value : plainTextToDescriptionHtml(value),
+        ),
       ),
     [resetKey],
   );
@@ -180,6 +182,9 @@ export const DescriptionEditor = ({
         Placeholder.configure({ placeholder }),
         DescriptionListSelectionExtension,
       ],
+      // Initialize after React commits the lazy event form. A suspended
+      // render can outlive an editor created during render.
+      immediatelyRender: false,
       content: initialContent,
       editable,
       // Supplying a custom `attributes` object replaces TipTap's own
@@ -197,7 +202,7 @@ export const DescriptionEditor = ({
       // TipTap's empty document is still `<p></p>` from getHTML(); normalize
       // to "" so DirtyParser and persistence treat "cleared" like never set.
       onUpdate: ({ editor: updated }) =>
-        onChange(updated.isEmpty ? "" : updated.getHTML()),
+        onChange(updated.isEmpty ? "" : compactListItemHtml(updated.getHTML())),
       onFocus: () => setIsFocused(true),
       onBlur: () => setIsFocused(false),
     },
@@ -216,11 +221,10 @@ export const DescriptionEditor = ({
   // `onUpdate`/`onChange` would trip the dirty-check on mount and on every
   // permission flip, for content that never actually changed.
   useEffect(() => {
-    editor?.setEditable(editable, false);
+    if (editor && !editor.isDestroyed) editor.setEditable(editable, false);
   }, [editor, editable]);
 
-  const editorRoot =
-    editor?.view.dom instanceof HTMLElement ? editor.view.dom : null;
+  const editorRoot = editor && !editor.isDestroyed ? editor.view.dom : null;
 
   const linkChromeEnabled = !suppressLinkShortcutHints;
 
@@ -280,7 +284,7 @@ export const DescriptionEditor = ({
     openDescriptionLink(link.href);
   };
 
-  if (!editor) return null;
+  if (!editor || !activeMarks) return null;
 
   return (
     <div

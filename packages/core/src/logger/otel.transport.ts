@@ -1,4 +1,4 @@
-import { logs, SeverityNumber } from "@opentelemetry/api-logs";
+import { logs, SeverityNumber } from "@opentelemetry/api";
 import { type TransformableInfo } from "logform";
 import TransportStream from "winston-transport";
 import {
