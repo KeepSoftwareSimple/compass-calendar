@@ -6,8 +6,7 @@ import {
   STUCK_SKIP_HINT,
   streakMultiplier,
 } from "@web/components/ShortcutShowcase/game.tasks";
-import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
-import { ShortCutLabel } from "@web/components/Shortcuts/ShortcutLabel";
+import { ShortcutKeycap } from "@web/components/Shortcuts/ShortcutKeycap";
 
 const formatClock = (remainingSeconds: number) => {
   const minutes = Math.floor(remainingSeconds / 60);
@@ -137,10 +136,10 @@ export const GameTaskQueue: FC<{
         )}
         <div className="flex items-center gap-1 pt-3">
           {keycaps.map((key, index) => (
-            <ShortcutHint
+            <ShortcutKeycap
               // biome-ignore lint/suspicious/noArrayIndexKey: keycap sequences repeat keys; position is the identity
               key={`${key}-${index}`}
-              variant="keycap"
+              keyToken={key}
               className={
                 index === nextKeycapIndex ||
                 index === chordPartnerIndex ||
@@ -150,9 +149,7 @@ export const GameTaskQueue: FC<{
                     ? "opacity-40"
                     : ""
               }
-            >
-              <ShortCutLabel k={key} />
-            </ShortcutHint>
+            />
           ))}
         </div>
       </div>

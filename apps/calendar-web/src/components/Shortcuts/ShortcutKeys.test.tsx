@@ -24,18 +24,24 @@ describe("ShortcutKeys", () => {
     Reflect.deleteProperty(navigator, "userAgent");
   });
 
-  it("shows Delete as fn ⌫ on macOS, where ⌫ alone sends Backspace", () => {
+  it("shows two keycaps and announces the key combination for Delete on macOS", () => {
     stubPlatform("MacIntel");
-    const { container } = render(<ShortcutKeys keys={["Delete"]} />);
+    const { container } = render(<ShortcutKeys announce keys="Delete" />);
 
-    expect(keycaps(container)[0]?.textContent).toBe("fn ⌫");
+    expect(keycaps(container).map((chip) => chip.textContent)).toEqual([
+      "fn",
+      "⌫",
+    ]);
+    expect(screen.getByText("Fn plus Backspace")).toBeInTheDocument();
   });
 
   it("keeps the Delete label on other platforms", () => {
     stubPlatform("Win32");
     const { container } = render(<ShortcutKeys keys={["Delete"]} />);
 
-    expect(keycaps(container)[0]?.textContent).toBe("Delete");
+    expect(keycaps(container).map((chip) => chip.textContent)).toEqual([
+      "Delete",
+    ]);
   });
 
   it("renders one keycap chip per key and uppercases lone letters", () => {
