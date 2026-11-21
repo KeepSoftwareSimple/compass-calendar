@@ -325,6 +325,31 @@ describe("ContextMenuItems", () => {
     expect(screen.queryByText(expected)).not.toBeInTheDocument();
   });
 
+  it("shows the event location and description when present", () => {
+    const { ContextMenuItemsView } =
+      require("./ContextMenuItems") as typeof import("./ContextMenuItems");
+    const event = createMockGridEvent({
+      location: "Room 4",
+      description: "Quarterly planning",
+    });
+    renderWithTheme(
+      <ContextMenuItemsView
+        event={event}
+        close={mockClose}
+        actions={{
+          delete: mock(),
+          duplicate: mock(),
+          edit: mock(),
+          setColor: mock(),
+          toggleHidden: mock(),
+        }}
+      />,
+      { event },
+    );
+    expect(screen.getByText("Room 4")).toBeInTheDocument();
+    expect(screen.getByText("Quarterly planning")).toBeInTheDocument();
+  });
+
   it("picks a color by digit while focus is on a menu action", () => {
     const event = createMockGridEvent({ title: "Test Event" });
     const setColor = mock();
