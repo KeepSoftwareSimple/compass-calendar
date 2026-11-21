@@ -3,7 +3,6 @@ import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.types";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
-import { type GridEventCardActivationOptions } from "@web/grid/components/event-card-activation";
 import { withGridEventKeyboardFocusZIndex } from "@web/grid/components/grid-event-focus-z-index";
 import { TimedEventCard } from "@web/grid/components/TimedEventCard";
 import { getTimedEventPosition } from "@web/grid/layout/event.position";
@@ -30,7 +29,6 @@ interface Props {
   isActiveDraft?: boolean;
   isHidden?: boolean;
   isSelected?: boolean;
-  eventCardKeyboardOptions?: GridEventCardActivationOptions;
   measurements: GridMeasurements;
   motionMode?: GridEventMotionMode;
   onEventKeyDown?: (event: GridEventEntity) => void;
@@ -54,7 +52,6 @@ const GridTimedEventBase = (
     isActiveDraft = false,
     isHidden = false,
     isSelected = false,
-    eventCardKeyboardOptions,
     measurements,
     motionMode = "idle",
     onEventKeyDown,
@@ -112,7 +109,6 @@ const GridTimedEventBase = (
       interactionAttributes={interactionAttributes}
       isHidden={isHidden}
       isSelected={isSelected || isActiveDraft}
-      eventCardKeyboardOptions={eventCardKeyboardOptions}
       motionMode={motionMode}
       onEventKeyDown={onEventKeyDown}
       position={{ ...position, zIndex }}

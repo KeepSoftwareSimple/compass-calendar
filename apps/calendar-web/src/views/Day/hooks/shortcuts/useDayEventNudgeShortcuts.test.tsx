@@ -906,7 +906,7 @@ describe("useDayEventNudgeShortcuts", () => {
     expect(useEdgeFocusStore.getState().eventId).toBeNull();
   });
 
-  it("pastes a copied timed event at the placement outline on the focused column day", () => {
+  it("pastes a copied timed event at the suggested time", () => {
     focusCalendarTarget(TIMED_EVENT_ID, "timed");
     const { queryClient } = renderEditShortcuts();
 
@@ -934,7 +934,7 @@ describe("useDayEventNudgeShortcuts", () => {
     );
   });
 
-  it("pastes an all-day copy at the placement outline on the focused column", () => {
+  it("pastes an all-day copy on the next day", () => {
     focusCalendarTarget(ALL_DAY_EVENT_ID, "all-day");
     const { queryClient } = renderEditShortcuts({
       allDayEvents: [allDayEvent],

@@ -4,7 +4,6 @@ import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
-import { type GridEventCardActivationOptions } from "@web/grid/components/event-card-activation";
 import { withGridEventKeyboardFocusZIndex } from "@web/grid/components/grid-event-focus-z-index";
 import {
   applyHiddenEventStripWidth,
@@ -29,7 +28,6 @@ interface Props {
   isHidden?: boolean;
   isPlaceholder: boolean;
   isSelected?: boolean;
-  eventCardKeyboardOptions?: GridEventCardActivationOptions;
   measurements: GridMeasurements;
   onEventKeyDown?: (event: GridEvent) => void;
   visibleDates: GridVisibleDate[];
@@ -48,7 +46,6 @@ const GridAllDayEventBase = (
     isHidden = false,
     isPlaceholder,
     isSelected = false,
-    eventCardKeyboardOptions,
     measurements,
     onEventKeyDown,
     visibleDates,
@@ -92,7 +89,6 @@ const GridAllDayEventBase = (
       isHidden={isHidden}
       isPlaceholder={isPlaceholder}
       isSelected={isSelected || isActiveDraft}
-      eventCardKeyboardOptions={eventCardKeyboardOptions}
       onBlur={() => setIsFocused(false)}
       onEventKeyDown={onEventKeyDown}
       onFocus={() => setIsFocused(true)}

@@ -1,9 +1,5 @@
 import { ZIndex } from "@web/common/constants/web.constants";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
-import {
-  selectEventPastePreviewActive,
-  useEventPastePreviewStore,
-} from "@web/events/stores/event-paste-preview.store";
 import { getBusyPeriodPosition } from "@web/grid/layout/event.position";
 import {
   type EventPosition,
@@ -44,11 +40,7 @@ export const QuickTimeSlots = ({
   visibleDates,
 }: Props) => {
   const isActive = useEventJumpStore(selectEventJumpActive);
-  const isPastePreview = useEventPastePreviewStore(
-    selectEventPastePreviewActive,
-  );
-
-  if (!isActive || isPastePreview || slots.length === 0) return null;
+  if (!isActive || slots.length === 0) return null;
 
   return (
     <div id={ID_QUICK_TIME_SLOTS}>

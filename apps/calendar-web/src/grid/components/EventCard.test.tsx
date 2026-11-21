@@ -442,26 +442,6 @@ describe("EventCard", () => {
     track.mockRestore();
   });
 
-  it("swallows Space without opening the menu when suppressSpaceMenu is set", () => {
-    let fired = false;
-    document.addEventListener("contextmenu", () => {
-      fired = true;
-    });
-
-    render(
-      <TimedEventCard
-        displayMode="draft"
-        event={createEvent()}
-        eventCardKeyboardOptions={{ suppressSpaceMenu: true }}
-        motionMode="idle"
-        position={position}
-      />,
-    );
-
-    fireEvent.keyDown(screen.getByRole("button"), { key: " ", code: "Space" });
-    expect(fired).toBe(false);
-  });
-
   it("dispatches contextmenu on Space for an all-day event card", () => {
     let fired = false;
     document.addEventListener("contextmenu", (event) => {

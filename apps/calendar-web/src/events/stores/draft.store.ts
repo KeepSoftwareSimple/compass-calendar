@@ -13,11 +13,7 @@ export type Activity_DraftEvent =
    * Shift+Arrow place-create: timed draft on the grid with the form closed so
    * the user can keep repositioning before opening details with Enter.
    */
-  | "keyboardPlace"
-  /**
-   * Mod+C paste placement: outline on the grid, arrows reposition, Mod+V commits.
-   */
-  | "pastePlace";
+  | "keyboardPlace";
 
 const OPENS_FORM_ON_START: ReadonlySet<Activity_DraftEvent> = new Set([
   "createShortcut",
@@ -127,23 +123,15 @@ export const draftActions = {
   // re-render every status subscriber.
   setFormOpen: (isFormOpen: boolean) =>
     useDraftStore.setState(
-      (state) => {
-        if (
-          isFormOpen &&
-          state.status?.activity === "pastePlace" &&
-          state.gridDraft
-        ) {
-          return {};
-        }
-        return Boolean(state.status?.isFormOpen) === isFormOpen
+      (state) =>
+        Boolean(state.status?.isFormOpen) === isFormOpen
           ? {}
           : {
               status: {
                 ...(state.status ?? initialDraftStatus),
                 isFormOpen,
               },
-            };
-      },
+            },
       false,
       { type: "setFormOpen" },
     ),

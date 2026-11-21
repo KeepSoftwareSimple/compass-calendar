@@ -3,11 +3,7 @@ import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.t
 import { focusEventFormTitle } from "@web/common/utils/form/form.util";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import { gridEventDraftToGridEvent } from "@web/events/grid-event-draft.adapter";
-import {
-  draftActions,
-  isEventFormOpen,
-  useDraftStore,
-} from "@web/events/stores/draft.store";
+import { draftActions, isEventFormOpen } from "@web/events/stores/draft.store";
 import { GridAllDayEventMemo } from "@web/grid/components/GridAllDayEvent";
 import { GridTimedEvent } from "@web/grid/components/GridTimedEvent";
 import { getWeekInteractionTargetAttributes } from "@web/grid/interaction/view-event-registry";
@@ -30,9 +26,6 @@ interface Props {
 }
 
 const openDraftFormOrFocusTitle = () => {
-  if (useDraftStore.getState().status?.activity === "pastePlace") {
-    return;
-  }
   if (!isEventFormOpen()) {
     draftActions.setFormOpen(true);
     return;
@@ -56,11 +49,6 @@ export const GridDraft: FC<Props> = ({
     ? (activeAllDayDraftEvent ?? draftToAllDayRowGridEvent(draft))
     : draftAsGridEvent;
   const draftEventType = rendersInAllDayRow ? "all-day" : "timed";
-  const draftActivity = useDraftStore((state) => state.status?.activity);
-  const suppressSpaceMenu = draftActivity === "pastePlace";
-  const draftKeyboardOptions = suppressSpaceMenu
-    ? { suppressSpaceMenu: true as const }
-    : undefined;
   const draftInteractionAttributes = draftAsGridEvent._id
     ? {
         ...getWeekInteractionTargetAttributes({
@@ -98,7 +86,6 @@ export const GridDraft: FC<Props> = ({
           isPlaceholder={false}
           isSelected={sidebarEditingRing}
           key={`draft-${draftAsGridEvent._id}`}
-          eventCardKeyboardOptions={draftKeyboardOptions}
           measurements={measurements}
           onEventKeyDown={openDraftFormOrFocusTitle}
           visibleDates={visibleDates}
@@ -111,7 +98,6 @@ export const GridDraft: FC<Props> = ({
           interactionAttributes={draftInteractionAttributes}
           isSelected={sidebarEditingRing}
           key={`draft-${draftAsGridEvent._id}`}
-          eventCardKeyboardOptions={draftKeyboardOptions}
           measurements={measurements}
           onEventKeyDown={openDraftFormOrFocusTitle}
           visibleDates={visibleDates}

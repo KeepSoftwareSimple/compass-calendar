@@ -17,8 +17,7 @@ const canRepositionDraftByKeyboard = (
   activity === "createShortcut" ||
   activity === "gridClick" ||
   activity === "keyboardEdit" ||
-  activity === "keyboardPlace" ||
-  activity === "pastePlace";
+  activity === "keyboardPlace";
 
 /**
  * Moves a draft by one arrow step. Returns the updated draft when the move
@@ -40,7 +39,20 @@ export const repositionDraftByKeyboard = ({
   step?: EventNudgeStep;
 }): GridEventDraft | null => {
   if (!canRepositionDraftByKeyboard(activity) || !draft) return null;
+  return repositionDraftByArrow({ draft, key, isStartAllowed, step });
+};
 
+export const repositionDraftByArrow = ({
+  draft,
+  key,
+  isStartAllowed,
+  step = "fine",
+}: {
+  draft: GridEventDraft;
+  key: string;
+  isStartAllowed?: (nextStart: Date) => boolean;
+  step?: EventNudgeStep;
+}): GridEventDraft | null => {
   const isAllDay = draft.values.schedule.kind === "allDay";
   const movement = getArrowKeyMovement(key, isAllDay, step);
   if (!movement) return null;
