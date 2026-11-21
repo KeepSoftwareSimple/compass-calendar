@@ -226,11 +226,8 @@ export function DayCalendarGrid() {
         return;
       }
 
-      const { gridDraft: currentDraft, status } = useDraftStore.getState();
+      const { gridDraft: currentDraft } = useDraftStore.getState();
       if (currentDraft && getGridDraftId(currentDraft) === event._id) {
-        if (status?.activity === "pastePlace") {
-          return;
-        }
         // Form-closed place-create (and other live drafts): open details
         // without reseeding the draft from the card.
         draftActions.setFormOpen(true);

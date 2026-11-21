@@ -14,10 +14,7 @@ import {
   GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   joinGridEventBoxShadow,
 } from "@web/grid/components/calendar-accent.util";
-import {
-  type GridEventCardActivationOptions,
-  gridEventCardActivationKeyDown,
-} from "@web/grid/components/event-card-activation";
+import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
 import {
   gridEventCardClassName,
   gridEventCardLabelSuffix,
@@ -42,7 +39,6 @@ export interface AllDayEventCardProps {
   isHidden?: boolean;
   isPlaceholder: boolean;
   isSelected?: boolean;
-  eventCardKeyboardOptions?: GridEventCardActivationOptions;
   onBlur?: () => void;
   onEventKeyDown?: (event: GridEvent) => void;
   onFocus?: () => void;
@@ -60,7 +56,6 @@ const AllDayEventCardBase = (
     interactionAttributes,
     isHidden = false,
     isPlaceholder,
-    eventCardKeyboardOptions,
     isSelected = false,
     onBlur,
     onEventKeyDown,
@@ -144,11 +139,7 @@ const AllDayEventCardBase = (
       })}
       onBlur={onBlur}
       onFocus={onFocus}
-      onKeyDown={gridEventCardActivationKeyDown(
-        event,
-        onEventKeyDown,
-        eventCardKeyboardOptions,
-      )}
+      onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

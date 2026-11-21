@@ -17,7 +17,9 @@ import {
   ID_WEEK_GRID_SCROLLER,
 } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { copyText } from "@web/common/utils/clipboard/clipboard.util";
 import { getVisibleGridStartMinute } from "@web/common/utils/draft/draft.util";
+import { repositionDraftByArrow } from "@web/common/utils/draft/reposition-draft-by-keyboard.util";
 import {
   getCalendarEventIdFromElement,
   refocusEventElement,
@@ -37,6 +39,7 @@ import {
   isEditableKeyboardTarget,
   isEventFormKeyboardTarget,
 } from "@web/common/utils/form/form.util";
+import { formatEventClipboardText } from "@web/events/event-clipboard-text.util";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import {
   duplicateGridEventDraft,
@@ -45,8 +48,8 @@ import {
   replaceGridDraftSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import {
+  commitDuplicateDraft,
   commitDuplicateEvent,
-  commitDuplicateFromPasteDraft,
 } from "@web/events/mutations/duplicate-event";
 import {
   eventOnTargetDay,
@@ -57,10 +60,7 @@ import {
   useEventMutations,
 } from "@web/events/mutations/useEventMutations";
 import { useUpdateEvent } from "@web/events/mutations/useUpdateEvent";
-import {
-  beginEventPastePreview,
-  endEventPastePreview,
-} from "@web/events/paste-preview/event-paste-preview.lifecycle";
+import { duplicateDraftForPastePlacement } from "@web/events/paste-preview/paste-placement.util";
 import { findEventInCache } from "@web/events/queries/event.query.cache";
 import {
   draftActions,
@@ -71,7 +71,10 @@ import {
   eventClipboardActions,
   useEventClipboardStore,
 } from "@web/events/stores/event-clipboard.store";
-import { isEventPastePreviewActive } from "@web/events/stores/event-paste-preview.store";
+import {
+  eventPastePreviewActions,
+  useEventPastePreviewStore,
+} from "@web/events/stores/event-paste-preview.store";
 import {
   edgeFocusActions,
   useEdgeFocusStore,
@@ -96,6 +99,7 @@ import {
   useAppShortcut,
   WRITE_EDIT_SHORTCUT,
 } from "@web/shortcuts/useAppShortcut";
+import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 import { deleteEventAndDiscardDraft } from "@web/views/Forms/hooks/useDeleteEvent";
 
 // Fallback when the grid can't be measured, matching EventForm's all-day->timed toggle.
@@ -303,6 +307,22 @@ export function useGridEventEditShortcuts({
   const { create: createEvent, delete: deleteEvent } =
     useEventMutations(dependencies);
   const updateEvent = useUpdateEvent(dependencies);
+  const viewDayKey = (
+    dayBoundary.kind === "clamp"
+      ? dayBoundary.weekDays[0]
+      : getPasteTargetDay?.(dayjs())
+  )?.format("YYYY-MM-DD");
+
+  // A new view or grid draft ends placement. The copied event remains available.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: placement ends when the visible period changes
+  useEffect(() => () => eventPastePreviewActions.deactivate(), [viewDayKey]);
+  useEffect(
+    () =>
+      useDraftStore.subscribe((state) => {
+        if (state.gridDraft) eventPastePreviewActions.deactivate();
+      }),
+    [],
+  );
 
   // Focused only (no hover/first-visible fallback): edit actions must
   // demand an explicit target.
@@ -392,7 +412,40 @@ export function useGridEventEditShortcuts({
 
     claimShortcut(keyboardEvent);
     eventClipboardActions.copy(sourceEvent);
-    beginEventPastePreview(sourceEvent, calendars ?? []);
+    void copyText(formatEventClipboardText(sourceEvent));
+    if (useDraftStore.getState().gridDraft) return;
+
+    edgeFocusActions.reset();
+    eventJumpActions.reset();
+    const placement = duplicateDraftForPastePlacement(
+      sourceEvent,
+      calendars ?? [],
+    );
+    eventPastePreviewActions.setPlacement(placement);
+  };
+
+  const movePastePlacement = (keyboardEvent: KeyboardEvent) => {
+    const { placement } = useEventPastePreviewStore.getState();
+    if (!placement || isGridEditShortcutBlocked(keyboardEvent)) return false;
+    if (!isUnspecifiedDocumentFocus() && !targeting.getFocusedNavigable()) {
+      return false;
+    }
+
+    claimShortcut(keyboardEvent);
+    const next = repositionDraftByArrow({
+      draft: placement,
+      key: keyboardEvent.key,
+      step: nudgeStepFromKeyboard(keyboardEvent),
+      isStartAllowed:
+        dayBoundary.kind === "clamp"
+          ? (start) =>
+              dayBoundary.weekDays.some((day) =>
+                day.isSame(inEffectiveTimeZone(start), "day"),
+              )
+          : undefined,
+    });
+    if (next) eventPastePreviewActions.setPlacement(next);
+    return true;
   };
 
   const pasteCopiedCalendarEvent = (keyboardEvent: KeyboardEvent) => {
@@ -402,32 +455,35 @@ export function useGridEventEditShortcuts({
     if (isGridEditShortcutBlocked(keyboardEvent)) return;
 
     const sourceEvent = useEventClipboardStore.getState().event;
-    if (!sourceEvent) return;
+    if (!sourceEvent || keyboardEvent.repeat) return;
 
     claimShortcut(keyboardEvent);
 
-    const placementDraft = useDraftStore.getState().gridDraft;
-    const placementActive =
-      isEventPastePreviewActive() &&
-      placementDraft &&
-      useDraftStore.getState().status?.activity === "pastePlace";
-
-    if (placementActive) {
-      const committed = commitDuplicateFromPasteDraft({
-        placementDraft,
-        defaultCalendarId: defaultCalendar?.id,
-        create: createEvent,
-      });
-      endEventPastePreview();
-      if (committed) {
-        eventJumpActions.setActive(false);
-        return;
-      }
-    }
-
+    const { placement } = useEventPastePreviewStore.getState();
     const sourceDay = eventStartDay(sourceEvent);
     const targetDay = getPasteTargetDay?.(sourceDay) ?? sourceDay;
-    endEventPastePreview();
+    eventPastePreviewActions.deactivate();
+
+    if (placement) {
+      if (
+        !commitDuplicateDraft({
+          draft: placement,
+          defaultCalendarId: defaultCalendar?.id,
+          create: createEvent,
+        })
+      ) {
+        draftActions.startGridDraft({
+          activity: "gridClick",
+          draft: placement,
+        });
+      } else if (dayBoundary.kind === "follow") {
+        const placedDay = inEffectiveTimeZone(placement.values.schedule.start);
+        if (!placedDay.isSame(targetDay, "day"))
+          dayBoundary.onCrossed(placedDay);
+      }
+      return;
+    }
+
     if (duplicateSourceEvent(sourceEvent, targetDay)) {
       eventJumpActions.setActive(false);
     }
@@ -553,7 +609,7 @@ export function useGridEventEditShortcuts({
   };
 
   const moveFocusedCalendarEvent = (keyboardEvent: KeyboardEvent) => {
-    if (isEventFormOpen()) return;
+    if (isEventFormOpen() || movePastePlacement(keyboardEvent)) return;
 
     // Narrowed once: the week window's rules (refuse, or carry by shifting the
     // view) are read three times below, and re-testing the discriminant at each
@@ -693,8 +749,14 @@ export function useGridEventEditShortcuts({
     );
   };
 
-  const onEscape = () => {
+  const onEscape = (keyboardEvent: KeyboardEvent) => {
     if (isHigherEscapeOwner()) return;
+    if (useEventPastePreviewStore.getState().placement) {
+      claimShortcut(keyboardEvent);
+      edgeFocusActions.reset();
+      eventPastePreviewActions.deactivate();
+      return;
+    }
     if (useEdgeFocusStore.getState().eventId) {
       edgeFocusActions.reset();
       return;
@@ -702,16 +764,11 @@ export function useGridEventEditShortcuts({
 
     const { gridDraft, status } = useDraftStore.getState();
     if (
-      (status?.activity === "keyboardPlace" ||
-        status?.activity === "pastePlace") &&
+      status?.activity === "keyboardPlace" &&
       !status.isFormOpen &&
       gridDraft
     ) {
-      if (status.activity === "pastePlace") {
-        endEventPastePreview();
-      } else {
-        draftActions.discard();
-      }
+      draftActions.discard();
     }
   };
 
@@ -774,7 +831,11 @@ export function useGridEventEditShortcuts({
   }, []);
 
   const moveDraftOrFocusAdjacent = (keyboardEvent: KeyboardEvent) => {
-    if (isEditableKeyboardTarget(keyboardEvent)) return;
+    if (
+      isEditableKeyboardTarget(keyboardEvent) ||
+      movePastePlacement(keyboardEvent)
+    )
+      return;
 
     const didMove = repositionDraftByKey(keyboardEvent.key);
     if (didMove) {
