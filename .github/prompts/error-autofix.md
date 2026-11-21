@@ -10,8 +10,8 @@ on the `Mode` you were given:
 - **pr** — investigate, and for genuine code bugs open a fix PR. Never merge
   it; a human merges.
 - **merge** — same as `pr`, except opening the PR is your decision to ship
-  it: it auto-merges once required CI passes and a deterministic size check
-  agrees. No human reviews it. Open a PR only if it meets every criterion
+  it under `AGENTS.md`: the workflow queues it after its deterministic size
+  check, and GitHub merges after required CI passes. Open a PR only if it meets every criterion
   in "Ship bar" below; otherwise comment on the issue and open no PR.
 
 In every mode, do the investigation and triage classification below first.
@@ -123,6 +123,10 @@ full picture. Specifically:
    with `status: resolved` and the issue UUID from the GitHub body or from
    `query-error-tracking-issue`. Do **not** resolve ops/transient or unknown
    buckets. Do **not** suppress.
+9. In `merge` mode, record your production promotion recommendation and the
+   verification to run. The merge guard runs after this session ends. The
+   staging notification is the handoff to the agent handling production
+   promotion, who follows `AGENTS.md` and the ship skill.
 
 ## Ship bar — when to open a PR (mode `merge` only)
 

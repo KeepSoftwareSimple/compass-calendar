@@ -20,7 +20,7 @@ OUTPUT: draft PR marked ready after bun run verify, Fixes #<n>, labeled agent-au
 IDEMPOTENCY: up to AGENT_LOOP_CONCURRENCY in-flight agents with non-overlapping partitions; agent-loop-running; skip issues with an open Fixes PR
 RETRY: HTTP 429 waits for credits and retries on the hourly watchdog; conflicted automerge PRs update-branch or close and requeue; dispatch a
   fresh run for all other retryable investigation (do not "Re-run jobs" on a failed snapshot)
-APPROVAL: agent-automerge + merge-guard (size, main not red) + GitHub auto-merge on required checks
+MERGE: GitHub merge queue and required checks; agent-automerge hands queueing to the workflow
 STOP: repo var AGENT_LOOP_ENABLED (must be string "true"; default off)
 HEARTBEAT: hourly cron kick (recovery, including docs-only merges that skip Release); Discord on merge-guard / smoke failure
 VERIFIER: .github/scripts/agent-loop-merge-guard.sh (not the LLM)
@@ -36,7 +36,7 @@ Sources of truth:
 | Agent instructions | `.github/prompts/agent-loop.md` |
 | Pick next WP | `.github/scripts/agent-loop-next.sh` |
 | Launch (Cursor API only) | `.github/scripts/agent-loop-launch.sh` |
-| Merge-guard Verifier (size) | `.github/scripts/agent-loop-merge-guard.sh` |
+| Queue PRs and recover conflicts | `.github/scripts/agent-loop-merge-guard.sh` |
 | Staging smoke | `.github/scripts/agent-loop-staging-smoke.sh` |
 | Post-deploy (smoke + annotate; no launch) | `.github/scripts/agent-loop-postdeploy.sh` |
 | Product spec | named by the issue `Spec:` link |
@@ -88,7 +88,7 @@ back to a pickup phrase.
 1. **Pick next WP** (`.github/scripts/agent-loop-next.sh`): walk
    `AGENT_LOOP_MILESTONES` in order. An empty variable prints idle and
    launches nothing. Skip `agent-loop-running` /
-   `agent-loop-needs-human`, Approval boundary `human`, open `Depends on:`
+   `agent-loop-needs-human`, legacy Approval boundary `human`, open `Depends on:`
    issues, and issues with an open PR with `Fixes #<n>`. Select up to
    `AGENT_LOOP_CONCURRENCY` (default 3) issues whose partition labels do
    not overlap. Partition labels are `sync-core`, `sync-microsoft`,
@@ -99,22 +99,19 @@ back to a pickup phrase.
    more issue numbers. POST the Cloud Agents API. HTTP 429 records the
    provider's retry time, labels the issue
    `agent-loop-waiting-for-credits`, and exits successfully so the hourly
-   watchdog can resume it. Other launch failures (including a missing
-   API key) are `agent-loop-needs-human` stops. The prompt file is
+   watchdog can resume it. Missing keys and HTTP 401/403 need the Cursor
+   integration owner to restore access. Other failures can retry on the
+   watchdog. The prompt file is
    `.github/prompts/<milestone-slug>.md` when that file exists, else
-   `.github/prompts/agent-loop.md`. That prompt is the only instruction
-   set; agents do not read the ship Manager skill.
-3. **Agent** follows that prompt: implement the WP, open a draft PR, run
-   `bun run verify --strict`, mark the PR ready, add label
-   `agent-automerge` when the Approval boundary is `allow`, and stop.
-   The agent does not merge and does not wait for CI.
-4. **Merge guard** (`.github/scripts/agent-loop-merge-guard.sh`): when size
-   is under the rails and the latest `main` Unit and E2E push runs are not
-   red, enable GitHub auto-merge (`gh pr merge --auto`; the ruleset merge
-   queue squash-merges and the repo deletes the branch). GitHub
-   squash-merges when the required checks pass. Size failures add
-   `agent-loop-needs-human` and stop. A red `main` just waits for the
-   scheduled sweep. If the PR is `CONFLICTING` (or `--auto` fails with a
+   `.github/prompts/agent-loop.md`. Both use [AGENTS.md](../../AGENTS.md)
+   and the [ship skill](../../.agents/skills/ship/SKILL.md).
+3. **Agent** follows the shared procedure and applies `agent-automerge` to
+   the ready PR. This hands queueing to the workflow while direct queue
+   access from Cursor is being verified. The agent owns the production
+   promotion decision under `AGENTS.md`.
+4. **Merge guard** (`.github/scripts/agent-loop-merge-guard.sh`): enable
+   GitHub auto-merge. The queue squash-merges after required checks pass.
+   If the PR is `CONFLICTING` (or `--auto` fails with a
    conflict), the guard updates the branch onto `main`. If it is still
    dirty, it closes the PR, removes `agent-automerge` and
    `agent-loop-running`, and leaves the issue `agent-ready` so the next
@@ -123,12 +120,12 @@ back to a pickup phrase.
 5. **Launch next** (`agent-loop.yml` `pull_request` `closed` + merged):
    smoke the staging that is live now, pick WPs to top the fleet up to N,
    launch them. `Fixes #<n>` closes the merged issue. A failing smoke
-   stops launches.
+   stops this launch-on-merge job.
 6. **Release on main** deploys staging (code paths only; docs-only merges
    skip deploy). The hourly cron is the watchdog for docs-only WPs.
-7. **Post-deploy** (`workflow_run`): smokes the new release and annotates
-   the issue. It does not pick or launch. On smoke failure it labels the
-   issue `agent-loop-needs-human`.
+7. **Post-deploy** (`workflow_run`): smokes the new staging release and
+   annotates the issue. The agent investigates smoke failures before promoting
+   the release to production.
 
 Two launch paths: `kick` (hourly cron + `workflow_dispatch`) and
 `launch-next` (automerge PR merged). `post-deploy` only smokes.
@@ -144,11 +141,6 @@ Review ruleset (8388539) requires a merge queue (`grouping_strategy:
 ALLGREEN`, squash). Unit and E2E workflows listen for `merge_group` so
 the queue can emit the required checks. If the queue rule cannot be
 written, the equivalent is `strict_required_status_checks_policy: true`.
-
-## Line limit
-
-Merge-guard default: `MAX_LINES=4000` (additions + deletions). Override per
-run with env `AGENT_LOOP_MAX_LINES`.
 
 ## Staging smoke
 
@@ -166,10 +158,10 @@ with a connected profile already signed in.
 
 | Label | Meaning |
 | --- | --- |
-| `agent-automerge` | Agent finished; merge-guard may squash-merge. |
+| `agent-automerge` | Queue this ready Cursor PR through the workflow. |
 | `agent-loop-running` | An agent is in flight for this issue. |
 | `agent-loop-waiting-for-credits` | Cursor returned HTTP 429; retry only after the recorded time. |
-| `agent-loop-needs-human` | Kill this issue's loop; do not pick it again. |
+| `agent-loop-needs-human` | Pause scheduled pickup for a documented decision or action that requires a person. |
 
 ## Script tests (also run in the `static` CI job)
 
@@ -197,12 +189,10 @@ staging drill.
 | Kill switch on, no eligible WP | `agent-loop-next.sh` `found=false`; no launch |
 | Empty milestones | `AGENT_LOOP_MILESTONES` unset → idle; no invented queue |
 | Missing API key | Launch adds `agent-loop-needs-human` and Discord; no issue comment |
-| Merge-guard line limit | Same downgrade if lines > `MAX_LINES=4000` |
 | Merge-guard conflict | `update-branch` then auto-merge; still dirty → PR closed, issue stays `agent-ready`, no `needs-human` |
 | Staging 5xx | Smoke fails; next WP not launched |
 | Credentials | Smoke and prompt never enter a password or complete OAuth |
 | Second launch while in flight | Queued behind `concurrency.group: agent-loop`; first run not cancelled |
-| Red main | Merge-guard prints "main is red" and does not enable auto-merge; scheduled sweep retries |
 
 ## Recovery packet
 

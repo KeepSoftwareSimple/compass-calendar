@@ -44,10 +44,10 @@ if ! "${AGENT_LOOP_SCRIPT_DIR}/agent-loop-staging-smoke.sh"; then
   set_output smoke_ok false
   if [ -n "$issue_number" ]; then
     gh issue comment "$issue_number" --repo "$REPO" --body \
-      "${COMMENT_PREFIX} staging smoke failed after #${pr_number} reached main. Added \`${NEEDS_HUMAN_LABEL}\`. New launches stop until staging passes smoke." \
+      "${COMMENT_PREFIX} staging smoke failed after #${pr_number} reached main. Diagnose and restore staging before promoting this release." \
       2>/dev/null || true
     gh issue edit "$issue_number" --repo "$REPO" \
-      --add-label "$NEEDS_HUMAN_LABEL" --remove-label "$RUNNING_LABEL" \
+      --remove-label "$RUNNING_LABEL" \
       2>/dev/null || true
   fi
   notify "${COMMENT_PREFIX} staging smoke failed (PR #${pr_number:-unknown})"

@@ -51,10 +51,10 @@ Issue URL: ${issue_url}
 Milestone: ${milestone_title}
 
 Read ${prompt_rel} and follow it exactly.
-Also read AGENTS.md.
+Follow the shared shipping and production promotion policy in AGENTS.md.
 Read the Spec: link from the issue body (do not re-litigate locked decisions).
 
-Take only the work package for this issue from origin/main. Implement it, run bun run verify --strict, open a draft PR with Fixes #${ISSUE_NUMBER}, mark it ready after verify, and label it ${AUTOMERGE_LABEL} when the Approval boundary is allow, then stop. Other in-flight issues on different partitions are expected. Do not merge yourself and do not wait for CI. Never enter credentials on staging.
+Take only the work package for this issue from origin/main. Other in-flight issues on different partitions are expected.
 EOF
 )
 
@@ -123,6 +123,11 @@ fi
 if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
   body=$(head -c 800 "$tmp" || true)
   rm -f "$tmp" "$headers"
+  follow_up="The hourly watchdog can retry. Investigate the launch failure if it recurs."
+  if [ "$http_code" = "401" ] || [ "$http_code" = "403" ]; then
+    follow_up="The Cursor integration owner needs to restore Cloud Agents access, then re-dispatch Agent loop."
+    gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label "$NEEDS_HUMAN_LABEL"
+  fi
   gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$(cat <<BODY
 ${COMMENT_PREFIX} Cursor API launch failed (HTTP ${http_code}).
 
@@ -130,12 +135,10 @@ ${COMMENT_PREFIX} Cursor API launch failed (HTTP ${http_code}).
 ${body}
 \`\`\`
 
-Added \`${NEEDS_HUMAN_LABEL}\`. Fix the API key or the payload, then re-dispatch Agent loop.
+${follow_up}
 BODY
 )"
-  gh issue edit "$ISSUE_NUMBER" --repo "$REPO" \
-    --add-label "$NEEDS_HUMAN_LABEL" --remove-label "$RUNNING_LABEL" \
-    2>/dev/null || true
+  gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --remove-label "$RUNNING_LABEL" 2>/dev/null || true
   notify "${COMMENT_PREFIX} Cursor API launch failed for #${ISSUE_NUMBER} (HTTP ${http_code})"
   echo "Cursor API launch failed HTTP ${http_code}" >&2
   exit 1

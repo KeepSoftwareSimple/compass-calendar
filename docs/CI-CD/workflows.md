@@ -16,7 +16,7 @@ Compass uses GitHub Actions for continuous integration, Docker Hub for image dis
 | Release on main | Push to `main` | Auto-increments patch version, publishes Docker images, then deploys staging |
 | Publish Docker images | Reusable workflow / manual dispatch / manual `v*.*.*` tag push | Builds and pushes Docker images only |
 | Deploy staging | Reusable workflow / manual dispatch | Pulls published images on staging, restarts the stack, then runs deploy health checks |
-| Deploy production | Manual dispatch | Deploys a release tag to production, then runs cloud deploy health checks |
+| Deploy production | On-demand dispatch | Deploys a release tag to production, then runs cloud deploy health checks |
 | Deploy health check | Reusable workflow | Validates the deployed staging stack and alerts Discord on failure |
 | Sync docs to compass-docs | Push to `main` touching `docs/**` | Mirrors this `docs/` directory to docs.compasscalendar.com |
 | Live provider smoke (`live-provider-smoke.yml`) | Nightly schedule / `workflow_dispatch` only (never on PRs) | Live adapter contract against `compass-smoke` test calendars; see [live-provider-smoke.md](./live-provider-smoke.md) |
@@ -255,9 +255,17 @@ Secrets and variables are split between repository level (shared across workflow
 
 Source: [`.github/workflows/deploy-production.yml`](../../.github/workflows/deploy-production.yml)
 
-Production deploys are manual-only. Run `Deploy production` from GitHub Actions
-with an existing release tag, such as `v1.2.3`; it is not called by
-`release-on-main.yml` and does not run automatically after PR merges.
+Agents decide when to promote a release under [AGENTS.md](../../AGENTS.md).
+Confirm the release tag passed staging and check the changes included in it.
+Dispatch from `main` and watch that run through its production health check.
+
+```sh
+gh workflow run deploy-production.yml --ref main -f tag=v1.2.3
+```
+
+Confirm the running version and affected behavior. Record the tag, run link,
+outcome, and rollback target on the issue or PR. For a deferred release,
+record the condition for deploying and the owner.
 
 The workflow deploys to the GitHub `production` environment through
 `_deploy-environment.yml`, builds environment-specific web and booking-web

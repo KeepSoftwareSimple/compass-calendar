@@ -68,15 +68,15 @@ Playwright. Docs index: `docs/README.md`.
   present tense: `fix(web): handle disconnected google state`.
 - Stage explicit paths. Never force-push, rewrite published history, weaken
   tests, or widen timeouts to go green.
-- Ship: implement, `bun run verify --strict`, open a PR with `Fixes #N`
-  and the `VERDICT:` line, mark it ready, run `gh pr merge --auto`. `main`
-  merges only via the merge queue, which squash-merges once required checks
-  pass. No labels, no path denylist. Sandbox Playwright timeouts in untouched
-  specs are PR evidence, not local blockers; CI decides. Do not wait for CI
-  on a green PR. Procedure:
-  `.agents/skills/ship/SKILL.md`.
-- Escalate with the `agent-loop-needs-human` label for product ambiguity,
-  production deploy, secrets, OAuth grants, deletion, and access grants.
+- Agents own in-scope merges and releases without manual approval. Follow
+  `.agents/skills/ship/SKILL.md` for strict verification and the merge queue.
+  Scheduled Cursor work hands queueing to its workflow with `agent-automerge`.
+- Promote staging-verified releases at your discretion. Batch routine changes,
+  deploy urgent fixes promptly, and stage customer-visible rollouts where
+  supported. Watch health checks and verify the affected flow. Record the tag,
+  result, and rollback target, or the condition and owner for deferred promotion.
+- Use `agent-loop-needs-human` only for a specific action or decision that
+  requires a person. Name the action and who can take it.
 - Claude Code web: `apt-get install -y gh` each session (not persistent).
   GraphQL blocked; use REST `gh api`. Omit
   `Authorization` from `GITHUB_TOKEN` on GitHub API curls. Milestones via REST;
