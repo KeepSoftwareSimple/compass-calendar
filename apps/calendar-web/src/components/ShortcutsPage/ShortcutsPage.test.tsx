@@ -1,3 +1,8 @@
+import {
+  createMemoryHistory,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
@@ -6,10 +11,10 @@ import {
   SHORTCUTS_PAGE_TITLE,
   ShortcutsCatalogView,
 } from "@web/components/ShortcutsPage/ShortcutsCatalogView";
+import { routeTree } from "@web/routers/router.routes";
 import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
 import { PUBLIC_SHORTCUT_CATALOG_LAST_UPDATED } from "@web/shortcuts/shortcuts-catalog.data";
 import { formatShortcutsCatalogLastUpdated } from "@web/shortcuts/shortcuts-catalog-last-updated.format";
-import { NotFoundView } from "@web/views/NotFound/NotFound";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 describe("public /shortcuts page", () => {
@@ -118,12 +123,15 @@ describe("public /shortcuts page", () => {
     }
   });
 
-  it("still shows the unmatched-path copy off /shortcuts", () => {
-    window.history.pushState({}, "", "/nope");
-    render(<NotFoundView />);
+  it("shows the 404 page for an unmatched path off /shortcuts", async () => {
+    const router = createRouter({
+      routeTree,
+      history: createMemoryHistory({ initialEntries: ["/shortcuts/nope"] }),
+    });
+    render(<RouterProvider router={router} />);
 
     expect(
-      screen.getByText(/This isn't part of the app, matey/),
+      await screen.findByText("This page drifted out to sea."),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: SHORTCUTS_PAGE_TITLE }),
