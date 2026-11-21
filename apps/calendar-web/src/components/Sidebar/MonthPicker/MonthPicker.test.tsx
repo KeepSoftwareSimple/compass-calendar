@@ -454,17 +454,18 @@ describe("MonthPicker", () => {
       />,
     );
 
-    const weekdayHeaders = screen
-      .getByRole("group", { name: "Date navigation" })
-      .querySelectorAll(".react-datepicker__day-name");
-    expect([...weekdayHeaders].map((header) => header.textContent)).toEqual([
-      "M",
-      "T",
-      "W",
-      "T",
-      "F",
-      "S",
-      "S",
+    const navigation = screen.getByRole("group", { name: "Date navigation" });
+    const weekdayNames = within(navigation).getAllByText(
+      /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/,
+    );
+    expect(weekdayNames.map((header) => header.textContent)).toEqual([
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
     ]);
 
     const monday = dayNamed("Choose Monday, May 11th, 2026");
@@ -489,10 +490,11 @@ describe("MonthPicker", () => {
       />,
     );
 
-    const firstHeader = screen
-      .getByRole("group", { name: "Date navigation" })
-      .querySelector(".react-datepicker__day-name");
-    expect(firstHeader?.textContent).toBe("S");
+    const navigation = screen.getByRole("group", { name: "Date navigation" });
+    const [firstWeekday] = within(navigation).getAllByText(
+      /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/,
+    );
+    expect(firstWeekday?.textContent).toBe("Sunday");
   });
 
   it("lets the chevrons change the displayed month", async () => {

@@ -1,9 +1,5 @@
+import { shift, size } from "@floating-ui/react";
 import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
-import {
-  type Modifier,
-  type ModifierArguments,
-  type Obj,
-} from "@popperjs/core";
 import classNames from "classnames";
 import type React from "react";
 import {
@@ -15,7 +11,7 @@ import {
   useState,
 } from "react";
 import * as ReactDatePickerModule from "react-datepicker";
-import { type ReactDatePickerProps } from "react-datepicker";
+import { type DatePickerProps } from "react-datepicker";
 import dayjs from "@core/util/date/dayjs";
 import { darken, isDark } from "@web/common/styles/color.utils";
 import { colors, lightColors } from "@web/common/styles/colors";
@@ -48,7 +44,16 @@ import { TooltipWrapper } from "../Tooltip/TooltipWrapper";
 
 export type CaptionPickerView = "day" | "year" | "month";
 
-export interface Props extends Omit<ReactDatePickerProps, "autoFocus"> {
+type SingleDatePickerProps = Extract<
+  DatePickerProps,
+  {
+    selectsRange?: false;
+    selectsMultiple?: false;
+    showMonthYearDropdown?: never;
+  }
+>;
+
+export interface Props extends Omit<SingleDatePickerProps, "autoFocus"> {
   animationOnToggle?: boolean;
   bgColor?: string;
   headerActionsClassName?: string;
@@ -104,58 +109,15 @@ const CAPTION_VIEW_AFTER_SELECT: Record<
   CaptionPickerView | null
 > = { year: "month", month: "day", day: null };
 
-/**
- * Caps popper max-height to the space between the anchor and the viewport edge.
- * The calendar shell can be taller than the viewport, so without this Popper
- * never flips and the panel extends past the fold (Life constrained-height E2E).
- */
-const capGridPopperMaxHeight: Modifier<"capGridPopperMaxHeight", Obj> = {
-  name: "capGridPopperMaxHeight",
-  enabled: true,
-  /** Run before rects so flip/preventOverflow see the capped height. */
-  phase: "read",
-  fn({ state }: ModifierArguments<Obj>) {
-    const el = state.elements.popper;
-    if (!(el instanceof HTMLElement)) return;
-
-    const ref = state.rects.reference;
-    const placement = state.placement;
-    const pad = 8;
-    const min = 80;
-    const bottomSpace = Math.max(
-      0,
-      window.innerHeight - ref.y - ref.height - pad,
-    );
-    const topSpace = Math.max(0, ref.y - pad);
-    const maxH = placement.startsWith("top")
-      ? Math.max(min, topSpace)
-      : Math.max(min, bottomSpace);
-
-    el.style.maxHeight = `${maxH}px`;
-  },
-};
-
-/**
- * Grid poppers: keep the calendar inside the viewport on short windows so the
- * last week row and focus outline are not clipped below the fold (Life/E2E).
- * Sidebar pickers use their own layout; do not override Popper there.
- */
-const GRID_POPPER_MODIFIERS: ReadonlyArray<Partial<Modifier<string, Obj>>> = [
-  capGridPopperMaxHeight,
-  {
-    name: "flip",
-    options: {
-      boundary: "viewport",
-      fallbackPlacements: ["top-start", "top", "bottom-start", "bottom"],
+// Keep grid calendars within the viewport, including on short windows.
+const GRID_POPPER_MODIFIERS = [
+  shift({ padding: 8 }),
+  size({
+    padding: 8,
+    apply({ availableHeight, elements }) {
+      elements.floating.style.maxHeight = `${Math.max(0, availableHeight)}px`;
     },
-  },
-  {
-    name: "preventOverflow",
-    options: {
-      boundary: "viewport",
-      padding: 8,
-    },
-  },
+  }),
 ];
 
 export const DatePicker: React.FC<Props> = (datePickerProps) => {
@@ -337,7 +299,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
 
   const stepYearPage = (
     headerProps: Parameters<
-      NonNullable<ReactDatePickerProps["renderCustomHeader"]>
+      NonNullable<SingleDatePickerProps["renderCustomHeader"]>
     >[0],
     direction: -1 | 1,
   ) => {
@@ -355,12 +317,12 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     });
   };
 
-  const handleChange: ReactDatePickerProps["onChange"] = (date, event) => {
+  const handleChange: SingleDatePickerProps["onChange"] = (date, event) => {
     if (captionPicker && captionViewRef.current !== "day") return;
     datePickerProps.onChange?.(date, event);
   };
 
-  const handleSelect: ReactDatePickerProps["onSelect"] = (date, event) => {
+  const handleSelect: SingleDatePickerProps["onSelect"] = (date, event) => {
     const nextCaptionView =
       captionPicker && date
         ? CAPTION_VIEW_AFTER_SELECT[captionViewRef.current]
@@ -372,8 +334,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     datePickerProps.onSelect?.(date, event);
   };
 
-  // react-datepicker paints z-index via popperClassName on the positioned
-  // node (popperProps.style is ignored by react-popper). "!z-22" equals
+  // react-datepicker positions the node that receives popperClassName. "!z-22" equals
   // Z_INDEX_FLOATING_MENU; keep the literal static so Tailwind can see it.
   return (
     <ReactDatePicker

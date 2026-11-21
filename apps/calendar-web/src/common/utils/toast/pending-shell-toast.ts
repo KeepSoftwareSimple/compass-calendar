@@ -9,6 +9,7 @@ export type PendingShellToast = {
   autoClose?: false;
 };
 
+let mountedToastHosts = 0;
 let pendingShellToast: PendingShellToast | null = null;
 let pendingShellToastClearTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -55,7 +56,7 @@ function isPendingShellToastVisible(pending: PendingShellToast): boolean {
   return false;
 }
 
-/** Queue a toast until {@link flushPendingShellToast} runs on the calendar shell. */
+/** Deliver through the mounted host, or retain the toast until it mounts. */
 export function queuePendingShellToast(pending: PendingShellToast): void {
   if (typeof window === "undefined") {
     deliverPendingShellToast(pending);
@@ -63,6 +64,7 @@ export function queuePendingShellToast(pending: PendingShellToast): void {
   }
 
   pendingShellToast = pending;
+  if (mountedToastHosts > 0) flushPendingShellToast();
 }
 
 /** Show any toast queued during a route without {@link BottomNoticeToastHost}. */
@@ -77,6 +79,14 @@ export function flushPendingShellToast(): void {
   // flush, which tears down react-toastify before the toast paints. Keep the
   // payload briefly so the remounted host can show it again.
   schedulePendingShellToastClear(pending);
+}
+
+export function registerPendingShellToastHost(): () => void {
+  mountedToastHosts += 1;
+  flushPendingShellToast();
+  return () => {
+    mountedToastHosts -= 1;
+  };
 }
 
 export function resetPendingShellToastForTests(): void {

@@ -2,6 +2,7 @@ import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import {
   flushPendingShellToast,
   queuePendingShellToast,
+  registerPendingShellToastHost,
   resetPendingShellToastForTests,
 } from "@web/common/utils/toast/pending-shell-toast";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
@@ -29,6 +30,23 @@ describe("pending-shell-toast", () => {
       "No problem, nothing was connected. You can sign in anytime.",
       expect.any(Object),
     );
+  });
+
+  it("delivers a toast queued after the host mounted", () => {
+    const unregister = registerPendingShellToastHost();
+
+    try {
+      queuePendingShellToast({
+        variant: "error",
+        message: "Connection failed",
+      });
+      expect(mocks.error).toHaveBeenCalledWith(
+        "Connection failed",
+        expect.any(Object),
+      );
+    } finally {
+      unregister();
+    }
   });
 
   it("keeps the payload briefly for a StrictMode remount", async () => {

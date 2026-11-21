@@ -182,6 +182,9 @@ export const DescriptionEditor = ({
         Placeholder.configure({ placeholder }),
         DescriptionListSelectionExtension,
       ],
+      // Initialize after React commits the lazy event form. A suspended
+      // render can outlive an editor created during render.
+      immediatelyRender: false,
       content: initialContent,
       editable,
       // Supplying a custom `attributes` object replaces TipTap's own
@@ -218,11 +221,10 @@ export const DescriptionEditor = ({
   // `onUpdate`/`onChange` would trip the dirty-check on mount and on every
   // permission flip, for content that never actually changed.
   useEffect(() => {
-    editor?.setEditable(editable, false);
+    if (editor && !editor.isDestroyed) editor.setEditable(editable, false);
   }, [editor, editable]);
 
-  const editorRoot =
-    editor?.view.dom instanceof HTMLElement ? editor.view.dom : null;
+  const editorRoot = editor && !editor.isDestroyed ? editor.view.dom : null;
 
   const linkChromeEnabled = !suppressLinkShortcutHints;
 
@@ -282,7 +284,7 @@ export const DescriptionEditor = ({
     openDescriptionLink(link.href);
   };
 
-  if (!editor) return null;
+  if (!editor || !activeMarks) return null;
 
   return (
     <div
