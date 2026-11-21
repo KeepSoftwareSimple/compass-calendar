@@ -27,7 +27,6 @@ describe("Event query view models", () => {
 
     expect(week.timedEvents.map(({ _id }) => _id)).toEqual([timed.id]);
     expect(week.allDayEvents.map(({ _id }) => _id)).toEqual([allDay.id]);
-    expect(week.rowCount).toBe(1);
     expect(day.events).toEqual([timed, allDay]);
     expect(day.timedEvents).toEqual(week.timedEvents);
   });
@@ -127,7 +126,6 @@ describe("Event query view models", () => {
       events: [],
       timedEvents: [],
       allDayEvents: [],
-      rowCount: 0,
       demoEventIds: undefined,
     });
   });

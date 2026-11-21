@@ -11,6 +11,61 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-21
+
+Swept the merges that landed after the 2026-11-20 ledger (#5322, #5323, #5325,
+#5326, #5327, #5328, #5329); #5324 was that sweep's own output and is excluded.
+Gate step 1 was clean on the three named detectors: `bun knip` reports no
+unused files or exports (the three standing config hints), `bun lint` passes
+every rule, `bun type-check` passes. One finding, shipped as the removal of the
+dead `rowCount` field on `CalendarEventViewModel`. Everything below was
+examined and kept.
+
+- **The two hidden-strip packers** (`assign.row.ts`, `dayAllDayRows.util.ts`,
+  #5322). Both assign `hiddenStripIndex` to same-day hidden all-day events, so
+  one rule now looks implemented twice. It is not one rule: the week packer
+  must find a lane free across an event's whole day span via
+  `findRowForEvent`, while the day packer knows every chip in a column covers
+  the same day and stacks in encounter order below that column's visible
+  count. Folding them would recouple the day view to week day-span packing,
+  which is what the file's own comment says it deliberately avoids.
+
+- **Re-packing `allDayEvents` twice** (`useWeekEventsQuery.ts`, #5322). The
+  pipeline packs without hidden ids, then `useWeekEventViewModel` packs again
+  with them. The second pass is the fix, not leftover work: the hidden-event
+  set lives in its own query and must not key the shared pipeline memo, which
+  many consumers hit. The `hiddenEventIds.size === 0` guard keeps the common
+  case at one pass.
+
+- **The strip offset formula** (`GridAllDayEvent.tsx`, #5322).
+  `hiddenStripIndex * (HIDDEN_EVENT_STRIP_WIDTH + HIDDEN_EVENT_STRIP_GAP)` is
+  spelled at exactly one site, and both constants are owned by
+  `grid.constants.ts`. Nothing to converge.
+
+- **Regex HTML rewriting in `compactListItemHtml`** (#5329). Three chained
+  regexes over `<li>` markup is the shape that usually wants a DOM parse, but
+  the function runs on every editor keystroke through `onUpdate`, the comment
+  states the provider behavior it repairs, and the three cases are pinned by
+  tests. A `DOMParser` rewrite would be slower on the hot path and risks
+  changing what TipTap round-trips. Touch only for a real formatting defect.
+
+- **Code 290 overlapping its message pattern**
+  (`mongo-network-error.util.ts`, #5323). The numeric code, the
+  `TransientTransactionError` label, and the
+  `transactionLifetimeLimitSeconds` message regex all match the same Atlas
+  failure, which reads like three detectors for one condition. All three are
+  load-bearing: the job wrapper sometimes flattens a cause into its own
+  message string, where no `code` or `errorLabels` survive, and the second
+  assertion in the new test pins exactly that case.
+
+- **`LIFE_QUOTES` as a flat literal array** (#5328). A one-line data append to
+  a 70-entry `as const` list. Data, not structure.
+
+- **#5325, #5316 (README prose), #5327 (snappy bump), #5326 (autofix merge
+  guard and watchdog).** Docs, a dependency version, and CI workflow config.
+  Per the 2026-11-09 precedent on the macOS CI queue, workflow config is not
+  domain duplication.
+
 ## 2026-11-20
 
 Swept the merges that landed after the 2026-11-19 ledger (#5306, #5311, #5314,
