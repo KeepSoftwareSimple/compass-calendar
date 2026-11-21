@@ -170,13 +170,9 @@ export const AuthModal: FC = () => {
     [currentView, setView],
   );
 
-  const handleProviderSignIn = useCallback(
-    (kind: ProviderKind) => {
-      startSignIn(kind);
-      closeModal();
-    },
-    [closeModal, startSignIn],
-  );
+  // The modal stays up (button in its loading state) until the browser leaves
+  // for the provider. Closing it here flashed the bare calendar in between.
+  const handleProviderSignIn = startSignIn;
 
   const navigateToForgotPassword = useCallback(() => {
     setView("forgotPassword");

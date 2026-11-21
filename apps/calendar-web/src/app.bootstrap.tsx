@@ -12,6 +12,7 @@ import {
   initializeDatabaseWithErrorHandling,
   showDbInitErrorToast,
 } from "@web/common/utils/app-init.util";
+import { captureBootShell } from "@web/common/utils/boot/boot-shell.util";
 import { mountCompassE2EHelpers } from "@web/common/utils/toast/mount-compass-e2e-helpers";
 import { App } from "@web/components/App/App";
 import { router } from "@web/routers";
@@ -32,6 +33,7 @@ export async function bootstrapApp(): Promise<void> {
     throw new Error("Root container with id 'root' not found in index.html");
   }
 
+  captureBootShell();
   const root = createRoot(container);
   const dbInitPromise = initializeDatabaseWithErrorHandling();
   sessionInit();
