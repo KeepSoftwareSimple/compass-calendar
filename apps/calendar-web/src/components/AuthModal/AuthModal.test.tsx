@@ -964,6 +964,26 @@ describe("AuthModal", () => {
 
       expect(mockMicrosoftStart).toHaveBeenCalled();
     });
+
+    it("stays open while the provider redirect loads", async () => {
+      const mockGoogleStart = mock();
+      registerUseStartProviderAuthorizationForTests((provider) => ({
+        loading: false,
+        startAuthorization: provider === "google" ? mockGoogleStart : mock(),
+      }));
+      const user = userEvent.setup();
+      setSignInAvailability({ google: "available" });
+      await renderWithProviders(<ModalTrigger />);
+      await user.click(screen.getByRole("button", { name: /open modal/i }));
+      await waitForAuthModal();
+
+      await user.click(
+        screen.getByRole("button", { name: "Continue with Google" }),
+      );
+
+      expect(mockGoogleStart).toHaveBeenCalled();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
   });
 
   describe("Privacy and Terms Links", () => {

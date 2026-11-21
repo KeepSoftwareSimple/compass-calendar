@@ -10,7 +10,6 @@ import {
   useState,
 } from "react";
 import { BILLING_PLAN } from "@core/constants/billing.constants";
-import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { consumeGoogleAuthNeedsConsentRetry } from "@web/auth/providers/authorization/provider-authorization.storage";
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
@@ -170,13 +169,9 @@ export const AuthModal: FC = () => {
     [currentView, setView],
   );
 
-  const handleProviderSignIn = useCallback(
-    (kind: ProviderKind) => {
-      startSignIn(kind);
-      closeModal();
-    },
-    [closeModal, startSignIn],
-  );
+  // The modal stays up (button in its loading state) until the browser leaves
+  // for the provider. Closing it here flashed the bare calendar in between.
+  const handleProviderSignIn = startSignIn;
 
   const navigateToForgotPassword = useCallback(() => {
     setView("forgotPassword");

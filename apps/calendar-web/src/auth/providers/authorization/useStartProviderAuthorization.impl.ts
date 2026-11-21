@@ -2,7 +2,7 @@ import {
   type UseGoogleLoginOptionsAuthCodeFlow,
   useGoogleLogin as useGoogleLoginBase,
 } from "@react-oauth/google";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildSignInOAuthState } from "@core/auth/signin-oauth-state.util";
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
@@ -117,6 +117,23 @@ function recordAuthorizationStart(
   trackSignupStep("oauth_redirect_started", { method: provider });
 }
 
+/**
+ * The sign-in modal stays open while the browser leaves for the provider. If
+ * the user comes back with Back, the page can be restored from bfcache with
+ * the button still spinning, so clear it.
+ */
+function useResetLoadingOnPageRestore(
+  setLoading: (loading: boolean) => void,
+): void {
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setLoading(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [setLoading]);
+}
+
 function assignAuthorizationRedirectOrReportError(
   url: string,
   setLoading: (loading: boolean) => void,
@@ -163,6 +180,7 @@ function createRedirectAuthorizationStrategy({
   return ({ intent, signupFlow, onStart, onError, prompt }) => {
     const [loading, setLoading] = useState(false);
     const session = useAuthorizationSession(provider, createState, signupFlow);
+    useResetLoadingOnPageRestore(setLoading);
 
     return {
       loading,
@@ -201,6 +219,7 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   includeGrantedScopes,
 }) => {
   const [loading, setLoading] = useState(false);
+  useResetLoadingOnPageRestore(setLoading);
   const { state, redirectUri } = useAuthorizationSession(
     "google",
     (_redirectUri, posthogDistinctId, signupFlow) =>
