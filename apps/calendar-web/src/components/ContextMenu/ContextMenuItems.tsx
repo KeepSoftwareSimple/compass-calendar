@@ -1,7 +1,10 @@
+import { Clock } from "@phosphor-icons/react/dist/csr/Clock";
 import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
 import { Eye } from "@phosphor-icons/react/dist/csr/Eye";
 import { EyeSlash } from "@phosphor-icons/react/dist/csr/EyeSlash";
+import { MapPin } from "@phosphor-icons/react/dist/csr/MapPin";
 import { PenNib } from "@phosphor-icons/react/dist/csr/PenNib";
+import { TextAlignLeft } from "@phosphor-icons/react/dist/csr/TextAlignLeft";
 import { Trash } from "@phosphor-icons/react/dist/csr/Trash";
 import type React from "react";
 import { createContext, useContext } from "react";
@@ -159,6 +162,24 @@ export function ContextMenuItemsView({
       ? getGridCardTimesLabel(event.startDate, event.endDate, event.timeZone)
       : null;
 
+  const details = [
+    { id: "time", text: timeRange, icon: Clock },
+    { id: "location", text: event.location?.trim(), icon: MapPin },
+    { id: "description", text: event.description?.trim(), icon: TextAlignLeft },
+  ].flatMap(({ id, text, icon: Icon }) =>
+    text
+      ? [
+          {
+            id,
+            text,
+            icon: (
+              <Icon aria-hidden="true" className="mt-px shrink-0" size={14} />
+            ),
+          },
+        ]
+      : [],
+  );
+
   const nav = useContext(ContextMenuNavContext);
   const selectedColor = event.color ?? null;
   const pickColor = (color: EventColorSlot | null) => {
@@ -195,10 +216,15 @@ export function ContextMenuItemsView({
         close();
       }}
     >
-      {timeRange && (
-        <div className="border-border border-b px-3 py-2 text-s text-text-muted">
-          {timeRange}
-        </div>
+      {details.length > 0 && (
+        <ul className="m-0 flex list-none flex-col gap-1 border-border border-b px-3 py-2 text-text-muted text-xs">
+          {details.map(({ id, icon, text }) => (
+            <li key={id} className="flex items-start gap-2">
+              {icon}
+              <span className="min-w-0 break-words">{text}</span>
+            </li>
+          ))}
+        </ul>
       )}
       {menuActions.map((item, index) => {
         // A real pointer click reports a positive `detail`; Enter/Space
