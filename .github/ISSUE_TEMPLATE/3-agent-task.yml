@@ -1,5 +1,5 @@
 name: Agent task
-description: Structured work for an agent session (finish line, scope, verify, approval)
+description: Structured work for an agent session (finish line, scope, verification)
 title: "[agent] "
 labels: [agent-ready]
 body:
@@ -54,18 +54,6 @@ body:
       label: Verify commands
       description: Suggested bun run test:* commands or browser/API scenarios.
       placeholder: bun run test:web
-    validations:
-      required: true
-
-  - type: dropdown
-    id: approval_boundary
-    attributes:
-      label: Approval boundary
-      description: From the standing capability budget (allow / ask / human).
-      options:
-        - allow
-        - ask
-        - human
     validations:
       required: true
 

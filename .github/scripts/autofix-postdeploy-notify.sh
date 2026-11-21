@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Runs after "Release on main" completes. If the released commit was an
 # autofix merge, comment on the source issue and ping Discord with a
-# ready-to-run production deploy command. Production stays a deliberate
-# manual step — this script never dispatches the deploy itself.
+# ready-to-run command for the agent handling production promotion.
 set -uo pipefail
 
 HEAD_SHA=${HEAD_SHA:?missing HEAD_SHA}
 CONCLUSION=${CONCLUSION:-success}
+# shellcheck disable=SC1091
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/autofix-lib.sh"
 
 main() {
@@ -38,11 +38,11 @@ main() {
   issue_number=$(gh pr view "$pr_number" --repo "$REPO" --json body --jq '.body' 2>/dev/null |
     grep -oE 'Fixes #[0-9]+' | grep -oE '[0-9]+' | head -n1)
 
-  local prod_cmd="gh workflow run deploy-production.yml -f tag=${tag}"
+  local prod_cmd="gh workflow run deploy-production.yml --ref main -f tag=${tag}"
 
   if [ -n "$issue_number" ]; then
     gh issue comment "$issue_number" --repo "$REPO" \
-      --body "${tag} is live on staging via #${pr_number}. Production deploy: \`${prod_cmd}\`" \
+      --body "${tag} passed staging via #${pr_number}. The agent handling production promotion should follow AGENTS.md, including production verification. Dispatch with \`${prod_cmd}\`." \
       2>/dev/null || true
     resolve_linked_posthog_issue "$issue_number" || true
   fi

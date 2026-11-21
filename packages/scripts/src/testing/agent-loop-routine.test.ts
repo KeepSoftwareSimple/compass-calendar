@@ -25,7 +25,8 @@ describe("agent-loop Routine contract", () => {
     // The merge queue rejects an explicit strategy or branch deletion.
     expect(guard).not.toMatch(/gh pr merge[^\n]*(--squash|--delete-branch)/);
     expect(guard).not.toContain("gh pr checks");
-    expect(guard).toContain("main_is_red");
+    expect(guard).not.toContain("main_is_red");
+    expect(guard).not.toContain("MAX_LINES");
     expect(guard).toContain("--disable-auto");
   });
 
@@ -85,7 +86,7 @@ describe("agent-loop Routine contract", () => {
     expect(next).toContain("has_open_dependency");
     expect(next).toContain("AGENT_LOOP_MILESTONES is empty; idle.");
     const prompt = readFileSync(".github/prompts/agent-loop.md", "utf8");
-    expect(prompt).not.toContain("ship/SKILL.md");
+    expect(prompt).toContain("ship/SKILL.md");
     expect(prompt).not.toContain("BOOKING_LOOP_ENABLED");
     const review = readFileSync(".github/workflows/agent-review.yml", "utf8");
     expect(review).toContain("workflow_dispatch");

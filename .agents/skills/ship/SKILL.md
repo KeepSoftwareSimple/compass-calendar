@@ -3,7 +3,7 @@ name: ship
 version: 5
 owner: compass-maintainers
 last_verified: 2026-11-02
-description: Take the current branch from working tree to a ready PR that the merge queue merges. Use when the user says "ship" or a loop prompt reaches the PR step.
+description: Take the current branch through the merge queue and own the production promotion decision. Use when the user says "ship" or a loop prompt reaches the PR step.
 ---
 
 # Ship
@@ -42,24 +42,35 @@ the repo records it.
 5. **Merge.** Mark the PR ready and run `gh pr merge --auto`. `main` takes
    changes only through the merge queue, so a direct merge is refused by
    rule; GitHub squash-merges through the queue once required checks pass.
-   No label is involved. The required checks are the whole gate: no
-   line-count rail, no path denylist, nothing to look for or wait on.
+   The scheduled Cursor loop hands queueing to its workflow with
+   `agent-automerge` as described in `AGENTS.md`.
 
    Do not wait for a human on a PR that is green and mergeable. If the queue
    drops the PR on a check the diff cannot reach (a runner timeout, a UI
    test in a surface you did not touch) and the same check passed on the PR
    head, say so once on the PR and run `gh pr merge --auto` again. A second
-   drop for the same reason is a human call: comment the evidence and stop.
+   drop for the same reason calls for diagnosing the check and recording
+   the blocker if it cannot be resolved in this session.
 
    Never close/reopen the PR, push empty commits, or merge `main` in just to
    re-run CI (merge `main` only for a real conflict).
 
+6. **Promote.** Apply the release policy in `AGENTS.md`. For a production
+   deploy, identify the release tag and confirm its staging deployment and
+   health checks succeeded. Check what else the tag contains, and capture the
+   current production tag as a rollback candidate. Run
+   `gh workflow run deploy-production.yml --ref main -f tag=<tag>` and watch
+   that run through its health check. Confirm the running version and relevant
+   behavior. If verification fails, diagnose and recover, using the previous
+   known-good release when compatible with the current data and configuration.
+   Record the outcome or the conditions and owner for a deferred promotion on
+   the issue or PR. See `docs/CI-CD/workflows.md#production-deploy`.
+
 ## Escalate
 
-Comment on the issue with the decision needed, the recommended option, and
-the cost of waiting, then label `agent-loop-needs-human`. Reasons: product
-ambiguity, production deploy, secrets, OAuth grants, deletion, access grants,
-verify still failing after two retries.
+When only a person can resolve a blocker, comment on the issue with the
+action, who can take it, the recommended option, and the cost of waiting.
+Then apply `agent-loop-needs-human`.
 
 ## Anti-patterns
 

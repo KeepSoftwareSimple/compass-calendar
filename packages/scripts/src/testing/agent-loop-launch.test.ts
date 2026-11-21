@@ -141,7 +141,7 @@ describe("agent-loop launch quota recovery", () => {
     expect(result.output).toContain("retry_after_seconds=3600");
   });
 
-  it("keeps non-quota launch failures as human stops", () => {
+  it("holds an issue when the Cursor integration owner must restore access", () => {
     const result = runLaunch("403");
 
     expect(result.status, result.stderr).toBe(1);
@@ -150,6 +150,14 @@ describe("agent-loop launch quota recovery", () => {
       "--add-label agent-loop-waiting-for-credits",
     );
     expect(result.commands).not.toContain("agent-loop: pickup");
+  });
+
+  it("lets the watchdog retry after a Cursor server error", () => {
+    const result = runLaunch("500");
+
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.commands).toContain("--remove-label agent-loop-running");
+    expect(result.commands).not.toContain("--add-label agent-loop-needs-human");
   });
 
   it("fails closed when CURSOR_API_KEY is unset", () => {

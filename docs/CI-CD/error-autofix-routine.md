@@ -63,9 +63,10 @@ issue so the next burst becomes `reopened`.
     checks the size rails and enables auto-merge, then required CI in the
     merge queue decides. A PR over the size rails is closed, never parked
     for a human. A gh failure leaves the PR for the watchdog to retry.
-- Production deploy is never automatic. Staging-only PostHog errors get a
-  comment, never a PR, in `merge` mode. The sweep queries production
-  exceptions only.
+- The agent recommends when to promote the fix. The staging notification
+  hands off to the agent handling production promotion under
+  [AGENTS.md](../../AGENTS.md). In `merge` mode, staging-only PostHog errors
+  get a comment. The sweep queries production exceptions only.
 
 ## Idempotency
 
