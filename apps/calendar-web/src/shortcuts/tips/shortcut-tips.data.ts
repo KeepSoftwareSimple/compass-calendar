@@ -3,7 +3,7 @@ import {
   DAY_NAME_BY_PREFIX,
   type DayJumpPrefix,
 } from "@web/shortcuts/shift-hint/assign-shift-hint-keys";
-import { expandModInShortcutDisplay } from "@web/shortcuts/shortcut.util";
+import { getSpokenShortcutKey } from "@web/shortcuts/shortcut.util";
 
 export {
   DAY_JUMP_PREFIXES,
@@ -78,17 +78,10 @@ export type RankedShortcutHint = ShortcutHint & {
   reasonCode: ShortcutSuggestionReason;
 };
 
-const spokenKey = (token: string): string => {
-  const expanded = expandModInShortcutDisplay(token);
-  if (expanded === "Meta") return "Cmd";
-  if (expanded === "Control") return "Ctrl";
-  return expanded;
-};
-
 const partPlainText = (part: ShortcutTipPart): string => {
   if (typeof part === "string") return part;
   const keys = "keys" in part ? part.keys : [part.key];
-  return keys.map(spokenKey).join("+");
+  return keys.map(getSpokenShortcutKey).join("+");
 };
 
 export const getPartsPlainText = (parts: readonly ShortcutTipPart[]): string =>

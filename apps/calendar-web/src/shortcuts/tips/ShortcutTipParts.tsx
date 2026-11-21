@@ -1,7 +1,6 @@
 import classNames from "classnames";
 import { type FC } from "react";
-import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
-import { ShortCutLabel } from "@web/components/Shortcuts/ShortcutLabel";
+import { ShortcutKeycap } from "@web/components/Shortcuts/ShortcutKeycap";
 import { useHintShortcutCelebrationClass } from "@web/shortcuts/tips/hint-shortcut-celebration.class";
 import {
   getPartsPlainText,
@@ -26,13 +25,12 @@ const KeycapGroup: FC<{
   return (
     <span className="inline-flex pointer-coarse:hidden items-center gap-1 whitespace-nowrap align-middle">
       {keys.map((key, index) => (
-        <ShortcutHint
+        <ShortcutKeycap
           // biome-ignore lint/suspicious/noArrayIndexKey: keycap sequences repeat keys; position is the identity
           key={`${key}-${index}`}
           className={classNames(celebrationClass)}
-        >
-          <ShortCutLabel k={key.length === 1 ? key.toUpperCase() : key} />
-        </ShortcutHint>
+          keyToken={key.length === 1 ? key.toUpperCase() : key}
+        />
       ))}
     </span>
   );

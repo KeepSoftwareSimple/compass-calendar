@@ -27,6 +27,7 @@ function ShortcutRowContent({ shortcut }: { shortcut: Shortcut }) {
       <span className="flex shrink-0 items-center gap-2">
         {shortcut.locked ? <ShortcutProBadge /> : null}
         <ShortcutKeys
+          announce={shortcut.keys.includes("Delete")}
           className="shrink-0"
           keys={shortcut.keys}
           alternatives={shortcut.keyAlternatives}

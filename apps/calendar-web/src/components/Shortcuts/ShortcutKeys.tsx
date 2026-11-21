@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import { Fragment } from "react";
-import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
-import { ShortCutLabel } from "./ShortcutLabel";
+import { ShortcutKeycap } from "@web/components/Shortcuts/ShortcutKeycap";
+import { getSpokenShortcutKey } from "@web/shortcuts/shortcut.util";
 
 /** Aliases for keys users might write differently than the canonical token. */
 const keyAliases: Record<string, string> = {
@@ -13,7 +13,7 @@ const keyAliases: Record<string, string> = {
 /**
  * Normalizes a single key token for display: uppercases lone letters
  * (keyboard convention, `w` -> `W`) and resolves common aliases. Named tokens
- * (`Shift`, `Enter`, `Mod`, `Arrow*`) pass through to `ShortCutLabel`.
+ * (`Shift`, `Enter`, `Mod`, `Arrow*`) pass through to `ShortcutKeycap`.
  */
 function normalizeKeyToken(key: string): string {
   const alias = keyAliases[key.toLowerCase()];
@@ -36,6 +36,8 @@ interface Props {
   keys: string | string[];
   title?: string;
   className?: string;
+  /** Include the keys in the surrounding text for screen readers. */
+  announce?: boolean;
   /** Keys are alternatives (either works): render a plain "or" between them. */
   alternatives?: boolean;
 }
@@ -51,11 +53,13 @@ export function ShortcutKeys({
   keys,
   title,
   className,
+  announce,
   alternatives = false,
 }: Props) {
   const cleaned = toKeyArray(keys)
     .map((key) => key.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(normalizeKeyToken);
 
   // Nothing to render -> emit nothing, rather than an empty chip row.
   if (cleaned.length === 0) return null;
@@ -68,6 +72,13 @@ export function ShortcutKeys({
         className,
       )}
     >
+      {announce && (
+        <span className="sr-only">
+          {cleaned
+            .map(getSpokenShortcutKey)
+            .join(alternatives ? " or " : " plus ")}
+        </span>
+      )}
       {cleaned.map((key, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: keycap sequences repeat keys; position is the identity
         <Fragment key={`${key}-${index}`}>
@@ -76,9 +87,7 @@ export function ShortcutKeys({
               or
             </span>
           ) : null}
-          <ShortcutHint variant="keycap">
-            <ShortCutLabel k={normalizeKeyToken(key)} />
-          </ShortcutHint>
+          <ShortcutKeycap keyToken={key} />
         </Fragment>
       ))}
     </span>

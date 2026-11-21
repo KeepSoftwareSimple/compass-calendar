@@ -17,7 +17,8 @@ export function promptContextMenuKeyboardOnly(
   showStatusToast(
     CONTEXT_MENU_KEYBOARD_ONLY_TOAST_ID,
     <span className="inline-flex items-center gap-1.5">
-      Keyboard only, press <ShortcutKeys keys={keys} /> to {label.toLowerCase()}
+      Keyboard only, press <ShortcutKeys announce keys={keys} /> to{" "}
+      {label.toLowerCase()}
     </span>,
   );
 }
