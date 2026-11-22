@@ -1,3 +1,4 @@
+import { enUS } from "date-fns/locale/en-US";
 import {
   type FC,
   type KeyboardEvent,
@@ -25,7 +26,6 @@ import {
   resolveMonthJumpCursor,
 } from "./monthPickerCursor";
 import { getMonthPickerDayClassName } from "./monthPickerDayClassName";
-import { monthPickerLocale } from "./monthPickerLocale";
 import {
   MONTH_PICKER_NEXT_KEYCAPS,
   MONTH_PICKER_PREV_KEYCAPS,
@@ -211,7 +211,9 @@ export const MonthPicker: FC<Props> = ({
         }
         inline
         isOpen={true}
-        locale={monthPickerLocale(weekStartDay)}
+        // `calendarStartDay` above owns the week start; the locale only
+        // sets date formatting, so it stays plain en-US.
+        locale={enUS}
         monthNav={{
           prevShortcut: MONTH_PICKER_PREV_KEYCAPS,
           nextShortcut: MONTH_PICKER_NEXT_KEYCAPS,

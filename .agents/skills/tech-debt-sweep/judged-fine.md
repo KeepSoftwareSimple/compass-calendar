@@ -11,6 +11,70 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-22
+
+Swept the merges that landed after the 2026-11-21 ledger (#5278, #5305, #5331,
+#5332, #5333, #5335, #5336, #5337); #5330 was that sweep's own output and is
+excluded. Gate step 1 was clean on the three named detectors: `bun knip`
+reports no unused files or exports (the three standing config hints),
+`bun lint` passes every rule, `bun type-check` passes. One finding, shipped as
+the removal of `monthPickerLocale`: #5279 extracted that cloned-locale
+workaround on 2026-11-17 for react-datepicker 4.x, whose `Day` did not receive
+`calendarStartDay`, and #5305 upgraded to 9.x four days later, where `Week`
+spreads `calendarStartDay` into `Day` and `getStartOfWeek` passes it to
+date-fns as `weekStartsOn`, which outranks `locale.options.weekStartsOn`. The
+condition expired, and #5305 replaced the comment that recorded it with a
+one-liner, so the clone read as deliberate design while the week start was
+really governed by the prop beside it. Everything below was examined and kept.
+
+- **The keycap consolidation** (`ShortcutKeycap.tsx`, #5278). A new file plus a
+  deleted `ShortcutLabel` looks like a move that left two owners, but it is one:
+  every keycap call site now renders `ShortcutKeycap`, and `isMacForwardDelete`
+  and `getSpokenShortcutKey` are owned once in `shortcut.util.ts`. Dropping
+  `variant="keycap"` at the `ShortcutKeys` call site is not a visual change
+  either; `ShortcutHint` already defaults that variant.
+
+- **Two key-token normalizers** (`ShortcutKeys.normalizeKeyToken`,
+  `ShortcutTipParts.KeycapGroup`, #5278). The first resolves user-written
+  aliases (`esc`, `cmd`) and uppercases lone letters; the second only
+  uppercases, because tip keys come from `shortcut-tips.data.ts` in canonical
+  form and never pass through an author's spelling. Folding them would put
+  alias resolution on a path that has no aliases to resolve.
+
+- **The paste-placement rework** (#5332). Replacing the grid-draft paste preview
+  with `event-paste-preview.store` left no residue: the `pastePlace` draft
+  activity and `event-paste-preview.lifecycle` are gone repo-wide, net -235
+  lines, and `knip` finds nothing orphaned.
+
+- **`GRID_POPPER_MODIFIERS` and the `react-datepicker-popper` selectors**
+  (#5305). The constant and the DOM queries still say "popper" after the move
+  to `@floating-ui/react`, but `react-datepicker` 9 still emits that class name,
+  so the selectors are correct and the constant names the thing it configures.
+  Renaming for consistency is not a finding. `@popperjs/core` and
+  `@types/react-datepicker` were both removed from `package.json` in the same
+  PR, so no dead dependency survived the migration.
+
+- **`captureBootShell` as module state** (#5333). A module-level handle to
+  `#boot-shell` plus a `cloneNode` looks like a global, but the node it captures
+  is destroyed by the first React render, so the capture has to happen before
+  mount and cannot live in a component. One writer, one reader.
+
+- **`useResetLoadingOnPageRestore` called from two strategies** (#5333). The
+  redirect and Google strategies each own their own `loading` state, so the hook
+  is shared code over two independent states, not a copy.
+
+- **`c-not-found`** (#5335). The 404 redesign stopped using the utility, but
+  `SomethingBrokeView` still does, so it is not dead CSS.
+
+- **The context-menu `details` array** (#5337). A three-entry literal with a
+  `flatMap` that drops empty fields. Clunky-looking, but it is the only site
+  that decides which event fields the menu shows, and the time label still comes
+  from the shared `getGridCardTimesLabel`.
+
+- **#5331 (toast progress gradient), #5336 (agent shipping and release
+  ownership).** A scoped CSS override and CI workflow plus docs config. Per the
+  2026-11-09 precedent, workflow config is not domain duplication.
+
 ## 2026-11-21
 
 Swept the merges that landed after the 2026-11-20 ledger (#5322, #5323, #5325,
