@@ -21,7 +21,7 @@
     "posthog-node": "^5.56.2",
     "rrule": "^2.7.2",
     "snappy": "^7.4.4",
-    "tslib": "^2.4.0",
+    "tslib": "^2.9.1",
     "winston": "^3.8.1",
     "winston-transport": "^4.7.0",
     "yaml": "^2.9.0",
