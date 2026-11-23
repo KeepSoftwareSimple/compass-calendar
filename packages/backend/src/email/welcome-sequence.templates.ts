@@ -14,7 +14,7 @@ export const WELCOME_STEP_TEMPLATE_ALIAS: Record<
   "jump-around": "24-jump-around",
   "adjusting-times": "34-adjusting-times",
   roundup: "44-roundup",
-  // Personalized reviews are rendered from calendar data, not a hosted template.
+  // Rendered locally from the content file, not a hosted Resend template.
   "weekly-review": null,
   "trial-ending": "compass-trial-ending",
 };

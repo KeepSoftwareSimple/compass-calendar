@@ -96,7 +96,7 @@ describe("reflection preferences", () => {
     expect(response.body.preferences).toBeNull();
   });
 
-  it("gates opt-in by the feature switch and complete history", async () => {
+  it("gates opt-in by the feature switch and queues one confirmation email", async () => {
     const { user } = await UtilDriver.setupTestUser();
     const put = (body = settings) =>
       driver
@@ -107,20 +107,27 @@ describe("reflection preferences", () => {
     CONFIG.REFLECTION_ENABLED = false;
     await put().expect(403);
     CONFIG.REFLECTION_ENABLED = true;
-    await put().expect(409);
-    const client = getSyncServiceClient();
-    spyOn(client, "readReflection").mockResolvedValue({
-      ok: true,
-      value: {
-        events: [],
-        historyComplete: true,
-        oldestYear: null,
-        nextCursor: null,
-        truncated: false,
-      },
-    });
-    await put().expect(200);
     await put({ ...settings, timeZone: "invalid/timezone" }).expect(400);
+    const confirmations = () =>
+      mongoService.emailSend.countDocuments({
+        userId: user._id,
+        sequence: "reflection",
+        stepKey: "confirmation",
+        status: "queued",
+      });
+    await put().expect(200);
+    expect(await confirmations()).toBe(1);
+    // A timezone change or a later re-enable never sends a second confirmation.
+    await put({ ...settings, timeZone: "America/New_York" }).expect(200);
+    await put({ ...settings, enabled: false }).expect(200);
+    expect(await confirmations()).toBe(0);
+    await put().expect(200);
+    expect(
+      await mongoService.emailSend.countDocuments({
+        userId: user._id,
+        stepKey: "confirmation",
+      }),
+    ).toBe(1);
     const { user: other } = await UtilDriver.setupTestUser();
     const response = await driver
       .getServer()

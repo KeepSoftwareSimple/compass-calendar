@@ -1,4 +1,7 @@
-import { type SettingsPage } from "@web/settings/settings.store";
+import {
+  type SettingsFocus,
+  type SettingsPage,
+} from "@web/settings/settings.store";
 
 /**
  * `/?settings=<page>` opens the Settings modal on that page. Settings is
@@ -20,4 +23,18 @@ export function settingsPageFromSearch(
   value: unknown,
 ): SettingsPage | undefined {
   return SETTINGS_PAGES.find((page) => page === value);
+}
+
+/**
+ * `&focus=<control>` lands keyboard focus on one control of the opened page,
+ * so an email link can end one keypress from the setting it asks about.
+ */
+export const SETTINGS_FOCUS_PARAM = "focus";
+
+const SETTINGS_FOCUS_TARGETS: readonly SettingsFocus[] = ["weekly-reflection"];
+
+export function settingsFocusFromSearch(
+  value: unknown,
+): SettingsFocus | undefined {
+  return SETTINGS_FOCUS_TARGETS.find((target) => target === value);
 }

@@ -32,9 +32,11 @@ describe("welcome sequence content links", () => {
       expect(WELCOME_SEQUENCE_CONTENT[key].subject).toContain(`(${index}/5)`),
     );
     const review = WELCOME_SEQUENCE_CONTENT["weekly-review"];
-    expect(review.cta.href).toBe(`${appUrl}/?settings=notifications`);
+    expect(review.cta.href).toBe(
+      `${appUrl}/?settings=notifications&focus=weekly-reflection`,
+    );
     expect(review.paragraphs.join(" ")).toContain("Sunday at 10:30 a.m.");
-    expect(review.paragraphs.join(" ")).toContain("Settings > Notifications");
+    expect(review.paragraphs.join(" ")).toContain("press Space");
   });
 
   it("opens Settings > Billing from the trial-ending email", () => {

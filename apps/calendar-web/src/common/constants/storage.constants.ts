@@ -17,6 +17,8 @@ export const STORAGE_KEYS = {
     "compass.onboarding.welcome-steps-viewed-session",
   HAS_SEEN_LIFE_VIEW_INTRO: "compass.onboarding.has-seen-life-view-intro",
   WELCOME_EXIT: "compass.onboarding.welcome-exit",
+  /** "true" when the visitor left the weekly reflection toggle on at sign-up. */
+  PENDING_REFLECTION_OPT_IN: "compass.onboarding.pending-reflection-opt-in",
   HAS_SEEN_ANONYMOUS_SAVE_TOAST:
     "compass.onboarding.has-seen-anonymous-save-toast",
   ANONYMOUS_CALENDAR_WRITE_COUNT:

@@ -5,6 +5,11 @@ import { UserApi } from "@web/api/user.api";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { UserContext } from "@web/auth/compass/user/context/UserContext";
 import { readHiddenCalendarIds } from "@web/calendars/calendar-visibility.storage";
+import {
+  selectSettingsFocus,
+  settingsActions,
+  useSettingsStore,
+} from "@web/settings/settings.store";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 
 export function ReflectionPreferencesControl() {
@@ -19,6 +24,9 @@ export function ReflectionPreferencesControl() {
     userId: string;
     data: z.infer<typeof ReflectionPreferencesResponseSchema>;
   } | null>(null);
+  const checkbox = useRef<HTMLInputElement>(null);
+  const focusRequested =
+    useSettingsStore(selectSettingsFocus) === "weekly-reflection";
   const [paused, setPaused] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -41,6 +49,13 @@ export function ReflectionPreferencesControl() {
       session.current++;
     };
   }, [userId]);
+  // An email link asked for this control: one keypress (Space) toggles it.
+  const ready = state?.userId === userId;
+  useEffect(() => {
+    if (!focusRequested || !ready || !checkbox.current) return;
+    checkbox.current.focus();
+    settingsActions.clearSettingsFocus();
+  }, [focusRequested, ready]);
   if (!userId) return <p>Sign in to manage calendar reflection emails.</p>;
   if (state?.userId !== userId)
     return (
@@ -86,6 +101,7 @@ export function ReflectionPreferencesControl() {
     >
       <label className="flex items-center gap-2">
         <input
+          ref={checkbox}
           type="checkbox"
           checked={preferences?.enabled ?? false}
           disabled={saving || (!state.data.available && !preferences?.enabled)}

@@ -4,6 +4,9 @@ import { IS_DEV } from "@web/common/constants/env.constants";
 
 export type SettingsPage = "accounts" | "billing" | "booking" | "notifications";
 
+/** A control Settings should focus once when opened from a link. */
+export type SettingsFocus = "weekly-reflection";
+
 export type OpenFromPaletteOptions = {
   fromPalette?: boolean;
 };
@@ -15,6 +18,7 @@ interface SettingsState {
   isSettingsOpen: boolean;
   isAboutOpen: boolean;
   settingsPage: SettingsPage;
+  settingsFocus: SettingsFocus | null;
   /** True when the current overlay was opened from the command palette. */
   overlayOpenedFromPalette: boolean;
   /** Public /meet footer CTA: preview setup before sign-up. */
@@ -32,6 +36,7 @@ export const initialSettingsState: SettingsState = {
   isSettingsOpen: false,
   isAboutOpen: false,
   settingsPage: "accounts",
+  settingsFocus: null,
   overlayOpenedFromPalette: false,
   guestMeetingSetupActive: false,
   closedForGuestAuthHandoff: false,
@@ -80,6 +85,7 @@ export const settingsActions = {
       {
         isSettingsOpen: false,
         settingsPage: "accounts",
+        settingsFocus: null,
         overlayOpenedFromPalette: false,
         guestMeetingSetupActive: false,
       },
@@ -124,12 +130,16 @@ export const settingsActions = {
     }),
   openSettings: (
     page: SettingsPage = "accounts",
-    { fromPalette = false }: OpenFromPaletteOptions = {},
+    {
+      fromPalette = false,
+      focus = null,
+    }: OpenFromPaletteOptions & { focus?: SettingsFocus | null } = {},
   ) =>
     useSettingsStore.setState(
       {
         isSettingsOpen: true,
         settingsPage: page,
+        settingsFocus: focus,
         overlayOpenedFromPalette: fromPalette,
         closedForGuestAuthHandoff: false,
       },
@@ -138,6 +148,10 @@ export const settingsActions = {
         type: "openSettings",
       },
     ),
+  clearSettingsFocus: () =>
+    useSettingsStore.setState({ settingsFocus: null }, false, {
+      type: "clearSettingsFocus",
+    }),
   setSettingsPage: (settingsPage: SettingsPage) =>
     useSettingsStore.setState({ settingsPage }, false, {
       type: "setSettingsPage",
@@ -207,6 +221,9 @@ export const selectIsSettingsOpen = (state: SettingsState) =>
 export const selectIsAboutOpen = (state: SettingsState) => state.isAboutOpen;
 
 export const selectSettingsPage = (state: SettingsState) => state.settingsPage;
+
+export const selectSettingsFocus = (state: SettingsState) =>
+  state.settingsFocus;
 
 export const selectOverlayOpenedFromPalette = (state: SettingsState) =>
   state.overlayOpenedFromPalette;

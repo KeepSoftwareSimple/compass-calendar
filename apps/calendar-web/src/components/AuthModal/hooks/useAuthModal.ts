@@ -13,8 +13,14 @@ import {
   searchFlagValue,
 } from "@web/common/utils/parse/search-flag.util";
 import { type OpenStartTrialStepOptions } from "@web/components/AuthModal/auth-modal-runtime";
-import { settingsPageFromSearch } from "@web/settings/settings.search";
-import { type SettingsPage } from "@web/settings/settings.store";
+import {
+  settingsFocusFromSearch,
+  settingsPageFromSearch,
+} from "@web/settings/settings.search";
+import {
+  type SettingsFocus,
+  type SettingsPage,
+} from "@web/settings/settings.store";
 
 export type AuthView =
   | "login"
@@ -53,6 +59,8 @@ export interface AuthSearch {
   meetingSetup?: SearchFlag;
   /** ?settings=<page> opens Settings on that page (welcome email CTAs). */
   settings?: SettingsPage;
+  /** ?focus=<control> focuses one control on the opened Settings page. */
+  focus?: SettingsFocus;
   /** ?quickAdd=1 opens the command palette in create mode. */
   quickAdd?: SearchFlag;
 }
@@ -66,6 +74,7 @@ export function validateAuthSearch(
     play: searchFlagValue(search.play),
     meetingSetup: searchFlagValue(search.meetingSetup),
     settings: settingsPageFromSearch(search.settings),
+    focus: settingsFocusFromSearch(search.focus),
     quickAdd: searchFlagValue(search[QUICK_ADD_SEARCH_PARAM]),
   };
 }

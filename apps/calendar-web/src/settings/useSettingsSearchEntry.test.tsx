@@ -82,6 +82,19 @@ describe("useSettingsSearchEntry", () => {
     );
   });
 
+  it("asks Settings to focus the weekly reflection toggle and consumes both params", async () => {
+    const router = await renderEntry({
+      authenticated: true,
+      path: "/?settings=notifications&focus=weekly-reflection",
+    });
+    await waitFor(() =>
+      expect(useSettingsStore.getState().settingsFocus).toBe(
+        "weekly-reflection",
+      ),
+    );
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+  });
+
   it("does not reopen Settings when the back button restores the param", async () => {
     const router = await renderEntry({ authenticated: true });
     await waitFor(() => {
