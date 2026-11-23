@@ -1,17 +1,33 @@
 # Weekly reflection runbook
 
-Weekly reflection emails are live for every account and strictly opt-in. Nobody
-is enrolled automatically: not new signups, not existing accounts. A user
-receives reviews only after choosing them. See the
+Weekly reflection emails are live for every account and opt-in. Existing
+accounts are never enrolled automatically. New signups see a default-on
+checkbox they can clear before creating the account; a user receives reviews
+only after enrolling that way, from Settings, or via the CLI. See the
 [implementation plan](../features/weekly-reflection-plan.md) for the agreed
 email behavior.
 
 ## How a user opts in
 
+- **Sign-up screen:** the welcome modal's last step has a "weekly reflection
+  every Sunday" checkbox, on by default so people know what is coming and can
+  opt out before creating an account. The choice survives the OAuth redirect in
+  browser storage and is applied once, as soon as the new account is signed in.
+  Continuing as a guest enrolls no one.
 - **Settings > Notifications:** the "Email me calendar reflections" checkbox.
-  Enabling it requires complete calendar history and a usable calendar
-  connection, otherwise the save is refused with a "still being prepared" message.
 - **Operator CLI:** `bun cli reflection enable --user-id <id> --apply` (below).
+
+Enrolling needs no calendar history; it records consent. A review is only sent
+once history is complete and calendar connections are healthy, otherwise that
+Sunday's attempt retries until local noon and is then skipped.
+
+Turning reviews on from the sign-up screen or Settings also queues a single
+confirmation email, once per account, from the standard sender address. It tells
+the user their first review is coming, on which Sunday, and asks them to allow
+the sender so the first review lands in the inbox. The CLI does not send it.
+
+The fifth welcome email (day 5) is a pitch for weekly reflections sent to every
+account, whether or not they enrolled, with a link to Settings > Notifications.
 
 Reviews arrive Sunday at 10:30 a.m. in the saved timezone, observing DST. A send
 that cannot be attempted by local noon expires rather than replaying later.
@@ -57,8 +73,8 @@ enqueues background import work through Sync; completion is confirmed with
 View PDF to a temporary directory without sending anything. Every command omitting
 `--apply` is a dry run.
 
-Reviews need complete history. An opted-in account whose history is incomplete
-or whose calendar connection needs attention is not sent a review. Verify a real
+An opted-in account whose history is incomplete or whose calendar connection
+needs attention is not sent a review. Verify a real
 received email and PDF in the inbox before treating presentation as validated.
 
 ## Rollback

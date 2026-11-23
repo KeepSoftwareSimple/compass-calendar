@@ -5,13 +5,14 @@ Status: implementation plan, originally November 2, 2026. Delivery is live and o
 ## Opt-in only, November 23, 2026
 
 Weekly reflection is live for everyone and opt-in. No account is enrolled
-automatically. This supersedes every earlier mention below of a private trial
+without a choice the user sees (the sign-up checkbox is on by default but
+visible and clearly labeled). This supersedes every earlier mention below of a private trial
 binding, staged or dated rollout, onboarding-cohort or existing-account
 enrollment, the daily trial cadence, and the December 6 population launch.
-Users opt in from Settings > Notifications, or an operator uses the CLI. One
+Users opt in from the sign-up screen (default-on checkbox), Settings > Notifications, or an operator uses the CLI; opting in queues a one-time confirmation email. One
 global switch, `email.reflection.enabled`, is the kill switch. Pauses,
-unsubscribes, suppression, the history gate, and the calendar connection gate
-apply to everyone. Operations are in the [runbook](../development/weekly-reflection.md).
+unsubscribes, suppression, and the history and calendar connection checks at send
+time apply to everyone. Enrolling itself no longer waits for history. Operations are in the [runbook](../development/weekly-reflection.md).
 
 ## Agreed product behavior
 

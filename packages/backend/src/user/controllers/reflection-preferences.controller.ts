@@ -7,7 +7,7 @@ import { zObjectId } from "@core/types/object-id.schema";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { emailSendRepository } from "@backend/email/email-send.repository";
-import { reflectionCalendarContext } from "@backend/email/reflection-context";
+import { enqueueReflectionConfirmation } from "@backend/email/reflection-confirmation";
 
 const available = () => !!CONFIG.EMAIL_PROVIDER && CONFIG.REFLECTION_ENABLED;
 
@@ -54,21 +54,6 @@ export async function putReflectionPreferences(req: Request, res: Response) {
         .json({ message: "Reflections are not available for this account" });
       return;
     }
-    const context = await reflectionCalendarContext({
-      ...user,
-      reflectionPreferences: input.data,
-    });
-    const history = await context.client.readReflection(context.principal, {
-      calendarIds: context.calendarIds,
-      selfEmails: context.selfEmails,
-      windows: [],
-    });
-    if (!history.ok || !history.value.historyComplete) {
-      res
-        .status(409)
-        .json({ message: "Your calendar history is still being prepared" });
-      return;
-    }
   }
   await mongoService.user.updateOne(
     { _id: id },
@@ -91,6 +76,9 @@ export async function putReflectionPreferences(req: Request, res: Response) {
     },
   );
   await emailSendRepository.cancelQueuedReflection(id, !input.data.enabled);
+  // Confirm the channel once, when a user turns reviews on, before the first one.
+  if (input.data.enabled && !user.reflectionPreferences?.enabled)
+    await enqueueReflectionConfirmation(user);
   res.json({
     preferences: input.data,
     available: available(),

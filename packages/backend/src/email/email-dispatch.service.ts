@@ -1,5 +1,4 @@
 import { Logger } from "@core/logger/winston.logger";
-import dayjs from "@core/util/date/dayjs";
 import { emailListIncludes } from "@core/util/email.util";
 import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
@@ -19,7 +18,10 @@ import {
   startEmailSendHeartbeat,
   stopEmailSendHeartbeat,
 } from "@backend/email/email.heartbeat";
-import { appendWelcomeEmailUtm } from "@backend/email/email-layout";
+import {
+  appendWelcomeEmailUtm,
+  renderWelcomeEmail,
+} from "@backend/email/email-layout";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
@@ -35,10 +37,14 @@ import {
   type EmailSendInput,
 } from "@backend/email/providers/email.port";
 import {
-  dispatchReflection,
-  dispatchReflectionBatch,
-} from "@backend/email/reflection-dispatch";
-import { enqueueDueReflections } from "@backend/email/reflection-enrollment";
+  REFLECTION_CONFIRMATION_STEP,
+  reflectionConfirmationContent,
+} from "@backend/email/reflection-confirmation";
+import { dispatchReflectionBatch } from "@backend/email/reflection-dispatch";
+import {
+  enqueueDueReflections,
+  reflectionEligible,
+} from "@backend/email/reflection-enrollment";
 import { findWelcomeStep } from "@backend/email/welcome-sequence";
 import { getWelcomeEmailContent } from "@backend/email/welcome-sequence.content";
 import { loadWelcomeSequenceUser } from "@backend/email/welcome-sequence.context";
@@ -177,8 +183,13 @@ export class EmailDispatchService {
           await this.#dispatchBookingHostRow(row);
           break;
         case "reflection":
-          reflections.push(row);
-          continue;
+          if (row.stepKey === REFLECTION_CONFIRMATION_STEP)
+            await this.#dispatchReflectionConfirmation(row);
+          else {
+            reflections.push(row);
+            continue;
+          }
+          break;
         case "welcome":
           await this.#dispatchWelcomeRow(row);
           break;
@@ -395,6 +406,40 @@ export class EmailDispatchService {
     });
   }
 
+  async #dispatchReflectionConfirmation(row: EmailSendRecord): Promise<void> {
+    const userIdHex = row.userId.toHexString();
+    const context: DispatchRowContext = {
+      row,
+      userIdHex,
+      label: "Reflection confirmation email",
+    };
+    const user = await mongoService.user.findOne({ _id: row.userId });
+    if (!user || !reflectionEligible(user)) {
+      await emailSendRepository.markCanceled(row._id);
+      return;
+    }
+    if (!isAllowlistedRecipient(user.email)) {
+      await this.#skipRow(context, "Recipient not allowlisted");
+      return;
+    }
+    const { unsubscribe, headers } = resolveUnsubscribe(
+      userIdHex,
+      "reflection",
+    );
+    const rendered = renderWelcomeEmail(
+      row.stepKey,
+      reflectionConfirmationContent(user.reflectionPreferences!.timeZone),
+      unsubscribe,
+    );
+    await this.#deliverRow(context, {
+      stillSendable: async () => {
+        const fresh = await mongoService.user.findOne({ _id: row.userId });
+        return !!fresh && reflectionEligible(fresh);
+      },
+      send: { idempotencyKey: row._id, to: user.email, ...rendered, headers },
+    });
+  }
+
   async #dispatchWelcomeRow(row: EmailSendRecord): Promise<void> {
     const userIdHex = row.userId.toHexString();
     const previewLoop = isPreviewLoopRow(row);
@@ -451,61 +496,29 @@ export class EmailDispatchService {
       return;
     }
 
-    if (row.stepKey === "weekly-review") {
-      // Only users who opted in to reviews receive the introductory one.
-      const fullUser = await mongoService.user.findOne({ _id: row.userId });
-      const preferences = fullUser?.reflectionPreferences;
-      if (!fullUser || !preferences) {
-        await skip("Calendar reviews unavailable");
-        return;
-      }
-      if (!row.reflection) {
-        await mongoService.emailSend.updateOne(
-          { _id: row._id, status: "queued", reflection: { $exists: false } },
-          {
-            $set: {
-              recipientEmail: fullUser.email,
-              reflection: {
-                date: dayjs().tz(preferences.timeZone).format("YYYY-MM-DD"),
-                timeZone: preferences.timeZone,
-                cadence: "daily",
-              },
-            },
-          },
-        );
-      }
-      const current = await mongoService.emailSend.findOne({
-        _id: row._id,
-        status: "queued",
-      });
-      if (!current) return;
-      await dispatchReflection(current, this.getProvider(), {
-        onboarding: true,
-      });
-      if (
-        previewLoop &&
-        (await mongoService.emailSend.findOne({ _id: row._id, status: "sent" }))
-      ) {
-        await handlePreviewLoopAfterSend(row, now);
-      }
-      return;
-    }
-
+    const content = getWelcomeEmailContent(row.stepKey);
     const templateAlias = getWelcomeStepTemplateAlias(row.stepKey);
     const ctaBaseHref = getWelcomeStepCtaBaseHref(row.stepKey);
-    if (!templateAlias || !ctaBaseHref) {
+    if (!content || !ctaBaseHref) {
       await skip("Missing email template");
       return;
     }
 
     const { unsubscribe, headers } = resolveUnsubscribe(userIdHex);
-
-    const ctaUrl = appendWelcomeEmailUtm(ctaBaseHref, row.stepKey);
-    const templateVariables = buildWelcomeResendTemplateVariables({
-      ctaUrl,
-      unsubscribeUrl: unsubscribe?.httpsUrl ?? "",
-      firstName: user.firstName,
-    });
+    // A step with no hosted template is rendered locally from its content.
+    const body = templateAlias
+      ? {
+          subject: content.subject,
+          template: {
+            id: templateAlias,
+            variables: buildWelcomeResendTemplateVariables({
+              ctaUrl: appendWelcomeEmailUtm(ctaBaseHref, row.stepKey),
+              unsubscribeUrl: unsubscribe?.httpsUrl ?? "",
+              firstName: user.firstName,
+            }),
+          },
+        }
+      : renderWelcomeEmail(row.stepKey, content, unsubscribe);
 
     await this.#deliverRow(context, {
       stillSendable: async () => {
@@ -515,11 +528,7 @@ export class EmailDispatchService {
       send: {
         idempotencyKey: row._id,
         to: user.email,
-        subject: getWelcomeEmailContent(row.stepKey)?.subject,
-        template: {
-          id: templateAlias,
-          variables: templateVariables,
-        },
+        ...body,
         headers,
       },
       ...(previewLoop
