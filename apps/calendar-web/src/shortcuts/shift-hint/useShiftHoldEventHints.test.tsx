@@ -161,6 +161,22 @@ describe("useShiftHoldEventHints", () => {
     expect(useEventJumpStore.getState().isActive).toBe(true);
   });
 
+  it("labels an event that began before the week on its first visible column", () => {
+    // Started Tuesday of the prior week; a same-weekday event starts in view.
+    const { result } = mountHints([
+      timedFixture(EVENT_A, "2026-07-28T09:00:00.000Z"),
+      timedFixture(EVENT_B, "2026-08-04T11:00:00.000Z"),
+    ]);
+
+    act(() => {
+      pressEventJump();
+    });
+
+    const hints = result.current.hints.map((hint) => hint.hint);
+    expect(new Set(hints).size).toBe(hints.length);
+    expect(hints).toEqual(["su1", "t1"]);
+  });
+
   it("focuses a day prefix with Shift and the day letter", () => {
     const { focus, result, elements } = mountHints();
 
