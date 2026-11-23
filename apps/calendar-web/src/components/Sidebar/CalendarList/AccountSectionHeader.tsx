@@ -9,6 +9,8 @@ import {
   toggleAccountCollapsed,
   useCollapsedAccountKeys,
 } from "@web/calendars/collapsed-accounts.store";
+import { pageJumpHintActions } from "@web/shortcuts/page-jump/page-jump.store";
+import { calendarAccountJumpId } from "@web/shortcuts/page-jump/page-jump.targets";
 import { useAccountHeaderStatus } from "./useAccountHeaderStatus";
 /**
  * Heading for one connected account's calendars: the account email (the
@@ -39,6 +41,8 @@ export const AccountSectionHeader: FC<{
     isRefreshing,
     syncStatus,
   } = useAccountHeaderStatus(connection);
+  const jumpId = calendarAccountJumpId(key);
+  const clearHover = () => pageJumpHintActions.setHoveredTarget(null);
   const isCollapsed = useCollapsedAccountKeys().has(key);
 
   return (
@@ -48,7 +52,10 @@ export const AccountSectionHeader: FC<{
           aria-controls={accountCalendarListId(key)}
           aria-expanded={!isCollapsed}
           className="c-focus-ring group flex w-full min-w-0 items-center gap-1 rounded-xs text-left"
+          onBlur={clearHover}
           onClick={() => toggleAccountCollapsed(key)}
+          onMouseEnter={() => pageJumpHintActions.setHoveredTarget(jumpId)}
+          onMouseLeave={clearHover}
           type="button"
         >
           <CaretDownIcon
