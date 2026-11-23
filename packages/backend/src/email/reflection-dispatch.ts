@@ -18,7 +18,6 @@ import {
 } from "@backend/email/reflection-context";
 import { reflectionEligible } from "@backend/email/reflection-enrollment";
 import { reflectionExpiresAt } from "@backend/email/reflection-schedule";
-import { prepareWelcomeReviewEmail } from "@backend/email/welcome-review.content";
 import hiddenEventService from "@backend/user/services/hidden-event.service";
 import { createHash } from "node:crypto";
 
@@ -30,7 +29,6 @@ export const hiddenEventsDigest = (ids: string[]) =>
 export async function dispatchReflection(
   row: EmailSendRecord,
   provider: EmailProvider,
-  options: { onboarding?: boolean } = {},
 ) {
   if (!(await emailSendRepository.isQueued(row._id))) return;
   const edition = row.reflection;
@@ -53,14 +51,11 @@ export async function dispatchReflection(
     await cancel("Missing reflection edition");
     return;
   }
-  if (!options.onboarding && edition.cadence !== "weekly") {
+  if (edition.cadence !== "weekly") {
     await cancel("Reflection cadence changed to weekly");
     return;
   }
-  if (
-    !options.onboarding &&
-    new Date() >= reflectionExpiresAt(edition.date, edition.timeZone)
-  ) {
+  if (new Date() >= reflectionExpiresAt(edition.date, edition.timeZone)) {
     await cancel("Reflection edition expired");
     return;
   }
@@ -97,9 +92,7 @@ export async function dispatchReflection(
         await hiddenEventService.listHiddenEventIds(row.userId),
       );
       const prepared = {
-        ...(options.onboarding
-          ? await prepareWelcomeReviewEmail(row, user, unsubscribe)
-          : await prepareReflection(row, user, unsubscribe.httpsUrl)),
+        ...(await prepareReflection(row, user, unsubscribe.httpsUrl)),
         hiddenDigest,
       };
       await mongoService.emailSend.updateOne(
@@ -121,8 +114,7 @@ export async function dispatchReflection(
       !prepared ||
       !fresh ||
       !reflectionEligible(fresh) ||
-      (!options.onboarding &&
-        new Date() >= reflectionExpiresAt(edition.date, edition.timeZone))
+      new Date() >= reflectionExpiresAt(edition.date, edition.timeZone)
     ) {
       await cancel("Reflection no longer eligible");
       return;

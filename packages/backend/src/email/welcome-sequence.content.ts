@@ -89,15 +89,15 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     },
   },
   "weekly-review": {
-    subject: "Your weekly review (5/5)",
-    heading: "A little time to reflect",
+    subject: "A Sunday email worth opening (5/5)",
+    heading: "Meet your weekly reflection",
     paragraphs: [
-      "Your weekly review brings together highlights from the past week, meaningful plans ahead, and memories from your calendar history.",
-      "Your reviews arrive automatically every Sunday at 10:30 a.m. in your selected timezone.",
-      "Open Settings > Notifications to pause or re-enable reviews and see your notification preferences. Calendar visibility controls which calendars appear in your review.",
+      "Every Sunday at 10:30 a.m., Compass can email you a short reflection on your calendar: highlights from your week, memories from the same week in past years, your life in weeks, and a look at what's ahead so you can plan it.",
+      "It takes about two minutes to read. If you turned it on while signing up, you're all set and your first one is on the way.",
+      "If not, you can turn it on in Settings > Notifications. You can pause it there any time.",
     ],
     cta: {
-      label: "Customize your notifications",
+      label: "Turn on weekly reflections",
       href: `${appUrl()}/?settings=notifications`,
     },
   },

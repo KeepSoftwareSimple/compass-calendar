@@ -26,6 +26,7 @@ import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
 import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { PixelPirate } from "./PixelPirate";
+import { setPendingReflectionOptIn } from "./pending-reflection-opt-in";
 import { useFaqDisclosure } from "./useFaqDisclosure";
 import { useWelcomeJumpShortcuts } from "./useWelcomeJumpShortcuts";
 import { WelcomeFaqList } from "./WelcomeFaqList";
@@ -92,6 +93,8 @@ export function WelcomeModal() {
       !isWelcomeOnboardingPathBlockedFromWindow(),
   );
   const [step, setStep] = useState<WelcomeStep>(1);
+  // On by default so new accounts know what is coming; unchecking opts out.
+  const [reflectionOptIn, setReflectionOptIn] = useState(true);
   const { closing, beginDismiss, cancelDismiss } =
     useDismissTransition(MODAL_DISMISS_MS);
   // Suppress OverlayPanel's unmount restore when handing off to Auth — Auth
@@ -225,6 +228,7 @@ export function WelcomeModal() {
     beginAuthHandoff();
     markWelcomeSeen(cta);
     if (cta === "sign_up") {
+      setPendingReflectionOptIn(reflectionOptIn);
       queueShowcaseAfterSignup();
       void trackSignupStartedAtClick("welcome_modal");
     }
@@ -240,6 +244,7 @@ export function WelcomeModal() {
     providerHandoffRef.current = true;
     setHandingOff(true);
     cancelDismiss();
+    setPendingReflectionOptIn(reflectionOptIn);
     queueShowcaseAfterSignup();
     markWelcomeSeen(`sign_up_${kind}`);
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
@@ -429,6 +434,19 @@ export function WelcomeModal() {
                 Connect your calendar, or try Compass without an account.
               </p>
             </div>
+            <label className="flex items-start gap-2 text-sm text-text-muted">
+              <input
+                type="checkbox"
+                checked={reflectionOptIn}
+                onChange={(event) => setReflectionOptIn(event.target.checked)}
+                className="mt-1 accent-accent focus-visible:outline-2 focus-visible:outline-accent"
+              />
+              <span>
+                Email me a weekly reflection every Sunday: highlights, memories,
+                and a look ahead. Uncheck to opt out; you can change this any
+                time in Settings.
+              </span>
+            </label>
             <div className="flex w-full flex-col items-center gap-3">
               {trialPrimaryProvider ? (
                 <>

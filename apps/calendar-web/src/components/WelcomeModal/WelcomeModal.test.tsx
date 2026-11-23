@@ -554,6 +554,38 @@ describe("WelcomeModal", () => {
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBe("true");
   });
 
+  it("offers the weekly reflection already on, and remembers an opt out for sign-up", async () => {
+    const user = userEvent.setup();
+    setSignInAvailability({ google: "available" });
+    renderWelcomeModal();
+    await goToChooseScreen(user);
+
+    const toggle = screen.getByRole("checkbox", {
+      name: /weekly reflection every Sunday/i,
+    });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    await user.keyboard("u");
+
+    expect(mockOpenModal).toHaveBeenCalledWith("signUp");
+    expect(
+      localStorage.getItem(STORAGE_KEYS.PENDING_REFLECTION_OPT_IN),
+    ).toBeNull();
+  });
+
+  it("remembers the default opt in when signing up", async () => {
+    const user = userEvent.setup();
+    setSignInAvailability({ google: "available" });
+    renderWelcomeModal();
+    await goToChooseScreen(user);
+
+    await user.keyboard("u");
+
+    expect(localStorage.getItem(STORAGE_KEYS.PENDING_REFLECTION_OPT_IN)).toBe(
+      "true",
+    );
+  });
+
   it("opens log in with the I shortcut", async () => {
     const user = userEvent.setup();
     renderWelcomeModal();
