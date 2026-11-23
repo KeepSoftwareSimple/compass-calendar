@@ -41,7 +41,7 @@ test("notification settings support pausing reviews with optional feedback", asy
     }
     if (method === "PUT") preferences = route.request().postDataJSON();
     await route.fulfill({
-      json: { available: true, trial: false, preferences },
+      json: { available: true, paused: !preferences.enabled, preferences },
     });
   });
   const settings = page.getByRole("dialog", { name: "Settings" });
