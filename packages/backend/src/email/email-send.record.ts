@@ -21,7 +21,6 @@ export const EmailSendRecordSchema = z.strictObject({
       date: z.iso.date(),
       timeZone: z.string(),
       cadence: z.enum(["daily", "weekly"]),
-      trial: z.boolean(),
       memoryIds: z.array(z.string()).optional(),
       prepared: z
         .object({

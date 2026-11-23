@@ -29,7 +29,7 @@ Internal documentation for engineers and agents working in the Compass repo.
 ## Features
 
 - [Weekly reflection email implementation plan](./features/weekly-reflection-plan.md)
-- [Weekly reflection trial and December rollout runbook](./development/weekly-reflection-trial.md)
+- [Weekly reflection runbook](./development/weekly-reflection.md)
 - [Attendees, Contacts, And RSVP](./features/attendees.md)
 - [Billing And Trial](./features/billing.md)
 - [Compass Calendar Booking (v1)](./features/booking.md)

@@ -8,7 +8,6 @@ import {
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
-import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
   afterAll,
   afterEach,
@@ -38,9 +37,6 @@ describe("reflection preferences", () => {
     Object.assign(CONFIG, {
       EMAIL_PROVIDER: "log",
       REFLECTION_ENABLED: true,
-      REFLECTION_ROLLOUT_ENABLED: false,
-      REFLECTION_TRIAL_USER_ID: undefined,
-      REFLECTION_TRIAL_EMAIL: undefined,
     });
     const client = getSyncServiceClient();
     spyOn(client, "listCalendars").mockResolvedValue({
@@ -67,61 +63,14 @@ describe("reflection preferences", () => {
     mock.restore();
   });
 
-  it("automatically enables new onboarding reviews in the app timezone and preserves a later pause", async () => {
-    CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
-    const { user } = await UtilDriver.setupTestUser();
-    const sendAt = new Date("2026-11-07T15:00:00Z");
-    await emailSendRepository.insertMany([
-      {
-        _id: `${user._id}:weekly-review`,
-        userId: user._id,
-        sequence: "welcome",
-        stepKey: "weekly-review",
-        status: "queued",
-        sendAt,
-        nextAttemptAt: sendAt,
-      },
-    ]);
-    const initialize = () =>
-      driver
-        .getServer()
-        .post(path)
-        .set("Cookie", cookie(user._id.toString()))
-        .send({
-          timeZone: "America/Denver",
-          excludedCalendarIds: ["hidden-calendar"],
-        });
-    await initialize().expect(204);
-    let saved = await mongoService.user.findOne({ _id: user._id });
-    expect(saved?.reflectionPreferences).toEqual({
-      enabled: true,
-      timeZone: "America/Denver",
-      excludedCalendarIds: ["hidden-calendar"],
-    });
-    expect(saved?.reflectionNextSendAt?.toISOString()).toBe(
-      "2026-11-08T17:30:00.000Z",
-    );
-    await driver
-      .getServer()
-      .put(path)
-      .set("Cookie", cookie(user._id.toString()))
-      .send({ ...settings, enabled: false })
-      .expect(200);
-    await initialize().expect(204);
-    saved = await mongoService.user.findOne({ _id: user._id });
-    expect(saved?.reflectionPreferences?.enabled).toBe(false);
-    expect(saved?.emailPreferences?.reflectionDisabledAt).toBeInstanceOf(Date);
-  });
-
-  it("does not automatically enroll an existing account outside the onboarding cohort", async () => {
-    CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
+  it("does not enroll anyone automatically and no longer accepts initialization", async () => {
     const { user } = await UtilDriver.setupTestUser();
     await driver
       .getServer()
       .post(path)
       .set("Cookie", cookie(user._id.toString()))
       .send({ timeZone: "America/Denver", excludedCalendarIds: [] })
-      .expect(204);
+      .expect(404);
     expect(
       (await mongoService.user.findOne({ _id: user._id }))
         ?.reflectionPreferences,
@@ -147,7 +96,7 @@ describe("reflection preferences", () => {
     expect(response.body.preferences).toBeNull();
   });
 
-  it("gates enrollment by trial binding and complete history before public rollout", async () => {
+  it("gates opt-in by the feature switch and complete history", async () => {
     const { user } = await UtilDriver.setupTestUser();
     const put = (body = settings) =>
       driver
@@ -155,13 +104,9 @@ describe("reflection preferences", () => {
         .put(path)
         .set("Cookie", cookie(user._id.toString()))
         .send(body);
+    CONFIG.REFLECTION_ENABLED = false;
     await put().expect(403);
-    CONFIG.REFLECTION_TRIAL_USER_ID = user._id.toString();
-    CONFIG.REFLECTION_TRIAL_EMAIL = "trial@example.com";
-    await put().expect(200);
-    CONFIG.REFLECTION_TRIAL_USER_ID = undefined;
-    CONFIG.REFLECTION_TRIAL_EMAIL = undefined;
-    CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
+    CONFIG.REFLECTION_ENABLED = true;
     await put().expect(409);
     const client = getSyncServiceClient();
     spyOn(client, "readReflection").mockResolvedValue({
@@ -202,7 +147,6 @@ describe("reflection preferences", () => {
         date: "2026-11-01",
         timeZone: settings.timeZone,
         cadence: "daily",
-        trial: true,
         prepared: { text: "Private event" } as never,
       },
     });

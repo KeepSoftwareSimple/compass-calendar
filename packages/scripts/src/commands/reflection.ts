@@ -15,7 +15,6 @@ import {
   prepareReflection,
   reflectionCalendarContext,
 } from "@backend/email/reflection-context";
-import { isReflectionTrialUser } from "@backend/email/reflection-enrollment";
 import { reflectionSendAt } from "@backend/email/reflection-schedule";
 import { saveLifePreferences } from "@backend/user/services/life-preferences.service";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -111,9 +110,8 @@ export async function runReflectionCommand(args: string[]) {
       }
       return;
     }
-    const id = values["user-id"] ?? CONFIG.REFLECTION_TRIAL_USER_ID;
-    if (!values.all && !id)
-      throw new Error("Pass --user-id or configure the private trial account");
+    const id = values["user-id"];
+    if (!values.all && !id) throw new Error("Pass --user-id or --all");
     const users = mongoService.user
       .find(values.all ? {} : { _id: zObjectId.parse(id) })
       .batchSize(25);
@@ -124,15 +122,14 @@ export async function runReflectionCommand(args: string[]) {
       if (action === "enable" || action === "disable") {
         if (
           action === "enable" &&
-          (!isReflectionTrialUser(user._id.toHexString()) ||
-            !CONFIG.REFLECTION_ENABLED ||
+          (!CONFIG.REFLECTION_ENABLED ||
             !CONFIG.EMAIL_PROVIDER ||
             !CONFIG.EMAIL_UNSUBSCRIBE_SECRET ||
             !user.reflectionPreferences ||
             user.emailPreferences?.suppressedAt)
         )
           throw new Error(
-            "Configure the approved trial account, email provider, unsubscribe secret, feature gate, and saved settings first",
+            "Configure the email provider, unsubscribe secret, feature gate, and saved settings first",
           );
         if (values.apply) {
           await mongoService.user.updateOne(
@@ -225,11 +222,11 @@ export async function runReflectionCommand(args: string[]) {
           date,
           timeZone,
           cadence: values.weekly ? "weekly" : "daily",
-          trial: true,
         },
       });
       const rendered = await prepareReflection(row, user, unsubscribeUrl, {
         preview: true,
+        allowIncompleteHistory: true,
       });
       const output =
         values.output ?? (await mkdtemp(join(tmpdir(), "compass-reflection-")));

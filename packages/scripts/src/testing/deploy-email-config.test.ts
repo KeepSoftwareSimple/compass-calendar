@@ -22,11 +22,6 @@ async function runEmailBlockScript(
       env: {
         ...process.env,
         REFLECTION_ENABLED: "",
-        REFLECTION_ROLLOUT_ENABLED: "",
-        REFLECTION_ROLLOUT_START_DATE: "",
-        REFLECTION_ENROLL_EXISTING: "",
-        REFLECTION_TRIAL_USER_ID: "",
-        REFLECTION_TRIAL_EMAIL: "",
         ...env,
       },
       stderr: "pipe",
@@ -111,67 +106,19 @@ describe("deploy write email block", () => {
     expect(parse(result.stdout).email.reflection).toBeUndefined();
   });
 
-  it("writes private trial settings without enabling general rollout or logging its binding", async () => {
-    const userId = "000000000000000000000123";
-    const email = "trial+reflection@example.com";
+  it("persists the reflection switch through deploy generation", async () => {
     const result = await runWriteEmailBlock({
       ...completeEmailConfig,
       REFLECTION_ENABLED: "true",
-      REFLECTION_TRIAL_USER_ID: userId,
-      REFLECTION_TRIAL_EMAIL: email,
     });
     expect(result.exitCode).toBe(0);
-    expect(parse(result.stdout).email.reflection).toEqual({
-      enabled: true,
-      rolloutEnabled: false,
-      enrollExisting: false,
-      trialUserId: userId,
-      trialEmail: email,
-    });
-    expect(result.stderr).not.toContain(userId);
-    expect(result.stderr).not.toContain(email);
+    expect(parse(result.stdout).email.reflection).toEqual({ enabled: true });
     const workflow = readFileSync(
       ".github/workflows/_deploy-environment.yml",
       "utf8",
     );
     expect(workflow).toContain(
       "REFLECTION_ENABLED: ${{ vars.REFLECTION_ENABLED }}",
-    );
-    expect(workflow).toContain(
-      "REFLECTION_ROLLOUT_ENABLED: ${{ vars.REFLECTION_ROLLOUT_ENABLED }}",
-    );
-    expect(workflow).toContain(
-      "REFLECTION_TRIAL_USER_ID: ${{ secrets.REFLECTION_TRIAL_USER_ID }}",
-    );
-    expect(workflow).toContain(
-      "REFLECTION_TRIAL_EMAIL: ${{ secrets.REFLECTION_TRIAL_EMAIL }}",
-    );
-  });
-
-  it("persists the dated population rollout through deploy generation", async () => {
-    const result = await runWriteEmailBlock({
-      ...completeEmailConfig,
-      REFLECTION_ENABLED: "true",
-      REFLECTION_ROLLOUT_ENABLED: "true",
-      REFLECTION_ROLLOUT_START_DATE: "2026-12-06",
-      REFLECTION_ENROLL_EXISTING: "true",
-    });
-    expect(result.exitCode).toBe(0);
-    expect(parse(result.stdout).email.reflection).toEqual({
-      enabled: true,
-      rolloutEnabled: true,
-      rolloutStartDate: "2026-12-06",
-      enrollExisting: true,
-    });
-    const workflow = readFileSync(
-      ".github/workflows/_deploy-environment.yml",
-      "utf8",
-    );
-    expect(workflow).toContain(
-      "REFLECTION_ROLLOUT_START_DATE: ${{ vars.REFLECTION_ROLLOUT_START_DATE }}",
-    );
-    expect(workflow).toContain(
-      "REFLECTION_ENROLL_EXISTING: ${{ vars.REFLECTION_ENROLL_EXISTING }}",
     );
   });
 
@@ -181,11 +128,7 @@ describe("deploy write email block", () => {
       REFLECTION_ENABLED: "false",
     });
     expect(stopped.exitCode).toBe(0);
-    expect(parse(stopped.stdout).email.reflection).toEqual({
-      enabled: false,
-      rolloutEnabled: false,
-      enrollExisting: false,
-    });
+    expect(parse(stopped.stdout).email.reflection).toEqual({ enabled: false });
     const invalid = await runWriteEmailBlock({
       ...completeEmailConfig,
       REFLECTION_ENABLED: "yes",

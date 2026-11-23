@@ -22,11 +22,7 @@ import {
   dispatchReflection,
   dispatchReflectionBatch,
 } from "@backend/email/reflection-dispatch";
-import {
-  enqueueDueReflections,
-  reflectionRolloutActive,
-} from "@backend/email/reflection-enrollment";
-import { initializeReflectionPreferences } from "@backend/email/reflection-initialization";
+import { enqueueDueReflections } from "@backend/email/reflection-enrollment";
 import { createUnsubscribeToken } from "@backend/email/unsubscribe-token";
 import {
   afterAll,
@@ -41,7 +37,7 @@ import {
   spyOn,
 } from "bun:test";
 
-describe("private reflection delivery", () => {
+describe("opt-in reflection delivery", () => {
   const original = { ...CONFIG };
   const userId = new ObjectId();
   const now = new Date("2026-11-01T17:31:00Z");
@@ -52,11 +48,6 @@ describe("private reflection delivery", () => {
     setSystemTime(now);
     Object.assign(CONFIG, {
       REFLECTION_ENABLED: true,
-      REFLECTION_ROLLOUT_ENABLED: false,
-      REFLECTION_ROLLOUT_START_DATE: undefined,
-      REFLECTION_ENROLL_EXISTING: false,
-      REFLECTION_TRIAL_USER_ID: userId.toHexString(),
-      REFLECTION_TRIAL_EMAIL: "trial@example.com",
       EMAIL_PROVIDER: "log",
       EMAIL_ALLOWLIST: [],
       EMAIL_UNSUBSCRIBE_SECRET: "reflection-test",
@@ -135,53 +126,9 @@ describe("private reflection delivery", () => {
     ).toBe("2026-11-08T17:30:00.000Z");
   });
 
-  it("opens on the local launch date across the international date line and honors rollback", () => {
-    Object.assign(CONFIG, {
-      REFLECTION_ROLLOUT_ENABLED: true,
-      REFLECTION_ROLLOUT_START_DATE: "2026-12-06",
-    });
-    const instant = new Date("2026-12-05T20:30:00Z");
-    expect(reflectionRolloutActive("Pacific/Kiritimati", instant)).toBe(true);
-    expect(reflectionRolloutActive("America/Denver", instant)).toBe(false);
-    expect(reflectionRolloutActive("Pacific/Honolulu", instant)).toBe(false);
-    expect(
-      reflectionRolloutActive(
-        "America/Denver",
-        new Date("2026-12-06T06:59:59Z"),
-      ),
-    ).toBe(false);
-    expect(
-      reflectionRolloutActive(
-        "America/Denver",
-        new Date("2026-12-06T07:00:00Z"),
-      ),
-    ).toBe(true);
-    CONFIG.REFLECTION_ROLLOUT_ENABLED = false;
-    expect(reflectionRolloutActive("Pacific/Kiritimati", instant)).toBe(false);
-  });
-
-  it("does not duplicate a Sunday edition already sent by the daily trial", async () => {
-    await enqueueDueReflections(now);
-    await mongoService.emailSend.updateMany(
-      {},
-      { $set: { status: "sent", "reflection.cadence": "daily" } },
-    );
-    await mongoService.user.updateOne(
-      { _id: userId },
-      { $unset: { reflectionNextSendAt: "" } },
-    );
-    await enqueueDueReflections(now);
-    expect(await mongoService.emailSend.countDocuments({})).toBe(1);
-  });
-
   // A welcome-email unsubscribe stamps `unsubscribedAt`, not
   // `reflectionDisabledAt`. Enrollment must not re-queue a review afterwards.
   it("stops weekly reviews after an unscoped unsubscribe", async () => {
-    Object.assign(CONFIG, {
-      REFLECTION_ROLLOUT_ENABLED: true,
-      REFLECTION_TRIAL_USER_ID: undefined,
-      REFLECTION_TRIAL_EMAIL: undefined,
-    });
     await enqueueDueReflections(now);
     expect(
       await mongoService.emailSend.countDocuments({ status: "queued" }),
@@ -230,150 +177,6 @@ describe("private reflection delivery", () => {
     ).toBe("2026-11-29T17:30:00.000Z");
   });
 
-  it("prepares existing accounts, preserves opt-outs, and opens on December 6", async () => {
-    Object.assign(CONFIG, {
-      REFLECTION_ROLLOUT_ENABLED: true,
-      REFLECTION_ROLLOUT_START_DATE: "2026-12-06",
-      REFLECTION_ENROLL_EXISTING: true,
-    });
-    const base = {
-      firstName: "Existing",
-      lastName: "User",
-      name: "Existing User",
-      locale: "en",
-    };
-    const legacy = new ObjectId();
-    const excluded = [
-      new ObjectId(),
-      new ObjectId(),
-      new ObjectId(),
-      new ObjectId(),
-      new ObjectId(),
-    ];
-    await mongoService.user.insertMany([
-      { ...base, _id: legacy, email: "existing@example.com" },
-      {
-        ...base,
-        _id: excluded[0],
-        email: "paused@example.com",
-        reflectionPreferences: {
-          enabled: false,
-          timeZone: "America/Denver",
-          excludedCalendarIds: ["hidden"],
-        },
-      },
-      {
-        ...base,
-        _id: excluded[1],
-        email: "unsubscribed@example.com",
-        emailPreferences: { unsubscribedAt: now },
-      },
-      {
-        ...base,
-        _id: excluded[2],
-        email: "suppressed@example.com",
-        emailPreferences: { suppressedAt: now },
-      },
-      {
-        ...base,
-        _id: excluded[3],
-        email: "synthetic@example.com",
-        isSynthetic: true,
-      },
-      {
-        ...base,
-        _id: excluded[4],
-        email: "disabled@example.com",
-        emailPreferences: { reflectionDisabledAt: now },
-      },
-    ]);
-    const before = new Date("2026-11-29T17:31:00Z");
-    setSystemTime(before);
-    await enqueueDueReflections(before);
-    const rows = await mongoService.emailSend.find({}).toArray();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.userId.equals(userId)).toBe(true);
-    const prepared = await mongoService.user.findOne({ _id: legacy });
-    expect(prepared?.reflectionPreferences?.enabled).toBe(true);
-    expect(prepared?.reflectionNextSendAt?.toISOString()).toBe(
-      "2026-12-06T10:30:00.000Z",
-    );
-    for (const id of excluded) {
-      expect(
-        (await mongoService.user.findOne({ _id: id }))?.reflectionPreferences
-          ?.enabled,
-      ).not.toBe(true);
-    }
-    expect(
-      (await mongoService.user.findOne({ _id: excluded[0] }))
-        ?.reflectionPreferences?.excludedCalendarIds,
-    ).toEqual(["hidden"]);
-    const launch = new Date("2026-12-06T10:31:00Z");
-    setSystemTime(launch);
-    await Promise.all([
-      enqueueDueReflections(launch),
-      enqueueDueReflections(launch),
-    ]);
-    const publicRows = await mongoService.emailSend
-      .find({ userId: legacy })
-      .toArray();
-    expect(publicRows).toHaveLength(1);
-    expect(publicRows[0]?.reflection).toMatchObject({
-      date: "2026-12-06",
-      cadence: "weekly",
-      trial: false,
-    });
-    const localLaunch = new Date("2026-12-06T17:31:00Z");
-    setSystemTime(localLaunch);
-    await enqueueDueReflections(localLaunch);
-    expect(
-      await mongoService.emailSend.countDocuments({
-        userId,
-        "reflection.date": "2026-12-06",
-        "reflection.trial": false,
-      }),
-    ).toBe(1);
-    const followingUtcSunday = new Date("2026-12-13T10:31:00Z");
-    setSystemTime(followingUtcSunday);
-    await enqueueDueReflections(followingUtcSunday);
-    const followingSunday = new Date("2026-12-13T17:31:00Z");
-    setSystemTime(followingSunday);
-    await enqueueDueReflections(followingSunday);
-    expect(
-      await mongoService.emailSend.countDocuments({
-        "reflection.date": "2026-12-13",
-        "reflection.cadence": "weekly",
-        "reflection.trial": false,
-      }),
-    ).toBe(2);
-  });
-
-  it.each([false, true])(
-    "checks the launch date at dispatch, including onboarding=%s",
-    async (onboarding) => {
-      await enqueueDueReflections(now);
-      const row = (await mongoService.emailSend.findOne({}))!;
-      await mongoService.emailSend.updateOne(
-        { _id: row._id },
-        { $set: { "reflection.trial": false } },
-      );
-      Object.assign(CONFIG, {
-        REFLECTION_ROLLOUT_ENABLED: true,
-        REFLECTION_ROLLOUT_START_DATE: "2026-12-06",
-      });
-      const send = mock(async () => ({ messageId: "unexpected" }));
-      await dispatchReflection(
-        { ...row, reflection: { ...row.reflection!, trial: false } },
-        { send, verifyWebhook: () => [] },
-        { onboarding },
-      );
-      expect(send).not.toHaveBeenCalled();
-      expect(
-        (await mongoService.emailSend.findOne({ _id: row._id }))?.status,
-      ).toBe("skipped");
-    },
-  );
-
   it("cancels queued legacy daily editions", async () => {
     await enqueueDueReflections(now);
     const row = (await mongoService.emailSend.findOne({}))!;
@@ -395,7 +198,6 @@ describe("private reflection delivery", () => {
   ] as const)(
     "withholds public reviews from unavailable calendar connections: %s",
     async (state) => {
-      CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
       const connectionId = new ObjectId().toHexString();
       const calendarId = new ObjectId().toHexString();
       const scope = {
@@ -457,7 +259,6 @@ describe("private reflection delivery", () => {
       });
       await enqueueDueReflections(now);
       const row = (await mongoService.emailSend.findOne({}))!;
-      expect(row.reflection?.trial).toBe(false);
       const send = mock(async () => ({ messageId: "unexpected" }));
       await dispatchReflection(row, { send, verifyWebhook: () => [] });
       expect(send).not.toHaveBeenCalled();
@@ -470,7 +271,6 @@ describe("private reflection delivery", () => {
   );
 
   it("prepares four reviews at a time while serializing provider sends and recovering after an error", async () => {
-    CONFIG.REFLECTION_ROLLOUT_ENABLED = true;
     for (let index = 0; index < 5; index++)
       await mongoService.user.insertOne({
         _id: new ObjectId(),
@@ -539,11 +339,7 @@ describe("private reflection delivery", () => {
     ).toBe(1);
   });
 
-  it("preserves the introductory onboarding review before regular Sunday enrollment", async () => {
-    Object.assign(CONFIG, {
-      REFLECTION_ROLLOUT_ENABLED: true,
-      REFLECTION_ENROLL_EXISTING: true,
-    });
+  it("never enrolls an account that has not opted in, even with a pending onboarding review", async () => {
     const newId = new ObjectId();
     await mongoService.user.insertOne({
       _id: newId,
@@ -575,22 +371,6 @@ describe("private reflection delivery", () => {
     expect(
       (await mongoService.user.findOne({ _id: newId }))?.reflectionPreferences,
     ).toBeUndefined();
-    expect(
-      await mongoService.emailSend.countDocuments({
-        userId: newId,
-        sequence: "reflection",
-      }),
-    ).toBe(0);
-    await initializeReflectionPreferences(newId, {
-      timeZone: "America/Denver",
-      excludedCalendarIds: [],
-    });
-    await enqueueDueReflections(now);
-    expect(
-      (
-        await mongoService.user.findOne({ _id: newId })
-      )?.reflectionNextSendAt?.toISOString(),
-    ).toBe("2026-11-08T17:30:00.000Z");
     expect(
       await mongoService.emailSend.countDocuments({
         userId: newId,
@@ -729,48 +509,6 @@ describe("private reflection delivery", () => {
     ).toBe("sent");
   });
 
-  it("automatically enrolls the new onboarding recipient before their first review", async () => {
-    await mongoService.user.updateOne(
-      { _id: userId },
-      { $unset: { reflectionPreferences: "" } },
-    );
-    const row = EmailSendRecordSchema.parse({
-      _id: `${userId.toHexString()}:weekly-review`,
-      userId,
-      sequence: "welcome",
-      stepKey: "weekly-review",
-      status: "queued",
-      sendAt: now,
-      nextAttemptAt: now,
-      attemptCount: 0,
-      lastError: null,
-      providerMessageId: null,
-      sentAt: null,
-      deliveredAt: null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    await mongoService.emailSend.insertOne(row);
-    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
-    const send = mock(async (_input: unknown) => ({
-      messageId: "automatic-review",
-    }));
-    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
-      send,
-      verifyWebhook: () => [],
-    });
-    await new EmailDispatchService().dispatchDue();
-    expect(send).toHaveBeenCalledTimes(1);
-    const saved = await mongoService.user.findOne({ _id: userId });
-    expect(saved?.reflectionPreferences?.enabled).toBe(true);
-    expect(saved?.reflectionNextSendAt?.toISOString()).toBe(
-      "2026-11-08T10:30:00.000Z",
-    );
-    expect((send.mock.calls[0]![0] as { text: string }).text).toContain(
-      "Your past week",
-    );
-  });
-
   it("does not send the onboarding review after a user pauses reviews", async () => {
     await mongoService.user.updateOne(
       { _id: userId },
@@ -893,24 +631,6 @@ describe("private reflection delivery", () => {
     expect(send.mock.calls[0]?.[0]?.text).toContain(
       "Walk with a friend in 2010",
     );
-  });
-
-  it("fails closed if the trial binding disappears and expires missed morning sends", async () => {
-    CONFIG.REFLECTION_TRIAL_EMAIL = undefined;
-    await enqueueDueReflections(now);
-    expect(await mongoService.emailSend.countDocuments()).toBe(0);
-    CONFIG.REFLECTION_TRIAL_EMAIL = "trial@example.com";
-    await enqueueDueReflections(now);
-    const row = EmailSendRecordSchema.parse(
-      await mongoService.emailSend.findOne({ userId }),
-    );
-    setSystemTime(new Date("2026-11-01T20:00:00Z"));
-    const send = mock(async () => ({ messageId: "unexpected" }));
-    await dispatchReflection(row, { send, verifyWebhook: () => [] });
-    expect(send).not.toHaveBeenCalled();
-    expect(
-      (await mongoService.emailSend.findOne({ _id: row._id }))?.status,
-    ).toBe("skipped");
   });
 
   it("retries an ambiguous provider response with the same frozen content and idempotency key", async () => {

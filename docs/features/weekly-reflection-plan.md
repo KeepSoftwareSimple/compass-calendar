@@ -1,26 +1,17 @@
 # Weekly reflection email implementation plan
 
-Status: implementation plan, November 2, 2026. No delivery is enabled by this document.
+Status: implementation plan, originally November 2, 2026. Delivery is live and opt-in; see below.
 
-## Scheduled rollout update, November 16, 2026
+## Opt-in only, November 23, 2026
 
-The requested launch is December 6, 2026. The private trial now follows the same
-Sunday 10:30 a.m. cadence as general reviews. Explicit population enrollment
-includes existing accounts while preserving pauses, unsubscribes, suppression,
-timezones, and calendar exclusions. A configured local start date gates both
-scheduling and dispatch. This supersedes the daily trial and onboarding-only
-cohort described below. Operational steps, exact deployment inputs, readiness
-checks, and rollback are in the [trial and rollout runbook](../development/weekly-reflection-trial.md#december-6-2026-population-rollout).
-
-## Private-trial presentation update, November 5, 2026
-
-The current trial uses a plain email titled `Weekly review (ISO week)`, compact
-section/date headings and year-only memory labels. Counts and highlights deduplicate
-matching cross-calendar facts. The Life View PDF uses Rubik Regular and SemiBold, a two-column title/quote
-header, the weekly grid, and a centered clickable `/life` link in the footer.
-Percentage progress stays in the email body only. This supersedes the earlier PNG/CID and
-completed-week-count presentation below. Private delivery is daily at 10:30 a.m.
-America/Denver for the bound trial account; public rollout remains disabled.
+Weekly reflection is live for everyone and opt-in. No account is enrolled
+automatically. This supersedes every earlier mention below of a private trial
+binding, staged or dated rollout, onboarding-cohort or existing-account
+enrollment, the daily trial cadence, and the December 6 population launch.
+Users opt in from Settings > Notifications, or an operator uses the CLI. One
+global switch, `email.reflection.enabled`, is the kill switch. Pauses,
+unsubscribes, suppression, the history gate, and the calendar connection gate
+apply to everyone. Operations are in the [runbook](../development/weekly-reflection.md).
 
 ## Agreed product behavior
 
@@ -271,20 +262,13 @@ not duplicate delivery within provider idempotency guarantees. Test Sunday,
 DST transitions, timezone changes, late retries, opt-out during preparation,
 bounce/complaint suppression, deleted accounts, and an unauthorized recipient.
 
-### 6. Private trial, then staged onboarding rollout
+### 6. Opt-in launch
 
-1. Ship preference migration and provider history fixes with reflection delivery
-   disabled. Verify existing calendar/auth/email flows still work.
-2. Run the targeted account seed and history import. Generate an unsent preview
-   (HTML, text, PNG) from actual account data for review, outside the repository.
-3. Enable only the approved daily trial. Review accuracy, memory usefulness,
-   attachment legibility, and whether the reflection helps plan the next week.
-4. Improve selection/template using trial feedback. Verify a Sunday edition
-   separately because the daily trial uses different date windows.
-5. After the user's trial approval, enable automatic enrollment for the new
-   onboarding cohort. Expand only after reviewing import load, queue health,
-   delivery failures/complaints, and qualitative usefulness. Do not auto-enroll
-   existing accounts.
+Ship with reflection delivery on and no one enrolled. Users opt in themselves
+or an operator enrolls an account with the CLI, then reviews accuracy, memory
+usefulness, and attachment legibility from real received emails. Expand
+reminders or prompts for opting in only after reviewing import load, queue
+health, delivery failures/complaints, and qualitative usefulness.
 
 Provide operator commands for coverage inspection/backfill, render-only preview,
 trial enable/disable, and queued-edition cancellation. Reuse the existing CLI

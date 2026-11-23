@@ -66,12 +66,10 @@ export async function dispatchReflection(
   }
   try {
     const user = await mongoService.user.findOne({ _id: row.userId });
-    const recipient = edition.trial
-      ? CONFIG.REFLECTION_TRIAL_EMAIL
-      : user?.email;
+    const recipient = user?.email;
     if (
       !user ||
-      !reflectionEligible(user, edition.trial) ||
+      !reflectionEligible(user) ||
       !recipient ||
       recipient !== row.recipientEmail ||
       user.reflectionPreferences?.timeZone !== edition.timeZone
@@ -122,7 +120,7 @@ export async function dispatchReflection(
     if (
       !prepared ||
       !fresh ||
-      !reflectionEligible(fresh, edition.trial) ||
+      !reflectionEligible(fresh) ||
       (!options.onboarding &&
         new Date() >= reflectionExpiresAt(edition.date, edition.timeZone))
     ) {
@@ -133,12 +131,9 @@ export async function dispatchReflection(
     const hiddenDigest = hiddenEventsDigest(
       await hiddenEventService.listHiddenEventIds(row.userId),
     );
-    const freshRecipient = edition.trial
-      ? CONFIG.REFLECTION_TRIAL_EMAIL
-      : fresh.email;
     if (
-      (!edition.trial && !context.connectionsReady) ||
-      freshRecipient !== recipient ||
+      !context.connectionsReady ||
+      fresh.email !== recipient ||
       fresh.reflectionPreferences?.timeZone !== edition.timeZone ||
       JSON.stringify([...context.calendarIds].sort()) !==
         JSON.stringify([...prepared.calendarIds].sort()) ||
@@ -196,11 +191,7 @@ export async function dispatchReflection(
     void emailAnalytics.capture({
       event: "email_sent",
       userId: row.userId.toHexString(),
-      properties: {
-        sequence: row.sequence,
-        cadence: edition.cadence,
-        trial: edition.trial,
-      },
+      properties: { sequence: row.sequence, cadence: edition.cadence },
     });
   } catch {
     // Provider errors can contain submitted event titles. Do not retain/log them.

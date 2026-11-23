@@ -1,6 +1,5 @@
 import { type Request, type Response } from "express";
 import {
-  InitializeReflectionPreferencesSchema,
   ReflectionCalendarVisibilitySchema,
   ReflectionPreferencesSchema,
 } from "@core/types/life-preferences.contracts";
@@ -9,16 +8,8 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import { reflectionCalendarContext } from "@backend/email/reflection-context";
-import {
-  isReflectionTrialUser,
-  reflectionRolloutActive,
-} from "@backend/email/reflection-enrollment";
-import { initializeReflectionPreferences } from "@backend/email/reflection-initialization";
 
-const available = (id: string, timeZone?: string) =>
-  !!CONFIG.EMAIL_PROVIDER &&
-  CONFIG.REFLECTION_ENABLED &&
-  (reflectionRolloutActive(timeZone) || isReflectionTrialUser(id));
+const available = () => !!CONFIG.EMAIL_PROVIDER && CONFIG.REFLECTION_ENABLED;
 
 export async function getReflectionPreferences(req: Request, res: Response) {
   const id = zObjectId.parse(req.session?.getUserId());
@@ -36,11 +27,7 @@ export async function getReflectionPreferences(req: Request, res: Response) {
     : null;
   res.json({
     preferences: saved?.success ? saved.data : null,
-    available: available(
-      id.toHexString(),
-      user.reflectionPreferences?.timeZone,
-    ),
-    trial: isReflectionTrialUser(id.toHexString()),
+    available: available(),
   });
 }
 
@@ -58,7 +45,7 @@ export async function putReflectionPreferences(req: Request, res: Response) {
   }
   if (input.data.enabled) {
     if (
-      !available(id.toHexString(), input.data.timeZone) ||
+      !available() ||
       user.isSynthetic ||
       user.emailPreferences?.suppressedAt
     ) {
@@ -76,11 +63,7 @@ export async function putReflectionPreferences(req: Request, res: Response) {
       selfEmails: context.selfEmails,
       windows: [],
     });
-    if (
-      !history.ok ||
-      (!isReflectionTrialUser(id.toHexString()) &&
-        !history.value.historyComplete)
-    ) {
+    if (!history.ok || !history.value.historyComplete) {
       res
         .status(409)
         .json({ message: "Your calendar history is still being prepared" });
@@ -110,8 +93,7 @@ export async function putReflectionPreferences(req: Request, res: Response) {
   await emailSendRepository.cancelQueuedReflection(id, !input.data.enabled);
   res.json({
     preferences: input.data,
-    available: available(id.toHexString(), input.data.timeZone),
-    trial: isReflectionTrialUser(id.toHexString()),
+    available: available(),
   });
 }
 
@@ -135,18 +117,5 @@ export async function patchReflectionCalendarVisibility(
     await mongoService.user.updateOne(filter, {
       $addToSet: { "reflectionPreferences.excludedCalendarIds": calendarId },
     });
-  res.status(204).end();
-}
-
-export async function initializeReflections(req: Request, res: Response) {
-  const input = InitializeReflectionPreferencesSchema.safeParse(req.body);
-  if (!input.success) {
-    res.status(400).json({ message: "Choose valid reflection settings" });
-    return;
-  }
-  await initializeReflectionPreferences(
-    zObjectId.parse(req.session?.getUserId()),
-    input.data,
-  );
   res.status(204).end();
 }

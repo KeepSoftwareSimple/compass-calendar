@@ -9,7 +9,6 @@ import {
 } from "@backend/user/controllers/life-preferences.controller";
 import {
   getReflectionPreferences,
-  initializeReflections,
   patchReflectionCalendarVisibility,
   putReflectionPreferences,
 } from "@backend/user/controllers/reflection-preferences.controller";
@@ -59,7 +58,6 @@ export class UserRoutes extends CommonRoutesConfig {
     this.app
       .route("/api/user/reflection-preferences")
       .all(verifySession())
-      .post(initializeReflections)
       .get(getReflectionPreferences)
       .put(putReflectionPreferences);
     this.app
