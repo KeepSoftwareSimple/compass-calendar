@@ -18,6 +18,7 @@ export type ShortcutHintId =
   | "edit-sequence"
   | "nudge"
   | "nudge-hour"
+  | "all-day-to-grid"
   | "edge-focus"
   | "create-event"
   | "page-jump"
@@ -211,6 +212,16 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     actionId: "event.move_hour",
     featureArea: "event_editing",
     parts: [{ keys: ["Alt", "Shift"] }, " and up or down moves an hour"],
+    suggestionReason: "event_focused",
+  },
+  "all-day-to-grid": {
+    id: "all-day-to-grid",
+    actionId: "event.move",
+    featureArea: "event_editing",
+    parts: [
+      { keys: ["Shift", "ArrowDown"] },
+      " moves it onto the grid",
+    ],
     suggestionReason: "event_focused",
   },
   "edge-focus": {

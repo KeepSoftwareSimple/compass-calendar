@@ -22,6 +22,18 @@ const afterFirstEvent = {
 };
 
 describe("selectShortcutHint", () => {
+  it("teaches Shift+Down for a focused all-day event until it is used", () => {
+    const ctx = {
+      ...afterFirstEvent,
+      eventFocused: true,
+      allDayEventFocused: true,
+    };
+    const hint = hintFor(ctx);
+    expect(hint.id).toBe("all-day-to-grid");
+    expect(getHintPlainText(hint)).toContain("Shift+");
+    expect(hintFor(ctx, ["all-day-to-grid"]).id).not.toBe("all-day-to-grid");
+  });
+
   it("returns null when sidebar tips are muted", () => {
     expect(
       selectShortcutHint(calendarIdle, [], undefined, Date.now(), true),

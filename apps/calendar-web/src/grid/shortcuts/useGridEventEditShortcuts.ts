@@ -637,6 +637,7 @@ export function useGridEventEditShortcuts({
         const startMinute =
           getVisibleGridStartMinute() ?? DEFAULT_TIMED_START_MINUTE;
         const dates = convertAllDayToTimedDates(event, startMinute);
+        shortcutHintProgressActions.demonstrate("all-day-to-grid");
         commitNudge(keyboardEvent, { ...event, ...dates, isAllDay: false });
         refocusEventElement(event._id);
         return;

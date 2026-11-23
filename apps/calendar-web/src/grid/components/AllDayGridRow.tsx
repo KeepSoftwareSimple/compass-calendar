@@ -121,6 +121,7 @@ export const AllDayGridRow: FC<AllDayRowProps> = ({
     <section
       className={`relative flex w-full shrink-0 items-start bg-background ${PH_NO_RAGECLICK_CLASS} transition-[height] duration-200 ease-out motion-reduce:transition-none`}
       aria-label="All-day events"
+      data-allday-row=""
       data-allday-collapsed={collapsible ? String(collapsed) : undefined}
       id={rowId}
       onBlurCapture={onBlurCapture}
