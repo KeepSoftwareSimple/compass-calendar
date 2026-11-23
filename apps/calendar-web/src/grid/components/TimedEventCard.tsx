@@ -1,3 +1,4 @@
+import { MapPinIcon } from "@phosphor-icons/react/dist/csr/MapPin";
 import {
   type CSSProperties,
   type ForwardedRef,
@@ -39,6 +40,7 @@ import {
   GRID_EVENT_TITLE_COMPACT_LINE_HEIGHT,
   GRID_EVENT_TITLE_FONT_SIZE,
   GRID_EVENT_TITLE_LINE_HEIGHT,
+  MIN_EVENT_HEIGHT_FOR_LOCATION_LABEL,
   MIN_EVENT_HEIGHT_FOR_TIME_LABEL,
   MIN_EVENT_WIDTH_FOR_TIME_LABEL,
 } from "@web/grid/grid.constants";
@@ -69,6 +71,7 @@ interface TimedEventCardProps {
   focusColor?: string | null;
   guestResponse?: GridGuestResponseState | null;
   interactionAttributes?: Record<string, string | undefined>;
+  isFocused?: boolean;
   isHidden?: boolean;
   isSelected?: boolean;
   motionMode: "dragging" | "idle" | "resizing";
@@ -89,6 +92,7 @@ const TimedEventCardBase = (
     focusColor = null,
     guestResponse = null,
     interactionAttributes,
+    isFocused = false,
     isHidden = false,
     isSelected = false,
     motionMode,
@@ -125,17 +129,30 @@ const TimedEventCardBase = (
     position.height >= MIN_EVENT_HEIGHT_FOR_TIME_LABEL &&
     position.width >= MIN_EVENT_WIDTH_FOR_TIME_LABEL;
 
+  // Focused events reveal their location when the card has room for it;
+  // otherwise a map icon hints that one exists (SPACE/ENTER opens details).
+  const location = event.location?.trim();
+  const canShowLocation = Boolean(location) && isFocused && !isHidden;
+  const showLocationLabel =
+    canShowLocation &&
+    showTimeLabel &&
+    position.height >= MIN_EVENT_HEIGHT_FOR_LOCATION_LABEL;
+  const showLocationIcon =
+    canShowLocation &&
+    !showLocationLabel &&
+    position.width >= REPEAT_ICON_MIN_WIDTH;
+
   // Clamp the title against the height the label leaves behind, not the whole
   // card. Clamping against the full height lets a wrapping title occupy every
   // line the card has and shove the label past the card's clipped edge.
   const lineClamp = useMemo(
     () =>
       getLineClamp(
-        showTimeLabel
-          ? position.height - GRID_EVENT_TIME_LABEL_LINE_HEIGHT
-          : position.height,
+        position.height -
+          (showTimeLabel ? GRID_EVENT_TIME_LABEL_LINE_HEIGHT : 0) -
+          (showLocationLabel ? GRID_EVENT_TIME_LABEL_LINE_HEIGHT : 0),
       ),
-    [position.height, showTimeLabel],
+    [position.height, showTimeLabel, showLocationLabel],
   );
 
   const { base: baseColor } = useEventPalette(event.color, event.colorHex);
@@ -278,7 +295,24 @@ const TimedEventCardBase = (
               {timeRange}
             </span>
           )}
+          {showLocationLabel && (
+            <span
+              className="relative max-w-full truncate"
+              style={{ ...timeLabelStyle, zIndex: ZIndex.LAYER_3 }}
+            >
+              {location}
+            </span>
+          )}
         </div>
+      )}
+      {showLocationIcon && (
+        <MapPinIcon
+          aria-hidden="true"
+          className={`pointer-events-none absolute bottom-0.5 ${showRepeatIcon ? "right-4" : "right-1"}`}
+          color={contentColor}
+          size={10}
+          weight="bold"
+        />
       )}
       {showRepeatIcon && <EventRepeatIcon contentColor={contentColor} />}
     </div>

@@ -107,6 +107,7 @@ const GridTimedEventBase = (
       guestResponse={guestResponse}
       onFocus={() => setIsFocused(true)}
       interactionAttributes={interactionAttributes}
+      isFocused={isFocused}
       isHidden={isHidden}
       isSelected={isSelected || isActiveDraft}
       motionMode={motionMode}
