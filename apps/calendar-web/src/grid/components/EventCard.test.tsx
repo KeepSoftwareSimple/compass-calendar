@@ -1365,4 +1365,38 @@ describe("EventCard", () => {
     fireEvent.keyDown(card, { key: "Enter" });
     expect(onEventKeyDown).toHaveBeenCalledTimes(1);
   });
+
+  describe("location", () => {
+    const renderLocated = (height: number, isFocused: boolean) =>
+      render(
+        <TimedEventCard
+          displayMode="saved"
+          event={createEvent({
+            startDate: "2099-10-31T18:00:00.000Z",
+            endDate: "2099-10-31T19:30:00.000Z",
+            location: "Studio 5",
+          })}
+          isFocused={isFocused}
+          motionMode="idle"
+          position={{ ...position, height }}
+        />,
+      );
+
+    it("shows the location on a focused event with room", () => {
+      renderLocated(80, true);
+      expect(screen.getByText("Studio 5")).toBeInTheDocument();
+    });
+
+    it("shows nothing extra when the event is not focused", () => {
+      const { container } = renderLocated(80, false);
+      expect(screen.queryByText("Studio 5")).not.toBeInTheDocument();
+      expect(container.querySelector("svg")).toBeNull();
+    });
+
+    it("falls back to a map icon when the focused event is too short", () => {
+      const { container } = renderLocated(40, true);
+      expect(screen.queryByText("Studio 5")).not.toBeInTheDocument();
+      expect(container.querySelector("svg")).not.toBeNull();
+    });
+  });
 });

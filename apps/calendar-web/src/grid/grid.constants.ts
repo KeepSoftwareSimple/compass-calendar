@@ -28,6 +28,9 @@ export const GRID_EVENT_TITLE_COMPACT_FONT_SIZE = "10px";
 export const GRID_EVENT_TITLE_COMPACT_LINE_HEIGHT = "1.1";
 export const MIN_EVENT_HEIGHT_FOR_TIME_LABEL = 36;
 export const MIN_EVENT_WIDTH_FOR_TIME_LABEL = 90;
+// Title + time + location rows (16 + 13 + 13) plus slack. Shorter focused cards
+// with a location show a map icon instead.
+export const MIN_EVENT_HEIGHT_FOR_LOCATION_LABEL = 49;
 export const EVENT_WIDTH_MINIMUM = 80;
 
 /**
