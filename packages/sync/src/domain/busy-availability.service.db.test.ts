@@ -86,6 +86,7 @@ describe("computeBusyAvailability", () => {
     connectionId: ConnectionId;
     lastSuccessAt?: Date | null;
     cursorExpiredBackoffUntil?: Date;
+    fullSnapshotAt?: Date | null;
     intervals?: Array<[string, string]>;
   }): Promise<SyncEventCalendarId> => {
     const calendarId = objectId() as SyncEventCalendarId;
@@ -112,6 +113,22 @@ describe("computeBusyAvailability", () => {
         resource._id,
         opts.cursorExpiredBackoffUntil,
       );
+    }
+    if (opts.fullSnapshotAt !== undefined) {
+      await resources.markSyncTokenUnsupported(
+        tenantId,
+        principalId,
+        resource._id,
+        NOW,
+      );
+      if (opts.fullSnapshotAt) {
+        await resources.markFullSnapshotCompleted(
+          tenantId,
+          principalId,
+          resource._id,
+          opts.fullSnapshotAt,
+        );
+      }
     }
     for (const [start, end] of opts.intervals ?? []) {
       const eventId = objectId();
@@ -304,6 +321,32 @@ describe("computeBusyAvailability", () => {
     expect(result.complete).toBe(false);
     expect(result.bookable).toBe(false);
   });
+
+  it.each([
+    { hours: 3, bookable: true },
+    { hours: 7, bookable: false },
+    { hours: null, bookable: false },
+  ])(
+    "checks full-snapshot freshness at $hours hours",
+    async ({ hours, bookable }) => {
+      const conn = await seedConnection("healthy", fresh);
+      const lastSnapshot = hours
+        ? new Date(NOW.getTime() - hours * 3_600_000)
+        : null;
+      const cal = await seedCalendar({
+        connectionId: conn,
+        lastSuccessAt: lastSnapshot ?? threeHoursAgo,
+        fullSnapshotAt: lastSnapshot,
+        intervals: [["2026-07-14T13:00Z", "2026-07-14T14:00Z"]],
+      });
+      const result = await run([cal]);
+      expect(result.bookable).toBe(bookable);
+      expect(result.intervals).toHaveLength(1);
+      expect(result.issues).toEqual(
+        bookable ? [] : [{ calendarId: cal, reason: "stale" }],
+      );
+    },
+  );
 
   it("a resource under an active cursor-expiry hold-off is not stale", async () => {
     const conn = await seedConnection("healthy", threeHoursAgo);

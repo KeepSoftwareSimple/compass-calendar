@@ -1,13 +1,16 @@
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { type PropsWithChildren } from "react";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import { SessionContext } from "@web/auth/compass/session/session.context";
 import {
   resetGoogleSyncUIStateForTests,
   setSyncingSyncIndicatorOverride,
 } from "@web/auth/providers/sync.indicator.state";
 import * as realUseversioncheck from "@web/components/Sidebar/SidebarActions/useVersionCheck";
 import { viewActions } from "@web/events/stores/view.store";
+import { useSettingsStore } from "@web/settings/settings.store";
 import { afterAll, afterEach, describe, expect, it } from "bun:test";
 
 // mock.module is process-wide and not reliably restorable, so the real hook
@@ -67,6 +70,25 @@ const { SidebarActions } =
   require("@web/components/Sidebar/SidebarActions/SidebarActions") as typeof import("@web/components/Sidebar/SidebarActions/SidebarActions");
 
 describe("SidebarActions", () => {
+  it("opens meeting settings from the signed-in sidebar", async () => {
+    const { wrapper } = createStoreWrapper();
+    render(
+      <SessionContext.Provider
+        value={{ authenticated: true, setAuthenticated: () => {} }}
+      >
+        <SidebarActions sections={[]} />
+      </SessionContext.Provider>,
+      { wrapper },
+    );
+    const button = screen.getByRole("button", {
+      name: "Meeting page settings",
+    });
+    button.focus();
+    await userEvent.setup().keyboard("{Enter}");
+    expect(useSettingsStore.getState().settingsPage).toBe("booking");
+    expect(useSettingsStore.getState().isSettingsOpen).toBe(true);
+  });
+
   it("shimmers the command palette icon while Google Calendar is syncing", () => {
     const { wrapper } = createStoreWrapper();
     setSyncingSyncIndicatorOverride();

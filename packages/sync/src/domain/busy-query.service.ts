@@ -8,6 +8,7 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { occupancyFactsForEvent } from "@sync/domain/booking-occupancy-facts";
+import { isSyncTokenUnsupportedSnapshotDue } from "@sync/domain/sync-token-unsupported";
 import {
   type EventRepository,
   type OccupancyEvent,
@@ -291,7 +292,12 @@ export async function computeBusyAvailability(
       resource.cursorExpiredBackoffUntil !== null &&
       now.getTime() <
         resource.cursorExpiredBackoffUntil.getTime() + HOLD_OFF_SWEEP_GRACE_MS;
-    if (!holdOffActive) {
+    // A completed full snapshot stays current until the next scheduled pull.
+    const snapshotDue = isSyncTokenUnsupportedSnapshotDue(
+      resource,
+      new Date(now.getTime() - HOLD_OFF_SWEEP_GRACE_MS),
+    );
+    if (!holdOffActive && snapshotDue) {
       const ageMs = now.getTime() - resource.lastSuccessAt.getTime();
       if (ageMs > input.maxAgeMs) {
         issues.push({ calendarId, reason: "stale" });

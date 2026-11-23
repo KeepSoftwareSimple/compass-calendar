@@ -745,14 +745,12 @@ describe("PublicBookingPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows unavailable when bookable is false", async () => {
+  it("rechecks availability after an unbookable response", async () => {
+    let bookable = false;
     server.use(
       pageHandler(),
       http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`, () =>
-        HttpResponse.json(
-          { slots: [], bookable: false },
-          { status: Status.OK },
-        ),
+        HttpResponse.json({ slots: [], bookable }, { status: Status.OK }),
       ),
     );
 
@@ -768,6 +766,16 @@ describe("PublicBookingPage", () => {
       outcome: "unbookable",
       duration_minutes: 30,
     });
+    expect(
+      screen.queryByRole("link", { name: "Review your meeting page settings" }),
+    ).not.toBeInTheDocument();
+    bookable = true;
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Try again" }));
+    expect(
+      await screen.findByRole("heading", { name: "Meet with Tyler Dane" }),
+    ).toBeInTheDocument();
   });
 
   it("keeps guest details and moves focus to the alert on 409", async () => {

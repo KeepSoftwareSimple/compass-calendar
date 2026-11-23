@@ -1,7 +1,10 @@
+import { CalendarPlusIcon } from "@phosphor-icons/react/dist/csr/CalendarPlus";
 import { CommandIcon } from "@phosphor-icons/react/dist/csr/Command";
 import { GearIcon } from "@phosphor-icons/react/dist/csr/Gear";
 import { KeyboardIcon } from "@phosphor-icons/react/dist/csr/Keyboard";
+import { useSession } from "@web/auth/compass/session/useSession";
 import { useGoogleUiState } from "@web/auth/providers/useProviderUiState";
+import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
 import { ShortcutLevelBadge } from "@web/components/Sidebar/SidebarActions/ShortcutLevelBadge";
 import { FOOTER_ICON_BUTTON_CLASS } from "@web/components/Sidebar/SidebarActions/sidebar-footer.constants";
 import { SidebarRefreshButton } from "@web/components/Sidebar/SidebarRefreshButton";
@@ -24,6 +27,7 @@ interface SidebarActionsProps {
 }
 
 export const SidebarActions = ({ sections }: SidebarActionsProps) => {
+  const { authenticated } = useSession();
   const isShortcutsOpen = useViewStore(selectIsShortcutsOpen);
   const isCmdPaletteOpen = useSettingsStore(selectIsCmdPaletteOpen);
   const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
@@ -43,9 +47,9 @@ export const SidebarActions = ({ sections }: SidebarActionsProps) => {
     : "Open shortcuts";
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-start border-border border-t px-3">
+    <div className="@container flex h-12 shrink-0 items-center justify-start border-border border-t px-3">
       <div
-        className="flex shrink-0 items-center gap-2"
+        className="flex shrink-0 items-center @min-[256px]:gap-2"
         data-testid="sidebar-footer-actions"
       >
         <TooltipWrapper
@@ -116,6 +120,18 @@ export const SidebarActions = ({ sections }: SidebarActionsProps) => {
             </span>
           </button>
         </TooltipWrapper>
+        {authenticated && IS_BOOKING_ENABLED && (
+          <TooltipWrapper asChild description="Meeting page settings">
+            <button
+              aria-label="Meeting page settings"
+              className={FOOTER_ICON_BUTTON_CLASS}
+              onClick={() => settingsActions.openSettings("booking")}
+              type="button"
+            >
+              <CalendarPlusIcon aria-hidden="true" size={16} />
+            </button>
+          </TooltipWrapper>
+        )}
         <ShortcutLevelBadge sections={sections} />
         <SidebarRefreshButton />
       </div>

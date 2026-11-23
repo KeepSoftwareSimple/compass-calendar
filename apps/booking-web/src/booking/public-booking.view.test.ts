@@ -69,7 +69,11 @@ describe("resolvePublicBookingPageView", () => {
       NOT_FOUND,
     );
 
-    expect(view).toEqual({ kind: "status", ...PUBLIC_BOOKING_LOAD_FAILED });
+    expect(view).toEqual({
+      kind: "status",
+      retry: "page",
+      ...PUBLIC_BOOKING_LOAD_FAILED,
+    });
   });
 
   it("hides a disabled page behind the same not-found copy as a bad link", () => {
@@ -89,7 +93,11 @@ describe("resolvePublicBookingPageView", () => {
       NOT_FOUND,
     );
 
-    expect(view).toEqual({ kind: "status", ...PUBLIC_BOOKING_UNBOOKABLE });
+    expect(view).toEqual({
+      kind: "status",
+      retry: "slots",
+      ...PUBLIC_BOOKING_UNBOOKABLE,
+    });
   });
 
   it("returns the page once it is enabled and bookable", () => {

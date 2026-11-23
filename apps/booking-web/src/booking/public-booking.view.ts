@@ -15,7 +15,7 @@ export interface PublicBookingStatusCopy {
 export const PUBLIC_BOOKING_UNBOOKABLE: PublicBookingStatusCopy = {
   title: "Meeting temporarily unavailable",
   description:
-    "The host calendar is not ready for new meetings. Please try again later.",
+    "Compass can’t confirm the host’s availability right now. Check again or contact the host to arrange a time.",
 };
 
 /**
@@ -118,7 +118,11 @@ export const resolvePublicBookingReservationView = (
  * settled: a terminal status message, or the host's page.
  */
 export type PublicBookingPageView =
-  | ({ kind: "status"; notFound?: boolean } & PublicBookingStatusCopy)
+  | ({
+      kind: "status";
+      notFound?: boolean;
+      retry?: "page" | "slots";
+    } & PublicBookingStatusCopy)
   | { kind: "page"; page: PublicGetBookingPageResponse };
 
 /**
@@ -139,13 +143,13 @@ export const resolvePublicBookingPageView = (
     return { kind: "status", notFound: true, ...notFound };
   }
   if (!pageQuery.isSuccess) {
-    return { kind: "status", ...PUBLIC_BOOKING_LOAD_FAILED };
+    return { kind: "status", retry: "page", ...PUBLIC_BOOKING_LOAD_FAILED };
   }
   if (!pageQuery.data.enabled) {
     return { kind: "status", notFound: true, ...notFound };
   }
   if (slotsData && !slotsData.bookable) {
-    return { kind: "status", ...PUBLIC_BOOKING_UNBOOKABLE };
+    return { kind: "status", retry: "slots", ...PUBLIC_BOOKING_UNBOOKABLE };
   }
   return { kind: "page", page: pageQuery.data };
 };

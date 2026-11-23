@@ -1,4 +1,5 @@
 import { type ObjectId } from "mongodb";
+import { nextOptedOutBlockingCalendarIds } from "@core/booking/merge-blocking-calendars";
 import {
   type AdminGetBookingPageResult,
   type AdminPutBookingPageInput,
@@ -21,7 +22,6 @@ import { bookingPageRepository } from "@backend/booking/booking-page.repository"
 import { bookingReservationRepository } from "@backend/booking/booking-reservation.repository";
 import {
   listEligibleBlockingCalendarIds,
-  optedOutBlockingCalendarIdsForPut,
   reconcileBookingPageBlockingCalendars,
 } from "@backend/booking/services/booking-blocking-calendars";
 import {
@@ -195,12 +195,11 @@ class BookingPageService {
     const existing = await bookingPageRepository.findByUserId(userId);
     const eligible = await listEligibleBlockingCalendarIds(userId);
     const optedOutBlockingCalendarIds = existing
-      ? await optedOutBlockingCalendarIdsForPut(
-          userId,
-          input.blockingCalendarIds,
-          existing.optedOutBlockingCalendarIds,
-          eligible,
-        )
+      ? nextOptedOutBlockingCalendarIds({
+          previousOptedOut: existing.optedOutBlockingCalendarIds ?? [],
+          eligible: [...eligible, ...existing.blockingCalendarIds],
+          submitted: input.blockingCalendarIds,
+        })
       : [];
     const fields = mapPutInputToRecordFields(input, existing);
     let bookingSlug = existing?.bookingSlug;

@@ -18,6 +18,7 @@ import {
 interface BookingBlockingCalendarsFieldProps {
   availabilityCalendars: Calendar[];
   blockingCalendarIds: readonly CalendarId[];
+  unavailableCalendars: readonly Pick<Calendar, "id" | "name">[];
   connections: SyncConnectionSummary[];
   onToggle: (calendarId: CalendarId, checked: boolean) => void;
 }
@@ -33,6 +34,7 @@ function initialCollapsedKeys(
 export function BookingBlockingCalendarsField({
   availabilityCalendars,
   blockingCalendarIds,
+  unavailableCalendars,
   connections,
   onToggle,
 }: BookingBlockingCalendarsFieldProps) {
@@ -88,6 +90,24 @@ export function BookingBlockingCalendarsField({
       {...bookingFieldAttrs("blocking")}
     >
       <legend className="mb-1 text-sm text-text">Blocking calendars</legend>
+      {unavailableCalendars.length > 0 && (
+        <div>
+          <p className="text-sm text-text-muted">
+            Compass can no longer check these calendars. Reconnect them, or
+            uncheck them and save to allow bookings without checking their
+            events.
+          </p>
+          {unavailableCalendars.map((calendar) => (
+            <BookingCheckboxRow
+              key={calendar.id}
+              checked={blockingSet.has(calendar.id)}
+              onChange={(checked) => onToggle(calendar.id, checked)}
+            >
+              {calendar.name}
+            </BookingCheckboxRow>
+          ))}
+        </div>
+      )}
       {availabilityCalendars.length === 0 ? (
         <p className="text-sm text-text-muted">No calendars available.</p>
       ) : useCollapsibleGroups ? (

@@ -30,6 +30,7 @@ import {
   formatBookingDurationWithConference,
   resolveBookingConference,
 } from "@web/booking/booking-conference.copy";
+import { meetingSetupRootHref } from "@web/booking/meeting-setup.search";
 
 const BOOKING_PAGE_NOT_FOUND = {
   title: "Meeting page not found",
@@ -84,7 +85,22 @@ export function PublicBookingPage() {
       <PublicBookingStatusMessage
         title={pageView.title}
         description={pageView.description}
+        retryQuery={
+          pageView.retry &&
+          { page: pageQuery, slots: slotsQuery }[pageView.retry]
+        }
       >
+        {pageView.retry === "slots" && flow.isPageOwner && (
+          <p className="mt-3 text-sm text-text">
+            <a
+              href={meetingSetupRootHref()}
+              className="c-focus-ring rounded-xs underline"
+            >
+              Review your meeting page settings
+            </a>{" "}
+            to see what’s blocking bookings.
+          </p>
+        )}
         {pageView.notFound ? <MeetLandingLink /> : null}
       </PublicBookingStatusMessage>
     );
