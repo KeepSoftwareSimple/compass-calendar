@@ -1,6 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { CommonRoutesConfig } from "@backend/common/common.routes.config";
+import emailReflectionController from "@backend/email/controllers/email.reflection.controller";
 import emailUnsubscribeController from "@backend/email/controllers/email.unsubscribe.controller";
 import emailWebhookController from "@backend/email/controllers/email.webhook.controller";
 
@@ -47,6 +48,15 @@ export class EmailRoutes extends CommonRoutesConfig {
         unsubscribeLimiter,
         express.urlencoded({ extended: false }),
         emailUnsubscribeController.confirmUnsubscribe,
+      );
+
+    this.app
+      .route("/api/email/reflection")
+      .get(unsubscribeLimiter, emailReflectionController.showConfirmation)
+      .post(
+        unsubscribeLimiter,
+        express.urlencoded({ extended: false }),
+        emailReflectionController.confirmEnable,
       );
 
     return this.app;

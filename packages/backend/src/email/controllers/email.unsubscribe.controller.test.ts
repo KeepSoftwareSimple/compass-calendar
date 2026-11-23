@@ -33,20 +33,28 @@ describe("EmailUnsubscribeController", () => {
     expect(body).toContain("Unsubscribe from Compass emails");
   });
 
-  it("opens reflection controls in app settings without unsubscribing on GET", async () => {
+  it("GET asks to confirm a reflection unsubscribe without login or mutation", async () => {
     CONFIG.EMAIL_UNSUBSCRIBE_SECRET = "secret";
     const token = createUnsubscribeToken(
       new ObjectId().toHexString(),
       "secret",
     );
-    const res = { redirect: mock(() => {}) };
+    let body = "";
+    const res = {
+      status: mock(() => res),
+      type: mock(() => res),
+      redirect: mock(() => {}),
+      send: mock((value: string) => {
+        body = value;
+      }),
+    };
     await emailUnsubscribeController.showConfirmation(
       { query: { token, scope: "reflection" } } as never,
       res as never,
     );
-    expect(res.redirect).toHaveBeenCalledWith(
-      new URL("/?settings=notifications", CONFIG.FRONTEND_URL).toString(),
-    );
+    expect(res.redirect).not.toHaveBeenCalled();
+    expect(body).toContain("Turn off weekly reflections");
+    expect(body).toContain('name="scope" value="reflection"');
   });
   it("renders a friendly page for an invalid token", async () => {
     CONFIG.EMAIL_UNSUBSCRIBE_SECRET = "secret";

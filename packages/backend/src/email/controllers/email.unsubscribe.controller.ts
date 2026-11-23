@@ -1,9 +1,11 @@
 import { type Request, type Response } from "express";
 import { Status } from "@core/errors/status.codes";
-import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
+import { emailAnalytics } from "@backend/email/email.analytics";
+import { pageShell } from "@backend/email/email-page";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
+  buildReflectionEnableUrl,
   type EmailUnsubscribeScope,
   parseUnsubscribeUserId,
 } from "@backend/email/email-unsubscribe";
@@ -18,20 +20,6 @@ const parseScope = (value: unknown): EmailUnsubscribeScope => {
   return value === "booking-host" || value === "reflection" ? value : "welcome";
 };
 
-const pageShell = (title: string, body: string): string => `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${title}</title>
-  </head>
-  <body style="margin:0;padding:24px;background:#f9fafb;font-family:system-ui,-apple-system,Segoe UI,sans-serif;">
-    <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:8px;padding:32px;">
-      ${body}
-    </div>
-  </body>
-</html>`;
-
 const invalidPage = (): string =>
   pageShell(
     "Unsubscribe",
@@ -41,16 +29,19 @@ const invalidPage = (): string =>
 
 const confirmPage = (token: string, scope: EmailUnsubscribeScope): string => {
   const isBookingHost = scope === "booking-host";
+  const isReflection = scope === "reflection";
   const description = isBookingHost
     ? "You will stop receiving email when guests book, cancel, or reschedule meetings on your Compass meeting page."
-    : "You will stop receiving welcome sequence messages from Compass Calendar.";
+    : isReflection
+      ? "You will stop receiving weekly reflection emails. Your calendar and other emails are not affected."
+      : "You will stop receiving welcome sequence messages from Compass Calendar.";
   const scopeField =
-    scope === "booking-host"
-      ? `<input type="hidden" name="scope" value="booking-host" />`
-      : "";
+    scope === "welcome"
+      ? ""
+      : `<input type="hidden" name="scope" value="${scope}" />`;
   return pageShell(
     "Unsubscribe",
-    `<h1 style="margin:0 0 12px;font-size:22px;line-height:30px;color:#111827;">${isBookingHost ? "Turn off booking alert emails" : "Unsubscribe from Compass emails"}</h1>
+    `<h1 style="margin:0 0 12px;font-size:22px;line-height:30px;color:#111827;">${isBookingHost ? "Turn off booking alert emails" : isReflection ? "Turn off weekly reflections" : "Unsubscribe from Compass emails"}</h1>
      <p style="margin:0 0 20px;font-size:16px;line-height:24px;color:#4b5563;">${description}</p>
      <form method="post" action="/api/email/unsubscribe">
        <input type="hidden" name="token" value="${token.replace(/"/g, "&quot;")}" />
@@ -62,11 +53,13 @@ const confirmPage = (token: string, scope: EmailUnsubscribeScope): string => {
 
 const feedbackLink = `<p><a href="mailto:${EMAIL_REPLY_TO}?subject=Compass%20email%20feedback">Share feedback by email (optional)</a></p>`;
 
-const donePage = (scope: EmailUnsubscribeScope): string => {
+const donePage = (scope: EmailUnsubscribeScope, token: string): string => {
   if (scope === "reflection")
     return pageShell(
       "Reflections are off",
-      `<h1>Reflections are off</h1><p>You will not receive further calendar reflection emails.</p>${feedbackLink}`,
+      `<h1 style="margin:0 0 12px;font-size:22px;line-height:30px;color:#111827;">Weekly reflections are off</h1>
+     <p style="margin:0 0 16px;font-size:16px;line-height:24px;color:#4b5563;">You will not receive further weekly reflection emails.</p>
+     <p><a href="${buildReflectionEnableUrl(token).replace(/"/g, "&quot;")}">Changed your mind? Turn them back on</a></p>${feedbackLink}`,
     );
   const description =
     scope === "booking-host"
@@ -88,12 +81,6 @@ export class EmailUnsubscribeController {
       return;
     }
     const scope = parseScope(req.query["scope"]);
-    if (scope === "reflection") {
-      res.redirect(
-        new URL("/?settings=notifications", CONFIG.FRONTEND_URL).toString(),
-      );
-      return;
-    }
     res.status(Status.OK).type("html").send(confirmPage(token, scope));
   };
 
@@ -132,12 +119,18 @@ export class EmailUnsubscribeController {
         },
       );
       await emailSendRepository.cancelQueuedReflection(userId, true);
+      if (user.reflectionPreferences?.enabled)
+        void emailAnalytics.capture({
+          event: "email_unsubscribed",
+          userId: userId.toHexString(),
+          properties: { sequence: "reflection", source: "email" },
+        });
     } else if (scope === "booking-host") {
       await markBookingHostEmailDisabled(userId);
     } else {
       await markUserUnsubscribed(userId);
     }
-    res.status(Status.OK).type("html").send(donePage(scope));
+    res.status(Status.OK).type("html").send(donePage(scope, token));
   };
 }
 

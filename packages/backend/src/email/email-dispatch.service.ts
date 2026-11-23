@@ -25,6 +25,7 @@ import {
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
+  buildReflectionEnableUrl,
   buildUnsubscribeTokenForUser,
   buildUnsubscribeUrls,
   type EmailUnsubscribeScope,
@@ -505,6 +506,17 @@ export class EmailDispatchService {
     }
 
     const { unsubscribe, headers } = resolveUnsubscribe(userIdHex);
+    // The reflection pitch opts in with one tap, on a phone, without a login.
+    const pitchToken =
+      row.stepKey === "weekly-review"
+        ? buildUnsubscribeTokenForUser(userIdHex)
+        : null;
+    const pitchContent = pitchToken
+      ? {
+          ...content,
+          cta: { ...content.cta, href: buildReflectionEnableUrl(pitchToken) },
+        }
+      : content;
     // A step with no hosted template is rendered locally from its content.
     const body = templateAlias
       ? {
@@ -518,7 +530,7 @@ export class EmailDispatchService {
             }),
           },
         }
-      : renderWelcomeEmail(row.stepKey, content, unsubscribe);
+      : renderWelcomeEmail(row.stepKey, pitchContent, unsubscribe);
 
     await this.#deliverRow(context, {
       stillSendable: async () => {

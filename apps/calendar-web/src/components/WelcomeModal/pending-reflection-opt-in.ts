@@ -8,12 +8,16 @@ export function setPendingReflectionOptIn(optedIn: boolean): void {
   else persistentBrowserStore.remove(STORAGE_KEYS.PENDING_REFLECTION_OPT_IN);
 }
 
-/** Read and clear the choice so it is applied exactly once. */
-export function takePendingReflectionOptIn(): boolean {
-  if (!persistentBrowserStore.isAvailable()) return false;
-  const optedIn =
+/** Whether sign-up asked for reflections and the choice is not applied yet. */
+export function peekPendingReflectionOptIn(): boolean {
+  return (
+    persistentBrowserStore.isAvailable() &&
     persistentBrowserStore.get(STORAGE_KEYS.PENDING_REFLECTION_OPT_IN) ===
-    "true";
+      "true"
+  );
+}
+
+/** Forget the choice once it has been saved, so it is applied exactly once. */
+export function clearPendingReflectionOptIn(): void {
   persistentBrowserStore.remove(STORAGE_KEYS.PENDING_REFLECTION_OPT_IN);
-  return optedIn;
 }
