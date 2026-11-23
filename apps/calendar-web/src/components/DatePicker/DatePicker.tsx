@@ -504,6 +504,32 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
               headerActionsClassName,
             )}
           >
+            {withTodayButton && (
+              <TooltipWrapper
+                description="Go to this month"
+                shortcut={
+                  view === "sidebar"
+                    ? [...MONTH_PICKER_CURRENT_KEYCAPS]
+                    : undefined
+                }
+                shortcutId={
+                  view === "sidebar" ? "nav-month-current" : undefined
+                }
+              >
+                <button
+                  type="button"
+                  aria-label="Go to this month"
+                  className={classNames(
+                    "flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-text/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                    currentMonth === selectedMonth && "invisible",
+                  )}
+                  style={{ color: headerColor }}
+                  onClick={jumpToThisMonth}
+                >
+                  <CircleIcon />
+                </button>
+              </TooltipWrapper>
+            )}
             <div className="flex items-center gap-1">
               <MonthNavButton
                 ariaLabel={headerNav.prevLabel}
@@ -540,32 +566,6 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
                 <ChevronRightIcon />
               </MonthNavButton>
             </div>
-            {withTodayButton && (
-              <TooltipWrapper
-                description="Go to this month"
-                shortcut={
-                  view === "sidebar"
-                    ? [...MONTH_PICKER_CURRENT_KEYCAPS]
-                    : undefined
-                }
-                shortcutId={
-                  view === "sidebar" ? "nav-month-current" : undefined
-                }
-              >
-                <button
-                  type="button"
-                  aria-label="Go to this month"
-                  className={classNames(
-                    "flex h-6 w-6 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-text/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                    currentMonth === selectedMonth && "invisible",
-                  )}
-                  style={{ color: headerColor }}
-                  onClick={jumpToThisMonth}
-                >
-                  <CircleIcon />
-                </button>
-              </TooltipWrapper>
-            )}
           </div>
         );
 
