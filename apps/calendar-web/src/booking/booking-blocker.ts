@@ -91,6 +91,17 @@ function reasonBlocker(
     };
   }
   const state = reason.connectionState;
+  if (
+    state === "disconnected" &&
+    !reconnectRequiredConnections(connections).length
+  ) {
+    return {
+      action: "info",
+      message: line(
+        "A selected calendar belongs to a disconnected account. Review your destination and blocking calendars.",
+      ),
+    };
+  }
   if (state && isReconnectConnectionState(state)) {
     return reconnectBlocker(reconnectRequiredConnections(connections)[0]);
   }

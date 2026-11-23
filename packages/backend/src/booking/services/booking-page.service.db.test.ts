@@ -951,30 +951,64 @@ describe("BookingPageService", () => {
     );
   });
 
-  it("does not re-add a calendar the host removed from blockers", async () => {
-    const userId = await createNamedUser("Blocker Opt Out");
-    const google = writableCalendar();
-    const microsoft = writableCalendar();
-    mockHealthySync([google, microsoft]);
-    const base = samplePutInput({
-      enabled: false,
-      destinationCalendarId: google.id,
-      blockingCalendarIds: [google.id, microsoft.id],
-    });
-    await bookingPageService.putAdminPage(userId, base);
-    await bookingPageService.putAdminPage(userId, {
-      ...base,
-      blockingCalendarIds: [google.id],
-    });
-
-    mockHealthySync([google, microsoft]);
-    const page = await bookingPageService.getAdminPage(userId);
-
-    expect(page.blockingCalendarIds).toEqual(
-      expect.arrayContaining([google.id]),
+  it("does not discover calendars retained for a disconnected account", async () => {
+    const userId = await createNamedUser("Disconnected Discovery");
+    const work = writableCalendar();
+    mockHealthySync([work]);
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: work.id,
+        blockingCalendarIds: [work.id],
+      }),
     );
-    expect(page.blockingCalendarIds).not.toContain(microsoft.id);
+    const removed = writableCalendar();
+    const account = { ...healthyConnection(), state: "disconnected" };
+    syncSpies.push(
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        listCalendars: async () => ({
+          ok: true,
+          value: { calendars: [{ ...removed, connectionId: account.id }] },
+        }),
+        listConnections: async () => ({
+          ok: true,
+          value: { connections: [account] },
+        }),
+      } as never),
+    );
+    const page = await bookingPageService.getAdminPage(userId);
+    expect(page.blockingCalendarIds).toContain(work.id);
+    expect(page.blockingCalendarIds).not.toContain(removed.id);
   });
+
+  it.each([true, false])(
+    "respects a blocker opt-out when the removed calendar is still discoverable: %s",
+    async (discoverable) => {
+      const userId = await createNamedUser("Blocker Opt Out");
+      const google = writableCalendar();
+      const microsoft = writableCalendar();
+      mockHealthySync([google, microsoft]);
+      const base = samplePutInput({
+        enabled: false,
+        destinationCalendarId: google.id,
+        blockingCalendarIds: [google.id, microsoft.id],
+      });
+      await bookingPageService.putAdminPage(userId, base);
+      if (!discoverable) mockHealthySync([google]);
+      await bookingPageService.putAdminPage(userId, {
+        ...base,
+        blockingCalendarIds: [google.id],
+      });
+
+      mockHealthySync([google, microsoft]);
+      const page = await bookingPageService.getAdminPage(userId);
+
+      expect(page.blockingCalendarIds).toEqual(
+        expect.arrayContaining([google.id]),
+      );
+      expect(page.blockingCalendarIds).not.toContain(microsoft.id);
+    },
+  );
 
   const meetingTypes = [
     { id: "intro", label: "Intro call", durationMinutes: 15 },

@@ -1,8 +1,5 @@
 import { type ObjectId } from "mongodb";
-import {
-  nextOptedOutBlockingCalendarIds,
-  withDiscoveredBlockingCalendarIds,
-} from "@core/booking/merge-blocking-calendars";
+import { withDiscoveredBlockingCalendarIds } from "@core/booking/merge-blocking-calendars";
 import {
   type CalendarId,
   CalendarIdSchema,
@@ -10,9 +7,8 @@ import {
 import { type ProviderCalendar } from "@core/types/sync/connection.contracts";
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
 import { bookingPageRepository } from "@backend/booking/booking-page.repository";
+import { loadDestinationCatalog } from "@backend/booking/services/booking-destination-readiness";
 import calendarService from "@backend/calendar/services/calendar.service";
-import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
-import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
 
 const asCalendarId = (value: string): CalendarId | null => {
   const parsed = CalendarIdSchema.safeParse(value);
@@ -39,13 +35,15 @@ export const listEligibleBlockingCalendarIds = async (
     ids.push(calendarId);
   };
 
-  const client = getSyncServiceClient();
   try {
-    const calendarsResult = await client.listCalendars(
-      toSyncPrincipal(userId.toString()),
+    const catalog = await loadDestinationCatalog(userId.toString());
+    const connected = new Set(
+      catalog.connections
+        .filter((c) => c.state !== "disconnected")
+        .map((c) => c.id),
     );
-    if (calendarsResult.ok) {
-      for (const calendar of calendarsResult.value.calendars) {
+    for (const calendar of catalog.calendars) {
+      if (connected.has(calendar.connectionId)) {
         add(eligibleIdFromProviderCalendar(calendar));
       }
     }
@@ -59,18 +57,6 @@ export const listEligibleBlockingCalendarIds = async (
   }
   return ids;
 };
-
-export const optedOutBlockingCalendarIdsForPut = async (
-  userId: ObjectId,
-  submitted: readonly CalendarId[],
-  previousOptedOut: readonly CalendarId[] | undefined,
-  eligible?: readonly CalendarId[],
-): Promise<CalendarId[]> =>
-  nextOptedOutBlockingCalendarIds({
-    previousOptedOut: previousOptedOut ?? [],
-    eligible: eligible ?? (await listEligibleBlockingCalendarIds(userId)),
-    submitted,
-  });
 
 export const reconcileBookingPageBlockingCalendars = async (
   page: BookingPageRecord,

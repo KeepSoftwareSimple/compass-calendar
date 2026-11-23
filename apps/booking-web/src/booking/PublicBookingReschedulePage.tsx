@@ -61,7 +61,15 @@ export function PublicBookingReschedulePage() {
   );
 
   if (pageView.kind === "status") {
-    return <PublicBookingStatusMessage {...pageView} />;
+    return (
+      <PublicBookingStatusMessage
+        {...pageView}
+        retryQuery={
+          pageView.retry &&
+          { page: pageQuery, slots: slotsQuery }[pageView.retry]
+        }
+      />
+    );
   }
 
   const { page } = pageView;

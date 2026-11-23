@@ -59,6 +59,7 @@ import {
   isBookingSettingsFormDirty,
   isConfiguredBookingPage,
   isLiveBookingPage,
+  isPlaceholderDestinationCalendar,
   isUnconfiguredBookingPage,
   slugFromAdminBookingPage,
   validateBookingForm,
@@ -153,6 +154,7 @@ export function BookingSettingsSection({
   const {
     data: calendars = [],
     isPending: calendarsPending,
+    isSuccess: calendarsLoaded,
     refetch: refetchCalendars,
   } = useCalendarsQuery();
   const [hostCalendarsRefetchDone, setHostCalendarsRefetchDone] =
@@ -657,7 +659,16 @@ export function BookingSettingsSection({
     );
   };
 
+  const unavailableBlockers =
+    calendarsLoaded && isConfiguredBookingPage(serverPage)
+      ? serverPage.blockingCalendarIds.filter(
+          (id) =>
+            !isPlaceholderDestinationCalendar(id) &&
+            !availabilityCalendars.some((c) => c.id === id),
+        )
+      : [];
   const forceOpenMoreOptions =
+    unavailableBlockers.length > 0 ||
     minNoticeInvalid ||
     horizonInvalid ||
     (saveError?.field != null && MORE_OPTIONS_FIELDS.has(saveError.field));
@@ -896,6 +907,12 @@ export function BookingSettingsSection({
             availabilityCalendars={availabilityCalendars}
             blockingCalendarIds={form.blockingCalendarIds}
             connections={connections}
+            unavailableCalendars={unavailableBlockers.map((id) => ({
+              id,
+              name:
+                calendars.find((c) => c.id === id)?.name ??
+                `Calendar ending in ${id.slice(-6)}`,
+            }))}
             onToggle={toggleBlockingCalendar}
           />
         </BookingMoreOptions>

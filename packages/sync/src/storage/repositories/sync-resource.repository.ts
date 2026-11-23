@@ -47,6 +47,16 @@ const CREDENTIAL_LOOKUP_STAGES = [
   { $match: { "_credential.0": { $exists: true } } },
 ] as const;
 
+type EventResourceFreshness = Pick<
+  SyncResourceRecord,
+  | "connectionId"
+  | "activeGeneration"
+  | "lastSuccessAt"
+  | "cursorExpiredBackoffUntil"
+  | "syncTokenUnsupportedAt"
+  | "lastFullSnapshotAt"
+>;
+
 export interface ListStaleEventsOptions {
   provider?: ProviderKind;
   excludeProviders?: readonly ProviderKind[];
@@ -713,17 +723,7 @@ export class SyncResourceRepository {
     tenantId: TenantId,
     principalId: PrincipalId,
     calendarIds: readonly SyncEventCalendarId[],
-  ): Promise<
-    Map<
-      SyncEventCalendarId,
-      {
-        connectionId: ConnectionId;
-        activeGeneration: number;
-        lastSuccessAt: Date | null;
-        cursorExpiredBackoffUntil: Date | null;
-      }
-    >
-  > {
+  ): Promise<Map<SyncEventCalendarId, EventResourceFreshness>> {
     const records = await this.collection
       .find({
         tenantId,
@@ -731,18 +731,14 @@ export class SyncResourceRepository {
         resourceKind: "events",
         calendarId: { $in: [...calendarIds] },
       })
-      .project<{
-        calendarId: SyncEventCalendarId;
-        connectionId: ConnectionId;
-        activeGeneration: number;
-        lastSuccessAt: Date | null;
-        cursorExpiredBackoffUntil: Date | null;
-      }>({
+      .project<EventResourceFreshness & { calendarId: SyncEventCalendarId }>({
         calendarId: 1,
         connectionId: 1,
         activeGeneration: 1,
         lastSuccessAt: 1,
         cursorExpiredBackoffUntil: 1,
+        syncTokenUnsupportedAt: 1,
+        lastFullSnapshotAt: 1,
       })
       .toArray();
     return new Map(
@@ -753,6 +749,8 @@ export class SyncResourceRepository {
           activeGeneration: r.activeGeneration,
           lastSuccessAt: r.lastSuccessAt,
           cursorExpiredBackoffUntil: r.cursorExpiredBackoffUntil ?? null,
+          syncTokenUnsupportedAt: r.syncTokenUnsupportedAt ?? null,
+          lastFullSnapshotAt: r.lastFullSnapshotAt ?? null,
         },
       ]),
     );

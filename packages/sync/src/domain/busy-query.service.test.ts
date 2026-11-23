@@ -152,6 +152,8 @@ describe("computeBusyAvailability truncation", () => {
                 activeGeneration: 1,
                 lastSuccessAt: now,
                 cursorExpiredBackoffUntil: null,
+                lastFullSnapshotAt: null,
+                syncTokenUnsupportedAt: null,
               },
             ],
           ]),

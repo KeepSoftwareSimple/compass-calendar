@@ -93,6 +93,23 @@ describe("meet page owner edit control", () => {
     expect(editLink).toHaveAttribute("href", "/?meetingSetup=1");
   });
 
+  it("links the owner to settings when guests cannot book", async () => {
+    server.use(
+      pageHandler(),
+      http.get(ownerUpcomingUrl, () => HttpResponse.json({ reservations: [] })),
+      http.get(hostPageUrl, () => HttpResponse.json(savedHostPage([]))),
+      http.get(slotsUrl, () =>
+        HttpResponse.json({ bookable: false, slots: [] }),
+      ),
+    );
+    renderBookingRoute("/meet/tylerdane");
+    expect(
+      await screen.findByRole("link", {
+        name: "Review your meeting page settings",
+      }),
+    ).toHaveAttribute("href", "/?meetingSetup=1");
+  });
+
   it("shows owner copy when the page has no weekly booking hours", async () => {
     server.use(
       pageHandler(),

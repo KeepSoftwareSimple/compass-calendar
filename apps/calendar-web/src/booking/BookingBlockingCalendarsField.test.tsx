@@ -30,6 +30,7 @@ describe("BookingBlockingCalendarsField", () => {
 
     render(
       <BookingBlockingCalendarsField
+        unavailableCalendars={[]}
         availabilityCalendars={calendars}
         blockingCalendarIds={[]}
         connections={[hostConnection]}
@@ -56,10 +57,29 @@ describe("BookingBlockingCalendarsField", () => {
     expect(header).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("lets a host remove a selected calendar that disappeared from the catalog", async () => {
+    const retired = createMockCalendar({ name: "Retired calendar" });
+    const onToggle = mock(() => {});
+    render(
+      <BookingBlockingCalendarsField
+        availabilityCalendars={[]}
+        unavailableCalendars={[retired]}
+        blockingCalendarIds={[retired.id]}
+        connections={[]}
+        onToggle={onToggle}
+      />,
+    );
+    const checkbox = screen.getByRole("checkbox", { name: "Retired calendar" });
+    expect(checkbox).toBeChecked();
+    await userEvent.setup().click(checkbox);
+    expect(onToggle).toHaveBeenCalledWith(retired.id, false);
+  });
+
   it("keeps a single account with few calendars flat without a group header", () => {
     const calendars = calendarsForAccount(2);
     render(
       <BookingBlockingCalendarsField
+        unavailableCalendars={[]}
         availabilityCalendars={calendars}
         blockingCalendarIds={[calendars[0]!.id]}
         connections={[hostConnection]}

@@ -8,12 +8,14 @@ export const PUBLIC_BOOKING_HEADING_CLASS =
 interface PublicBookingStatusMessageProps {
   title: string;
   description: string;
+  retryQuery?: { refetch: () => Promise<unknown>; isFetching: boolean };
   children?: ReactNode;
 }
 
 export function PublicBookingStatusMessage({
   title,
   description,
+  retryQuery,
   children,
 }: PublicBookingStatusMessageProps) {
   const headingRef = useBookingHeadingFocus(title);
@@ -30,6 +32,16 @@ export function PublicBookingStatusMessage({
           {title}
         </h1>
         <p className="mt-2 text-sm text-text-muted">{description}</p>
+        {retryQuery && (
+          <button
+            type="button"
+            className="c-focus-ring mt-3 rounded-xs text-sm text-text underline"
+            disabled={retryQuery.isFetching}
+            onClick={() => void retryQuery.refetch()}
+          >
+            {retryQuery.isFetching ? "Checking…" : "Try again"}
+          </button>
+        )}
         {children}
       </section>
     </PublicBookingLayout>

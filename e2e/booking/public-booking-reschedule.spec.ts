@@ -159,7 +159,9 @@ test.describe("public booking reschedule", () => {
     await expect(heading).toBeFocused();
     await expect(heading).toHaveAttribute("id", "booking-status-heading");
     await expect(
-      page.getByText("The host calendar is not ready for new meetings."),
+      page.getByText(
+        "Compass can’t confirm the host’s availability right now.",
+      ),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Pick a time" }),
