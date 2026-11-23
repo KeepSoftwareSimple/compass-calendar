@@ -22,7 +22,7 @@
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
     "@types/express": "^5.0.6",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "mongodb-memory-server": "^11.3.0"
   }
 }

@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
-    "@types/lodash": "^4.17.26",
+    "@types/lodash": "^4.17.27",
     "mongodb": "^7.7.0",
     "supertokens-node": "^24.0.3",
     "typescript": "^7.0.2"
