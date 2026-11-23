@@ -218,10 +218,7 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "all-day-to-grid",
     actionId: "event.move",
     featureArea: "event_editing",
-    parts: [
-      { keys: ["Shift", "ArrowDown"] },
-      " moves it onto the grid",
-    ],
+    parts: [{ keys: ["Shift", "ArrowDown"] }, " moves it onto the grid"],
     suggestionReason: "event_focused",
   },
   "edge-focus": {
