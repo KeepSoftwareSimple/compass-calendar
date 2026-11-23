@@ -1,5 +1,6 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { PageJumpHintOverlay } from "@web/shortcuts/page-jump/PageJumpHintOverlay";
+import { pageJumpHintActions } from "@web/shortcuts/page-jump/page-jump.store";
 import {
   buildCalendarPageJumpTargets,
   buildDayPageJumpTargets,
@@ -73,6 +74,7 @@ describe("PageJumpHintOverlay", () => {
 
   afterEach(() => {
     cleanup();
+    pageJumpHintActions.reset();
     document.body.replaceChildren();
     Object.defineProperty(window, "innerHeight", {
       configurable: true,
@@ -88,6 +90,18 @@ describe("PageJumpHintOverlay", () => {
     addAnchor("view-select");
     render(<PageJumpHintOverlay visible={false} />);
 
+    expect(overlayRoot()).toBeNull();
+  });
+
+  it("chips only the hovered target when Mod is not held", () => {
+    addAnchor("view-select");
+    addAnchor("month-picker");
+    render(<PageJumpHintOverlay visible={false} />);
+
+    act(() => pageJumpHintActions.setHoveredTarget("month-picker"));
+    expect(chipDigits()).toEqual(["2"]);
+
+    act(() => pageJumpHintActions.setHoveredTarget(null));
     expect(overlayRoot()).toBeNull();
   });
 
