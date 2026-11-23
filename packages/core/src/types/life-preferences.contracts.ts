@@ -46,6 +46,8 @@ export type ReflectionPreferences = z.infer<typeof ReflectionPreferencesSchema>;
 export const ReflectionPreferencesResponseSchema = z.object({
   preferences: ReflectionPreferencesSchema.nullable(),
   available: z.boolean(),
+  /** True once the user has turned reflections off, until they turn them on. */
+  paused: z.boolean(),
 });
 export const ReflectionCalendarVisibilitySchema = z.strictObject({
   calendarId: z.string().min(1).max(256),

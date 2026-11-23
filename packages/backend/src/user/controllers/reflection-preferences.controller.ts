@@ -4,12 +4,12 @@ import {
   ReflectionPreferencesSchema,
 } from "@core/types/life-preferences.contracts";
 import { zObjectId } from "@core/types/object-id.schema";
-import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
-import { emailSendRepository } from "@backend/email/email-send.repository";
-import { enqueueReflectionConfirmation } from "@backend/email/reflection-confirmation";
-
-const available = () => !!CONFIG.EMAIL_PROVIDER && CONFIG.REFLECTION_ENABLED;
+import {
+  reflectionAvailable,
+  reflectionEnableBlock,
+  setReflectionEnabled,
+} from "@backend/email/reflection-opt-in";
 
 export async function getReflectionPreferences(req: Request, res: Response) {
   const id = zObjectId.parse(req.session?.getUserId());
@@ -27,7 +27,8 @@ export async function getReflectionPreferences(req: Request, res: Response) {
     : null;
   res.json({
     preferences: saved?.success ? saved.data : null,
-    available: available(),
+    available: reflectionAvailable(),
+    paused: !!user.emailPreferences?.reflectionDisabledAt,
   });
 }
 
@@ -44,44 +45,17 @@ export async function putReflectionPreferences(req: Request, res: Response) {
     return;
   }
   if (input.data.enabled) {
-    if (
-      !available() ||
-      user.isSynthetic ||
-      user.emailPreferences?.suppressedAt
-    ) {
-      res
-        .status(403)
-        .json({ message: "Reflections are not available for this account" });
+    const blocked = reflectionEnableBlock(user);
+    if (blocked) {
+      res.status(403).json({ message: blocked });
       return;
     }
   }
-  await mongoService.user.updateOne(
-    { _id: id },
-    {
-      $set: {
-        reflectionPreferences: {
-          ...input.data,
-          ...(input.data.enabled ? { optedInAt: new Date() } : {}),
-        },
-        ...(!input.data.enabled
-          ? { "emailPreferences.reflectionDisabledAt": new Date() }
-          : {}),
-      },
-      $unset: {
-        reflectionNextSendAt: "",
-        ...(input.data.enabled
-          ? { "emailPreferences.reflectionDisabledAt": "" }
-          : {}),
-      },
-    },
-  );
-  await emailSendRepository.cancelQueuedReflection(id, !input.data.enabled);
-  // Confirm the channel once, when a user turns reviews on, before the first one.
-  if (input.data.enabled && !user.reflectionPreferences?.enabled)
-    await enqueueReflectionConfirmation(user);
+  await setReflectionEnabled(user, input.data, "settings");
   res.json({
     preferences: input.data,
-    available: available(),
+    available: reflectionAvailable(),
+    paused: !input.data.enabled,
   });
 }
 

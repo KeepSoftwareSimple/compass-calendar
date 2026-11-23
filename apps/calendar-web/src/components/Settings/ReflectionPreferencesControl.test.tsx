@@ -13,7 +13,7 @@ const preferences: ReflectionPreferences = {
   timeZone: "America/Denver",
   excludedCalendarIds: [],
 };
-const response = { available: true, preferences };
+const response = { available: true, paused: false, preferences };
 const control = (userId: string, authenticated = true) => (
   <SessionContext.Provider
     value={{ authenticated, setAuthenticated: () => {} }}
@@ -67,7 +67,11 @@ describe("reflection preference control", () => {
       preferences: { ...preferences, enabled: true },
     });
     const save = spyOn(UserApi, "saveReflectionPreferences").mockImplementation(
-      async (input) => ({ ...response, preferences: input }),
+      async (input) => ({
+        ...response,
+        paused: !input.enabled,
+        preferences: input,
+      }),
     );
     const user = userEvent.setup();
     render(control("account-a"));
@@ -89,6 +93,30 @@ describe("reflection preference control", () => {
       screen.queryByRole("link", { name: /Share feedback/ }),
     ).not.toBeInTheDocument();
   });
+  it("still shows the paused note after a reload, and the server's reason when enabling is refused", async () => {
+    spyOn(UserApi, "getReflectionPreferences").mockResolvedValue({
+      ...response,
+      paused: true,
+    });
+    const refused = Object.assign(new Error("refused"), {
+      config: {},
+      response: {
+        status: 403,
+        data: { message: "You unsubscribed from all Compass emails." },
+      },
+    });
+    spyOn(UserApi, "saveReflectionPreferences").mockRejectedValue(refused);
+    const user = userEvent.setup();
+    render(control("account-a"));
+    expect(
+      await screen.findByText(/Calendar reflections are paused/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "You unsubscribed from all Compass emails.",
+    );
+  });
+
   it("ignores a former account's pending response after the account changes", async () => {
     spyOn(UserApi, "getReflectionPreferences").mockResolvedValue(response);
     let finish!: (value: typeof response) => void;

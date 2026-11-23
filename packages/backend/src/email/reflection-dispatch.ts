@@ -17,6 +17,7 @@ import {
   reflectionCalendarContext,
 } from "@backend/email/reflection-context";
 import { reflectionEligible } from "@backend/email/reflection-enrollment";
+import { requestReflectionHistory } from "@backend/email/reflection-history";
 import { reflectionExpiresAt } from "@backend/email/reflection-schedule";
 import hiddenEventService from "@backend/user/services/hidden-event.service";
 import { createHash } from "node:crypto";
@@ -185,20 +186,36 @@ export async function dispatchReflection(
       userId: row.userId.toHexString(),
       properties: { sequence: row.sequence, cadence: edition.cadence },
     });
-  } catch {
-    // Provider errors can contain submitted event titles. Do not retain/log them.
+  } catch (error) {
+    // Provider errors can contain submitted event titles. Do not retain/log
+    // them: only the two known, title-free causes get a specific reason.
+    const reason = failureReason(error);
+    if (reason === "history_incomplete") {
+      const user = await mongoService.user.findOne({ _id: row.userId });
+      if (user) void requestReflectionHistory(user);
+    }
     const updated = await emailSendRepository.recordFailure(
       row._id,
-      "Reflection preparation or delivery failed",
+      reason === "failed"
+        ? "Reflection preparation or delivery failed"
+        : reason,
       new Date(Date.now() + emailSendBackoffMs(row.attemptCount + 1)),
     );
     if (updated?.status === "failed")
       void emailAnalytics.capture({
         event: "email_failed",
         userId: row.userId.toHexString(),
-        properties: { sequence: row.sequence },
+        properties: { sequence: row.sequence, reason },
       });
   }
+}
+
+function failureReason(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  if (message === "Calendar history incomplete") return "history_incomplete";
+  if (message === "Calendar connection needs attention")
+    return "calendar_needs_attention";
+  return "failed";
 }
 
 /** Prepare independent reviews concurrently; keep provider requests sequential. */

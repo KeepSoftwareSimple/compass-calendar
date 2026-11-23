@@ -50,6 +50,11 @@ export function buildUnsubscribeUrls(
   return { httpsUrl, mailtoUrl, listUnsubscribeHeader };
 }
 
+/** Token-authenticated page that turns weekly reflections on without a login. */
+export function buildReflectionEnableUrl(token: string): string {
+  return `${CONFIG.BASEURL}/email/reflection?token=${encodeURIComponent(token)}`;
+}
+
 export function isEmailSequenceStopped(
   preferences: { unsubscribedAt?: Date; suppressedAt?: Date } | undefined,
 ): boolean {

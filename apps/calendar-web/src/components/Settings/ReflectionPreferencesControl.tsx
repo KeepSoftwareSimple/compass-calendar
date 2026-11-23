@@ -2,6 +2,7 @@ import { useContext, useEffect, useId, useRef, useState } from "react";
 import { type z } from "zod/v4";
 import { type ReflectionPreferencesResponseSchema } from "@core/types/life-preferences.contracts";
 import { UserApi } from "@web/api/user.api";
+import { isApiError } from "@web/api/util/api.util";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { UserContext } from "@web/auth/compass/user/context/UserContext";
 import { readHiddenCalendarIds } from "@web/calendars/calendar-visibility.storage";
@@ -27,14 +28,12 @@ export function ReflectionPreferencesControl() {
   const checkbox = useRef<HTMLInputElement>(null);
   const focusRequested =
     useSettingsStore(selectSettingsFocus) === "weekly-reflection";
-  const [paused, setPaused] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
     session.current++;
     setSaving(false);
-    setPaused(false);
     setError("");
     if (userId)
       void UserApi.getReflectionPreferences()
@@ -83,12 +82,16 @@ export function ReflectionPreferencesControl() {
       });
       if (generation === session.current) {
         setState({ userId, data });
-        setPaused(preferences?.enabled === true && !enabled);
       }
-    } catch {
+    } catch (caught) {
+      const failed = isApiError(caught) ? caught.response : undefined;
+      const message = (failed?.data as { message?: unknown } | undefined)
+        ?.message;
       if (generation === session.current)
         setError(
-          "Reflection settings were not saved. Your calendar history may still be preparing. Please try again.",
+          failed?.status === 403 && typeof message === "string"
+            ? message
+            : "Reflection settings were not saved. Please try again.",
         );
     } finally {
       if (generation === session.current) setSaving(false);
@@ -130,7 +133,7 @@ export function ReflectionPreferencesControl() {
       <p>
         Recent highlights, memories, your life in weeks, and time to plan ahead.
       </p>
-      {paused && (
+      {state.data.paused && !preferences?.enabled && (
         <p role="status">
           Calendar reflections are paused. You can enable them here anytime.{" "}
           <a

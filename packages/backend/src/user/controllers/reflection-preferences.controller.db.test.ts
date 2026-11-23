@@ -20,6 +20,17 @@ import {
   spyOn,
 } from "bun:test";
 
+const waitFor = async (check: () => void) => {
+  for (let i = 0; i < 50; i++) {
+    try {
+      return check();
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  check();
+};
+
 describe("reflection preferences", () => {
   const driver = new BaseDriver();
   const path = "/api/user/reflection-preferences";
@@ -135,6 +146,36 @@ describe("reflection preferences", () => {
       .set("Cookie", cookie(other._id.toString()))
       .expect(200);
     expect(response.body.preferences).toBeNull();
+  });
+
+  it("starts the history import on opt-in and refuses accounts that unsubscribed from all email", async () => {
+    const client = getSyncServiceClient();
+    const importHistory = spyOn(
+      client,
+      "importReflectionHistory",
+    ).mockResolvedValue({ ok: true, value: { queued: 0 } } as never);
+    const { user } = await UtilDriver.setupTestUser();
+    const put = (body = settings) =>
+      driver
+        .getServer()
+        .put(path)
+        .set("Cookie", cookie(user._id.toString()))
+        .send(body);
+    await put().expect(200);
+    await waitFor(() => expect(importHistory).toHaveBeenCalled());
+    await put({ ...settings, enabled: false }).expect(200);
+    const paused = await driver
+      .getServer()
+      .get(path)
+      .set("Cookie", cookie(user._id.toString()))
+      .expect(200);
+    expect(paused.body.paused).toBe(true);
+    await mongoService.user.updateOne(
+      { _id: user._id },
+      { $set: { "emailPreferences.unsubscribedAt": new Date() } },
+    );
+    const refused = await put().expect(403);
+    expect(refused.body.message).toContain("unsubscribed from all");
   });
 
   it("disables queued mail and clears private snapshots even when enrollment is unavailable", async () => {
