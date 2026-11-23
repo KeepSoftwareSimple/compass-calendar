@@ -115,13 +115,23 @@ type ScheduleMeta = {
   weekday: number;
 };
 
-const scheduleMeta = (event: GridEvent): ScheduleMeta => {
+const scheduleMeta = (
+  event: GridEvent,
+  firstVisibleDay: Dayjs | undefined,
+): ScheduleMeta => {
   if (!event.startDate) return FALLBACK_SCHEDULE;
   const start = dayjs(event.startDate);
+  // An event that began before the visible range is labeled on its first
+  // visible column, so it cannot share a day prefix (t1) with one that
+  // starts on that weekday in view.
+  const column =
+    firstVisibleDay && start.isBefore(firstVisibleDay, "day")
+      ? firstVisibleDay
+      : start;
   return {
     startMs: start.valueOf(),
-    dayKey: start.format(YEAR_MONTH_DAY_FORMAT),
-    weekday: start.day(),
+    dayKey: column.format(YEAR_MONTH_DAY_FORMAT),
+    weekday: column.day(),
   };
 };
 
@@ -139,6 +149,7 @@ const toActiveHints = (
 const buildDayJumpAssignments = (
   visible: ShiftHintFocusTarget[],
   events: GridEvent[],
+  firstVisibleDay?: Dayjs,
 ): {
   assignments: DayJumpAssignment[];
   visibleById: Map<string, ShiftHintFocusTarget>;
@@ -146,7 +157,7 @@ const buildDayJumpAssignments = (
   const scheduleById = new Map<string, ScheduleMeta>();
   for (const event of events) {
     if (!event._id) continue;
-    scheduleById.set(event._id, scheduleMeta(event));
+    scheduleById.set(event._id, scheduleMeta(event, firstVisibleDay));
   }
 
   const targets = visible.map((target) => {
@@ -375,6 +386,7 @@ export function useShiftHoldEventHints({
       const { assignments, visibleById } = buildDayJumpAssignments(
         listVisibleRef.current(),
         [...allDayEventsRef.current, ...timedEventsRef.current],
+        visibleDaysRef.current[0],
       );
       assignmentsRef.current = assignments;
       visibleByIdRef.current = visibleById;
@@ -814,6 +826,7 @@ export function useShiftHoldEventHints({
     const { assignments, visibleById } = buildDayJumpAssignments(
       listVisibleRef.current(),
       [...allDayEventsRef.current, ...timedEventsRef.current],
+      visibleDaysRef.current[0],
     );
     assignmentsRef.current = assignments;
     visibleByIdRef.current = visibleById;
