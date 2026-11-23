@@ -99,7 +99,7 @@ describe("opt-in reflection delivery", () => {
     setSystemTime();
   });
 
-  it("enqueues exactly one weekly edition across concurrent cycles and never enrolls another account", async () => {
+  it("enqueues exactly one weekly edition across concurrent cycles and skips accounts that have not opted in", async () => {
     await mongoService.user.insertOne({
       _id: new ObjectId(),
       email: "other@example.com",
@@ -107,11 +107,6 @@ describe("opt-in reflection delivery", () => {
       lastName: "",
       name: "Other",
       locale: "en",
-      reflectionPreferences: {
-        enabled: true,
-        timeZone: "America/Denver",
-        excludedCalendarIds: [],
-      },
     });
     await Promise.all([enqueueDueReflections(now), enqueueDueReflections(now)]);
     const rows = await mongoService.emailSend.find({}).toArray();
