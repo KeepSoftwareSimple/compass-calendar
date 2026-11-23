@@ -99,7 +99,7 @@ export async function prepareReflection(
   const edition = row.reflection;
   if (!edition) throw new Error("Missing reflection edition");
   const context = await reflectionCalendarContext(user);
-  if (!edition.trial && !context.connectionsReady)
+  if (!options.preview && !context.connectionsReady)
     throw new Error("Calendar connection needs attention");
   const metadata = await context.client.readReflection(context.principal, {
     calendarIds: context.calendarIds,
@@ -107,11 +107,7 @@ export async function prepareReflection(
     windows: [],
   });
   if (!metadata.ok) throw new Error("Calendar history unavailable");
-  if (
-    !edition.trial &&
-    !options.allowIncompleteHistory &&
-    !metadata.value.historyComplete
-  )
+  if (!options.allowIncompleteHistory && !metadata.value.historyComplete)
     throw new Error("Calendar history incomplete");
   const current = reflectionWindows(
     edition.date,
@@ -167,7 +163,7 @@ export async function prepareReflection(
       );
     } while (cursor);
   }
-  if (!edition.trial && !options.allowIncompleteHistory && !historyComplete)
+  if (!options.allowIncompleteHistory && !historyComplete)
     throw new Error("Calendar history incomplete");
   const previous = await mongoService.emailSend
     .find(

@@ -29,11 +29,7 @@ export function ReflectionPreferencesControl() {
     setPaused(false);
     setError("");
     if (userId)
-      void UserApi.initializeReflectionPreferences({
-        timeZone,
-        excludedCalendarIds: [...readHiddenCalendarIds()],
-      })
-        .then(() => UserApi.getReflectionPreferences())
+      void UserApi.getReflectionPreferences()
         .then((data) => {
           if (active) setState({ userId, data });
         })
@@ -44,7 +40,7 @@ export function ReflectionPreferencesControl() {
       active = false;
       session.current++;
     };
-  }, [userId, timeZone]);
+  }, [userId]);
   if (!userId) return <p>Sign in to manage calendar reflection emails.</p>;
   if (state?.userId !== userId)
     return (

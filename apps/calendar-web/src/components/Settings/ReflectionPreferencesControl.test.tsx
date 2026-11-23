@@ -12,7 +12,7 @@ const preferences: ReflectionPreferences = {
   timeZone: "America/Denver",
   excludedCalendarIds: [],
 };
-const response = { available: true, trial: true, preferences };
+const response = { available: true, preferences };
 const control = (userId: string, authenticated = true) => (
   <SessionContext.Provider
     value={{ authenticated, setAuthenticated: () => {} }}
@@ -26,13 +26,11 @@ afterEach(() => mock.restore());
 
 describe("reflection preference control", () => {
   it("does not load email preferences for a signed-out cached account", () => {
-    const initialize = spyOn(UserApi, "initializeReflectionPreferences");
     const load = spyOn(UserApi, "getReflectionPreferences");
     render(control("cached-account", false));
     expect(
       screen.getByText("Sign in to manage calendar reflection emails."),
     ).toBeInTheDocument();
-    expect(initialize).not.toHaveBeenCalled();
     expect(load).not.toHaveBeenCalled();
   });
 

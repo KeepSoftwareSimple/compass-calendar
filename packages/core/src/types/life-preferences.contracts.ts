@@ -43,13 +43,9 @@ export const ReflectionPreferencesSchema = z.strictObject({
 });
 export type ReflectionPreferences = z.infer<typeof ReflectionPreferencesSchema>;
 
-export const InitializeReflectionPreferencesSchema =
-  ReflectionPreferencesSchema.omit({ enabled: true });
-
 export const ReflectionPreferencesResponseSchema = z.object({
   preferences: ReflectionPreferencesSchema.nullable(),
   available: z.boolean(),
-  trial: z.boolean(),
 });
 export const ReflectionCalendarVisibilitySchema = z.strictObject({
   calendarId: z.string().min(1).max(256),

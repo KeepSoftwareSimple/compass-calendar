@@ -8,10 +8,7 @@ import {
 } from "@backend/email/email-layout";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { prepareReflection } from "@backend/email/reflection-context";
-import {
-  isReflectionTrialUser,
-  reflectionEligible,
-} from "@backend/email/reflection-enrollment";
+import { reflectionEligible } from "@backend/email/reflection-enrollment";
 import { WELCOME_SEQUENCE_CONTENT } from "@backend/email/welcome-sequence.content";
 
 export async function prepareWelcomeReviewEmail(
@@ -20,10 +17,8 @@ export async function prepareWelcomeReviewEmail(
   unsubscribe: WelcomeEmailUnsubscribe,
 ) {
   const intro = WELCOME_SEQUENCE_CONTENT["weekly-review"];
-  // Feature rollout gates and explicit pauses still apply to onboarding.
-  if (
-    !reflectionEligible(user, isReflectionTrialUser(user._id.toHexString()))
-  ) {
+  // The feature gate and explicit pauses still apply to onboarding.
+  if (!reflectionEligible(user)) {
     return {
       ...renderWelcomeEmail("weekly-review", intro, unsubscribe),
       pdfBase64: null,
@@ -36,7 +31,7 @@ export async function prepareWelcomeReviewEmail(
   const date =
     row.reflection?.date ?? dayjs().tz(timeZone).format("YYYY-MM-DD");
   const review = await prepareReflection(
-    { ...row, reflection: { date, timeZone, cadence: "daily", trial: false } },
+    { ...row, reflection: { date, timeZone, cadence: "daily" } },
     user,
     unsubscribe.httpsUrl,
     { preview: true, allowIncompleteHistory: true },

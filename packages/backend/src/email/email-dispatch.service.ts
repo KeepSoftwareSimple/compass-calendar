@@ -38,11 +38,7 @@ import {
   dispatchReflection,
   dispatchReflectionBatch,
 } from "@backend/email/reflection-dispatch";
-import {
-  enqueueDueReflections,
-  isReflectionTrialUser,
-} from "@backend/email/reflection-enrollment";
-import { initializeReflectionPreferences } from "@backend/email/reflection-initialization";
+import { enqueueDueReflections } from "@backend/email/reflection-enrollment";
 import { findWelcomeStep } from "@backend/email/welcome-sequence";
 import { getWelcomeEmailContent } from "@backend/email/welcome-sequence.content";
 import { loadWelcomeSequenceUser } from "@backend/email/welcome-sequence.context";
@@ -456,12 +452,7 @@ export class EmailDispatchService {
     }
 
     if (row.stepKey === "weekly-review") {
-      // Browser initialization normally supplies the user's timezone. UTC is
-      // the fallback for a signup that never opens the web app.
-      await initializeReflectionPreferences(row.userId, {
-        timeZone: "UTC",
-        excludedCalendarIds: [],
-      });
+      // Only users who opted in to reviews receive the introductory one.
       const fullUser = await mongoService.user.findOne({ _id: row.userId });
       const preferences = fullUser?.reflectionPreferences;
       if (!fullUser || !preferences) {
@@ -478,7 +469,6 @@ export class EmailDispatchService {
                 date: dayjs().tz(preferences.timeZone).format("YYYY-MM-DD"),
                 timeZone: preferences.timeZone,
                 cadence: "daily",
-                trial: isReflectionTrialUser(userIdHex),
               },
             },
           },
