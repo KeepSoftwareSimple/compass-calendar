@@ -16,6 +16,10 @@ export type WelcomeEmailContentEntry = {
 
 const appUrl = (): string => CONFIG.FRONTEND_URL.replace(/\/$/, "");
 
+/** Opens Settings > Notifications with the weekly reflection toggle focused. */
+export const reflectionSettingsHref = (): string =>
+  `${appUrl()}/?settings=notifications&focus=weekly-reflection`;
+
 const billingSettingsHref = (): string => `${appUrl()}/?settings=billing`;
 
 // TODO(copy): replace placeholder welcome drip copy before launch.
@@ -94,11 +98,11 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     paragraphs: [
       "Every Sunday at 10:30 a.m., Compass can email you a short reflection on your calendar: highlights from your week, memories from the same week in past years, your life in weeks, and a look at what's ahead so you can plan it.",
       "It takes about two minutes to read. If you turned it on while signing up, you're all set and your first one is on the way.",
-      "If not, you can turn it on in Settings > Notifications. You can pause it there any time.",
+      "If not, the button below opens Settings with the toggle ready: press Space or click to turn it on. You can pause it there any time.",
     ],
     cta: {
       label: "Turn on weekly reflections",
-      href: `${appUrl()}/?settings=notifications`,
+      href: reflectionSettingsHref(),
     },
   },
   "trial-ending": {

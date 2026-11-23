@@ -4,7 +4,10 @@ import dayjs from "@core/util/date/dayjs";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import { nextReflectionSend } from "@backend/email/reflection-schedule";
-import { type WelcomeEmailContentEntry } from "@backend/email/welcome-sequence.content";
+import {
+  reflectionSettingsHref,
+  type WelcomeEmailContentEntry,
+} from "@backend/email/welcome-sequence.content";
 
 export const REFLECTION_CONFIRMATION_STEP = "confirmation";
 
@@ -51,7 +54,7 @@ export function reflectionConfirmationContent(
     ],
     cta: {
       label: "Manage notifications",
-      href: `${CONFIG.FRONTEND_URL.replace(/\/$/, "")}/?settings=notifications`,
+      href: reflectionSettingsHref(),
     },
   };
 }

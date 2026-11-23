@@ -6,7 +6,10 @@ import {
   type AuthSearch,
   VIEW_TO_PARAM,
 } from "@web/components/AuthModal/hooks/useAuthModal";
-import { SETTINGS_SEARCH_PARAM } from "@web/settings/settings.search";
+import {
+  SETTINGS_FOCUS_PARAM,
+  SETTINGS_SEARCH_PARAM,
+} from "@web/settings/settings.search";
 import { settingsActions } from "@web/settings/settings.store";
 
 interface SettingsSearchEntryOptions {
@@ -47,13 +50,14 @@ export function useSettingsSearchEntry({
       return;
     }
     consumedRef.current = true;
-    settingsActions.openSettings(page);
+    settingsActions.openSettings(page, { focus: search[SETTINGS_FOCUS_PARAM] });
     void navigate({
       to: ".",
       replace: true,
       search: (prev: AuthSearch) => {
         const next = { ...prev };
         delete next[SETTINGS_SEARCH_PARAM];
+        delete next[SETTINGS_FOCUS_PARAM];
         return next;
       },
     });

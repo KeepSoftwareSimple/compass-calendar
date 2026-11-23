@@ -27,7 +27,11 @@ the user their first review is coming, on which Sunday, and asks them to allow
 the sender so the first review lands in the inbox. The CLI does not send it.
 
 The fifth welcome email (day 5) is a pitch for weekly reflections sent to every
-account, whether or not they enrolled, with a link to Settings > Notifications.
+account, whether or not they enrolled. Its button, and the confirmation email's,
+open `/?settings=notifications&focus=weekly-reflection`: Settings on
+Notifications with the reflection checkbox focused, so Space or a click is the
+whole action. The `focus` param is consumed like `settings`; add new targets to
+`settings.search.ts`.
 
 Reviews arrive Sunday at 10:30 a.m. in the saved timezone, observing DST. A send
 that cannot be attempted by local noon expires rather than replaying later.
