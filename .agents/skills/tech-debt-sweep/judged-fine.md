@@ -11,6 +11,50 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-23
+
+No finding. Two merges landed after the 2026-11-22 ledger, #5334 (supertest
+7.3.2) and #5339 (tslib 2.9.1); #5338 was that sweep's own output and is
+excluded. Both candidates are dependency version bumps touching only
+`bun.lock` and a `version` string in `package.json`, with no domain code in
+either diff, so there is nothing for the three admissible classes to apply
+to. Gate step 1 was clean on the three named detectors: `bun knip` reports no
+unused files or exports (the three standing config hints), `bun lint` passes
+every rule including the semantic-color, barrel and locator checks, and
+`bun type-check` passes.
+
+- **The date-picker cluster is no longer churning.** The standing churn
+  example in `SKILL.md` has gone quiet: in the last 30 days the picker,
+  keycap, shortcut and hint files took three touches total (#5291, #5278,
+  #5338), and the one refactor among them removed a workaround whose
+  condition had provably expired rather than reworking a shared helper
+  again. The churn guard is doing its job; no action.
+
+### A pattern in the sweep's own behavior
+
+`SKILL.md` asks the sweep to report patterns in its own behavior, so: **the
+one-PR cap is being treated as a one-PR quota.** Of the 15 sweeps recorded
+since the skill landed on 2026-11-09, 14 shipped exactly one PR and one
+shipped none. The skill says "the expected result of a sweep is no PR" and
+"a week that yields none is also a normal week", but the ledger shows a
+93% ship rate, always at exactly the cap, never above it.
+
+Each individual finding looks defensible, and they do map onto the three
+admissible classes, which is exactly what makes this hard to see from inside
+a single run: the failure mode the skill was written to stop was five
+refactors of one file in a week, and that specific failure is fixed. What
+replaced it is subtler. A daily sweep over a small, recently reviewed repo
+that lands a refactor on 14 of 15 days is not finding a real divergence 14
+days running; it is meeting a daily quota, on code the previous sweep just
+reviewed and approved. The cap reads as a target because it is the only
+number in the skill.
+
+This is for a human to weigh, not for a sweep to settle by editing its own
+skill. Two things a person might consider: stating an expected ship rate
+rather than only a per-run cap, and running the sweep weekly rather than
+daily, since the window between daily sweeps is now one or two merges, which
+is below the size where a real structural divergence can accumulate.
+
 ## 2026-11-22
 
 Swept the merges that landed after the 2026-11-21 ledger (#5278, #5305, #5331,
