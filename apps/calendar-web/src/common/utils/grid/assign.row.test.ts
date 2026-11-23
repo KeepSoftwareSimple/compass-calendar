@@ -79,6 +79,17 @@ describe("case: 4 events, year change", () => {
   });
 });
 
+describe("case: multi-week event spanning New Year", () => {
+  it("does not share a lane with events in January", () => {
+    const { allDayEvents } = assignEventsToRow([
+      { startDate: "2026-12-20", endDate: "2027-01-20", _id: createId() },
+      { startDate: "2026-12-27", endDate: "2026-12-28", _id: createId() },
+      { startDate: "2027-01-01", endDate: "2027-01-02", _id: createId() },
+    ]);
+    expect(allDayEvents.map((e) => e.row)).toEqual([1, 2, 2]);
+  });
+});
+
 describe("case: 2 overlapping events", () => {
   const { rowsCount, allDayEvents } = assignEventsToRow([
     { startDate: "2023-03-29", endDate: "2024-04-02" },
