@@ -20,6 +20,8 @@ export type ShortcutHintContext = {
   isLifeView: boolean;
   isWeekView?: boolean;
   eventFocused: boolean;
+  /** The focused event is in the all-day row. */
+  allDayEventFocused?: boolean;
   firstEventDone: boolean;
   /** Day prefixes the jump engine can currently land on. */
   jumpableDayPrefixes?: readonly string[];
@@ -142,6 +144,13 @@ export function selectShortcutHint(
         ? (["command-palette"] as const)
         : LIFE_POOL;
     return pick(pool);
+  }
+  if (
+    ctx.eventFocused &&
+    ctx.allDayEventFocused &&
+    !demonstratedIds.includes("all-day-to-grid")
+  ) {
+    return ranked("all-day-to-grid");
   }
   if (ctx.eventFocused) {
     return pick(withWeekDayFocus(FOCUSED_POOL, showWeekDay));

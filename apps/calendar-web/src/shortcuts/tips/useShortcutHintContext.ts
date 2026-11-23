@@ -26,7 +26,10 @@ import { selectShortcutHint } from "@web/shortcuts/tips/selectShortcutHint";
 import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useShortcutHintProgress } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useIsTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
-import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
+import {
+  useIsAllDayEventFocused,
+  useIsAnyCalendarEventFocused,
+} from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
 import { isLifeThisWeekFocusEligible } from "@web/views/Life/life-this-week-focus";
 import { useLifePreferences } from "@web/views/Life/useLifePreferences";
 
@@ -47,6 +50,7 @@ export function useShortcutHintContext() {
   const isFormOpen = useDraftStore(selectIsEventFormOpen);
   const formFocusInside = useEventFormFocusStore(selectEventFormFocusInside);
   const eventFocused = useIsAnyCalendarEventFocused();
+  const allDayEventFocused = useIsAllDayEventFocused();
   const pathname = window.location.pathname;
   const isLifeView = isLifePathname(pathname);
   const lifeSettings = useLifePreferences();
@@ -103,6 +107,7 @@ export function useShortcutHintContext() {
       lifeThisWeekEligible,
       isWeekView,
       eventFocused,
+      allDayEventFocused,
       firstEventDone: firstEventDone || isCelebrating,
       jumpableDayPrefixes,
       todayWeekday: dayjs().day(),
