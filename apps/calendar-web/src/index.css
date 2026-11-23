@@ -939,6 +939,8 @@
 .c-date-picker {
   @apply select-none rounded-xs border-0 shadow-[0_4px_4px_var(--color-shadow-default)];
   background-color: var(--date-picker-bg);
+  /* react-datepicker sets its own font-family; keep the app font. */
+  font-family: var(--font-sans);
   font-size: 11px;
   --date-picker-hover-bg: color-mix(
     in srgb,
