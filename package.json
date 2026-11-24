@@ -59,7 +59,7 @@
   "dependencies": {
     "@compass/backend": "*",
     "@compass/core": "*",
-    "module-alias": "^2.2.2"
+    "module-alias": "^2.3.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
