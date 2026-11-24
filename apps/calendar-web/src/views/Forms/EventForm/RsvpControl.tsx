@@ -90,7 +90,7 @@ export const RsvpControl = ({ event, accountEmail, id }: RsvpControlProps) => {
                 onChange={() => respond(status)}
                 className="peer sr-only"
               />
-              <span className="flex min-h-7 items-center px-2.5 text-text-muted transition-colors hover:bg-surface-raised peer-checked:bg-accent peer-checked:text-on-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-inset">
+              <span className="flex min-h-7 items-center px-2.5 text-text-muted transition-colors not-peer-checked:hover:bg-surface-raised peer-checked:bg-accent peer-checked:text-on-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-focus-visible:ring-inset">
                 {label}
               </span>
             </label>
