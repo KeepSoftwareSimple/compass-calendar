@@ -11,6 +11,106 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-24
+
+No finding. Swept the 14 merges that landed after the 2026-11-23 ledger
+(#5341 through #5354); #5340 was that sweep's own output and is excluded.
+Gate step 1 was clean on the three named detectors: `bun knip` reports no
+unused files or exports (the three standing config hints), `bun lint` passes
+every rule including the semantic-color, barrel and locator checks, and
+`bun type-check` passes. No file in the window overlaps a prior sweep's
+refactor (#5313, #5330, #5338), so the churn guard did not bind. Everything
+below was examined and kept.
+
+- **The reflection opt-in consolidation** (`reflection-opt-in.ts`, #5352).
+  Three email PRs landed on this path in one window, which is the shape churn
+  takes, but it is the opposite: #5352 created one owner for the rule, and
+  both callers delegate to it. `reflection-preferences.controller.ts` and the
+  new `email.reflection.controller.ts` share `reflectionEnableBlock` and
+  `setReflectionEnabled` rather than each gating opt-in themselves, and the
+  block reasons are user-facing copy owned in that one file. The web side does
+  not copy the rule either: `ReflectionPreferencesControl` renders the
+  backend's 403 `message` verbatim and only falls back to generic copy when
+  the status is not 403. There is no second site to drift.
+
+- **`UP_NEXT_IMMINENT_MINUTES`** (#5353). The feature PR itself removed the
+  drifted copy: `UpNextBanner` held a local `MINUTES_BEFORE_START = 2` beside
+  `useUpNextEvent`'s own threshold, and #5353 exported one constant and
+  imported it. Checked for a third copy, since the hook's comment says it is
+  shared with the upcoming-event notifier: there is none.
+  `upcoming-notifier.logic.ts` works from per-event `popupReminderMinutes` and
+  `MAX_NOTIFICATION_LOOKAHEAD_MINUTES`, a different rule with a different
+  owner. Nothing left to fold.
+
+- **`_dayNumber` in `assign.row.ts`** (#5342). The New Year lane bug was a
+  real divergence, so the obvious question is whether another site still
+  packs spans by day of year. Repo-wide, none does: the only surviving
+  `dayOfYear()` call is `reflection-content.ts`'s `Your weekly review (N)`
+  subject number, which is a label and not span arithmetic. No shared
+  absolute-day helper exists for the new module-private `_dayNumber` to
+  duplicate, and introducing one to serve a single caller would be a fix
+  larger than the problem.
+
+- **`SYNC_TOKEN_UNSUPPORTED_FULL_SNAPSHOT_INTERVAL_MS` vs the tail of
+  `CURSOR_EXPIRY_HOLD_OFF_MS`** (#5349). Both are `6 * 60 * 60_000`, in
+  `sync-token-unsupported.ts` and `sync-job-dispatch.service.ts`, and the
+  first's comment says it "matches the widest cursor-expiry hold-off", which
+  reads like a drifted copy waiting to happen. It should stay two constants.
+  They are independent policies that merely coincide today: the ladder bounds
+  provider quota for incremental pulls, the interval bounds the cost of
+  authoritative full snapshots. Deriving one from the other would make a
+  quota tweak to the ladder's tail silently change snapshot cadence, which is
+  worse than the comment going stale. The comment recording the coincidence
+  and its reason is the right treatment.
+
+- **#5350's trial teardown.** A 285-line runbook, `reflection-initialization.ts`,
+  `initializeReflectionPreferences`, and five config keys were deleted at
+  once, which is where dangling references normally survive because `knip`
+  cannot see docs or YAML. None did: no reference remains to
+  `weekly-reflection-trial`, the removed module or endpoint, or
+  `rolloutEnabled`, `rolloutStartDate`, `enrollExisting`, `trialUserId` and
+  `trialEmail`. `compass.example.yaml` carries no `reflection` block at all
+  and the schema's `reflection` stays `.optional()` with `enabled` defaulting
+  to true, so a fresh `cp compass.example.yaml compass.yaml` still parses
+  under `.strict()`.
+
+- **The two focus hooks** (`useIsAnyCalendarEventFocused.ts`, #5346).
+  `useIsAllDayEventFocused` was added beside the existing hook over a shared
+  `useFocusCheck`, so each consumer subscribes its own `focusin`/`focusout`
+  pair where one derived value would do. That is an efficiency preference, not
+  one of the three classes, and the checks are module-level stable references
+  so the `[check]` dependency causes no re-subscribe churn.
+
+- **Booking status copy** (#5349). `PUBLIC_BOOKING_UNBOOKABLE` was reworded
+  and a retry affordance added, but the copy constants stay owned by
+  `public-booking.view.ts` and the retry is carried as a discriminated
+  `retry: "page" | "slots"` field that the component resolves against its own
+  queries. No copy was duplicated into the component.
+
+- **#5341, #5343, #5344, #5345, #5348, #5347, #5354.** A Zustand hover field
+  on the existing page-jump store; a pure JSX block move in `DatePicker.tsx`
+  (26 insertions, 26 deletions, the identical `withTodayButton` block
+  relocated); two CSS lines; a types-only dependency bump; one new grid
+  constant with a comment deriving its value; a `firstVisibleDay` argument
+  threaded into one hint helper; and one Tailwind variant
+  (`not-peer-checked:hover:`). Nothing for the three classes to apply to.
+
+### A pattern in the sweep's own behavior
+
+This is the **second consecutive sweep with no finding**, which is worth
+recording because it is the first direct evidence for what the 2026-11-23
+entry argued. That entry observed a 93% ship rate always at exactly the
+one-PR cap, and suspected the cap was being read as a quota rather than a
+ceiling. Two null results in a row, on a 14-merge window that is much larger
+than the 2-merge window of the previous run, is consistent with that reading:
+when the sweep is not reaching for something, it finds nothing, even with a
+week's worth of feature work to look at.
+
+The two suggestions in that entry are still open and still need a person:
+state an expected ship rate rather than only a per-run cap, and move the
+sweep from daily to weekly. Nothing in this run changes that recommendation,
+and a sweep should not settle it by editing its own skill.
+
 ## 2026-11-23
 
 No finding. Two merges landed after the 2026-11-22 ledger, #5334 (supertest
