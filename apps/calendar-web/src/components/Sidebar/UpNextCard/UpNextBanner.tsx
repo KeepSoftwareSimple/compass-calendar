@@ -10,10 +10,9 @@ import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { formatEventStatus } from "./UpNextCard";
 import { useUpNextBannerHorizontalCenter } from "./useUpNextBannerHorizontalCenter";
-import { useUpNextEvent } from "./useUpNextEvent";
+import { UP_NEXT_IMMINENT_MINUTES, useUpNextEvent } from "./useUpNextEvent";
 import { useUpNextOsNotification } from "./useUpNextOsNotification";
 
-const MINUTES_BEFORE_START = 2;
 const BANNER_BOTTOM_OFFSET_PX = 24;
 
 /**
@@ -30,7 +29,7 @@ export const UpNextBanner: FC = () => {
     Boolean(upNext) &&
     (isCurrentEvent ||
       dayjs(upNext?.startDate).diff(now, "minute", true) <=
-        MINUTES_BEFORE_START);
+        UP_NEXT_IMMINENT_MINUTES);
   const isVisible = isWithinWindow && upNext?._id !== dismissedId;
   const centerX = useUpNextBannerHorizontalCenter(isVisible);
   const bannerRef = useRef<HTMLDivElement>(null);

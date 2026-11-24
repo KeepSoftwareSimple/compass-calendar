@@ -10,6 +10,8 @@ import { draftActions } from "@web/events/stores/draft.store";
 import { filterEventsVisibleOnGrid } from "@web/events/visibility/filter-events-visible-on-grid";
 import { notifiableEventQueryRange } from "@web/notifications/upcoming-notifier.logic";
 
+export const UP_NEXT_IMMINENT_MINUTES = 2;
+
 /**
  * Today's timed events with their real start/end bounds, ticking every minute.
  * Shared by the up-next card and the upcoming-event notifier so the multi-day
@@ -73,8 +75,15 @@ export function useUpNextEvent() {
       (a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf(),
     );
 
-  const upNext = nowEvents[0] || upcomingEvents[0];
-  const isCurrentEvent = !!nowEvents[0];
+  // An event about to start outranks one still running, so a back-to-back
+  // meeting surfaces (and its join shortcut works) before the old one ends.
+  const imminent = upcomingEvents.find(
+    (event) =>
+      dayjs(event.startDate).diff(now, "minute", true) <=
+      UP_NEXT_IMMINENT_MINUTES,
+  );
+  const upNext = imminent || nowEvents[0] || upcomingEvents[0];
+  const isCurrentEvent = !imminent && !!nowEvents[0];
 
   const sourceEvent = upNext
     ? events.find((candidate) => candidate.id === upNext._id)

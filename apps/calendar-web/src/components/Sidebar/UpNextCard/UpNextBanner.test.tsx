@@ -219,6 +219,21 @@ describe("UpNextBanner", () => {
     );
   });
 
+  it("offers Join for a meeting about to start while another event is still running", () => {
+    render(<UpNextBanner />, {
+      events: [
+        timedEvent(SOON_EVENT_ID, "Running Event", -10),
+        timedEvent(LATER_EVENT_ID, "Back To Back", 1, {
+          url: "https://meet.google.com/abc-defg-hij",
+          label: null,
+        }),
+      ],
+    });
+
+    expect(screen.getByText("Back To Back")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Join" })).toBeInTheDocument();
+  });
+
   it("pressing n opens the event details form even when Join is shown", async () => {
     const user = userEvent.setup();
     render(<UpNextBanner />, {
