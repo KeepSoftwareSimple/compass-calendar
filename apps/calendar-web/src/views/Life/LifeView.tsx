@@ -27,10 +27,7 @@ import {
   useViewStore,
 } from "@web/events/stores/view.store";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
-import {
-  LIFE_PAGE_JUMP_TARGETS,
-  pageJumpAttrs,
-} from "@web/shortcuts/page-jump/page-jump.targets";
+import { LIFE_PAGE_JUMP_TARGETS } from "@web/shortcuts/page-jump/page-jump.targets";
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useLifeUiFocusShortcuts } from "@web/shortcuts/ui-focus/useUiFocusShortcuts";
@@ -212,19 +209,28 @@ export function LifeView({ today }: LifeViewProps) {
           onPrev={() => cycleVariation(-1)}
           prevLabel="Previous life variation"
         />
-        <section
-          aria-label={`Life visualization: ${summary}`}
-          className="min-h-0 flex-1 overflow-auto pr-5 pb-6"
-          {...pageJumpAttrs("life-grid")}
-        >
-          <LifeGrid
-            currentWeekLabel={currentWeekLabel}
-            currentWeekRef={currentWeekRef}
-            showCurrentWeek={hasBirthDate}
-            totalDots={totalDots}
-            weeksLived={weeksLived}
-          />
-        </section>
+        <LifeGrid
+          key={preferences.birthDate}
+          birthDate={preferences.birthDate}
+          summary={summary}
+          initialWeek={search.week}
+          initialZoom={search.zoom}
+          currentWeekLabel={currentWeekLabel}
+          currentWeekRef={currentWeekRef}
+          totalDots={totalDots}
+          weeksLived={weeksLived}
+          onOpenWeek={async (dateString, week, zoom) => {
+            await navigate({
+              to: ROOT_ROUTES.LIFE,
+              replace: true,
+              search: (current) => ({ ...current, week, zoom }),
+            });
+            await navigate({
+              to: ROOT_ROUTES.WEEK_DATE,
+              params: { dateString },
+            });
+          }}
+        />
       </main>
 
       <ResizableSidebarPanel isOpen={isSidebarOpen}>

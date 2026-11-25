@@ -31,6 +31,21 @@ test("shows the Life view intro once and dismisses with Enter or Escape", async 
 
   const gotIt = intro.getByRole("button", { name: "Got it" });
   await expect(gotIt).toBeFocused();
+  const pirate = intro.getByRole("button", {
+    name: "A quote from Oliver Burkeman",
+  });
+  const quote = page
+    .getByRole("tooltip")
+    .filter({ hasText: "neglect the right things" });
+  await expect(quote).toBeHidden();
+  await pirate.hover();
+  await expect(quote).toBeVisible();
+  await gotIt.hover();
+  await expect(quote).toBeHidden();
+  await gotIt.press("Shift+Tab");
+  await expect(pirate).toBeFocused();
+  await expect(quote).toBeVisible();
+  await pirate.press("Tab");
   await gotIt.press("Enter");
   await expect(intro).toBeHidden();
 
