@@ -241,24 +241,21 @@ describe("useVersionCheck", () => {
   });
 
   it("cleans up the visibility listener on unmount", async () => {
-    const addEventListenerSpy = spyOn(document, "addEventListener");
-    const removeEventListenerSpy = spyOn(document, "removeEventListener");
-
     const { unmount } = await renderVersionCheckHook();
-
-    const handler = addEventListenerSpy.mock.calls.find(
-      ([eventName]) => eventName === "visibilitychange",
-    )?.[1];
+    await flushVersionCheckAsync();
+    fetchMock.mockClear();
 
     unmount();
 
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      "visibilitychange",
-      handler,
-    );
+    act(() => {
+      visibilityState = "hidden";
+      document.dispatchEvent(new Event("visibilitychange"));
+      setSystemTime(new Date(Date.now() + MIN_HIDDEN_DURATION_MS + 1_000));
+      visibilityState = "visible";
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
 
-    addEventListenerSpy.mockRestore();
-    removeEventListenerSpy.mockRestore();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("runs the backup poll on the interval", async () => {

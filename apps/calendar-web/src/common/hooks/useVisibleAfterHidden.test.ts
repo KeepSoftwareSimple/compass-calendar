@@ -83,25 +83,20 @@ describe("useVisibleAfterHidden", () => {
 
   it("removes the listener on unmount", () => {
     reset();
-    const addEventListenerSpy = spyOn(document, "addEventListener");
-    const removeEventListenerSpy = spyOn(document, "removeEventListener");
-
+    const onVisible = mock();
     const { unmount } = renderHook(() =>
-      useVisibleAfterHidden(mock(), THRESHOLD_MS),
+      useVisibleAfterHidden(onVisible, THRESHOLD_MS),
     );
-    const handler = addEventListenerSpy.mock.calls.find(
-      ([eventName]) => eventName === "visibilitychange",
-    )?.[1];
 
     unmount();
 
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      "visibilitychange",
-      handler,
-    );
+    act(() => {
+      setVisibility("hidden");
+      setSystemTime(new Date(Date.now() + THRESHOLD_MS + 1_000));
+      setVisibility("visible");
+    });
 
-    addEventListenerSpy.mockRestore();
-    removeEventListenerSpy.mockRestore();
+    expect(onVisible).not.toHaveBeenCalled();
   });
 
   it("always calls the latest onVisible, not a stale closure from mount", () => {
