@@ -1,10 +1,16 @@
 import { useEffect, useRef } from "react";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@web/components/Tooltip/Tooltip";
 import { PixelPirate } from "@web/components/WelcomeModal/PixelPirate";
 import {
   LIFE_VIEW_INTRO_BODY,
   LIFE_VIEW_INTRO_PRIMARY_LABEL,
+  LIFE_VIEW_INTRO_QUOTE,
   LIFE_VIEW_INTRO_TITLE,
 } from "@web/views/Life/life-view-intro.util";
 import { type LifeViewIntroState } from "@web/views/Life/useLifeViewIntro";
@@ -40,9 +46,23 @@ export function LifeViewIntroModal({
       widthClassName="w-120"
     >
       <div className="flex w-full flex-col gap-6">
-        <PixelPirate className="h-14 w-14 shrink-0" />
+        <Tooltip placement="right">
+          <TooltipTrigger asChild>
+            <button
+              aria-label="A quote from Oliver Burkeman"
+              type="button"
+              className="w-fit cursor-help rounded-sm focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              <PixelPirate className="size-14" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-60">
+            <blockquote>“{LIFE_VIEW_INTRO_QUOTE}”</blockquote>
+            <p className="mt-1 text-text-muted">Oliver Burkeman</p>
+          </TooltipContent>
+        </Tooltip>
         <div className="flex w-full flex-col gap-2">
-          <h1 className="font-bold text-2xl text-text leading-snug">
+          <h1 className="font-[VT323,monospace] text-4xl text-text leading-none">
             {LIFE_VIEW_INTRO_TITLE}
           </h1>
           <p className="text-text-muted">{LIFE_VIEW_INTRO_BODY}</p>

@@ -180,7 +180,7 @@ afterEach(() => {
 });
 
 describe("LifeView", () => {
-  it("renders the shared header, sidebar controls, grid, and no zoom UI", async () => {
+  it("renders the shared header, sidebar controls, grid, and zoom controls", async () => {
     await renderLifeViewWithSidebar();
 
     expect(screen.getByRole("heading", { name: "Life" })).toBeInTheDocument();
@@ -218,9 +218,7 @@ describe("LifeView", () => {
     });
     expect(region).toBeInTheDocument();
     expect(region.querySelector(".ring-1")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /zoom/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Zoom in" })).toBeEnabled();
     expect(screen.queryByText(/ctrl\+scroll|pinch/i)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Shuffle life quote" }),
@@ -476,7 +474,7 @@ describe("LifeView", () => {
     expect(lifespan).toBeLessThanOrEqual(100);
   });
 
-  it("keeps the 52-week row on mobile without horizontal scroll or dot buttons", () => {
+  it("keeps the 52-week row at the default mobile zoom", () => {
     mockViewport(true);
     renderLifeView();
 
@@ -489,9 +487,7 @@ describe("LifeView", () => {
 
     expect(firstWeekRow.style.gridTemplateColumns).toContain("repeat(52,");
     expect(region).toHaveClass("overflow-auto");
-    expect(
-      screen.queryByRole("button", { name: /zoom/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Zoom in" })).toBeEnabled();
   });
 
   it("lets a narrow viewport close the sidebar from inside the sidebar", async () => {

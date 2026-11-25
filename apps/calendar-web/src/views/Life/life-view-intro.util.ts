@@ -5,7 +5,10 @@ import { persistentBrowserStore } from "@web/common/storage/browser-key-value.st
 export const LIFE_VIEW_INTRO_TITLE = "Life view";
 
 export const LIFE_VIEW_INTRO_BODY =
-  'Your life as a grid of weeks. Seeing how few you have left may make you pause before scheduling more busy work. As Oliver Burkeman wrote, "The real measure of any time management technique is whether it helps you neglect the right things."';
+  "Your life as a grid of weeks. Seeing how few you have left may make you pause before scheduling more busy work.";
+
+export const LIFE_VIEW_INTRO_QUOTE =
+  "The real measure of any time management technique is whether it helps you neglect the right things.";
 
 export const LIFE_VIEW_INTRO_PRIMARY_LABEL = "Got it";
 
