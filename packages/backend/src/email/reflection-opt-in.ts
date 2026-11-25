@@ -6,6 +6,7 @@ import mongoService from "@backend/common/services/mongo.service";
 import { emailAnalytics } from "@backend/email/email.analytics";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import { enqueueReflectionConfirmation } from "@backend/email/reflection-confirmation";
+import { hasReflectionOptIn } from "@backend/email/reflection-enrollment";
 import { requestReflectionHistory } from "@backend/email/reflection-history";
 
 export const reflectionAvailable = () =>
@@ -22,11 +23,11 @@ export function reflectionEnableBlock(user: WithId<Schema_User>) {
   return null;
 }
 
-/** The one place reflections are turned on or off after a user's own choice. */
+/** The one place reflections are turned on or off after a user or operator chooses. */
 export async function setReflectionEnabled(
   user: WithId<Schema_User>,
   preferences: ReflectionPreferences,
-  source: "settings" | "email",
+  source: "settings" | "email" | "cli",
 ) {
   const id = user._id;
   await mongoService.user.updateOne(
@@ -53,10 +54,11 @@ export async function setReflectionEnabled(
   if (preferences.enabled) {
     // Confirm the channel once, before the first one, and start the history
     // import a first send depends on.
-    if (!user.reflectionPreferences?.enabled)
+    if (source !== "cli" && !hasReflectionOptIn(user))
       await enqueueReflectionConfirmation(user);
-    void requestReflectionHistory(user);
-  } else if (user.reflectionPreferences?.enabled) {
+    const history = requestReflectionHistory(user);
+    if (source === "cli") await history;
+  } else if (hasReflectionOptIn(user)) {
     void emailAnalytics.capture({
       event: "email_unsubscribed",
       userId: id.toHexString(),

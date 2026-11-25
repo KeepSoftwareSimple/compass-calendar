@@ -6,7 +6,6 @@ import dayjs from "@core/util/date/dayjs";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { EmailSendRecordSchema } from "@backend/email/email-send.record";
-import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
   buildUnsubscribeTokenForUser,
   buildUnsubscribeUrls,
@@ -15,6 +14,11 @@ import {
   prepareReflection,
   reflectionCalendarContext,
 } from "@backend/email/reflection-context";
+import { hasReflectionOptIn } from "@backend/email/reflection-enrollment";
+import {
+  reflectionEnableBlock,
+  setReflectionEnabled,
+} from "@backend/email/reflection-opt-in";
 import { reflectionSendAt } from "@backend/email/reflection-schedule";
 import { saveLifePreferences } from "@backend/user/services/life-preferences.service";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -120,37 +124,25 @@ export async function runReflectionCommand(args: string[]) {
       found++;
       if (user.isSynthetic) continue;
       if (action === "enable" || action === "disable") {
-        if (
-          action === "enable" &&
-          (!CONFIG.REFLECTION_ENABLED ||
-            !CONFIG.EMAIL_PROVIDER ||
-            !CONFIG.EMAIL_UNSUBSCRIBE_SECRET ||
-            !user.reflectionPreferences ||
-            user.emailPreferences?.suppressedAt)
-        )
-          throw new Error(
-            "Configure the email provider, unsubscribe secret, feature gate, and saved settings first",
-          );
+        const preferences = user.reflectionPreferences;
+        if (action === "enable") {
+          const blocked = reflectionEnableBlock(user);
+          if (blocked) throw new Error(blocked);
+          if (!CONFIG.EMAIL_UNSUBSCRIBE_SECRET || !preferences)
+            throw new Error(
+              "Configure the unsubscribe secret and saved settings first",
+            );
+        }
         if (values.apply) {
-          await mongoService.user.updateOne(
-            { _id: user._id },
+          await setReflectionEnabled(
+            user,
             {
-              $set: {
-                "reflectionPreferences.enabled": action === "enable",
-                ...(action === "enable"
-                  ? { "reflectionPreferences.optedInAt": new Date() }
-                  : { "emailPreferences.reflectionDisabledAt": new Date() }),
-              },
-              $unset: {
-                reflectionNextSendAt: "",
-                ...(action === "enable"
-                  ? { "emailPreferences.reflectionDisabledAt": "" }
-                  : {}),
-              },
+              timeZone: preferences?.timeZone ?? "UTC",
+              excludedCalendarIds: preferences?.excludedCalendarIds ?? [],
+              enabled: action === "enable",
             },
+            "cli",
           );
-          if (action === "disable")
-            await emailSendRepository.cancelQueuedReflection(user._id);
         }
         console.log(
           `${user._id.toHexString()}: ${action} ${values.apply ? "applied" : "dry run"}`,
@@ -168,7 +160,7 @@ export async function runReflectionCommand(args: string[]) {
         console.log(
           JSON.stringify({
             userId: user._id.toHexString(),
-            enabled: user.reflectionPreferences?.enabled ?? false,
+            enabled: hasReflectionOptIn(user),
             calendarCount: context.calendarIds.length,
             ...metadata.value,
           }),

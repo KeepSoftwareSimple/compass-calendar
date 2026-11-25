@@ -46,7 +46,7 @@ export function reflectionConfirmationContent(
     subject: "You're signed up for weekly reflections",
     heading: "Your weekly reflection is on the way",
     paragraphs: [
-      `Your first reflection arrives ${first} (${timeZone}), then every Sunday at 10:30 a.m.`,
+      `Your first reflection is scheduled for ${first} (${timeZone}). We send reflections on Sundays at 10:30 a.m. once your calendar history is ready and your selected calendar connections are healthy.`,
       sender
         ? `It will come from ${sender}. Add that address to your contacts, or reply to this email, so it reaches your inbox and not your spam folder.`
         : "Add this sender to your contacts, or reply to this email, so it reaches your inbox and not your spam folder.",

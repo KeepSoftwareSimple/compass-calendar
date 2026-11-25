@@ -92,7 +92,7 @@ export class EmailReflectionController {
       .send(
         messagePage(
           "Weekly reflections are on",
-          "Watch for a confirmation email now, and your first reflection on Sunday. You can change this in Settings, under Notifications.",
+          "Reflections go out on Sundays once your calendar history and connections are ready. You can change this in Settings, under Notifications.",
         ),
       );
   };

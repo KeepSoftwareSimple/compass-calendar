@@ -7,12 +7,16 @@ import { afterEach, describe, expect, it } from "bun:test";
 
 const original = { ...CONFIG };
 
-const user = (emailPreferences: Schema_User["emailPreferences"]) =>
+const user = (
+  emailPreferences: Schema_User["emailPreferences"],
+  optedInAt: Date | null = new Date("2026-11-06T00:00:00Z"),
+) =>
   ({
     _id: new ObjectId(),
     email: "person@example.com",
     reflectionPreferences: {
       enabled: true,
+      ...(optedInAt ? { optedInAt } : {}),
       timeZone: "America/Denver",
       excludedCalendarIds: [],
     },
@@ -33,6 +37,11 @@ describe("reflectionEligible opt-out handling", () => {
   it("sends to an enrolled account with no opt-out on file", () => {
     enable();
     expect(reflectionEligible(user(undefined))).toBe(true);
+  });
+
+  it("excludes legacy bulk enrollment without recorded consent", () => {
+    enable();
+    expect(reflectionEligible(user(undefined, null))).toBe(false);
   });
 
   // A welcome-email unsubscribe carries no scope, so it stamps `unsubscribedAt`
