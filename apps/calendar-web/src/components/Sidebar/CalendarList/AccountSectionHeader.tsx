@@ -78,9 +78,12 @@ export const AccountSectionHeader: FC<{
             {accountEmail}
           </span>
           {showProviderOnHover ? (
-            <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
-              <ProviderMark provider={provider} size={12} />
-            </span>
+            <>
+              {" "}
+              <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
+                <ProviderMark provider={provider} size={12} />
+              </span>
+            </>
           ) : null}
         </button>
       </h2>

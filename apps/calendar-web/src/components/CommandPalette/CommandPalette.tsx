@@ -334,14 +334,20 @@ const CommandPaletteContent = ({
                             )}
                           </span>
                           {item.detail && (
-                            <span className="shrink-0 text-text-muted text-xs">
-                              {item.detail}
-                            </span>
+                            <>
+                              {" "}
+                              <span className="shrink-0 text-text-muted text-xs">
+                                {item.detail}
+                              </span>
+                            </>
                           )}
                           {item.badge && (
-                            <span className="ml-auto shrink-0 rounded border border-border px-1.5 text-text-muted text-xs">
-                              {item.badge}
-                            </span>
+                            <>
+                              {" "}
+                              <span className="ml-auto shrink-0 rounded border border-border px-1.5 text-text-muted text-xs">
+                                {item.badge}
+                              </span>
+                            </>
                           )}
                           {item.shortcut && (
                             <ShortcutKeys
