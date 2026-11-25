@@ -12,6 +12,7 @@ import { renderWithStore } from "@web/__tests__/render-with-store";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { ID_ROOT } from "@web/common/constants/web.constants";
 import { viewActions } from "@web/events/stores/view.store";
 import { pageJumpHintActions } from "@web/shortcuts/page-jump/page-jump.store";
 import { LifeView } from "./LifeView";
@@ -260,24 +261,19 @@ describe("LifeView", () => {
     });
     await user.click(birthDateInput);
     await user.keyboard("{ArrowDown}");
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Previous month" }),
-      ).toBeInTheDocument();
-    });
+    // The picker renders into the app portal, outside the test render container.
+    const portal = document.getElementById(ID_ROOT);
+    if (!portal) throw new Error("Birth date picker portal did not open");
+    const picker = within(portal);
+    expect(
+      picker.getByRole("button", { name: "Previous month" }),
+    ).toBeVisible();
     await user.click(
-      screen.getByRole("button", { name: "Choose month and year" }),
+      picker.getByRole("button", { name: "Choose month and year" }),
     );
 
-    const calendar = document.querySelector(
-      ".lifeBirthDatePicker",
-    ) as HTMLElement | null;
-    expect(calendar).not.toBeNull();
-
-    expect(within(calendar!).getByText(/Years \d+ to \d+/)).toBeInTheDocument();
-    expect(
-      calendar!.querySelector(".react-datepicker__year-text"),
-    ).toBeInTheDocument();
+    expect(picker.getByText("Years 1981 to 2000")).toBeVisible();
+    expect(picker.getByText("1999")).toBeVisible();
   });
 
   it("updates weeks lived when the birth date changes", async () => {
