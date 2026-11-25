@@ -216,14 +216,26 @@ export class GoogleEventWriter implements ProviderEventWriter {
       // A duplicate id means a prior attempt already created it: read it back
       // and report success so a retry is a no-op, not a failure. The read-back
       // has its own try so a failed lookup is classified (and redacted) too,
-      // never leaked as a raw provider error.
+      // never leaked as a raw provider error. A deleted event keeps its id as a
+      // cancelled tombstone, so an undo-of-delete lands here too: read-back
+      // alone would report success while the event stays cancelled and every
+      // later edit fails. Revive it with the restored content instead.
       if (googleStatus(error) === 409) {
         try {
           const existing = await api.get({
             calendarId: input.calendarId,
             eventId: input.providerEventId,
           });
-          return toResult(existing);
+          if (existing.status !== "cancelled") return toResult(existing);
+          const { id: _id, ...revival } = requestBody;
+          const revived = await api.patch({
+            calendarId: input.calendarId,
+            eventId: input.providerEventId,
+            requestBody: { ...revival, status: "confirmed" },
+            sendUpdates: toSendUpdates(input.invitation),
+            ifMatch: null,
+          });
+          return toResult(revived);
         } catch (getError) {
           throw classifyWriteError(getError);
         }
