@@ -147,6 +147,12 @@ function mockViewport(isMobile: boolean) {
     }) as MediaQueryList) as typeof window.matchMedia;
 }
 
+function getLifespanInput() {
+  return screen.getByRole<HTMLInputElement>("spinbutton", {
+    name: /age of death/i,
+  });
+}
+
 function getGrid(region: HTMLElement) {
   return region.querySelector("[data-total-dots]") as HTMLElement;
 }
@@ -196,9 +202,7 @@ describe("LifeView", () => {
     expect(
       screen.queryByRole("button", { name: "Previous month" }),
     ).not.toBeInTheDocument();
-    expect(
-      (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    ).toBe("79");
+    expect(getLifespanInput().value).toBe("79");
     expect(screen.getByText("Average")).toBeInTheDocument();
     expect(
       screen.getByText("This is your life if you live to 79"),
@@ -314,7 +318,7 @@ describe("LifeView", () => {
     });
     expect(getGrid(region).dataset.totalDots).toBe(String(79 * 52));
 
-    fireEvent.change(screen.getByLabelText(/age of death/i), {
+    fireEvent.change(getLifespanInput(), {
       target: { value: "85" },
     });
 
@@ -325,7 +329,7 @@ describe("LifeView", () => {
     await renderLifeViewWithSidebar();
 
     setBirthDateInput("2000-01-01");
-    fireEvent.change(screen.getByLabelText(/age of death/i), {
+    fireEvent.change(getLifespanInput(), {
       target: { value: "81" },
     });
 
@@ -349,9 +353,7 @@ describe("LifeView", () => {
     expect(screen.getByRole("textbox", { name: "Date of birth" })).toHaveValue(
       "Jan 1, 2000",
     );
-    expect(
-      (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    ).toBe("81");
+    expect(getLifespanInput().value).toBe("81");
     unmount();
 
     localStorage.setItem(STORAGE_KEYS.LIFE_PREFERENCES, "{");
@@ -364,21 +366,19 @@ describe("LifeView", () => {
         }) as HTMLInputElement
       ).value,
     ).toBe("");
-    expect(
-      (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    ).toBe("79");
+    expect(getLifespanInput().value).toBe("79");
   });
 
   it("allows the age input to be cleared before entering a new age", async () => {
     const user = userEvent.setup();
     await renderLifeViewWithSidebar();
 
-    const ageInput = screen.getByLabelText(/age of death/i);
+    const ageInput = getLifespanInput();
     await user.clear(ageInput);
-    expect((ageInput as HTMLInputElement).value).toBe("");
+    expect(ageInput.value).toBe("");
 
     await user.type(ageInput, "88");
-    expect((ageInput as HTMLInputElement).value).toBe("88");
+    expect(ageInput.value).toBe("88");
     expect(
       getGrid(screen.getByRole("region", { name: /life visualization/i })),
     ).toHaveAttribute("data-total-dots", String(88 * 52));
@@ -393,17 +393,13 @@ describe("LifeView", () => {
     );
 
     expect(screen.getByText("Long")).toBeInTheDocument();
-    expect(
-      (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    ).toBe("100");
+    expect(getLifespanInput().value).toBe("100");
 
     await user.click(
       screen.getByRole("button", { name: "Next life variation" }),
     );
     expect(screen.getByText("Random")).toBeInTheDocument();
-    const randomAge = Number(
-      (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    );
+    const randomAge = Number(getLifespanInput().value);
     expect(randomAge).toBeGreaterThanOrEqual(1);
     expect(randomAge).toBeLessThanOrEqual(100);
   });
@@ -449,9 +445,7 @@ describe("LifeView", () => {
     expect(
       screen.getByText("This is your life if you live to 100"),
     ).toBeInTheDocument();
-    expect(
-      (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    ).toBe("100");
+    expect(getLifespanInput().value).toBe("100");
   });
 
   it("shuffles to a random Life variation", async () => {
@@ -463,9 +457,7 @@ describe("LifeView", () => {
     );
 
     expect(screen.getByText("Random")).toBeInTheDocument();
-    const lifespan = Number(
-      (screen.getByLabelText(/age of death/i) as HTMLInputElement).value,
-    );
+    const lifespan = Number(getLifespanInput().value);
     expect(lifespan).toBeGreaterThanOrEqual(1);
     expect(lifespan).toBeLessThanOrEqual(100);
   });
@@ -554,6 +546,7 @@ describe("LifeView", () => {
     document.body.focus();
 
     const currentWeek = screen.getByRole("button", {
+      current: "date",
       name: /January 1, 2026 \| week/,
     });
     act(() => {
@@ -576,7 +569,7 @@ describe("LifeView", () => {
     await renderLifeViewWithSidebar();
     const currentWeek = within(
       screen.getByRole("region", { name: /^Life visualization:/ }),
-    ).getByRole("button", { name: /\| week \d+ \/ \d+$/ });
+    ).getByRole("button", { current: "date", name: /\| week \d+ \/ \d+$/ });
     const birthDate = screen.getByRole("textbox", { name: "Date of birth" });
     act(() => currentWeek.focus());
 
@@ -594,6 +587,7 @@ describe("LifeView", () => {
 
     setBirthDateInput("1990-06-15");
     const currentWeek = screen.getByRole("button", {
+      current: "date",
       name: /January 1, 2026 \| week/,
     });
 
