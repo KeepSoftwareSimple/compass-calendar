@@ -235,6 +235,27 @@ describe("GoogleEventWriter", () => {
     expect(result.providerVersion).toBe('"vGet"');
   });
 
+  it("revives a cancelled event when a create collides with its tombstone", async () => {
+    // Undo-of-delete re-creates under the original id; Google still holds the
+    // deleted event as cancelled, so the create must un-cancel it.
+    const api = new FakeEventsApi({
+      insert: gError(409, "duplicate"),
+      get: {
+        ...scriptedEvent("abc12deadbeef00000000000"),
+        status: "cancelled",
+      },
+    });
+    const { writer } = writerWith(api);
+
+    const result = await writer.createEvent(baseCreate);
+
+    expect(api.calls.patch).toHaveLength(1);
+    expect(api.calls.patch[0]!.eventId).toBe("abc12deadbeef00000000000");
+    expect(api.calls.patch[0]!.requestBody.status).toBe("confirmed");
+    expect(api.calls.patch[0]!.requestBody.id).toBeUndefined();
+    expect(result.providerVersion).toBe('"v2"');
+  });
+
   it("classifies (and redacts) a failed read-back after a duplicate-id create", async () => {
     // The 409 recovery lookup itself fails: the error must be classified, not
     // leaked as a raw provider error carrying the bearer token.
