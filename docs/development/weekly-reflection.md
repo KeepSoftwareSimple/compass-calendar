@@ -1,7 +1,7 @@
 # Weekly reflection runbook
 
 Weekly reflection emails are live for every account and opt-in. Existing
-accounts are never enrolled automatically. New signups see a default-on
+accounts join through an explicit opt-in. New signups see a default-on
 checkbox they can clear before creating the account; a user receives reviews
 only after enrolling that way, from Settings, or via the CLI. See the
 [implementation plan](../features/weekly-reflection-plan.md) for the agreed
@@ -26,12 +26,9 @@ confirmation email, once per account, from the standard sender address. It tells
 the user their first review is coming, on which Sunday, and asks them to allow
 the sender so the first review lands in the inbox. The CLI does not send it.
 
-The fifth welcome email (day 5) is a pitch for weekly reflections sent to every
-account, whether or not they enrolled. Its button, and the confirmation email's,
-open `/?settings=notifications&focus=weekly-reflection`: Settings on
-Notifications with the reflection checkbox focused, so Space or a click is the
-whole action. The `focus` param is consumed like `settings`; add new targets to
-`settings.search.ts`.
+The fifth welcome email (day 5) introduces weekly reflections. Its button opens
+an opt-in confirmation page that works while signed out. The confirmation email
+opens Notifications with the reflection checkbox focused.
 
 Reviews arrive Sunday at 10:30 a.m. in the saved timezone, observing DST. A send
 that cannot be attempted by local noon expires rather than replaying later.
@@ -73,13 +70,41 @@ bun cli reflection disable --user-id <user-id> --apply   # also cancels queued e
 
 `status` and `history` (without `--apply`) are read-only. `history --apply`
 enqueues background import work through Sync; completion is confirmed with
-`status`, not by the enqueue succeeding. `preview` writes HTML, text, and the Life
-View PDF to a temporary directory without sending anything. Every command omitting
-`--apply` is a dry run.
+`status`, not by the enqueue succeeding. `preview` writes HTML, text, and, when a
+birthday is saved, the Life View PDF to a temporary directory without sending
+anything. The real email uses the same PDF as a downloadable attachment.
+Every command omitting `--apply` is a dry run.
 
 An opted-in account whose history is incomplete or whose calendar connection
 needs attention is not sent a review. Verify a real
 received email and PDF in the inbox before treating presentation as validated.
+
+## November 25 rollout review
+
+- **Inbox presentation.** Opened the November 22 production trial review in
+  desktop Gmail. The recap, preview, memories, and Life View summary rendered
+  in the email. Gmail opened the attached single-page PDF and rendered the
+  grid and labels. Mobile presentation remains unverified.
+- **Import load and readiness.** The production Sync jobs collection had
+  no pending, claimed, or failed repair or initial-import jobs at the time of
+  review. The one confirmed subscriber had certified history for all 13
+  selected remote calendars. One selected calendar lacked a healthy connection,
+  so its connection needs attention before that account can receive a review.
+  This snapshot measures current backlog and eligibility. Import load under
+  broader adoption remains unmeasured.
+- **Queue and delivery.** The reflection queue had no jobs overdue by more
+  than ten minutes. Since November 22 it recorded one sent review, matching a
+  Resend delivery with zero bounces, failures, or complaints for that message.
+  These observations cover a single prelaunch delivery.
+- **Consent.** The old population enrollment path left 983 enabled accounts
+  with its default UTC settings and no recorded opt-in. Operations disabled
+  delivery on those accounts and verified that one explicitly enrolled account
+  remained enabled. No other reflection sends appeared in the review window.
+- **Usefulness and announcement.** The sample included dated upcoming events
+  and memories spanning multiple years. This establishes what the email
+  presents. Recipient feedback on accuracy and usefulness is still needed.
+  Before expanding prompts, review the November 29 outcomes, including skips,
+  failures, complaints, import backlog and recipient feedback.
 
 ## Rollback
 

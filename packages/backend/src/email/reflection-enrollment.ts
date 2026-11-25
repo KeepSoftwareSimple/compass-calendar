@@ -10,12 +10,19 @@ import {
   reflectionSendAt,
 } from "@backend/email/reflection-schedule";
 
+export function hasReflectionOptIn(user: Schema_User) {
+  return (
+    user.reflectionPreferences?.enabled === true &&
+    user.reflectionPreferences.optedInAt instanceof Date
+  );
+}
+
 export function reflectionEligible(user: WithId<Schema_User>) {
   return (
     CONFIG.REFLECTION_ENABLED &&
     !!CONFIG.EMAIL_PROVIDER &&
     !user.isSynthetic &&
-    user.reflectionPreferences?.enabled === true &&
+    hasReflectionOptIn(user) &&
     // One owning rule for "this account has opted out of email", so a global
     // unsubscribe stops reviews the way `reflectionDisabledAt` does.
     !isEmailSequenceStopped(user.emailPreferences) &&
@@ -29,6 +36,7 @@ export async function enqueueDueReflections(now = new Date()) {
   const users = await mongoService.user
     .find({
       "reflectionPreferences.enabled": true,
+      "reflectionPreferences.optedInAt": { $type: "date" },
       "emailPreferences.suppressedAt": { $exists: false },
       "emailPreferences.unsubscribedAt": { $exists: false },
       "emailPreferences.reflectionDisabledAt": { $exists: false },

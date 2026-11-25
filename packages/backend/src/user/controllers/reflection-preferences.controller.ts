@@ -5,6 +5,7 @@ import {
 } from "@core/types/life-preferences.contracts";
 import { zObjectId } from "@core/types/object-id.schema";
 import mongoService from "@backend/common/services/mongo.service";
+import { hasReflectionOptIn } from "@backend/email/reflection-enrollment";
 import {
   reflectionAvailable,
   reflectionEnableBlock,
@@ -20,7 +21,7 @@ export async function getReflectionPreferences(req: Request, res: Response) {
   }
   const saved = user.reflectionPreferences
     ? ReflectionPreferencesSchema.safeParse({
-        enabled: user.reflectionPreferences.enabled,
+        enabled: hasReflectionOptIn(user),
         timeZone: user.reflectionPreferences.timeZone,
         excludedCalendarIds: user.reflectionPreferences.excludedCalendarIds,
       })

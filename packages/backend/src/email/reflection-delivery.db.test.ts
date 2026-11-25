@@ -66,6 +66,7 @@ describe("opt-in reflection delivery", () => {
       },
       reflectionPreferences: {
         enabled: true,
+        optedInAt: new Date("2026-10-31T00:00:00Z"),
         timeZone: "America/Denver",
         excludedCalendarIds: [],
       },
@@ -104,6 +105,11 @@ describe("opt-in reflection delivery", () => {
       lastName: "",
       name: "Other",
       locale: "en",
+      reflectionPreferences: {
+        enabled: true,
+        timeZone: "UTC",
+        excludedCalendarIds: [],
+      },
     });
     await Promise.all([enqueueDueReflections(now), enqueueDueReflections(now)]);
     const rows = await mongoService.emailSend.find({}).toArray();
@@ -273,6 +279,7 @@ describe("opt-in reflection delivery", () => {
         locale: "en",
         reflectionPreferences: {
           enabled: true,
+          optedInAt: new Date("2026-10-31T00:00:00Z"),
           timeZone: "America/Denver",
           excludedCalendarIds: [],
         },

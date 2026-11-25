@@ -14,6 +14,13 @@ global switch, `email.reflection.enabled`, is the kill switch. Pauses,
 unsubscribes, suppression, and the history and calendar connection checks at send
 time apply to everyone. Enrolling itself no longer waits for history. Operations are in the [runbook](../development/weekly-reflection.md).
 
+## Current Life View attachment
+
+Weekly reflections attach a single downloadable Life View PDF when the account
+has a saved birthday. The PNG and inline-image requirements in the original
+design below are superseded. The preview command uses the production renderer
+and writes the same PDF format.
+
 ## Agreed product behavior
 
 Give users a short, useful reflection they can enjoy entirely in their inbox,
@@ -193,7 +200,7 @@ Acceptance: deterministic fixtures cover rich/sparse/no history, fallback,
 duplicate copies, declined/hidden/canceled events, all-day/multi-day events,
 cross-year weeks, leap days, and DST. Counts are described as calendar facts.
 
-### 4. Deterministic Life View PNG and attachment transport
+### 4. Original Life View PNG design (superseded by PDF)
 
 Render the grid from shared life calculations, not an AI-generated image or a
 production browser screenshot. Start with SVG primitives rasterized to PNG
