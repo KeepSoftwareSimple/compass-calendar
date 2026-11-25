@@ -11,6 +11,68 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-25
+
+One finding, shipped as the removal of the backend's runtime alias
+registration. One merge landed after the 2026-11-24 ledger, #5357, which moved
+the root `module-alias` range from `^2.2.2` to `^2.3.5`; #5355 was that sweep's
+own output and is excluded, and #5341 through #5354 are closed by the
+2026-11-24 entry and were not re-opened. Gate step 1 was clean on the three
+named detectors: `bun knip` reports no unused files or exports (the three
+standing config hints), `bun lint` passes every rule including the
+semantic-color, barrel and locator checks, and `bun type-check` passes. The
+churn guard did not bind: no prior sweep refactor has touched `package.json`
+or `packages/backend/src/init.ts` in the last 30 days.
+
+- **The finding: `module-alias` had no reachable consumer.** The dependency
+  bump is what exposed it. `packages/backend/src/init.ts` guarded a
+  `require("module-alias").addAliases({ "@backend", "@core" })` call behind
+  `typeof Bun === "undefined" && __dirname.includes("/build/")`, and that
+  condition can never hold. `build.backend.ts` bundles with `target: "bun"`
+  and inlines everything, so Bun.build freezes `__dirname` in the artifact to
+  the **source** directory (`packages/backend/src`), not the build directory,
+  making the second conjunct false in the only place the branch was written
+  for; under `bun --watch src/app.ts` and `bun test` the first conjunct is
+  false. Three further independent reasons it could not have worked: the
+  generated `build/backend/package.json` lists only `@resvg/resvg-js`, so
+  `require("module-alias")` in the artifact would throw MODULE_NOT_FOUND; the
+  bundle contains zero bare `@core/` or `@backend/` requires for an alias to
+  resolve, verified by grep on a fresh `bun run build:backend`; and the two
+  `import` statements below the block are hoisted and evaluated before it
+  runs, so even under Node the registration would land after the imports it
+  was meant to serve. Removing it also drops the unread `_moduleAliases` block
+  in the root `package.json`, which only `module-alias`'s `init()` ever reads,
+  and nothing imports `module-alias/register` or calls `init()`. What this
+  prevents: a false signal that the backend artifact registers runtime
+  aliases, wired so it would crash if it ever fired, plus a recurring cost on
+  a runtime dependency with no consumer. #5357 is that cost, and it was this
+  window's only merge.
+
+- **`engines.node: ">=24.0.0"`** stays. It constrains what a contributor's
+  local toolchain must provide, and is not evidence of a Node runtime for the
+  bundle: every shipped entrypoint is Bun (`CMD ["bun", "app.js"]` in
+  `self-host/Dockerfile.backend` and `Dockerfile.sync`, which
+  `publish-docker-images.yml` builds and `compose.yaml` runs by image), and
+  the bundle cannot run under Node at all. Confirmed by trying: `node app.js`
+  on a fresh build dies at `__require is not a function` long before it
+  reaches `init.ts`.
+
+- **`"main": "build/src/app.js"` in `packages/backend/package.json`** is a
+  stale path; the build writes `build/backend/app.js`. Left alone. Nothing
+  reads it: no TypeScript file imports the bare `@compass/backend` or
+  `@compass/core` specifier, all cross-package imports go through the
+  `@core/*`-style `tsconfig.json` paths, and `@compass/core` already carries
+  `"main": ""`. The root `dependencies` entries for the two `@compass/*`
+  packages exist to create the workspace symlinks, which bun does from
+  `workspaces` regardless. Correcting or emptying the field is a packaging
+  decision with no current caller to validate it against, so it is a fix
+  looking for a problem rather than a finding.
+
+- **Pre-existing backend failures.** `bun test:backend:fast` reports 13
+  failures in `GET /api/config` and the SSE server suite, on this branch and
+  identically on an unmodified `origin/main` tree. Environmental, unrelated to
+  the diff, and not this sweep's to fix.
+
 ## 2026-11-24
 
 No finding. Swept the 14 merges that landed after the 2026-11-23 ledger

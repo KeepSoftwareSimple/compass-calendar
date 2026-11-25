@@ -9,12 +9,6 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "_moduleAliases": {
-    "@compass/backend": "packages/backend/src",
-    "@compass/core": "packages/core/src",
-    "@compass/scripts": "packages/scripts/src",
-    "@compass/sync": "packages/sync/src"
-  },
   "scripts": {
     "cli": "bun packages/scripts/src/cli.ts",
     "debug:supertokens": "export DEBUG=com.supertokens &&bun run dev:backend",
@@ -58,8 +52,7 @@
   },
   "dependencies": {
     "@compass/backend": "*",
-    "@compass/core": "*",
-    "module-alias": "^2.3.5"
+    "@compass/core": "*"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
