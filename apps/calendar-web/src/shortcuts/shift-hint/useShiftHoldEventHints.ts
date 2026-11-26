@@ -34,6 +34,7 @@ import {
 } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import {
   canQuickTimeBufferGrow,
+  isMeridiemKey,
   quickTimeFocusedColumnDay,
   resolveQuickTimeStart,
 } from "@web/shortcuts/quick-time/quick-time.util";
@@ -333,6 +334,16 @@ export function useShiftHoldEventHints({
 
       if (event.key === "Enter") {
         if (!buffered) return false;
+        commitQuickTime();
+        return true;
+      }
+
+      // `a` or `p` ends a typed time, so "2a" and "215p" commit right away.
+      const letter = event.key.toLowerCase();
+      if (buffered && !hasCommandModifier(event) && isMeridiemKey(letter)) {
+        eventJumpActions.setQuickTimeDigits(
+          `${useEventJumpStore.getState().quickTimeDigits}${letter}`,
+        );
         commitQuickTime();
         return true;
       }
