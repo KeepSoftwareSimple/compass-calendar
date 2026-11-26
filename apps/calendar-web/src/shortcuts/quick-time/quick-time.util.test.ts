@@ -50,6 +50,15 @@ describe("resolveQuickTimeStart", () => {
     expect(resolve("930")).toBe("09:30");
   });
 
+  it("reads a trailing a or p as 12-hour time", () => {
+    expect(resolve("2a")).toBe("02:00");
+    expect(resolve("215p")).toBe("14:15");
+    expect(resolve("12a")).toBe("00:00");
+    expect(resolve("12p")).toBe("12:00");
+    expect(resolve("1230p")).toBe("12:30");
+    expect(resolve("13p")).toBeNull();
+  });
+
   it("lands on the target day, not today", () => {
     const start = resolveQuickTimeStart("1700", dayjs("2026-08-09T00:00:00"));
 

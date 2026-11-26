@@ -9,7 +9,10 @@ import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 /** Longest sequence a typed time can be: HHMM. */
 export const QUICK_TIME_MAX_DIGITS = 4;
 
-const DIGITS_ONLY = /^\d{1,4}$/;
+/** Digits, optionally closed by `a` or `p` ("2a" is 2:00 AM, "215p" is 2:15 PM). */
+const TYPED_TIME = /^\d{1,4}[ap]?$/;
+
+export const isMeridiemKey = (key: string) => key === "a" || key === "p";
 
 /** False once the buffer is HHMM, which is when it can commit immediately. */
 export const canQuickTimeBufferGrow = (digits: string) =>
@@ -24,12 +27,14 @@ export const canQuickTimeBufferGrow = (digits: string) =>
  * land on the same hour whatever the clock says and whichever day is
  * focused. (parseUserTime only infers AM/PM when handed a current value,
  * which the event form's time field does and this shortcut does not.)
+ *
+ * A trailing `a` or `p` makes the time 12-hour: "2a" is 2:00, "215p" is 14:15.
  */
 export function resolveQuickTimeStart(
   digits: string,
   targetDay: Dayjs,
 ): Dayjs | null {
-  if (!DIGITS_ONLY.test(digits)) return null;
+  if (!TYPED_TIME.test(digits)) return null;
 
   const parsed = parseUserTime(digits);
   if (!parsed) return null;
