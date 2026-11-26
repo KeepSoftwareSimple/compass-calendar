@@ -11,6 +11,106 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-26
+
+One finding, shipped as the life week preview's hidden-event check. Swept the
+five merges that landed after the 2026-11-25 ledger (#5359, #5360, #5361,
+#5362, #5364); #5358 was that sweep's own output and is excluded, and #5341
+through #5357 are closed by the 2026-11-24 and 2026-11-25 entries and were not
+re-opened. Gate step 1 was clean on the three named detectors: `bun knip`
+reports no unused files or exports (the three standing config hints), `bun
+lint` passes every rule including the semantic-color, barrel and locator
+checks, and `bun type-check` passes. The churn guard did not bind: no prior
+sweep refactor has touched the Life view or the sync writer adapter in the last
+30 days (#5313 shows up under every path only because it is this clone's
+grafted root commit, 3,354 files of initial import, not a sweep touch).
+
+- **The finding: `LifeWeekEvents` re-implemented `isEventIdHidden` as a
+  literal.** `apps/calendar-web/src/events/hidden/hidden-event-id.ts` owns the
+  "is this event hidden" rule, `isEventIdHidden(eventId, hiddenEventIds)`, with
+  its own test file pinning the null-safe semantics. Seven sites import it:
+  `assign.row.ts`, `grid-event-card-chrome.ts`, `timed-deck.layout.ts`,
+  `AllDayEvents.tsx`, `MainGridEvents.tsx`, `dayAllDayRows.util.ts` and
+  `filter-events-visible-on-grid.ts`. `LifeWeekEvents.tsx`, new in #5364, was
+  the one site that spelled the rule out instead:
+  `!(event._id && hidden.has(event._id))`. The two agree today, so this is the
+  weak end of the drifted-copy class, and it is admissible on the
+  discoverability mechanism rather than on a present disagreement: the next
+  change to hidden-event handling will be found by grepping the owning helper,
+  and the life week preview would not be in the results. That subsystem is
+  live, not frozen; #5352's era added a mutation coordinator with pending
+  intents that `useHiddenEventIds` now merges into the query. Confirmed no test
+  covered hidden filtering in the preview: neither `LifeView.test.tsx` nor
+  `e2e/life/week-preview.spec.ts` mentions hidden events, so a divergence was
+  silent in both directions. Fixed with one import and one expression, behavior
+  identical, plus `LifeWeekEvents.test.tsx` pinning that a hidden event stays
+  out of the preview. Verified the test is load-bearing by dropping the hidden
+  term and watching it fail.
+
+- **The `"cancelled"` literal in the Google writer** (#5359). The 409 branch
+  now reads the tombstone back and patches it to `confirmed`, comparing
+  `existing.status !== "cancelled"`, and `google-event.normalizer.ts` compares
+  the same literal. Two sites, one string, which is the shape a drifted copy
+  takes, but there is nothing of ours to drift from: that value is Google's own
+  wire enum, read inside the Google adapter where provider knowledge belongs.
+  Minting a local constant for a third party's documented enum adds an
+  indirection without removing a divergence.
+
+- **Reflection opt-in** (#5360). Three email PRs in a row on this path, and
+  this one is consolidation rather than churn: the CLI's hand-rolled
+  `updateOne` with its own `optedInAt` / `reflectionDisabledAt` / `$unset`
+  bookkeeping is gone, and `packages/scripts/src/commands/reflection.ts` now
+  calls `reflectionEnableBlock` and `setReflectionEnabled` like the two
+  controllers do. #5360 deleted a drifted copy; it did not add one.
+
+- **The Mongo prefilter beside `hasReflectionOptIn`.** `enqueueDueReflections`
+  repeats the new rule as a query (`"reflectionPreferences.enabled": true`
+  plus `"reflectionPreferences.optedInAt": { $type: "date" }`) while
+  `hasReflectionOptIn` states it in memory. Keep both. The query is a
+  prefilter an index can serve, and the loop re-checks each candidate with
+  `if (!reflectionEligible(user)) continue;`, which calls the owning
+  predicate. The authoritative gate is single; a drift in the query can only
+  narrow the candidate set, never send a reflection to someone who has not
+  opted in.
+
+- **The three-level zoom ladder** (#5364). "There are three zoom levels, max
+  index 2" is encoded at six sites: `boundedInteger(search.zoom, 2)` in
+  `life-search.ts`, `Math.min(2, Math.max(0, zoom + step))`, the two
+  `disabled={zoom === 0 | 2}` guards, `[100, 200, 300][zoom]` and
+  `columnWidth` in `LifeGrid.tsx`, and the `["max-w-2", ...]` /
+  `["h-2.5", ...]` triples in `LifeGridRow.tsx`. All six agree, so nothing is
+  diverged; the cost is only that a fourth level would mean editing six
+  places. Deriving the bound from the class arrays would couple a URL
+  validator to Tailwind class lists, which is a worse trade than the repeat.
+  Taste, not a finding.
+
+- **`font-[VT323,monospace]` on the Life intro heading** (#5364). An arbitrary
+  Tailwind value rather than a canonical utility, which `bun lint` does not
+  police (its rule covers semantic colors). It is the established convention,
+  not a new deviation: eleven calendar-web sites spell the family out the same
+  way, plus the booking app, and `index.css` defines no display-font token for
+  them to use. Introducing one is a repo-wide change to pre-existing code,
+  outside this window and outside a sweep's one-PR budget. Worth a person's
+  decision, not a sweep's.
+
+- **`LifeWeekEvents` composing its own read instead of `useWeekEventViewModel`.**
+  It calls `useWeekEventsQuery` and `useCalendarEventViewModel` directly, which
+  is the first two thirds of that composed hook. Deliberate and correct: the
+  third part is `assignEventsToRow`, which re-packs hidden all-day events into
+  shared strip lanes, and a plain `<ul>` of titles has no lanes to pack.
+  Checked the thing that would actually be a bug: calendar visibility is still
+  applied, because `useCalendarEventViewModel` runs
+  `filterEventsByVisibleCalendars`, so an unchecked calendar's events stay out
+  of the preview.
+
+- **`events.slice(0, 3)` in the preview** (#5364). Same judgment as the
+  `reflection-content.ts` section caps on 2026-11-09: a display cap in the
+  component that displays, with no second site deriving from it.
+
+- **#5361 and #5362.** `knip` and `dompurify` version bumps touching
+  `bun.lock` and `package.json` version strings only. No domain code for the
+  three classes to apply to.
+
 ## 2026-11-25
 
 One finding, shipped as the removal of the backend's runtime alias

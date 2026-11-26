@@ -1,4 +1,5 @@
 import dayjs from "@core/util/date/dayjs";
+import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { useCalendarEventViewModel } from "@web/events/queries/useCalendarEventViewModel";
 import { useWeekEventsQuery } from "@web/events/queries/useWeekEventsQuery";
@@ -26,7 +27,7 @@ export function LifeWeekEvents({ date }: { date: string }) {
     );
   if (week.isPending || week.isPlaceholderData) return <p>Loading events…</p>;
   const events = [...allDayEvents, ...timedEvents]
-    .filter((event) => !event.isDemo && !(event._id && hidden.has(event._id)))
+    .filter((event) => !event.isDemo && !isEventIdHidden(event._id, hidden))
     .sort(
       (a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf(),
     );
