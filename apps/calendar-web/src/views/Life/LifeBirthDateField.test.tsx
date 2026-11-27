@@ -163,6 +163,9 @@ describe("LifeBirthDateField", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Jan 1993")).toBeInTheDocument();
+      expect(
+        screen.getAllByRole("gridcell", { name: /January .*1993/ }),
+      ).toContain(document.activeElement);
     });
 
     await user.keyboard("{ArrowRight}{Enter}");
