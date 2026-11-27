@@ -120,6 +120,17 @@ describe("isTransientMongoNetworkError", () => {
     ).toBe(true);
   });
 
+  it("matches a roundtrip estimate above the remaining CSOT budget", () => {
+    expect(
+      isTransientMongoNetworkError(
+        namedError(
+          "MongoOperationTimeoutError",
+          "Server roundtrip time is greater than the time remaining",
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("matches server monitor and socket connect timeouts", () => {
     expect(
       isTransientMongoNetworkError(

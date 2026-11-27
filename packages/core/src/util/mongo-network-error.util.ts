@@ -40,6 +40,10 @@ const TRANSIENT_MONGO_MESSAGE_PATTERNS = [
   // from Connection#readMany when a tightly-bounded op (e.g. the health
   // check's ping) hits its timeoutMS mid-read on a slow/blipping socket.
   /timed out during socket read/i,
+  // Driver: MongoOperationTimeoutError thrown before a command is sent when
+  // the monitor's measured round trip exceeds the op's remaining timeoutMS,
+  // i.e. a slow network, not a durable server failure.
+  /server roundtrip time is greater than the time remaining/i,
   // Server code 290: a transaction outlived transactionLifetimeLimitSeconds
   // (Atlas default 60s), usually under load. The job retries from scratch.
   /transaction exceeded the configured 'transactionLifetimeLimitSeconds'/i,
