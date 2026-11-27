@@ -1446,14 +1446,21 @@ describe("EventForm", () => {
     expect(eventResult.defaultPrevented).toBe(false);
   });
 
-  it("submits a typed draft title when Mod+Enter is pressed", async () => {
+  it("submits the complete typed title with Mod+Enter after a stale draft update", async () => {
     const user = userEvent.setup();
     const onSubmit = mock();
+    let echoEarlierTitle = () => {};
 
     function Harness() {
       const [draft, setDraftState] = useState<GridEventDraft>(
         createNewDraft({ title: "" }),
       );
+      echoEarlierTitle = () => {
+        setDraftState((current) => ({
+          ...current,
+          values: { ...current.values, title: "Pla" },
+        }));
+      };
       const setDraftFromForm = (
         nextDraft: SetStateAction<GridEventDraft | null>,
       ) => {
@@ -1483,10 +1490,12 @@ describe("EventForm", () => {
 
     renderWithStore(<Harness />);
 
-    const titleField = screen.getByPlaceholderText("Title");
+    const titleField = screen.getByRole("textbox", { name: "Title" });
     act(() => titleField.focus());
 
     await user.type(titleField, "Plan");
+    act(echoEarlierTitle);
+    expect(titleField).toHaveValue("Plan");
     await user.keyboard("{Control>}{Enter}{/Control}");
 
     expect(onSubmit).toHaveBeenCalledTimes(1);

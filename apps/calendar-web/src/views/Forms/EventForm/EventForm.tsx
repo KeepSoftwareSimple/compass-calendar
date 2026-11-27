@@ -384,8 +384,16 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
         cancelAnimationFrame(contentDraftSyncFrameRef.current);
         contentDraftSyncFrameRef.current = null;
       }
-      pushDraftToStore(latestDraftRef.current, true);
-    }, [pushDraftToStore]);
+      const current = latestDraftRef.current;
+      const input = titleInputRef.current;
+      // A deferred store update can echo an older title while the input
+      // still holds the full edit. Flush the visible title before saving.
+      const nextDraft =
+        input && !isBusy && !isReadOnly && input.value !== current.values.title
+          ? patchGridDraftFields(current, { title: input.value })
+          : current;
+      pushDraftToStore(nextDraft, true);
+    }, [isBusy, isReadOnly, pushDraftToStore]);
 
     const setLatestDraft = useCallback(
       (nextDraft: SetStateAction<GridEventDraft | null>, urgent = false) => {
