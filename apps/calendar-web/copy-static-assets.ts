@@ -39,6 +39,13 @@ export async function copyStaticAssets(outdir: string, apiBaseUrl: string) {
     Bun.file(path.resolve(import.meta.dir, "src/robots.txt")),
   );
 
+  await Bun.write(
+    path.join(outdir, "sample-life-in-weeks.pdf"),
+    Bun.file(
+      path.resolve(import.meta.dir, "src/assets/sample-life-in-weeks.pdf"),
+    ),
+  );
+
   // The landing game at /start is plain static files, kept out of the app
   // bundle so it costs the calendar nothing at boot.
   const landingDir = path.resolve(import.meta.dir, "src/landing");

@@ -14,7 +14,7 @@ email behavior.
   opt out before creating an account. The choice survives the OAuth redirect in
   browser storage and is applied once, as soon as the new account is signed in.
   Continuing as a guest enrolls no one.
-- **Settings > Notifications:** the "Email me calendar reflections" checkbox.
+- **Settings > Notifications:** preview a sample email and its PDF, then select "Weekly reflection emails".
 - **Operator CLI:** `bun cli reflection enable --user-id <id> --apply` (below).
 
 Enrolling needs no calendar history; it records consent. A review is only sent

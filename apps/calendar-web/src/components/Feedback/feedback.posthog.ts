@@ -59,7 +59,8 @@ export async function captureFeedback(
         $survey_completed: true,
         app_version: APP_VERSION,
         app_view: view,
-        feedback_source: "command_palette",
+        feedback_source:
+          view === "settings" ? "reflection_settings" : "command_palette",
         feedback_type: "feedback",
       },
     }),
