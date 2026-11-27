@@ -31,7 +31,7 @@
     "@types/testing-library__jest-dom": "^5.9.1",
     "bun-types": "^1.4.3",
     "jsdom": "^31.0.1",
-    "msw": "^2.7.0",
+    "msw": "^3.0.7",
     "typescript": "^7.0.2"
   }
 }
