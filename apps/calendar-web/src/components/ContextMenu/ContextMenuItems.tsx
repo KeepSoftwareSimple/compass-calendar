@@ -25,6 +25,7 @@ import {
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { getGridCardTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { promptContextMenuKeyboardOnly } from "@web/common/utils/toast/context-menu-keyboard-only.toast";
+import { descriptionToPlainText } from "@web/components/DescriptionEditor/plain-text-description";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
   useHiddenEventIds,
@@ -165,13 +166,19 @@ export function ContextMenuItemsView({
   const details = [
     { id: "time", text: timeRange, icon: Clock },
     { id: "location", text: event.location?.trim(), icon: MapPin },
-    { id: "description", text: event.description?.trim(), icon: TextAlignLeft },
-  ].flatMap(({ id, text, icon: Icon }) =>
+    {
+      id: "description",
+      text: descriptionToPlainText(event.description ?? ""),
+      icon: TextAlignLeft,
+      clamp: true,
+    },
+  ].flatMap(({ id, text, icon: Icon, clamp }) =>
     text
       ? [
           {
             id,
             text,
+            clamp,
             icon: (
               <Icon aria-hidden="true" className="mt-px shrink-0" size={14} />
             ),
@@ -218,10 +225,14 @@ export function ContextMenuItemsView({
     >
       {details.length > 0 && (
         <ul className="m-0 flex list-none flex-col gap-1 border-border border-b px-3 py-2 text-text-muted text-xs">
-          {details.map(({ id, icon, text }) => (
+          {details.map(({ id, icon, text, clamp }) => (
             <li key={id} className="flex items-start gap-2">
               {icon}
-              <span className="min-w-0 break-words">{text}</span>
+              <span
+                className={`min-w-0 break-words ${clamp ? "line-clamp-2" : ""}`}
+              >
+                {text}
+              </span>
             </li>
           ))}
         </ul>

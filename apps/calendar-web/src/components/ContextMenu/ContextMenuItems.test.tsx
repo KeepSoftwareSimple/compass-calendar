@@ -325,6 +325,32 @@ describe("ContextMenuItems", () => {
     expect(screen.queryByText(expected)).not.toBeInTheDocument();
   });
 
+  it("shows description HTML as plain text", () => {
+    const { ContextMenuItemsView } =
+      require("./ContextMenuItems") as typeof import("./ContextMenuItems");
+    const event = createMockGridEvent({
+      description:
+        "<ul><li>Kiln: fridge food<br></li><li>Water bottle</li></ul>",
+    });
+    renderWithTheme(
+      <ContextMenuItemsView
+        event={event}
+        close={mockClose}
+        actions={{
+          delete: mock(),
+          duplicate: mock(),
+          edit: mock(),
+          setColor: mock(),
+          toggleHidden: mock(),
+        }}
+      />,
+      { event },
+    );
+    expect(
+      screen.getByText("Kiln: fridge food Water bottle"),
+    ).toBeInTheDocument();
+  });
+
   it("shows the event location and description when present", () => {
     const { ContextMenuItemsView } =
       require("./ContextMenuItems") as typeof import("./ContextMenuItems");

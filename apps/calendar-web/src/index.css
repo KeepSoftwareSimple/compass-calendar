@@ -723,7 +723,7 @@
  * floating-ui's positioning plus Z_INDEX_FLOATING_MENU, so it carries no
  * position or z-index of its own. */
 @utility c-context-menu {
-  @apply min-w-40 list-none rounded border border-border bg-surface-raised p-1 shadow-[0_4px_6px_var(--color-shadow-default)];
+  @apply min-w-40 max-w-72 list-none rounded border border-border bg-surface-raised p-1 shadow-[0_4px_6px_var(--color-shadow-default)];
 }
 
 @utility c-tooltip {

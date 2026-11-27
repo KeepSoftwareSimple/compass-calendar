@@ -37,3 +37,16 @@ export const plainTextToDescriptionHtml = (value: string): string =>
         .map((line) => `<p>${linkifyUrls(escapeHtml(line))}</p>`);
     })
     .join("");
+
+// Flattens description HTML to readable text for compact previews. Block ends
+// and <br> become spaces so list items do not run together.
+export const descriptionToPlainText = (value: string): string => {
+  if (!looksLikeHtml(value)) {
+    return value.trim();
+  }
+  const doc = new DOMParser().parseFromString(
+    value.replace(/<\/(p|li|div|ul|ol)>|<br\s*\/?>/gi, " $&"),
+    "text/html",
+  );
+  return (doc.body.textContent ?? "").replace(/\s+/g, " ").trim();
+};
