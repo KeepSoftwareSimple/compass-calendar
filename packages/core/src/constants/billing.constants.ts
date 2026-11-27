@@ -17,6 +17,8 @@ export type BillingDisplayPrice = {
   interval: "day" | "week" | "month" | "year";
 };
 
+export const CHECKOUT_RESET_HEADER = "x-compass-checkout";
+
 export const BILLING_PLAN = {
   TRIAL_LENGTH_DAYS: 7,
   BACKFILL_CUTOFF: "2099-12-31T23:59:59.000Z",

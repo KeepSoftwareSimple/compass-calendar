@@ -32,6 +32,7 @@ const fetchCheckoutClientSecret = fetchEmbeddedCheckoutSecret(
 
 type EmbeddedCheckoutPanelProps = {
   publishableKey: string;
+  fetchClientSecret?: () => Promise<string>;
   onBack?: () => void;
   onCheckoutComplete?: () => void;
 };
@@ -42,6 +43,7 @@ type EmbeddedCheckoutPanelProps = {
  */
 export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
   publishableKey,
+  fetchClientSecret = fetchCheckoutClientSecret,
   onBack,
   onCheckoutComplete,
 }) => {
@@ -91,7 +93,7 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
       >
         <EmbeddedCheckout
           className="w-full"
-          fetchClientSecret={fetchCheckoutClientSecret}
+          fetchClientSecret={fetchClientSecret}
           onComplete={onComplete}
           publishableKey={publishableKey}
         />

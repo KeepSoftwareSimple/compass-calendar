@@ -7,7 +7,10 @@ import {
 import { session } from "@web/auth/compass/session/Session";
 import { hasUserEverAuthenticated } from "@web/auth/compass/state/auth.state.util";
 import { ENV_WEB } from "@web/common/constants/env.constants";
-import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
+import {
+  DEFAULT_CALENDAR_ROUTE,
+  ROOT_ROUTES,
+} from "@web/common/constants/routes";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { VIEW_TO_PARAM } from "@web/components/AuthModal/hooks/useAuthModal";
@@ -147,10 +150,11 @@ export const signOut = async (status: SignoutStatus) => {
 
   await session.signOut();
 
-  const isOnCalendar = window.location.pathname.startsWith(
-    DEFAULT_CALENDAR_ROUTE,
-  );
-  if (isOnCalendar && status !== Status.UNAUTHORIZED) {
+  const { pathname } = window.location;
+  const canStayOnPage =
+    pathname.startsWith(DEFAULT_CALENDAR_ROUTE) ||
+    pathname === ROOT_ROUTES.CHECKOUT;
+  if (canStayOnPage && status !== Status.UNAUTHORIZED) {
     return;
   }
   // Navigate in-app rather than assigning window.location: a document
@@ -164,7 +168,7 @@ export const signOut = async (status: SignoutStatus) => {
   }
   const auth = VIEW_TO_PARAM.login;
   await router.navigate(
-    isOnCalendar
+    canStayOnPage
       ? {
           to: ".",
           search: (prev: Record<string, unknown>) => ({ ...prev, auth }),

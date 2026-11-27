@@ -1,5 +1,11 @@
-import { type AnyRouter, useRouter, useSearch } from "@tanstack/react-router";
+import {
+  type AnyRouter,
+  useLocation,
+  useRouter,
+  useSearch,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CHECKOUT_RESET_HEADER } from "@core/constants/billing.constants";
 import { getEmailPasswordPort } from "@web/auth/compass/hooks/emailpassword.port";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
@@ -15,6 +21,7 @@ import {
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { rememberSignupTrialMethod } from "@web/billing/signup-trial.util";
+import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { getAuthSubmitErrorMessage } from "./useAuthFormHandlers.util";
 import { type AuthSearch, type AuthView } from "./useAuthModal";
 
@@ -55,7 +62,11 @@ export function useAuthFormHandlers({
 }: UseAuthFormHandlersOptions): UseAuthFormHandlersResult {
   const completeAuthentication = useCompleteAuthentication();
   const router = useRouter();
-  const search = useSearch({ from: "__root__" });
+  const search = useSearch({ strict: false });
+  const isCheckout = useLocation({
+    select: (location) => location.pathname === ROOT_ROUTES.CHECKOUT,
+  });
+  const { plan, promo } = search;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const initialAuthTokenRef = useRef<string | undefined>(undefined);
@@ -166,6 +177,19 @@ export function useAuthFormHandlers({
       try {
         const response = await getEmailPasswordPort().sendPasswordResetEmail({
           formFields: [{ id: "email", value: data.email }],
+          ...(isCheckout && {
+            options: {
+              preAPIHook: async ({ url, requestInit }) => {
+                const headers = new Headers(requestInit.headers);
+                const checkout = new URLSearchParams({
+                  ...(plan && { plan }),
+                  ...(promo && { promo }),
+                });
+                headers.set(CHECKOUT_RESET_HEADER, `?${checkout}`);
+                return { url, requestInit: { ...requestInit, headers } };
+              },
+            },
+          }),
         });
 
         switch (response.status) {
@@ -186,7 +210,7 @@ export function useAuthFormHandlers({
         setIsSubmitting(false);
       }
     },
-    [],
+    [isCheckout, plan, promo],
   );
 
   const handleResetPassword = useCallback(

@@ -39,6 +39,16 @@ export interface StripeBillingGateway {
     params: Stripe.Checkout.SessionCreateParams,
     options?: Stripe.RequestOptions,
   ): Promise<{ client_secret?: string | null; url?: string | null }>;
+  latestSubscriptionCheckout(
+    customer: string,
+  ): Promise<Stripe.Checkout.Session | undefined>;
+  expireCheckoutSession(id: string): Promise<Stripe.Checkout.Session>;
+  listPrices(
+    params: Stripe.PriceListParams,
+  ): Promise<{ data: Stripe.Price[]; has_more: boolean }>;
+  listPromotionCodes(
+    params: Stripe.PromotionCodeListParams,
+  ): Promise<{ data: Stripe.PromotionCode[] }>;
   retrieveCheckoutSession(
     id: string,
     params?: Stripe.Checkout.SessionRetrieveParams,
@@ -77,6 +87,17 @@ function createStripeBillingGateway(): StripeBillingGateway {
     updateCustomer: (id, params) => getStripe().customers.update(id, params),
     createCheckoutSession: (params, options) =>
       getStripe().checkout.sessions.create(params, options),
+    async latestSubscriptionCheckout(customer) {
+      for await (const session of getStripe().checkout.sessions.list({
+        customer,
+      })) {
+        if (session.mode === "subscription") return session;
+      }
+      return undefined;
+    },
+    expireCheckoutSession: (id) => getStripe().checkout.sessions.expire(id),
+    listPrices: (params) => getStripe().prices.list(params),
+    listPromotionCodes: (params) => getStripe().promotionCodes.list(params),
     retrieveCheckoutSession: (id, params) =>
       getStripe().checkout.sessions.retrieve(id, params),
     updateSubscription: (id, params, options) =>

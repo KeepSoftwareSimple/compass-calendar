@@ -1,5 +1,6 @@
 export const ROOT_ROUTES = {
   API: "/api",
+  CHECKOUT: "/checkout",
   CLEANUP: "/cleanup",
   GOOGLE_AUTH_CALLBACK: "/auth/google/callback",
   PROVIDER_AUTH_CALLBACK: "/auth/$provider/callback",

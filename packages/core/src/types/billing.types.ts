@@ -25,7 +25,20 @@ export const BillingStatusResponseSchema = z.object({
 });
 export type BillingStatusResponse = z.infer<typeof BillingStatusResponseSchema>;
 
-export const BillingCheckoutRequestSchema = z.object({}).strict().default({});
+export const BillingPlanIntervalSchema = z.enum(["monthly", "annual"]);
+export const BillingPromotionCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z0-9_-]{1,64}$/);
+
+export const BillingCheckoutRequestSchema = z
+  .object({
+    plan: BillingPlanIntervalSchema.optional(),
+    promotionCode: BillingPromotionCodeSchema.optional(),
+  })
+  .strict()
+  .default({});
 export type BillingCheckoutRequest = z.infer<
   typeof BillingCheckoutRequestSchema
 >;

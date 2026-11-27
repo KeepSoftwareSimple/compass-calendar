@@ -3,6 +3,10 @@ import {
   createRoute,
   lazyRouteComponent,
 } from "@tanstack/react-router";
+import {
+  BillingPlanIntervalSchema,
+  BillingPromotionCodeSchema,
+} from "@core/types/billing.types";
 import { APPLE_AUTH_CALLBACK_PATH } from "@web/auth/apple/authorization/apple-authorization.constants";
 import { IS_DEV } from "@web/common/constants/env.constants";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
@@ -36,6 +40,20 @@ export const calendarShellRoute = createRoute({
   component: lazyRouteComponent(
     () => import("@web/components/RootShell/RootShell"),
     "RootShell",
+  ),
+});
+
+export const checkoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROOT_ROUTES.CHECKOUT,
+  validateSearch: (search: Record<string, unknown>) => {
+    const plan = BillingPlanIntervalSchema.safeParse(search.plan).data;
+    const promo = BillingPromotionCodeSchema.safeParse(search.promo).data;
+    return { ...(plan && { plan }), ...(promo && { promo }) };
+  },
+  component: lazyRouteComponent(
+    () => import("@web/billing/DirectCheckoutView"),
+    "DirectCheckoutView",
   ),
 });
 
@@ -158,6 +176,7 @@ const calendarShellChildren = calendarShellRoute.addChildren([
 export const routeTree = rootRoute.addChildren([
   calendarShellChildren,
   publicShortcutsRoute,
+  checkoutRoute,
   appleAuthCallbackRoute,
   providerAuthCallbackRoute,
 ]);

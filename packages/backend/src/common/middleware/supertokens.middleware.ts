@@ -9,6 +9,7 @@ import {
   type TypeInput as ThirdPartyTypeInput,
 } from "supertokens-node/recipe/thirdparty/types";
 import UserMetadata from "supertokens-node/recipe/usermetadata";
+import { CHECKOUT_RESET_HEADER } from "@core/constants/billing.constants";
 import { APP_NAME } from "@core/constants/core.constants";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
@@ -316,6 +317,7 @@ export const supertokensCors = () =>
     allowedHeaders: [
       "content-type",
       "st-auth-mode",
+      CHECKOUT_RESET_HEADER,
       ...SuperTokens.getAllCORSHeaders(),
     ],
     credentials: true,
