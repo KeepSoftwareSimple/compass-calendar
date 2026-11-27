@@ -72,7 +72,7 @@ import { assembleEventInstances } from "@sync/domain/event-instance-assembly";
 import {
   HORIZON_FUTURE_MONTHS,
   HORIZON_PAST_MONTHS,
-} from "@sync/domain/horizon";
+} from "@core/constants/sync-horizon.constants";
 import {
   peekOAuthStatePayload,
   signOAuthState,
