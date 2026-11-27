@@ -18,6 +18,7 @@ import {
 } from "@web/shortcuts/shift-hint/assign-shift-hint-keys";
 import {
   eventJumpActions,
+  selectQuickTimeDigits,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
 import { useShiftHoldEventHints } from "@web/shortcuts/shift-hint/useShiftHoldEventHints";
@@ -139,6 +140,67 @@ describe("typed-time ownership", () => {
 
     expect(createAt).toHaveBeenCalledTimes(1);
     expect(startedAt(createAt)).toBe("12:00");
+  });
+
+  it("commits a 12-hour time on a or p without waiting for more digits", () => {
+    const { createAt, type } = mountOwner();
+
+    type(["2"]);
+    const event = dispatch(keydown("a"));
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(createAt).toHaveBeenCalledTimes(1);
+    expect(startedAt(createAt)).toBe("02:00");
+    expect(useEventJumpStore.getState().quickTimeDigits).toBe("");
+  });
+
+  it("reads a meridiem key on a three-digit sequence as H:MM", () => {
+    const { createAt, type } = mountOwner();
+
+    type(["2", "1", "5"]);
+    dispatch(keydown("p"));
+
+    expect(startedAt(createAt)).toBe("14:15");
+    expect(useEventJumpStore.getState().quickTimeDigits).toBe("");
+  });
+
+  it("leaves a meridiem key alone when nothing is buffered", () => {
+    const { createAt } = mountOwner();
+
+    const event = dispatch(keydown("p"));
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(createAt).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The meridiem key commits in the same keystroke that closes the sequence,
+   * so the buffer must never hold the letter: QuickTimeIndicator pads whatever
+   * it is handed, and a buffer ending in `a` or `p` would render as the hint
+   * "New event at 2a" for one frame, or as "2a__" if padded.
+   */
+  it("never puts the meridiem letter in the rendered buffer", () => {
+    const rendered: string[] = [];
+    const createAt = mock((_start: Dayjs) => {});
+
+    renderHook(() => {
+      rendered.push(useEventJumpStore(selectQuickTimeDigits));
+      useShiftHoldEventHints({
+        createAtTime: (start) => createAt(start),
+        focus: () => {},
+        getQuickTimeDay: () => TARGET_DAY,
+        listVisible: () => [],
+        timedEvents: [],
+        visibleDays: VISIBLE_DAYS,
+      });
+    });
+
+    dispatch(digit("2"));
+    dispatch(keydown("a"));
+
+    expect(createAt).toHaveBeenCalledTimes(1);
+    expect(rendered).toContain("2");
+    expect(rendered.filter((digits) => /[ap]/.test(digits))).toEqual([]);
   });
 
   it("consumes each digit so it reaches no other handler", () => {

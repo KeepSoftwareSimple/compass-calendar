@@ -10,7 +10,7 @@ export const quickTimeHintParts = (
   digits: string,
 ): readonly ShortcutTipPart[] => [
   "New event at ",
-  /[ap]$/.test(digits) ? digits : digits.padEnd(4, "_"),
+  digits.padEnd(4, "_"),
   " · add ",
   { key: "A" },
   " or ",

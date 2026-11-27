@@ -282,8 +282,12 @@ export function useShiftHoldEventHints({
       return columnTimeBurstRef.current.map((entry) => entry.digit).join("");
     };
 
-    const commitQuickTime = () => {
-      const digits = useEventJumpStore.getState().quickTimeDigits;
+    /**
+     * `typed` closes a sequence the buffer never has to hold, so a meridiem
+     * key commits without a store write the indicator would race to render.
+     */
+    const commitQuickTime = (typed?: string) => {
+      const digits = typed ?? useEventJumpStore.getState().quickTimeDigits;
       resetQuickTime();
       resetColumnTimeBurst();
       focusedJumpEventIdRef.current = null;
@@ -341,10 +345,9 @@ export function useShiftHoldEventHints({
       // `a` or `p` ends a typed time, so "2a" and "215p" commit right away.
       const letter = event.key.toLowerCase();
       if (buffered && !hasCommandModifier(event) && isMeridiemKey(letter)) {
-        eventJumpActions.setQuickTimeDigits(
+        commitQuickTime(
           `${useEventJumpStore.getState().quickTimeDigits}${letter}`,
         );
-        commitQuickTime();
         return true;
       }
 
