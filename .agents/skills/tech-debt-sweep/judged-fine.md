@@ -11,6 +11,81 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-27
+
+One finding, shipped as the dead meridiem branch in the quick-time indicator.
+Swept the four merges that landed after the 2026-11-26 ledger: #5365, #5366,
+#5367 and #5371. #5369 was that sweep's own output and is excluded, and
+everything from #5341 through #5364 is closed by the 2026-11-23 through
+2026-11-26 entries and was not re-opened. Gate step 1 was clean on the three
+named detectors: `bun knip` reports no unused files or exports (the same three
+standing config hints), `bun lint` passes every rule including the
+semantic-color, barrel and locator checks, and `bun type-check` passes. The
+churn guard did not bind: no prior sweep refactor has touched
+`QuickTimeIndicator.tsx`, `quick-time.util.ts` or `useShiftHoldEventHints.ts`
+in the last 30 days.
+
+- **The finding: `quickTimeHintParts` guarded a buffer state that cannot
+  exist.** #5371 taught the typed-time shortcut to close a sequence with `a` or
+  `p`, and added `/[ap]$/.test(digits) ? digits : digits.padEnd(4, "_")` to the
+  indicator so a meridiem-suffixed buffer would echo unpadded. That branch is
+  unreachable. The only write that puts a letter in the buffer is the meridiem
+  keypath in `useShiftHoldEventHints.ts`, which called
+  `setQuickTimeDigits(digits + letter)` and then `commitQuickTime()`
+  synchronously in the same keydown; `commitQuickTime` reads the buffer back,
+  calls `resetQuickTime()`, and the store is `""` again before React's
+  `useSyncExternalStore` subscription is flushed. Probed it by collecting every
+  value the store held and every value React rendered while driving `2` then
+  `a`: the store held `["", "2", "2a", "", "", ""]`, React rendered
+  `["", "", "2", ""]`, and the event was created at 02:00. So the letter was
+  written to global state purely to be read back one line later, and the
+  indicator carried a ternary for a frame that never renders. Closed both ends:
+  `commitQuickTime` now takes the closed sequence as an argument, so the
+  meridiem key commits without the transient store write, and the indicator is
+  back to one unconditional `padEnd`. Behavior identical.
+
+- **Residual: #5371 shipped the keypath with no test on it.** The PR tested
+  `resolveQuickTimeStart` (the pure resolver) for `2a`, `215p`, `12a`, `12p`,
+  `1230p` and `13p`, but nothing covered the hook branch that feeds it, which
+  is why the dead indicator branch went unnoticed. Added three tests for the
+  keypath (`a` on a one-digit buffer commits at 02:00, `p` on a three-digit
+  buffer commits at 14:15, a meridiem key with an empty buffer stays
+  unclaimed) plus one pinning the invariant that keeps the indicator branch
+  dead: no value React renders may contain `a` or `p`. Verified all four are
+  load-bearing by mutation: disabling the meridiem branch fails three of them,
+  and deferring the commit so the buffer holds the letter across a frame fails
+  four, the invariant test among them.
+
+- **`isMeridiemKey` vs `TYPED_TIME`** (`quick-time.util.ts`). The predicate
+  `key === "a" || key === "p"` and the pattern `/^\d{1,4}[ap]?$/` spell the
+  same letter pair twice in the owning module. Left alone: one answers "is this
+  keystroke a meridiem key", the other validates a whole typed sequence, and
+  they are four lines apart in the file that owns the rule. Folding them would
+  mean deriving a character class from a predicate, which is more indirection
+  than the duplication costs.
+
+- **The `[ap]` capture in `USER_TIME_PATTERN`**
+  (`web.date.util.ts:93`). Third spelling of the pair, and the one that looks
+  most like a drifted copy, but it is not ours to converge: that pattern parses
+  what a user types into the event form's time field, including `2:30pm` and
+  `2.30 p.m.`, so its grammar is deliberately wider than the shortcut's. The
+  shortcut delegates to `parseUserTime` for the actual parse, so there is one
+  parser, not two.
+
+- **The column-time-burst commits** (`useShiftHoldEventHints.ts:654`, `:700`).
+  Both still write the buffer with `setQuickTimeDigits(...)` and then call
+  `commitQuickTime()`, the same write-then-read-back shape the meridiem path
+  had, and both were left as they are. The shape is only a defect when what it
+  writes is unrenderable: these write digits, which `quickTimeHintParts` pads
+  correctly, so no indicator branch depends on the transient value and nothing
+  can diverge. Converting them would be taste, and they predate this window.
+  `commitQuickTime`'s new parameter is optional precisely so they did not have
+  to change. Checked that all six call sites invoke it directly, so none can
+  pass a stray argument the way a bare function reference would.
+
+- **Dependency bumps** (#5365 tiptap, #5366 react-query, #5367 tailwind). Pure
+  `bun.lock` and `package.json` changes, no source touched. Not sweep leads.
+
 ## 2026-11-26
 
 One finding, shipped as the life week preview's hidden-event check. Swept the
