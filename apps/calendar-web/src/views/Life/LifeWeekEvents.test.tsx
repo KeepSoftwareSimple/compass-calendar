@@ -1,9 +1,11 @@
 import { EventIdSchema } from "@core/types/domain-primitives";
 import { type Event, EventScheduleSchema } from "@core/types/event.contracts";
 import { cleanup, render, screen } from "@web/__tests__/__mocks__/mock.render";
+import { seedEventQueries } from "@web/__tests__/utils/event-query-test-data";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { createCompassQueryClient } from "@web/api/query-client";
+import { refreshEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
 import { LifeWeekEvents } from "./LifeWeekEvents";
 import { afterEach, describe, expect, it } from "bun:test";
 import "@testing-library/jest-dom";
@@ -27,6 +29,7 @@ const timedEvent = (id: string, title: string, day: string): Event =>
 
 afterEach(() => {
   cleanup();
+  refreshEventRepositorySource(false);
 });
 
 describe("LifeWeekEvents", () => {
@@ -55,5 +58,29 @@ describe("LifeWeekEvents", () => {
 
     expect(screen.getByText("Dinner with Jo")).toBeInTheDocument();
     expect(screen.queryByText("Flight to Chicago")).toBeNull();
+  });
+
+  it("says an empty synced week is older than Compass keeps", () => {
+    refreshEventRepositorySource(true);
+    const queryClient = createCompassQueryClient();
+    seedEventQueries(queryClient, []);
+    seedHiddenEventIds(queryClient, [], "remote");
+
+    render(<LifeWeekEvents date="2020-01-05" />, { queryClient });
+
+    expect(
+      screen.getByText("Compass only keeps the last 12 months of events."),
+    ).toBeInTheDocument();
+  });
+
+  it("says an empty local week has no events", () => {
+    const queryClient = createCompassQueryClient();
+    seedEventQueries(queryClient, []);
+
+    render(<LifeWeekEvents date="2020-01-05" />, { queryClient });
+
+    expect(
+      screen.getByText("No calendar events this week."),
+    ).toBeInTheDocument();
   });
 });

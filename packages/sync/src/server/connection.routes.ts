@@ -9,6 +9,10 @@ import {
   type SyncOAuthCallbackOutcome,
 } from "@core/analytics/oauth-callback.analytics";
 import { OAUTH_CALLBACK_EVENT } from "@core/analytics/oauth-signup.events";
+import {
+  HORIZON_FUTURE_MONTHS,
+  HORIZON_PAST_MONTHS,
+} from "@core/constants/sync-horizon.constants";
 import { Status } from "@core/errors/status.codes";
 import {
   captureSafely,
@@ -69,10 +73,6 @@ import {
 import { type DerivedConnectionState } from "@sync/domain/connection-state";
 import { refreshConnectionState } from "@sync/domain/connection-state-refresh.service";
 import { assembleEventInstances } from "@sync/domain/event-instance-assembly";
-import {
-  HORIZON_FUTURE_MONTHS,
-  HORIZON_PAST_MONTHS,
-} from "@sync/domain/horizon";
 import {
   peekOAuthStatePayload,
   signOAuthState,
