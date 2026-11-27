@@ -289,7 +289,10 @@ describe("EventCard", () => {
     expect(card.style.getPropertyValue("--event-bg")).toBe(
       getEventPalette("red").base,
     );
-    expect(card.style.filter).toBe("drop-shadow(0 1px 2px rgb(0 0 0 / 0.28))");
+    const expectedFilter = document.createElement("div").style;
+    expectedFilter.filter = "drop-shadow(0 1px 2px rgb(0 0 0 / 0.28))";
+    expect(expectedFilter.filter).not.toBe("");
+    expect(card.style.filter).toBe(expectedFilter.filter);
   });
 
   it("paints a merged timed card with a whole-card gradient across its calendars", () => {

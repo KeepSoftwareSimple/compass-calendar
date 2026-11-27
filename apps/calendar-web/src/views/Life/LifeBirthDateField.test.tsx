@@ -161,11 +161,24 @@ describe("LifeBirthDateField", () => {
     await user.type(input, "1993");
     await user.keyboard("{ArrowDown}");
 
-    await waitFor(() => {
+    const focusedJanuaryDay = () =>
+      screen
+        .getAllByRole("gridcell", { name: /January .*1993/ })
+        .find((day) => day === document.activeElement);
+    const initialDay = await waitFor(() => {
       expect(screen.getByText("Jan 1993")).toBeInTheDocument();
+      const day = focusedJanuaryDay();
+      expect(day).toBeDefined();
+      return day?.getAttribute("aria-label");
     });
 
-    await user.keyboard("{ArrowRight}{Enter}");
+    await user.keyboard("{ArrowRight}");
+    await waitFor(() => {
+      const day = focusedJanuaryDay();
+      expect(day).toBeDefined();
+      expect(day).not.toHaveAttribute("aria-label", initialDay);
+    });
+    await user.keyboard("{Enter}");
 
     expect(onCommit).toHaveBeenCalledTimes(1);
     const [[committed]] = onCommit.mock.calls as unknown as [[Date]];
