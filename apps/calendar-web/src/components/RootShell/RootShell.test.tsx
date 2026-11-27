@@ -6,6 +6,10 @@ import { render, screen, waitFor } from "@web/__tests__/__mocks__/mock.render";
 import { createTestRouter } from "@web/__tests__/utils/providers/createTestRouter";
 import { createCompassQueryClient } from "@web/api/query-client";
 import { SessionContext } from "@web/auth/compass/session/session.context";
+import {
+  resetProviderAvailabilityForTests,
+  setProviderAvailabilityForTests,
+} from "@web/auth/providers/useIsProviderAvailable";
 import { resetAwaitingCheckoutBannerDismissForTests } from "@web/billing/awaiting-checkout-banner.util";
 import { billingQueryKeys } from "@web/billing/billing.query";
 import { resetBillingGateAttentionForTests } from "@web/billing/billing-gate-attention";
@@ -21,6 +25,11 @@ import {
 import { type AppAccess } from "@web/billing/useAppAccess";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import {
+  initialFirstEventPromptState,
+  useFirstEventPromptStore,
+} from "@web/components/FirstEventPrompt/first-event.store";
+import { LOCAL_MODE_CONNECT_PROMPT_MESSAGE } from "@web/components/LocalModeConnectPrompt/LocalModeConnectPrompt";
 import { RootShell } from "@web/components/RootShell/RootShell";
 import { useSettingsStore } from "@web/settings/settings.store";
 import { pointerHintActions } from "@web/shortcuts/keyboard-only/pointer-hint.store";
@@ -295,6 +304,47 @@ describe("RootShell calendar onboarding on /life", () => {
     expect(
       screen.queryByText(/Compass works from the keyboard/i),
     ).not.toBeInTheDocument();
+  });
+
+  describe("sign-up nudge for an engaged anonymous visitor", () => {
+    beforeEach(() => {
+      persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_WELCOME, "true");
+      persistentBrowserStore.set(
+        STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE,
+        "true",
+      );
+      persistentBrowserStore.set(STORAGE_KEYS.FIRST_EVENT_DONE, "true");
+      persistentBrowserStore.set(
+        STORAGE_KEYS.ANONYMOUS_CALENDAR_WRITE_COUNT,
+        "1",
+      );
+      useFirstEventPromptStore.setState({
+        ...initialFirstEventPromptState,
+        isDone: true,
+      });
+      setProviderAvailabilityForTests("google", "available");
+    });
+
+    afterEach(() => {
+      resetProviderAvailabilityForTests();
+      useFirstEventPromptStore.setState(initialFirstEventPromptState);
+    });
+
+    it("shows on /week", async () => {
+      await renderShell("/week", { anonymous: true });
+
+      expect(
+        await screen.findByText(LOCAL_MODE_CONNECT_PROMPT_MESSAGE),
+      ).toBeInTheDocument();
+    });
+
+    it("stays hidden on /life", async () => {
+      await renderShell("/life", { anonymous: true });
+
+      expect(
+        screen.queryByText(LOCAL_MODE_CONNECT_PROMPT_MESSAGE),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("still shows welcome on /week for a first-time anonymous visitor", async () => {

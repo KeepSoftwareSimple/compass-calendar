@@ -260,8 +260,12 @@ export function RootShell() {
         {/* Phone visitors only see MobileGate; a bottom notice card steals
             tray touches and breaks Time Block Party drag/tap. */}
         {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
-        {/* One ask at a time: the meeting setup flow ends in its own sign-up. */}
-        {!isMobile && !guestMeetingSetupActive && <LocalModeConnectPrompt />}
+        {/* One ask at a time: the meeting setup flow ends in its own sign-up,
+            and the Life view shows its own intro to visitors who may not yet
+            know what this app is. */}
+        {!isMobile && !guestMeetingSetupActive && !isLifeView && (
+          <LocalModeConnectPrompt />
+        )}
       </BottomNoticeStack>
     </AuthModalProvider>
   );
