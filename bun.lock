@@ -139,7 +139,7 @@
         "@types/supertest": "^7.2.1",
         "bson": "^7.3.3",
         "mongodb-memory-server": "^11.3.0",
-        "qs": "^6.16.1",
+        "qs": "^6.17.1",
         "supertest": "^7.3.2",
       },
     },
@@ -247,7 +247,7 @@
     "prosemirror-transform": "1.12.0",
     "prosemirror-view": "1.42.6",
     "proxy-addr": "2.0.8",
-    "qs": "^6.16.0",
+    "qs": "^6.17.1",
     "seroval": "1.6.11",
     "source-map-js": "1.2.2",
     "typescript": "7.0.2",
@@ -1584,7 +1584,7 @@
 
     "punycode": ["punycode@2.3.1", "", {}, "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="],
 
-    "qs": ["qs@6.16.1", "", { "dependencies": { "es-define-property": "^1.0.1", "side-channel": "^1.1.1" } }, "sha512-5Px6J7rfHBAGUhNQ3es4YzcOdBBw0SDcVtThJml4RdnKw4tKs2epA0kPZ+K8X+WiHktT93RHVcQ/3ym5aTCgtg=="],
+    "qs": ["qs@6.17.1", "", { "dependencies": { "es-define-property": "^1.0.1", "side-channel": "^1.1.1" } }, "sha512-jd3COkaKVgGUW+ZHyEHCG9bH7RoaaiWuMgzsIBjUMVjLAaWGWpoUAVwljVvBHxRu/2qEHnadLGZrkutYUBPQJA=="],
 
     "query-selector-shadow-dom": ["query-selector-shadow-dom@1.0.1", "", {}, "sha512-lT5yCqEBgfoMYpf3F2xQRK7zEr1rhIIZuceDK6+xRkJQ4NMbHTwXqk4NkwDwQMNqXgG9r9fyHnzwNVs6zV5KRw=="],
 
