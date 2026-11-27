@@ -1,8 +1,8 @@
 import { EventIdSchema } from "@core/types/domain-primitives";
 import { type Event, EventScheduleSchema } from "@core/types/event.contracts";
 import { cleanup, render, screen } from "@web/__tests__/__mocks__/mock.render";
-import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { seedEventQueries } from "@web/__tests__/utils/event-query-test-data";
+import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { createCompassQueryClient } from "@web/api/query-client";
 import { refreshEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
