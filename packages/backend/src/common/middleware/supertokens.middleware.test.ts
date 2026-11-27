@@ -5,6 +5,7 @@ import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
 import ThirdParty from "supertokens-node/recipe/thirdparty";
 import UserMetadata from "supertokens-node/recipe/usermetadata";
+import { CHECKOUT_RESET_HEADER } from "@core/constants/billing.constants";
 import { APP_NAME, NodeEnv } from "@core/constants/core.constants";
 import { appleAuthService } from "@backend/auth/services/apple/apple.auth.service";
 import { googleAuthService } from "@backend/auth/services/google/google.auth.service";
@@ -429,6 +430,7 @@ describe("supertokens.middleware", () => {
       expect(buildResetPasswordLink).toHaveBeenCalledWith(
         "http://localhost:1234/auth/reset-password?token=abc",
         CONFIG.FRONTEND_URL,
+        undefined,
       );
       // In test env, sending is suppressed — originalSendEmail must not be called
       expect(originalSendEmail).not.toHaveBeenCalled();
@@ -981,6 +983,7 @@ describe("supertokens.middleware", () => {
       expect(arg.allowedHeaders).toEqual([
         "content-type",
         "st-auth-mode",
+        CHECKOUT_RESET_HEADER,
         "st-auth-mode",
       ]);
     });

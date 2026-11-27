@@ -1,4 +1,5 @@
 import { type Request, type Response } from "express";
+import { z } from "zod/v4";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import {
@@ -20,6 +21,7 @@ import billingService from "@backend/billing/services/billing.service";
 import stripeService from "@backend/billing/services/stripe.service";
 
 const logger = Logger("app:billing");
+const EMPTY_CHECKOUT_REQUEST_SCHEMA = z.strictObject({}).default({});
 
 const sendBillingError = (res: Response, e: unknown) => {
   if (e instanceof BillingHttpError) {
@@ -46,10 +48,17 @@ const respondWithCheckoutSession = async (
     userId: string,
     options: BillingCheckoutRequest,
   ) => Promise<BillingCheckoutResponse>,
+  schema: z.ZodType<BillingCheckoutRequest> = BillingCheckoutRequestSchema,
 ) => {
   try {
-    const body = BillingCheckoutRequestSchema.parse(req.body ?? {});
-    const result = await createSession(sessionUserId(req), body);
+    const body = schema.safeParse(req.body ?? {});
+    if (!body.success) {
+      throw new BillingHttpError(
+        Status.BAD_REQUEST,
+        "Invalid checkout options.",
+      );
+    }
+    const result = await createSession(sessionUserId(req), body.data);
     res.status(Status.OK).json(BillingCheckoutResponseSchema.parse(result));
   } catch (e) {
     sendBillingError(res, e);
@@ -95,6 +104,7 @@ class BillingController {
       req,
       res,
       stripeService.createPaymentMethodSession,
+      EMPTY_CHECKOUT_REQUEST_SCHEMA,
     );
 
   getSubscription = async (

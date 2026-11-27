@@ -2,6 +2,7 @@ import supertokens from "supertokens-node";
 import Session from "supertokens-node/recipe/session";
 import { type SessionContainerInterface } from "supertokens-node/recipe/session/types";
 import { type RecipeInterface as ThirdPartyRecipeInterface } from "supertokens-node/recipe/thirdparty/types";
+import { CHECKOUT_RESET_HEADER } from "@core/constants/billing.constants";
 import { NodeEnv } from "@core/constants/core.constants";
 import { Logger } from "@core/logger/winston.logger";
 import { providerKindFromThirdPartyId } from "@core/types/sync/identity.contracts";
@@ -335,11 +336,21 @@ export async function handleThirdPartySignInUp(
 }
 
 export async function sendPasswordResetEmail<
-  T extends { passwordResetLink: string; user: { email: string } },
+  T extends {
+    passwordResetLink: string;
+    user: { email: string };
+    userContext?: Parameters<typeof supertokens.getRequestFromUserContext>[0];
+  },
 >(input: T, originalSendEmail: (input: T) => Promise<void>): Promise<void> {
+  const checkout =
+    input.userContext &&
+    supertokens
+      .getRequestFromUserContext(input.userContext)
+      ?.getHeaderValue(CHECKOUT_RESET_HEADER);
   const resetLink = buildResetPasswordLink(
     input.passwordResetLink,
     CONFIG.FRONTEND_URL,
+    checkout,
   );
 
   if (CONFIG.NODE_ENV === NodeEnv.Test) {

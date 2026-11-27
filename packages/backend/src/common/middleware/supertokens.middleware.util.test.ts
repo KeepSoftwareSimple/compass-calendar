@@ -78,6 +78,23 @@ describe("supertokens.middleware.util", () => {
   });
 
   describe("buildResetPasswordLink", () => {
+    it("returns a checkout reset to the same offer and plan on the Compass host", () => {
+      const link = buildResetPasswordLink(
+        "http://localhost:3567/auth/reset-password?token=reset-token",
+        "http://localhost:9080",
+        "?promo=ahab30&plan=annual&next=https://elsewhere.example",
+      );
+      const url = new URL(link);
+      expect(url.origin).toBe("http://localhost:9080");
+      expect(url.pathname).toBe("/checkout");
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        promo: "AHAB30",
+        plan: "annual",
+        auth: "reset",
+        token: "reset-token",
+      });
+    });
+
     it("rewrites reset links into the app auth flow", () => {
       const token = faker.string.alphanumeric(32);
       const frontendUrl = "http://localhost:9080";

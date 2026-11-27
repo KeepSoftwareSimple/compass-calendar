@@ -1,4 +1,5 @@
 import {
+  type BillingCheckoutRequest,
   type BillingCheckoutResponse,
   BillingCheckoutResponseSchema,
   type BillingStatusResponse,
@@ -22,9 +23,12 @@ const BillingApi = {
     return BillingSubscriptionResponseSchema.parse(response.data);
   },
 
-  async createCheckoutSession(): Promise<BillingCheckoutResponse> {
+  async createCheckoutSession(
+    options?: BillingCheckoutRequest,
+  ): Promise<BillingCheckoutResponse> {
     const response = await BaseApi.post<BillingCheckoutResponse>(
       `/billing/checkout/session`,
+      options,
     );
     return BillingCheckoutResponseSchema.parse(response.data);
   },

@@ -111,12 +111,107 @@ describe("StripeService", () => {
         .custom_text,
     ).toBeUndefined();
     expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-      idempotencyKey: `compass-checkout-v11-${userId.toString()}`,
+      idempotencyKey: `compass-checkout-v12-${userId.toString()}-first`,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
     expect(stored?.billing?.stripeCustomerId).toBe("cus_1");
     expect(stored?.billing?.subscriptionStatus).toBe("awaiting_checkout");
+  });
+
+  it("starts an annual trial with the link's promotion and replaces a different open checkout", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "promo@example.com",
+      name: "Promo User",
+      firstName: "Promo",
+      lastName: "User",
+      locale: "en",
+      billing: {
+        stripeCustomerId: "cus_promo",
+        subscriptionStatus: "awaiting_checkout",
+      },
+    });
+    const expireCheckoutSession = mock(async () => ({}));
+    const createCheckoutSession = mock(
+      async (params: Stripe.Checkout.SessionCreateParams) => ({
+        client_secret: "cs_promo",
+        params,
+      }),
+    );
+    const latestSubscriptionCheckout = mock(
+      async (): Promise<{
+        id: string;
+        status: string;
+        client_secret?: string;
+        metadata?: Stripe.MetadataParam;
+      }> => ({ id: "cs_previous", status: "open" }),
+    );
+    const retrievePrice = mock(async () => ({
+      active: true,
+      currency: "usd",
+      product: "prod_compass",
+      recurring: { interval: "month", interval_count: 1 },
+    }));
+    const listPrices = mock(async () => ({
+      data: [{ id: "price_annual", recurring: { interval_count: 1 } }],
+      has_more: false,
+    }));
+    const listPromotionCodes = mock(async () => ({
+      data: [
+        { id: "promo_ahab", restrictions: { first_time_transaction: true } },
+      ],
+    }));
+    const service = new StripeService(
+      stubBillingGateway({
+        createCheckoutSession,
+        expireCheckoutSession,
+        latestSubscriptionCheckout,
+        listPrices,
+        listPromotionCodes,
+        retrievePrice,
+      }),
+    );
+
+    const offer = { plan: "annual", promotionCode: "AHAB30" } as const;
+    await expect(
+      service.createCheckoutSession(userId.toString(), offer),
+    ).resolves.toEqual({ clientSecret: "cs_promo" });
+    expect(listPromotionCodes).toHaveBeenCalledWith({
+      active: true,
+      code: "AHAB30",
+      limit: 1,
+    });
+    expect(listPrices).toHaveBeenCalledWith({
+      active: true,
+      currency: "usd",
+      product: "prod_compass",
+      recurring: { interval: "year", usage_type: "licensed" },
+    });
+    expect(expireCheckoutSession).toHaveBeenCalledWith("cs_previous");
+    expect(createCheckoutSession.mock.calls[0]?.[0]).toMatchObject({
+      automatic_tax: { enabled: true },
+      discounts: [{ promotion_code: "promo_ahab" }],
+      line_items: [{ price: "price_annual", quantity: 1 }],
+      subscription_data: { trial_period_days: 7 },
+    });
+    expect(createCheckoutSession.mock.calls[0]?.[0]).not.toHaveProperty(
+      "allow_promotion_codes",
+    );
+
+    latestSubscriptionCheckout.mockResolvedValue({
+      id: "cs_promo",
+      status: "open",
+      client_secret: "cs_promo",
+      metadata: createCheckoutSession.mock.calls[0]?.[0].metadata,
+    });
+    await expect(
+      service.createCheckoutSession(userId.toString(), offer),
+    ).resolves.toEqual({ clientSecret: "cs_promo" });
+    expect(createCheckoutSession).toHaveBeenCalledTimes(1);
+    expect(expireCheckoutSession).toHaveBeenCalledTimes(1);
   });
 
   it("applies synthetic journey coupon discounts only for configured synthetic accounts", async () => {
@@ -165,7 +260,7 @@ describe("StripeService", () => {
     expect(syntheticArgs.discounts).toEqual([
       { coupon: "coupon_synthetic_100" },
     ]);
-    expect((syntheticArgs as { metadata?: unknown }).metadata).toEqual({
+    expect((syntheticArgs as { metadata?: unknown }).metadata).toMatchObject({
       compassSynthetic: "true",
     });
     expect(
@@ -188,7 +283,9 @@ describe("StripeService", () => {
     };
     expect(realArgs.discounts).toBeUndefined();
     expect(realArgs).toHaveProperty("allow_promotion_codes", true);
-    expect((realArgs as { metadata?: unknown }).metadata).toBeUndefined();
+    expect((realArgs as { metadata?: unknown }).metadata).not.toHaveProperty(
+      "compassSynthetic",
+    );
     expect(
       (realArgs as { payment_method_collection?: string })
         .payment_method_collection,

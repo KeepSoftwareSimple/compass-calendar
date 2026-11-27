@@ -29,8 +29,10 @@ import { isStripeConfigured } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
 import { isPosthogSyntheticAccount } from "@backend/user/posthog-synthetic-account.util";
 
-/** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
-const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v11-";
+const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v12";
+
+const ALREADY_SUBSCRIBED =
+  "You already have a subscription. Manage it under Settings > Billing.";
 
 function syntheticJourneyCheckoutDiscounts(user: {
   email: string;
@@ -47,9 +49,6 @@ function syntheticJourneyCheckoutDiscounts(user: {
   }
   return [{ coupon: discountId }];
 }
-
-const checkoutIdempotencyKey = (userId: string): string =>
-  `${CHECKOUT_IDEMPOTENCY_PREFIX}${userId}`;
 
 const TRIAL_CANCEL_WITHOUT_CARD = {
   trial_settings: {
@@ -144,7 +143,7 @@ export class StripeService {
 
   createCheckoutSession = async (
     userId: string,
-    _options: BillingCheckoutRequest = {},
+    options: BillingCheckoutRequest = {},
   ): Promise<BillingCheckoutResponse> => {
     if (!isStripeConfigured(CONFIG)) {
       throw new Error("Stripe is not configured");
@@ -163,15 +162,28 @@ export class StripeService {
         liveStatus === "active" ||
         liveStatus === "past_due");
     if (hasLiveSubscription) {
-      throw new BillingHttpError(
-        Status.CONFLICT,
-        "You already have a subscription. Manage it under Settings > Billing.",
-      );
+      throw new BillingHttpError(Status.CONFLICT, ALREADY_SUBSCRIBED);
     }
 
     let customerId = user.billing?.stripeCustomerId;
     const trialFields = checkoutTrialFields(user.billing);
-    const sendCheckoutIdempotency = !user.billing?.stripeSubscriptionId;
+    const syntheticDiscounts = syntheticJourneyCheckoutDiscounts(user);
+    const [priceId, promotionCode] = await Promise.all([
+      this.checkoutPriceId(options.plan),
+      options.promotionCode && !syntheticDiscounts
+        ? this.getCheckoutPromotion(options.promotionCode)
+        : undefined,
+    ]);
+
+    if (
+      promotionCode?.restrictions.first_time_transaction &&
+      user.billing?.stripeSubscriptionId
+    ) {
+      throw new BillingHttpError(
+        Status.BAD_REQUEST,
+        "This offer is for new subscribers. Your account has already started a subscription.",
+      );
+    }
 
     if (!customerId) {
       const customer = await this.stripe
@@ -198,8 +210,33 @@ export class StripeService {
       );
     }
 
-    const discounts = syntheticJourneyCheckoutDiscounts(user);
-    const syntheticJourneyCheckout = discounts !== undefined;
+    const discounts =
+      syntheticDiscounts ??
+      (promotionCode ? [{ promotion_code: promotionCode.id }] : undefined);
+    const syntheticJourneyCheckout = syntheticDiscounts !== undefined;
+    const variant = JSON.stringify([priceId, discounts ?? null, trialFields]);
+    const latest = await this.stripe
+      .latestSubscriptionCheckout(customerId)
+      .catch(wrapStripeFailure);
+    if (latest?.status === "complete") {
+      const completedSubscription = stripeExpandableId(latest.subscription);
+      if (
+        !completedSubscription ||
+        completedSubscription !== user.billing?.stripeSubscriptionId
+      ) {
+        throw new BillingHttpError(Status.CONFLICT, ALREADY_SUBSCRIBED);
+      }
+    }
+    if (latest?.status === "open") {
+      if (latest.metadata?.["compassCheckoutVariant"] === variant) {
+        return checkoutResponse(latest);
+      }
+      // A different plan or promotion replaces the previous form. If it
+      // completed while we were switching, Stripe rejects the expiration.
+      await this.stripe
+        .expireCheckoutSession(latest.id)
+        .catch(wrapStripeFailure);
+    }
     // Only synthetic sessions get metadata for analytics exclusion.
     const syntheticAnalyticsAccount = isPosthogSyntheticAccount(
       user.email,
@@ -212,11 +249,14 @@ export class StripeService {
           mode: "subscription",
           customer: customerId,
           client_reference_id: userId,
-          line_items: [{ price: getStripePriceId(), quantity: 1 }],
+          line_items: [{ price: priceId, quantity: 1 }],
           ...(discounts ? { discounts } : { allow_promotion_codes: true }),
-          ...(syntheticAnalyticsAccount
-            ? { metadata: syntheticCheckoutSessionMetadata() }
-            : {}),
+          metadata: {
+            compassCheckoutVariant: variant,
+            ...(syntheticAnalyticsAccount
+              ? syntheticCheckoutSessionMetadata()
+              : {}),
+          },
           // Real checkout always collects a card. Synthetic prod journey uses a
           // 100% discount and `if_required` so live Stripe never sees test cards.
           payment_method_collection: syntheticJourneyCheckout
@@ -240,14 +280,74 @@ export class StripeService {
             metadata: { compassUserId: userId },
           },
         },
-        sendCheckoutIdempotency
-          ? { idempotencyKey: checkoutIdempotencyKey(userId) }
-          : undefined,
+        // Competing requests for different plans share a key until Stripe
+        // records a session. Only one can create a successor to that session.
+        {
+          idempotencyKey: `${CHECKOUT_IDEMPOTENCY_PREFIX}-${userId}-${latest?.id ?? "first"}`,
+        },
       )
       .catch(wrapStripeFailure);
 
     return checkoutResponse(session);
   };
+
+  private async checkoutPriceId(
+    plan: BillingCheckoutRequest["plan"],
+  ): Promise<string> {
+    const defaultPriceId = getStripePriceId();
+    if (!plan) return defaultPriceId;
+
+    const interval = plan === "annual" ? "year" : "month";
+    const price = await this.stripe
+      .retrievePrice(defaultPriceId)
+      .catch(wrapStripeFailure);
+    if (
+      price.active &&
+      price.recurring?.interval === interval &&
+      price.recurring.interval_count === 1
+    ) {
+      return defaultPriceId;
+    }
+
+    const product = stripeExpandableId(price.product);
+    if (product) {
+      const prices = await this.stripe
+        .listPrices({
+          active: true,
+          product,
+          currency: price.currency,
+          recurring: { interval, usage_type: "licensed" },
+        })
+        .catch(wrapStripeFailure);
+      // Fail safely if the catalog has multiple candidates for this interval.
+      const matching = prices.data.filter(
+        (candidate) => candidate.recurring?.interval_count === 1,
+      );
+      if (!prices.has_more && matching.length === 1 && matching[0]) {
+        return matching[0].id;
+      }
+    }
+    throw new BillingHttpError(
+      Status.BAD_REQUEST,
+      "This plan is unavailable. Please choose another plan.",
+    );
+  }
+
+  private async getCheckoutPromotion(
+    code: string,
+  ): Promise<Stripe.PromotionCode> {
+    const { data } = await this.stripe
+      .listPromotionCodes({ active: true, code, limit: 1 })
+      .catch(wrapStripeFailure);
+    const promotion = data[0];
+    if (!promotion || promotion.customer || promotion.customer_account) {
+      throw new BillingHttpError(
+        Status.BAD_REQUEST,
+        "This offer is unavailable or has ended.",
+      );
+    }
+    return promotion;
+  }
 
   /**
    * Ends a Stripe trial immediately, billing the card on file today. This is

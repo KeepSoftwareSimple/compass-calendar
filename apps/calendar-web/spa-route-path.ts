@@ -9,6 +9,7 @@ import { ROOT_ROUTES } from "./src/common/constants/routes";
  */
 const EXACT_PATHS = new Set<string>([
   ROOT_ROUTES.ROOT,
+  ROOT_ROUTES.CHECKOUT,
   ROOT_ROUTES.WEEK,
   ROOT_ROUTES.DAY,
   ROOT_ROUTES.LIFE,

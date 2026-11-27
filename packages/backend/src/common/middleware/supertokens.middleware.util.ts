@@ -1,5 +1,9 @@
 import { ObjectId } from "mongodb";
 import { type SessionContainerInterface } from "supertokens-node/recipe/session/types";
+import {
+  BillingPlanIntervalSchema,
+  BillingPromotionCodeSchema,
+} from "@core/types/billing.types";
 import { getUserIdMappingStore } from "@backend/auth/ports/supertokens.registry";
 import { type AppleSignInSuccess } from "@backend/auth/services/apple/apple.auth.types";
 import { type GoogleSignInSuccess } from "@backend/auth/services/google/google.auth.types";
@@ -22,30 +26,34 @@ export function getFormFieldValue(
   return typeof field?.value === "string" ? field.value : undefined;
 }
 
-function buildFrontendAuthLink(
-  originalLink: string,
-  frontendUrl: string,
-  authView: "reset",
-): string {
-  const url = new URL(originalLink);
-  const token = url.searchParams.get("token");
-
-  if (!token) {
-    return originalLink;
-  }
-
-  const appUrl = new URL(`${frontendUrl}/day`);
-  appUrl.searchParams.set("auth", authView);
-  appUrl.searchParams.set("token", token);
-
-  return appUrl.toString();
-}
-
 export function buildResetPasswordLink(
   passwordResetLink: string,
   frontendUrl: string,
+  checkout?: string,
 ): string {
-  return buildFrontendAuthLink(passwordResetLink, frontendUrl, "reset");
+  const url = new URL(passwordResetLink);
+  const token = url.searchParams.get("token");
+
+  if (!token) {
+    return passwordResetLink;
+  }
+
+  const appUrl = new URL(
+    `${frontendUrl}${checkout?.startsWith("?") ? "/checkout" : "/day"}`,
+  );
+  if (checkout?.startsWith("?")) {
+    const search = new URLSearchParams(checkout);
+    const plan = BillingPlanIntervalSchema.safeParse(search.get("plan")).data;
+    const promo = BillingPromotionCodeSchema.safeParse(
+      search.get("promo"),
+    ).data;
+    if (plan) appUrl.searchParams.set("plan", plan);
+    if (promo) appUrl.searchParams.set("promo", promo);
+  }
+  appUrl.searchParams.set("auth", "reset");
+  appUrl.searchParams.set("token", token);
+
+  return appUrl.toString();
 }
 
 export async function ensureExternalUserIdMapping(
