@@ -25,6 +25,7 @@ import { type GridEventDraft } from "@web/events/event-draft.types";
 import {
   createGridEventDraft,
   editGridEventDraft,
+  patchGridDraftFields,
   replaceGridDraftSchedule,
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
@@ -1456,10 +1457,9 @@ describe("EventForm", () => {
         createNewDraft({ title: "" }),
       );
       echoEarlierTitle = () => {
-        setDraftState((current) => ({
-          ...current,
-          values: { ...current.values, title: "Pla" },
-        }));
+        setDraftState((current) =>
+          patchGridDraftFields(current, { title: "Pla" }),
+        );
       };
       const setDraftFromForm = (
         nextDraft: SetStateAction<GridEventDraft | null>,
