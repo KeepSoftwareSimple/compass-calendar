@@ -72,6 +72,17 @@ in the last 30 days.
   shortcut delegates to `parseUserTime` for the actual parse, so there is one
   parser, not two.
 
+- **The column-time-burst commits** (`useShiftHoldEventHints.ts:654`, `:700`).
+  Both still write the buffer with `setQuickTimeDigits(...)` and then call
+  `commitQuickTime()`, the same write-then-read-back shape the meridiem path
+  had, and both were left as they are. The shape is only a defect when what it
+  writes is unrenderable: these write digits, which `quickTimeHintParts` pads
+  correctly, so no indicator branch depends on the transient value and nothing
+  can diverge. Converting them would be taste, and they predate this window.
+  `commitQuickTime`'s new parameter is optional precisely so they did not have
+  to change. Checked that all six call sites invoke it directly, so none can
+  pass a stray argument the way a bare function reference would.
+
 - **Dependency bumps** (#5365 tiptap, #5366 react-query, #5367 tailwind). Pure
   `bun.lock` and `package.json` changes, no source touched. Not sweep leads.
 
