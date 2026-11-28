@@ -30,6 +30,7 @@ import { runExportMyData } from "@web/common/storage/offline-data/export-user-da
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { useDeleteAccountConfirmation } from "@web/components/DeleteAccountConfirmation/hooks/useDeleteAccountConfirmation";
+import { useFeedbackStore } from "@web/components/Feedback/feedback.store";
 import { useLogoutConfirmation } from "@web/components/LogoutConfirmation/hooks/useLogoutConfirmation";
 import {
   OverlayPanel,
@@ -111,8 +112,9 @@ export const SettingsModal: FC = () => {
   const access = useAppAccess();
   const hasBilling = getPlanBadge(access) !== null;
   const isAccessPending = useIsAppAccessPending();
+  const feedbackOpen = useFeedbackStore((state) => Boolean(state.request));
   const { areHintsVisible } = useSettingsShortcuts({
-    enabled: isOpen && !isUpgradeOpen,
+    enabled: isOpen && !isUpgradeOpen && !feedbackOpen,
     hasBilling,
     hasBooking: authenticated && IS_BOOKING_ENABLED,
     page,

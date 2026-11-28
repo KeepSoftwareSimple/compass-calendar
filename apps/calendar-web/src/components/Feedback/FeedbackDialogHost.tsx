@@ -31,6 +31,7 @@ export function FeedbackDialogHost() {
 
   if (!request || !posthog) return null;
 
+  const fromSettings = request.view === "settings";
   const handleSubmit = async (details: string) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -45,15 +46,15 @@ export function FeedbackDialogHost() {
 
     setIsSubmitting(false);
     feedbackActions.close();
-    settingsActions.clearOverlayOpenedFromPalette();
+    if (!fromSettings) settingsActions.clearOverlayOpenedFromPalette();
     showStatusToast("feedback-sent", "Feedback sent to the big boss, thanks!");
   };
 
   return (
     <FeedbackDialog
       isSubmitting={isSubmitting}
-      onDismiss={handleDismiss}
-      restoreFocus={restoreCommandPaletteFocus}
+      onDismiss={fromSettings ? feedbackActions.close : handleDismiss}
+      restoreFocus={fromSettings ? undefined : restoreCommandPaletteFocus}
       skipFocusRestoreRef={skipFocusRestoreRef}
       onSubmit={handleSubmit}
     />

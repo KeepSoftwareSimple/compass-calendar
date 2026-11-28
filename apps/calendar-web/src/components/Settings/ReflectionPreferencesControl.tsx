@@ -5,7 +5,10 @@ import { UserApi } from "@web/api/user.api";
 import { isApiError } from "@web/api/util/api.util";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { UserContext } from "@web/auth/compass/user/context/UserContext";
+import { usePostHog } from "@web/auth/posthog/posthog-react";
 import { readHiddenCalendarIds } from "@web/calendars/calendar-visibility.storage";
+import { feedbackActions } from "@web/components/Feedback/feedback.store";
+import { ReflectionEmailPreview } from "@web/components/Settings/ReflectionEmailPreview";
 import {
   selectSettingsFocus,
   settingsActions,
@@ -18,7 +21,9 @@ export function ReflectionPreferencesControl() {
   const { authenticated } = useSession();
   const userId = authenticated ? account?.userId : undefined;
   const timeZone = useEffectiveTimeZone();
+  const posthog = usePostHog();
   const descriptionId = useId();
+  const scheduleId = useId();
   const errorId = useId();
   const session = useRef(0);
   const [state, setState] = useState<{
@@ -65,9 +70,10 @@ export function ReflectionPreferencesControl() {
   if (!state.data.available && !state.data.preferences)
     return <p>Calendar reflections are not available for this account yet.</p>;
   const preferences = state.data.preferences;
+  const deliveryTimeZone = preferences?.timeZone ?? timeZone;
   const change = async (
     enabled: boolean,
-    reviewTimeZone = preferences?.timeZone ?? timeZone,
+    reviewTimeZone = deliveryTimeZone,
   ) => {
     const generation = session.current;
     setSaving(true);
@@ -102,24 +108,22 @@ export function ReflectionPreferencesControl() {
       aria-label="Calendar reflections"
       className="flex flex-col gap-2 text-text-muted"
     >
-      <label className="flex items-center gap-2">
+      <label className="flex items-center gap-2 text-text">
         <input
           ref={checkbox}
           type="checkbox"
           checked={preferences?.enabled ?? false}
           disabled={saving || (!state.data.available && !preferences?.enabled)}
-          aria-describedby={`${descriptionId}${error ? ` ${errorId}` : ""}`}
+          aria-describedby={`${descriptionId} ${scheduleId}${error ? ` ${errorId}` : ""}`}
           onChange={(event) => void change(event.target.checked)}
           className="accent-accent focus-visible:outline-2 focus-visible:outline-accent"
         />
-        Email me calendar reflections
+        Weekly reflection emails
       </label>
       <p id={descriptionId}>
-        Sundays at 10:30 a.m. (
-        {preferences?.timeZone ??
-          Intl.DateTimeFormat().resolvedOptions().timeZone}
-        )
+        Highlights from previous years and your updated Life in Weeks as a PDF
       </p>
+      <p id={scheduleId}>Sundays at 10:30 a.m. ({deliveryTimeZone})</p>
       {preferences && preferences.timeZone !== timeZone && (
         <button
           className="c-focus-ring self-start text-accent underline"
@@ -130,20 +134,23 @@ export function ReflectionPreferencesControl() {
           Use app timezone ({timeZone})
         </button>
       )}
-      <p>
-        Recent highlights, memories, your life in weeks, and time to plan ahead.
-      </p>
-      {state.data.paused && !preferences?.enabled && (
-        <p role="status">
-          Calendar reflections are paused. You can enable them here anytime.{" "}
-          <a
-            className="c-focus-ring text-accent underline"
-            href="mailto:tyler@keepsoftwaresimple.com?subject=Calendar%20reflection%20feedback"
-          >
-            Share feedback by email (optional)
-          </a>
-        </p>
-      )}
+      <ReflectionEmailPreview />
+      {saving ? (
+        <p role="status">Saving…</p>
+      ) : state.data.paused && !preferences?.enabled ? (
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p role="status">Emails are paused.</p>
+          {posthog && (
+            <button
+              type="button"
+              className="c-focus-ring text-accent underline"
+              onClick={() => feedbackActions.open("settings")}
+            >
+              Share feedback
+            </button>
+          )}
+        </div>
+      ) : null}
       {error && (
         <p id={errorId} role="alert">
           {error}

@@ -47,15 +47,44 @@ test("notification settings support pausing reviews with optional feedback", asy
   const settings = page.getByRole("dialog", { name: "Settings" });
   await settings.getByRole("button", { name: "Notifications" }).click();
   const reviews = settings.getByRole("checkbox", {
-    name: "Email me calendar reflections",
+    name: "Weekly reflection emails",
   });
   await expect(reviews).toBeChecked();
   await reviews.focus();
   await page.keyboard.press("Space");
   await expect(reviews).not.toBeChecked();
-  await expect(
-    settings.getByRole("link", { name: "Share feedback by email (optional)" }),
-  ).toBeVisible();
+  const feedback = settings.getByRole("button", { name: "Share feedback" });
+  await feedback.click();
+  const dialog = page.getByRole("dialog", { name: "Share feedback" });
+  await expect(dialog.getByRole("textbox")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(feedback).toBeFocused();
+  await page.route("**/i/v0/e/", (route) => route.fulfill({ json: {} }));
+  await feedback.click();
+  await dialog
+    .getByRole("textbox")
+    .fill("Please keep the old calendar highlights.");
+  const submitted = page.waitForRequest(
+    (request) =>
+      request.url().endsWith("/i/v0/e/") && request.method() === "POST",
+  );
+  await dialog.getByRole("button", { name: "Send feedback" }).click();
+  expect((await submitted).postDataJSON().properties).toMatchObject({
+    feedback_source: "reflection_settings",
+    $survey_response: "Please keep the old calendar highlights.",
+  });
+  await expect(feedback).toBeFocused();
+
+  await settings
+    .getByRole("button", { name: "Preview a sample email" })
+    .click();
+  const attachment = settings.getByRole("link", {
+    name: /Open sample Life in Weeks PDF/,
+  });
+  const pdf = await page.request.get((await attachment.getAttribute("href"))!);
+  expect(pdf.headers()["content-type"]).toContain("application/pdf");
+  expect((await pdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  await expect(reviews).not.toBeChecked();
   // This checkpoint owns the settings dialog; the calendar sidebar behind it
   // is covered by the app checkpoints.
   await expectNoAxeViolations(page, {

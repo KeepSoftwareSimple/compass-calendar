@@ -6,6 +6,7 @@ import { SessionContext } from "@web/auth/compass/session/session.context";
 import { UserContext } from "@web/auth/compass/user/context/UserContext";
 import { ReflectionPreferencesControl } from "@web/components/Settings/ReflectionPreferencesControl";
 import { settingsActions } from "@web/settings/settings.store";
+import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const preferences: ReflectionPreferences = {
@@ -46,7 +47,7 @@ describe("reflection preference control", () => {
     const user = userEvent.setup();
     render(control("account-a"));
     const checkbox = await screen.findByRole("checkbox", {
-      name: "Email me calendar reflections",
+      name: "Weekly reflection emails",
     });
     await user.tab();
     expect(checkbox).toHaveFocus();
@@ -61,7 +62,7 @@ describe("reflection preference control", () => {
     expect(save).toHaveBeenLastCalledWith({ ...preferences, enabled: true });
   });
 
-  it("pauses emails before offering optional feedback and allows re-enabling", async () => {
+  it("pauses and resumes emails when the feedback service is unavailable", async () => {
     spyOn(UserApi, "getReflectionPreferences").mockResolvedValue({
       ...response,
       preferences: { ...preferences, enabled: true },
@@ -76,21 +77,22 @@ describe("reflection preference control", () => {
     const user = userEvent.setup();
     render(control("account-a"));
     const checkbox = await screen.findByRole("checkbox", {
-      name: "Email me calendar reflections",
+      name: "Weekly reflection emails",
     });
     expect(
-      screen.queryByRole("link", { name: /Share feedback/ }),
+      screen.queryByRole("button", { name: "Share feedback" }),
     ).not.toBeInTheDocument();
     await user.click(checkbox);
-    await screen.findByRole("link", {
-      name: "Share feedback by email (optional)",
-    });
+    await screen.findByText("Emails are paused.");
+    expect(
+      screen.queryByRole("button", { name: "Share feedback" }),
+    ).not.toBeInTheDocument();
     expect(checkbox).not.toBeChecked();
     expect(save).toHaveBeenLastCalledWith(preferences);
     await user.click(checkbox);
     await waitFor(() => expect(checkbox).toBeChecked());
     expect(
-      screen.queryByRole("link", { name: /Share feedback/ }),
+      screen.queryByRole("button", { name: "Share feedback" }),
     ).not.toBeInTheDocument();
   });
   it("still shows the paused note after a reload, and the server's reason when enabling is refused", async () => {
@@ -108,13 +110,50 @@ describe("reflection preference control", () => {
     spyOn(UserApi, "saveReflectionPreferences").mockRejectedValue(refused);
     const user = userEvent.setup();
     render(control("account-a"));
-    expect(
-      await screen.findByText(/Calendar reflections are paused/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Emails are paused.")).toBeInTheDocument();
     await user.click(screen.getByRole("checkbox"));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "You unsubscribed from all Compass emails.",
     );
+  });
+
+  it("previews the sample before opting in and saves the displayed app timezone", async () => {
+    setPinnedTimeZone("Pacific/Auckland");
+    spyOn(UserApi, "getReflectionPreferences").mockResolvedValue({
+      ...response,
+      preferences: null,
+    });
+    const save = spyOn(UserApi, "saveReflectionPreferences").mockImplementation(
+      async (input) => ({ ...response, preferences: input }),
+    );
+    const user = userEvent.setup();
+    render(control("account-a"));
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Weekly reflection emails",
+    });
+    expect(checkbox).toHaveAccessibleDescription(
+      "Highlights from previous years and your updated Life in Weeks as a PDF Sundays at 10:30 a.m. (Pacific/Auckland)",
+    );
+    const preview = screen.getByRole("button", {
+      name: "Preview a sample email",
+    });
+    await user.click(preview);
+    expect(preview).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("article", { name: "Sample weekly reflection" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: /Open sample Life in Weeks PDF/ }),
+    ).toHaveAttribute("href", "/sample-life-in-weeks.pdf");
+    await user.click(preview);
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+    await user.click(checkbox);
+    expect(save).toHaveBeenCalledWith({
+      ...preferences,
+      timeZone: "Pacific/Auckland",
+      enabled: true,
+    });
   });
 
   it("ignores a former account's pending response after the account changes", async () => {
@@ -130,7 +169,7 @@ describe("reflection preference control", () => {
     const { rerender } = render(control("account-a"));
     await user.click(
       await screen.findByRole("checkbox", {
-        name: "Email me calendar reflections",
+        name: "Weekly reflection emails",
       }),
     );
     rerender(control("account-b"));
@@ -153,7 +192,7 @@ describe("reflection preference control", () => {
     const user = userEvent.setup();
     render(control("account-a"));
     const checkbox = await screen.findByRole("checkbox", {
-      name: "Email me calendar reflections",
+      name: "Weekly reflection emails",
     });
     await waitFor(() => expect(checkbox).toHaveFocus());
     await user.keyboard(" ");

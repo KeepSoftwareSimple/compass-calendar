@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 
 export interface FeedbackRequest {
-  view: ViewName;
+  view: ViewName | "settings";
 }
 
 interface FeedbackState {
@@ -14,7 +14,8 @@ export const useFeedbackStore = create<FeedbackState>()(() => ({
 }));
 
 export const feedbackActions = {
-  open: (view: ViewName) => useFeedbackStore.setState({ request: { view } }),
+  open: (view: FeedbackRequest["view"]) =>
+    useFeedbackStore.setState({ request: { view } }),
   close: () => useFeedbackStore.setState({ request: null }),
 };
 
