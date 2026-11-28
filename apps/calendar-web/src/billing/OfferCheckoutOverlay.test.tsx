@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { type PropsWithChildren } from "react";
@@ -20,6 +20,7 @@ import { setEmbeddedCheckoutForTests } from "@web/billing/embedded-checkout/embe
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { CompassRequiredProviders } from "@web/components/CompassProvider/CompassProvider";
 import { routeTree } from "@web/routers/router.routes";
+import { settingsActions } from "@web/settings/settings.store";
 import * as sseProvider from "@web/sse/provider/SSEProvider";
 import * as dedication from "@web/views/Week/components/Dedication/Dedication";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
@@ -157,18 +158,62 @@ describe("Checkout overlay", () => {
     );
     await user.type(
       await screen.findByLabelText("Command palette search"),
-      "redeem an offer",
+      "discount codes",
     );
     await user.click(
-      await screen.findByRole("option", { name: /redeem an offer/i }),
+      await screen.findByRole("option", { name: /discount codes/i }),
     );
 
-    await screen.findByRole("dialog", { name: "Checkout" });
+    await screen.findByRole("dialog", { name: "Discount codes" });
     expect(router.state.location.pathname).toBe(pathname);
     expect(screen.queryByLabelText("Command palette search")).toBeNull();
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "Monthly plan" })).toHaveFocus(),
     );
+  });
+
+  it("shows eligibility when an active subscriber opens Discount codes", async () => {
+    using checkout = spyOn(BillingApi, "createCheckoutSession");
+    renderCheckout("/week", "active");
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Open command palette" }),
+    );
+    await user.type(
+      await screen.findByLabelText("Command palette search"),
+      "discount codes",
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /discount codes/i }),
+    );
+
+    await screen.findByRole("dialog", { name: "Discount codes" });
+    expect(screen.getByText(/You already have a subscription/)).toBeVisible();
+    expect(
+      screen.getByText(/before starting your first trial or subscription/),
+    ).toBeVisible();
+    expect(checkout).not.toHaveBeenCalled();
+  });
+
+  it("opens Discount codes from the Life palette for a signed-out visitor", async () => {
+    const router = renderCheckout("/life");
+    const user = userEvent.setup();
+
+    await waitFor(() => expect(router.state.status).toBe("idle"));
+    act(() => settingsActions.openCmdPalette());
+    await user.type(
+      await screen.findByLabelText("Command palette search"),
+      "discount codes",
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /discount codes/i }),
+    );
+
+    const panel = await screen.findByRole("dialog", { name: "Discount codes" });
+    expect(panel).toBeVisible();
+    expect(router.state.location.pathname).toBe("/life");
+    expect(screen.getByRole("link", { name: "Log in" })).toBeVisible();
   });
 
   it("sends an existing trial to billing instead of creating checkout", async () => {

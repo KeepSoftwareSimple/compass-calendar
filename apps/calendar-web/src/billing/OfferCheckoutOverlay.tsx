@@ -36,7 +36,7 @@ export default function OfferCheckoutOverlay() {
 
   return (
     <OverlayPanel
-      title={promo === "AHAB30" ? "Get 30% off Compass" : "Checkout"}
+      title={promo === "AHAB30" ? "Get 30% off Compass" : "Discount codes"}
       onDismiss={close}
       widthClassName="w-[min(560px,calc(100vw-2rem))]"
       align="start"
@@ -91,10 +91,9 @@ export default function OfferCheckoutOverlay() {
             <p>
               {status === "trialing"
                 ? "Your trial is already set up."
-                : "You already have a subscription."}
-              {promo
-                ? " This offer can only be used when you start your first subscription."
-                : ""}
+                : "You already have a subscription."}{" "}
+              New-subscriber discounts are applied before starting your first
+              trial or subscription.
             </p>
             {isMobileOS() ? (
               <p>Open Compass on your computer to manage billing.</p>
@@ -117,6 +116,11 @@ export default function OfferCheckoutOverlay() {
           </>
         ) : (
           <>
+            {!promo && !plan && (
+              <p className="text-text-muted">
+                Choose a plan to enter your code at checkout.
+              </p>
+            )}
             <nav aria-label="Billing period" className="flex flex-wrap gap-3">
               <Link
                 to="."
