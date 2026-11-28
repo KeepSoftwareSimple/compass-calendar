@@ -29,6 +29,7 @@ import {
 import { HighlightedLabel } from "@web/components/CommandPalette/HighlightedLabel";
 import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmdItems";
 import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useDemoEventsCmdItems";
+import { useDiscountCodeCmdItems } from "@web/components/CommandPalette/hooks/useDiscountCodeCmdItems";
 import { useEventFormCmdItems } from "@web/components/CommandPalette/hooks/useEventFormCmdItems";
 import { useLogoutCmdItems } from "@web/components/CommandPalette/hooks/useLogoutCmdItems";
 import {
@@ -469,6 +470,7 @@ export const CommandPalette = ({
   const authCmdItems = useAuthCmdItems();
   const showAccountsCmdItems = useShowAccountsCmdItems();
   const showBillingCmdItems = useShowBillingCmdItems();
+  const discountCodeCmdItems = useDiscountCodeCmdItems();
   const showBookingCmdItems = useShowBookingCmdItems();
   const meetingPageCmdItems = useMeetingPageCmdItems(open);
   const logoutCmdItems = useLogoutCmdItems();
@@ -552,6 +554,7 @@ export const CommandPalette = ({
         ...authCmdItems,
         ...showAccountsCmdItems,
         ...showBillingCmdItems,
+        ...discountCodeCmdItems,
         ...showBookingCmdItems,
         ...meetingPageCmdItems,
         ...logoutCmdItems,
@@ -608,6 +611,7 @@ export const LifeCommandPalette = ({
   useAppLockReason("commandPalette", open);
   const navigate = useNavigate();
   const themeCmdItems = useThemeCmdItems();
+  const discountCodeCmdItems = useDiscountCodeCmdItems();
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
   const legendCmdItems = usePaletteLegendCmdItems();
@@ -641,7 +645,11 @@ export const LifeCommandPalette = ({
         {
           id: "settings",
           heading: "Settings",
-          items: [...timezoneCmdItems, ...notificationCmdItems],
+          items: [
+            ...timezoneCmdItems,
+            ...notificationCmdItems,
+            ...discountCodeCmdItems,
+          ],
         },
         ...getMoreCommandPaletteSections("life"),
       ]}

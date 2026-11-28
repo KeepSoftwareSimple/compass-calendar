@@ -1,5 +1,4 @@
 import { CreditCardIcon } from "@phosphor-icons/react/dist/csr/CreditCard";
-import { useRouter } from "@tanstack/react-router";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { cardUpdateActions } from "@web/billing/card-update.store";
 import { getPlanBadge } from "@web/billing/planBadge";
@@ -15,11 +14,9 @@ export const BILLING_PENDING_CMD_IDS = {
 /** Opens Settings on Billing when the install actually has a plan to report. */
 export const useShowBillingCmdItems = (): CommandItem[] => {
   const { authenticated } = useSession();
-  const router = useRouter();
   const access = useAppAccess();
   const isAccessPending = useIsAppAccessPending();
   const badge = getPlanBadge(access);
-
   // Hold both rows while the plan loads, so the rows below them don't drop
   // when billing lands a beat after the palette opens.
   if (authenticated && isAccessPending) {
@@ -62,21 +59,6 @@ export const useShowBillingCmdItems = (): CommandItem[] => {
       onClick: () =>
         settingsActions.openSettings("billing", { fromPalette: true }),
     },
-    ...(access.kind === "server" && access.status === "awaiting_checkout"
-      ? [
-          {
-            id: "redeem-offer",
-            label: "Redeem an offer",
-            icon: CreditCardIcon,
-            keywords: ["coupon", "discount", "promotion", "checkout"],
-            onClick: () =>
-              void router.navigate({
-                to: ".",
-                search: (previous) => ({ ...previous, checkout: 1 }),
-              }),
-          },
-        ]
-      : []),
     {
       id: "update-card",
       label: "Update card",
