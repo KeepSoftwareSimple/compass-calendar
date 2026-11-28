@@ -1,5 +1,16 @@
 import { Outlet, useLocation, useSearch } from "@tanstack/react-router";
-import { useContext, useEffect, useMemo } from "react";
+import {
+  lazy,
+  Suspense,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
+import {
+  readSessionResolved,
+  subscribeSessionResolved,
+} from "@web/auth/compass/session/auth-session.store";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
 import { GoogleOAuthSignupScopesRecovery } from "@web/auth/providers/GoogleOAuthSignupScopesRecovery";
@@ -21,6 +32,7 @@ import { useGuestMeetingSetupResume } from "@web/booking/useGuestMeetingSetupRes
 import { useGuestRsvpNotice } from "@web/booking/useGuestRsvpNotice";
 import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
 import { isMobileOS } from "@web/common/utils/device/device.util";
+import { isSearchFlagOn } from "@web/common/utils/parse/search-flag.util";
 import { AuthModal } from "@web/components/AuthModal/AuthModal";
 import { AuthModalProvider } from "@web/components/AuthModal/AuthModalProvider";
 import {
@@ -86,6 +98,10 @@ import {
 import { isLifePathname } from "./isLifePathname";
 import { useSuspendCalendarGridOnLifeView } from "./useSuspendCalendarGridOnLifeView";
 
+const OfferCheckoutOverlay = lazy(
+  () => import("@web/billing/OfferCheckoutOverlay"),
+);
+
 /**
  * The auth modal is driven by the router's `?auth=` search param, so its
  * provider must live inside the router (a sibling to `RouterProvider` can't
@@ -103,6 +119,11 @@ export function RootShell() {
   );
   const rootSearch = useSearch({ from: "__root__" });
   const { auth: authParam } = rootSearch;
+  const checkoutRequested = isSearchFlagOn(rootSearch.checkout);
+  const sessionResolved = useSyncExternalStore(
+    subscribeSessionResolved,
+    readSessionResolved,
+  );
   const welcomeOnboardingPathBlocked = isWelcomeOnboardingPathBlocked(
     pathname,
     rootSearch,
@@ -124,10 +145,12 @@ export function RootShell() {
   const pointerHintEligible = usePointerHintStore(
     selectPointerHintSurfaceEligible,
   );
-  const connectCalendarPromptEligible =
-    useConnectCalendarPromptSurfaceEligible(isAuthModalOpen);
-  const firstEventPromptEligible =
-    useFirstEventPromptSurfaceEligible(isAuthModalOpen);
+  const connectCalendarPromptEligible = useConnectCalendarPromptSurfaceEligible(
+    isAuthModalOpen || checkoutRequested,
+  );
+  const firstEventPromptEligible = useFirstEventPromptSurfaceEligible(
+    isAuthModalOpen || checkoutRequested,
+  );
   useSyncBillingWriteLock();
   usePlanChangeToasts();
   useNavigationShortcuts();
@@ -156,14 +179,18 @@ export function RootShell() {
   // Full-screen gate for post-trial read-only states only. New accounts in
   // `awaiting_checkout` browse the calendar until they write or opt in.
   const gateStatus =
-    isCelebrating || signupTrialStepActive || isAwaitingCheckoutExplore
+    isCelebrating ||
+    checkoutRequested ||
+    signupTrialStepActive ||
+    isAwaitingCheckoutExplore
       ? null
       : readOnlyStatus;
   const showAwaitingCheckoutBanner =
-    isAwaitingCheckoutExplore && !isCelebrating;
+    isAwaitingCheckoutExplore && !isCelebrating && !checkoutRequested;
   const showCalendarOnboarding =
     gateStatus === null &&
     !isCelebrating &&
+    !checkoutRequested &&
     !deferCalendarOnboarding &&
     !isMobile;
   const showPastDue = access.kind === "server" && access.status === "past_due";
@@ -193,15 +220,16 @@ export function RootShell() {
         isShowcaseActive,
       ),
       welcomeGuide: selectWelcomeGuideSurfaceEligible(
-        billingGateClear,
+        billingGateClear && !checkoutRequested,
         isWelcomeGuideOpen,
       ),
       connectCalendarPrompt: billingGateClear && connectCalendarPromptEligible,
       firstEventPrompt: showCalendarOnboarding && firstEventPromptEligible,
-      pointerHint: !isLifeView && pointerHintEligible,
+      pointerHint: !isLifeView && !checkoutRequested && pointerHintEligible,
     };
   }, [
     gateStatus,
+    checkoutRequested,
     isCelebrating,
     showCalendarOnboarding,
     authenticated,
@@ -236,11 +264,19 @@ export function RootShell() {
       {showPastDue && <BillingPastDueBanner />}
       {showAwaitingCheckoutBanner && <BillingAwaitingCheckoutBanner />}
       <Outlet />
-      <AuthModal />
+      {(!checkoutRequested || sessionResolved) && <AuthModal />}
+      {checkoutRequested &&
+        sessionResolved &&
+        !isAuthModalOpen &&
+        !isCelebrating && (
+          <Suspense fallback={null}>
+            <OfferCheckoutOverlay />
+          </Suspense>
+        )}
       <ConnectAppleForm />
       <GoogleOAuthSignupScopesRecovery />
       <MissingPermissionsModal />
-      {gateStatus === null && <CheckoutOverlay />}
+      {gateStatus === null && !checkoutRequested && <CheckoutOverlay />}
       {showCalendarOnboarding && <ShowcasePlayLink />}
       {activeOnboardingSurface === "billingGate" && gateStatus !== null && (
         <BillingGateModal status={gateStatus} />
@@ -255,7 +291,9 @@ export function RootShell() {
         <ConnectCalendarPromptGate />
       )}
       {activeOnboardingSurface === "pointerHint" && <PointerHint />}
-      {!isMobile && !suppressBottomNoticeStack && <UpNextBanner />}
+      {!isMobile && !checkoutRequested && !suppressBottomNoticeStack && (
+        <UpNextBanner />
+      )}
       <BottomNoticeStack suppressed={suppressBottomNoticeStack}>
         {/* Phone visitors only see MobileGate; a bottom notice card steals
             tray touches and breaks Time Block Party drag/tap. */}
@@ -263,9 +301,10 @@ export function RootShell() {
         {/* One ask at a time: the meeting setup flow ends in its own sign-up,
             and the Life view shows its own intro to visitors who may not yet
             know what this app is. */}
-        {!isMobile && !guestMeetingSetupActive && !isLifeView && (
-          <LocalModeConnectPrompt />
-        )}
+        {!isMobile &&
+          !guestMeetingSetupActive &&
+          !isLifeView &&
+          !checkoutRequested && <LocalModeConnectPrompt />}
       </BottomNoticeStack>
     </AuthModalProvider>
   );

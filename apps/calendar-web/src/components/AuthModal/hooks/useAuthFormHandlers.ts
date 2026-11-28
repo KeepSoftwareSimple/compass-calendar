@@ -1,9 +1,4 @@
-import {
-  type AnyRouter,
-  useLocation,
-  useRouter,
-  useSearch,
-} from "@tanstack/react-router";
+import { type AnyRouter, useRouter, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CHECKOUT_RESET_HEADER } from "@core/constants/billing.constants";
 import { getEmailPasswordPort } from "@web/auth/compass/hooks/emailpassword.port";
@@ -21,7 +16,7 @@ import {
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { rememberSignupTrialMethod } from "@web/billing/signup-trial.util";
-import { ROOT_ROUTES } from "@web/common/constants/routes";
+import { isSearchFlagOn } from "@web/common/utils/parse/search-flag.util";
 import { getAuthSubmitErrorMessage } from "./useAuthFormHandlers.util";
 import { type AuthSearch, type AuthView } from "./useAuthModal";
 
@@ -63,9 +58,7 @@ export function useAuthFormHandlers({
   const completeAuthentication = useCompleteAuthentication();
   const router = useRouter();
   const search = useSearch({ strict: false });
-  const isCheckout = useLocation({
-    select: (location) => location.pathname === ROOT_ROUTES.CHECKOUT,
-  });
+  const isCheckout = isSearchFlagOn(search.checkout);
   const { plan, promo } = search;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);

@@ -7,11 +7,9 @@ import {
 import { session } from "@web/auth/compass/session/Session";
 import { hasUserEverAuthenticated } from "@web/auth/compass/state/auth.state.util";
 import { ENV_WEB } from "@web/common/constants/env.constants";
-import {
-  DEFAULT_CALENDAR_ROUTE,
-  ROOT_ROUTES,
-} from "@web/common/constants/routes";
+import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
+import { isSearchFlagOn } from "@web/common/utils/parse/search-flag.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { VIEW_TO_PARAM } from "@web/components/AuthModal/hooks/useAuthModal";
 import {
@@ -150,10 +148,10 @@ export const signOut = async (status: SignoutStatus) => {
 
   await session.signOut();
 
-  const { pathname } = window.location;
+  const { pathname, search } = window.location;
   const canStayOnPage =
     pathname.startsWith(DEFAULT_CALENDAR_ROUTE) ||
-    pathname === ROOT_ROUTES.CHECKOUT;
+    isSearchFlagOn(new URLSearchParams(search).get("checkout") ?? undefined);
   if (canStayOnPage && status !== Status.UNAUTHORIZED) {
     return;
   }

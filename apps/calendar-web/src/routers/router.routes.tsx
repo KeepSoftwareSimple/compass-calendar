@@ -2,14 +2,14 @@ import {
   createRootRoute,
   createRoute,
   lazyRouteComponent,
+  redirect,
 } from "@tanstack/react-router";
-import {
-  BillingPlanIntervalSchema,
-  BillingPromotionCodeSchema,
-} from "@core/types/billing.types";
 import { APPLE_AUTH_CALLBACK_PATH } from "@web/auth/apple/authorization/apple-authorization.constants";
 import { IS_DEV } from "@web/common/constants/env.constants";
-import { ROOT_ROUTES } from "@web/common/constants/routes";
+import {
+  DEFAULT_CALENDAR_ROUTE,
+  ROOT_ROUTES,
+} from "@web/common/constants/routes";
 import { validateAuthSearch } from "@web/components/AuthModal/hooks/useAuthModal";
 import { ShortcutsCatalogView } from "@web/components/ShortcutsPage/ShortcutsCatalogView";
 import {
@@ -46,15 +46,14 @@ export const calendarShellRoute = createRoute({
 export const checkoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: ROOT_ROUTES.CHECKOUT,
-  validateSearch: (search: Record<string, unknown>) => {
-    const plan = BillingPlanIntervalSchema.safeParse(search.plan).data;
-    const promo = BillingPromotionCodeSchema.safeParse(search.promo).data;
-    return { ...(plan && { plan }), ...(promo && { promo }) };
+  // Previously shared offer and password reset URLs still open checkout.
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: DEFAULT_CALENDAR_ROUTE,
+      search: { ...search, checkout: 1 },
+      replace: true,
+    });
   },
-  component: lazyRouteComponent(
-    () => import("@web/billing/DirectCheckoutView"),
-    "DirectCheckoutView",
-  ),
 });
 
 export const publicShortcutsRoute = createRoute({

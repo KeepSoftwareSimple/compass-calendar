@@ -7,6 +7,11 @@ import {
   useMemo,
 } from "react";
 import { QUICK_ADD_SEARCH_PARAM } from "@core/shortcuts/quick-add-search-param";
+import {
+  type BillingCheckoutRequest,
+  BillingPlanIntervalSchema,
+  BillingPromotionCodeSchema,
+} from "@core/types/billing.types";
 import { useSession } from "@web/auth/compass/session/useSession";
 import {
   type SearchFlag,
@@ -52,6 +57,9 @@ const PARAM_TO_VIEW = Object.fromEntries(
 
 export interface AuthSearch {
   auth?: string;
+  checkout?: SearchFlag;
+  plan?: BillingCheckoutRequest["plan"];
+  promo?: string;
   token?: string;
   /** ?play=1 launches the Block Party practice game directly (any value). */
   play?: SearchFlag;
@@ -69,6 +77,9 @@ export function validateAuthSearch(
   search: Record<string, unknown>,
 ): AuthSearch {
   return {
+    checkout: searchFlagValue(search.checkout),
+    plan: BillingPlanIntervalSchema.safeParse(search.plan).data,
+    promo: BillingPromotionCodeSchema.safeParse(search.promo).data,
     auth: typeof search.auth === "string" ? search.auth : undefined,
     token: typeof search.token === "string" ? search.token : undefined,
     play: searchFlagValue(search.play),
