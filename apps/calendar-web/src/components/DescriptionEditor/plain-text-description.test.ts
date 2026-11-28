@@ -37,4 +37,12 @@ describe("plainTextToDescriptionHtml", () => {
     expect(html).toBe("<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>");
     expect(html).not.toContain("<script");
   });
+
+  // Pins the whole escaping contract, not just angle brackets, so this path
+  // cannot silently keep a weaker encoder than @core/util/escape-html.util.
+  it("escapes ampersands and quotes through the shared encoder", () => {
+    expect(plainTextToDescriptionHtml(`Tom & "Jerry" <b>`)).toBe(
+      "<p>Tom &amp; &quot;Jerry&quot; &lt;b&gt;</p>",
+    );
+  });
 });

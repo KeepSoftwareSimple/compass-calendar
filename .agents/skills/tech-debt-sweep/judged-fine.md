@@ -11,6 +11,110 @@ genuinely wrong, say so to the user rather than quietly re-litigating it.
 Format: one `##` block per sweep date, one bullet per area, each naming the
 reason it stays.
 
+## 2026-11-28
+
+One finding, shipped as the duplicated HTML encoder in the description
+plain-text helper. Swept the nine merges that landed after the 2026-11-27
+ledger: #5370, #5373, #5374, #5375, #5376, #5377, #5378, #5379 and #5380.
+#5372 was that sweep's own output and is excluded, and everything through
+#5371 is closed by the 2026-11-23 through 2026-11-27 entries and was not
+re-opened. Gate step 1 was clean on the three named detectors: `bun knip`
+reports no unused files or exports (the same three standing config hints),
+`bun lint` passes every rule including the semantic-color, barrel and locator
+checks, and `bun type-check` passes.
+
+- **The finding: #5374 introduced a second copy of the repo's HTML encoder.**
+  `packages/core/src/util/escape-html.util.ts` is the owning definition,
+  documented as the encoder "for an HTML attribute or text node", and six
+  sites import it (`render-meet-landing-html.ts`,
+  `public-booking.service.ts`, `desktop-reminder.email.ts`,
+  `reflection-content.ts`, `email-layout.ts` and the booking confirmation
+  body). #5374's new `plain-text-description.ts` re-implemented it as a
+  byte-identical private `escapeHtml`, so the repo had seven HTML-escaping
+  sites and only six of them registered on the shared primitive. The two are
+  equal today, which is exactly why nothing would notice them diverging: the
+  divergence appears the next time someone hardens the core encoder (the
+  obvious one being `'` for single-quoted attributes) and the
+  description-to-HTML path silently keeps the weaker version. That path is
+  not incidental, it is where user-typed description text is escaped and then
+  interpolated into `<p>` and `<a href="...">` markup for the editor and the
+  context menu, so a missed hardening there is XSS-shaped rather than
+  cosmetic. No test guarded it either: the only escaping assertion at the
+  site covered `<` and `>` via a script tag, and neither `&` nor `"` was
+  pinned, so the copy could have drifted on those two characters without
+  failing anything. Deleted the copy, imported the owning definition, and
+  added one test pinning the full contract (`&`, `"` and `<` in a single
+  input) so this site now fails if its encoder stops matching core's.
+  Behavior identical; the swapped-in function is character-for-character what
+  it replaced. Churn guard clean: `escape-html.util.ts` has no commits in the
+  last 30 days and `plain-text-description.ts` only #5374 itself, which is a
+  fix, not a prior sweep refactor.
+
+- **Deferred by budget, still a real finding: `LIFE_VARIATIONS.average`
+  hardcodes `DEFAULT_LIFESPAN`.** `life-math.ts:2` defines
+  `DEFAULT_LIFESPAN = 79` and `life-math.ts:17` then writes
+  `average: { defaultLifespan: 79 }` as a literal, while its sibling
+  `random` correctly references `RANDOM_LIFESPAN_MAX`. The divergence is
+  observable in one file: `life-preferences.storage.ts:22` defaults the Zod
+  schema from `DEFAULT_LIFESPAN` and `:34` defaults the preferences object
+  from `LIFE_VARIATIONS.average.defaultLifespan`, so raising the shared
+  constant moves the schema default and the reflection email's
+  "N-year average" caption while leaving the stored default and the sidebar's
+  "Average" button on 79. This is the `WEEKS_PER_ROW` shape and it is
+  admissible, but it is pre-existing (#5083, outside this sweep's window) and
+  the one-PR budget went to the in-window finding above. Next sweep should
+  take it; the fix is replacing the literal with the constant.
+
+- **`ReflectionEmailPreview.tsx` restates the real email's sections**
+  (#5375). The settings preview hardcodes the headings, the sample dates and
+  "39% done (79-year average)" that `reflection-content.ts` and
+  `reflection-life-progress.ts` generate for real. Left alone: every number in
+  it is openly fictional ("Pottery class", "Jun 15-21"), nothing in it derives
+  from a shared constant, so there is no internal pair that can desync the way
+  the life PDF's grid and caption could. Driving the real generator in the
+  browser to render a sample would add a backend dependency to a settings
+  illustration, which is a fix larger than the problem.
+
+- **The promotion-code cluster** (#5378, #5379, #5380). Looked hardest here,
+  since three PRs reworked one area in two days and that is where a drifted
+  copy would be. There is none: `BillingPromotionCodeSchema` in
+  `packages/core/src/types/billing.types.ts` owns the trim, upper-case and
+  `/^[A-Z0-9_-]{1,64}$/` rule, and both consumers parse through it, the web in
+  `useAuthModal.ts:82` and the backend in
+  `supertokens.middleware.util.ts:47`. The `checkout=1` search param and the
+  overlay rename in #5379 are plain behavior changes with tests. Nothing to do.
+
+- **The sync-horizon move** (#5377). Lifted `HORIZON_PAST_MONTHS` and
+  `HORIZON_FUTURE_MONTHS` out of `@sync/domain/horizon` into
+  `@core/constants/sync-horizon.constants` so the web could tell "no events"
+  from "older than we keep", and both former consumers now import from core.
+  This is the opposite of a finding: it removed the conditions for one. Noted
+  that the web only checks the past edge, so a week past the future horizon
+  still reads "No calendar events this week"; that is a product call about
+  wording, not debt, and escalates rather than being swept.
+
+- **`CommandPalette.tsx` holds three components** (`CommandPaletteContent`,
+  `CommandPalette`, `LifeCommandPalette`), against the one-component-per-file
+  rule. Left alone: `bun lint` mechanically enforces the rules it owns and
+  passes here, the file predates this window, and splitting it is the
+  consistency rename the skill rules out absent a correctness problem. #5380's
+  own change to it was a clean extraction in the right direction, moving the
+  discount row into `useDiscountCodeCmdItems.ts`.
+
+- **Dependency bumps** (#5370 jsdom 31, #5373 qs). Lock and manifest only, no
+  source touched. Not sweep leads.
+
+- **Sweep mechanics: the churn guard misfires on a shallow clone.** The
+  command in the skill, `git log --since="30 days ago" --oneline -- <path> |
+  grep -i refactor`, matched for every path in the repo on first run. The
+  scheduled checkout is shallow (50 commits, `.git/shallow` present) and its
+  grafted root commit carries all 3,357 files with the subject
+  `refactor(web): drop the dead all-day rowCount from the event view model
+  (#5330)`, so the guard reported a prior sweep refactor on files that commit
+  never modified. Ran `git fetch --deepen=300` to get 373 commits of real
+  history before trusting the guard. Future sweeps must deepen first; taken at
+  face value the guard would have declared the whole repo off limits.
+
 ## 2026-11-27
 
 One finding, shipped as the dead meridiem branch in the quick-time indicator.
