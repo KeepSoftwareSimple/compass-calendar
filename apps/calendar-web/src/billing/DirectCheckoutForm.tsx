@@ -5,7 +5,6 @@ import { type BillingCheckoutRequest } from "@core/types/billing.types";
 import { BillingApi } from "@web/api/billing.api";
 import { getApiErrorMessage } from "@web/api/util/api.util";
 import { EmbeddedCheckoutPanel } from "@web/billing/EmbeddedCheckoutPanel";
-import { ROOT_ROUTES } from "@web/common/constants/routes";
 
 type DirectCheckoutFormProps = {
   plan: NonNullable<BillingCheckoutRequest["plan"]>;
@@ -52,8 +51,9 @@ export function DirectCheckoutForm({
         </button>
         {promotionCode && (
           <Link
-            to={ROOT_ROUTES.CHECKOUT}
-            search={{ plan }}
+            to="."
+            search={(previous) => ({ ...previous, promo: undefined })}
+            replace
             className="c-focus-ring text-sm underline"
           >
             Continue without the offer
